@@ -464,6 +464,17 @@ graph TD
     *   [D] **3.2.5:** Unit tests for `ToolSystem` (mocking executor, registry, stateManager).
     *   [D] **3.2.6:** Create a simple example `IToolExecutor` (e.g., `CalculatorTool`).
     *   [D] **3.2.7:** Unit tests for `CalculatorTool`.
+    *   [D] **3.2.7:** Unit tests for `CalculatorTool`.
+*   [D] **3.3: Additional Provider Adapters (Post-v1.0 Goal, Implementing Early)**
+    *   [D] **3.3.1:** Implement `GeminiAdapter`.
+    *   [D] **3.3.2:** Unit tests for `GeminiAdapter`.
+    *   [D] **3.3.3:** Implement `AnthropicAdapter`.
+    *   [D] **3.3.4:** Unit tests for `AnthropicAdapter`.
+    *   [D] **3.3.5:** Implement `OpenRouterAdapter`.
+    *   [D] **3.3.6:** Unit tests for `OpenRouterAdapter`.
+    *   [D] **3.3.7:** Implement `DeepSeekAdapter`.
+    *   [D] **3.3.8:** Unit tests for `DeepSeekAdapter`.
+
 
 **Phase 4: Orchestration & Observation (Est. Complexity: High)**
 
