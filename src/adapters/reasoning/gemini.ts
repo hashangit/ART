@@ -61,10 +61,10 @@ export class GeminiAdapter implements ProviderAdapter {
       throw new Error('Gemini API key is required.');
     }
     this.apiKey = options.apiKey;
-    this.model = options.model || 'gemini-1.5-flash'; // Default model
+    this.model = options.model || 'gemini-2.5-pro-exp-03-25'; // Updated default model
     this.apiVersion = options.apiVersion || 'v1beta';
     this.apiBaseUrl = options.apiBaseUrl || 'https://generativelanguage.googleapis.com';
-    Logger.debug(`GeminiAdapter initialized with model: ${this.model}, version: ${this.apiVersion}`);
+    Logger.info(`GeminiAdapter initialized with model: ${this.model}, version: ${this.apiVersion}`); // Use info level
   }
 
   /**
@@ -78,41 +78,51 @@ export class GeminiAdapter implements ProviderAdapter {
    */
   async call(prompt: FormattedPrompt, options: CallOptions): Promise<string> {
     if (typeof prompt !== 'string') {
-      Logger.warn('GeminiAdapter received non-string prompt. Treating as string.');
+      Logger.warn('GeminiAdapter received non-string prompt. Treating as string.', { threadId: options.threadId, traceId: options.traceId });
       prompt = String(prompt);
     }
 
     const apiUrl = `${this.apiBaseUrl}/${this.apiVersion}/models/${this.model}:generateContent?key=${this.apiKey}`;
 
+    // Handle system prompt by prepending (as per checklist example)
+    // TODO: Add history handling by constructing the contents array appropriately
+    let userPromptContent = prompt;
+    if (options.system || options.system_prompt) {
+        userPromptContent = `${options.system || options.system_prompt}\n\n${prompt}`;
+        Logger.debug('Prepending system prompt to user message for Gemini.', { threadId: options.threadId });
+    }
+
     const payload: GeminiGenerateContentPayload = {
       contents: [
-        // TODO: Add system prompt/history handling by mapping to Gemini's contents structure
-        { parts: [{ text: prompt }] }, // Simple user prompt
+        { parts: [{ text: userPromptContent }] }
+        // Future: Add history turns here following the {role: 'model', parts: [...]}, {role: 'user', parts: [...]} pattern
       ],
       generationConfig: {
-        // Map relevant parameters from CallOptions
         temperature: options.temperature,
-        maxOutputTokens: options.max_tokens || options.maxOutputTokens, // Allow both names
+        maxOutputTokens: options.max_tokens || options.maxOutputTokens,
         topP: options.top_p || options.topP,
         topK: options.top_k || options.topK,
         stopSequences: options.stop || options.stop_sequences || options.stopSequences,
       },
+      // TODO: Add tool support if needed, mapping to Gemini's format
+      // tools: options.tools ? mapToolsToGeminiFormat(options.tools) : undefined,
     };
 
     // Remove undefined generationConfig parameters
     if (payload.generationConfig) {
         Object.keys(payload.generationConfig).forEach(key =>
-            payload.generationConfig![key as keyof GeminiGenerateContentPayload['generationConfig']] === undefined &&
-            delete payload.generationConfig![key as keyof GeminiGenerateContentPayload['generationConfig']]
+            payload.generationConfig![key as keyof NonNullable<GeminiGenerateContentPayload['generationConfig']>] === undefined &&
+            delete payload.generationConfig![key as keyof NonNullable<GeminiGenerateContentPayload['generationConfig']>]
         );
-        // If generationConfig becomes empty, remove it entirely
         if (Object.keys(payload.generationConfig).length === 0) {
             delete payload.generationConfig;
         }
     }
 
+    // TODO: Add streaming support if options.onThought is provided
 
     Logger.debug(`Calling Gemini API: ${apiUrl.split('?')[0]} with model ${this.model}`, { threadId: options.threadId, traceId: options.traceId });
+    Logger.debug(`Gemini Payload: ${JSON.stringify(payload)}`, { threadId: options.threadId, traceId: options.traceId }); // Log payload
 
     try {
       const response = await fetch(apiUrl, {
@@ -125,34 +135,42 @@ export class GeminiAdapter implements ProviderAdapter {
 
       if (!response.ok) {
         const errorBody = await response.text();
-        Logger.error(`Gemini API request failed with status ${response.status}: ${errorBody}`, { threadId: options.threadId, traceId: options.traceId });
-        throw new Error(`Gemini API request failed: ${response.status} ${response.statusText} - ${errorBody}`);
+        const statusText = response.statusText || 'Unknown Status';
+        Logger.error(`${this.providerName} API request failed: ${response.status} ${statusText}`, { errorBody, threadId: options.threadId, traceId: options.traceId });
+        // Standard error format
+        throw new Error(`${this.providerName} API request failed: ${response.status} ${statusText} - ${errorBody}`);
       }
 
+      // TODO: Add streaming response handling here
+
       const data = await response.json() as GeminiGenerateContentResponse;
+      Logger.debug('Gemini API non-streaming response received.', { threadId: options.threadId, traceId: options.traceId });
 
       // Extract text from the first candidate's content parts
       const responseText = data.candidates?.[0]?.content?.parts?.map(part => part.text).join('');
 
       if (responseText === undefined || responseText === null) {
-        // Check for prompt feedback indicating blocking
-        if (data.promptFeedback) {
-             Logger.error('Gemini API call blocked or failed to generate content.', { responseData: data, threadId: options.threadId, traceId: options.traceId });
-             throw new Error('Gemini API call blocked or failed to generate content. Check prompt feedback in logs or API documentation.');
+        const finishReason = data.candidates?.[0]?.finishReason;
+        const promptFeedback = data.promptFeedback;
+        Logger.error('Gemini API call did not return text content.', { finishReason, promptFeedback, responseData: data, threadId: options.threadId, traceId: options.traceId });
+        // Provide more specific error based on feedback if possible
+        if (finishReason === 'SAFETY' || promptFeedback) {
+             throw new Error('Gemini API call blocked due to safety settings or invalid input. Check logs for details.');
         }
-        Logger.error('Invalid response structure from Gemini API: No text content found', { responseData: data, threadId: options.threadId, traceId: options.traceId });
         throw new Error('Invalid response structure from Gemini API: No text content found.');
       }
-
-      // TODO: Implement onThought callback if streaming is added later.
 
       const responseContent = responseText.trim();
       Logger.debug(`Gemini API call successful. Response length: ${responseContent.length}`, { threadId: options.threadId, traceId: options.traceId });
       return responseContent;
 
     } catch (error: any) {
-      Logger.error(`Error during Gemini API call: ${error.message}`, { error, threadId: options.threadId, traceId: options.traceId });
-      throw error;
+       // Log error with standard message format if not already formatted
+       if (!error.message.startsWith(`${this.providerName} API request failed:`)) {
+           Logger.error(`Error during ${this.providerName} API call: ${error.message}`, { error, threadId: options.threadId, traceId: options.traceId });
+       }
+       // Re-throw for consistent upstream handling
+       throw error;
     }
   }
 }

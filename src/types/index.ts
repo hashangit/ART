@@ -87,11 +87,26 @@ export interface ParsedToolCall {
 /**
  * Configuration specific to a conversation thread.
  */
+import { ModelCapability } from '../systems/reasoning/model-registry'; // Import needed type
+
+// Structure for model preferences within ThreadConfig
+export interface ModelPreferences {
+  defaultProvider?: string; // Preferred default provider for this thread
+  preferredModels?: {
+    // Optional mapping of capability to a specific preferred model
+    [capability in ModelCapability]?: {
+      provider: string;
+      modelId: string;
+    }
+  };
+}
+
 export interface ThreadConfig {
   reasoning: {
-    provider: string; // Identifier for the LLM provider (e.g., 'openai')
-    model: string; // Specific model name (e.g., 'gpt-4-turbo')
-    parameters?: Record<string, any>; // Temperature, top_p, etc.
+    provider: string; // Default provider if not overridden by preferences
+    model: string; // Default model if not overridden by preferences
+    parameters?: Record<string, any>; // Default LLM parameters
+    modelPreferences?: ModelPreferences; // Added model preferences
     // Potentially add prompt template overrides here
   };
   enabledTools: string[]; // List of tool names allowed for this thread

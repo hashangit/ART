@@ -474,7 +474,982 @@ graph TD
     *   [D] **3.3.6:** Unit tests for `OpenRouterAdapter`.
     *   [D] **3.3.7:** Implement `DeepSeekAdapter`.
     *   [D] **3.3.8:** Unit tests for `DeepSeekAdapter`.
+*   [D] **3.4: Additional Provider Adapters (Phase 1 Priority)**
+        [D] **3.4.1:** Ensure all adapters implement consistent interface methods and error handling.
+            - Update all adapters to extend `ProviderAdapter` interface 
+            - Implement standard error reporting format: `throw new Error(`${provider} API request failed: ${status} ${statusText} - ${errorMessage}`)`
+            - Add logging points at critical stages: initialization, API call start, response received, error encountered
+            ```typescript
+            // Standard error handling pattern for all adapters
+            try {
+                // API call code
+            } catch (error: any) {
+                Logger.error(`Error during ${this.providerName} API call: ${error.message}`, { error, threadId: options.threadId, traceId: options.traceId });
+                throw error; // Re-throw for consistent upstream handling
+            }
+            ```
 
+        [D] **3.4.2:** Update OpenAI adapter with latest models and features.
+            - Update model defaults in constructor:
+            ```typescript
+            this.model = options.model || 'gpt-4o'; // Updated from 'gpt-3.5-turbo'
+            ```
+            - Add system message support in call method:
+            ```typescript
+            const messages = [];
+            // Add system message if provided in options
+            if (options.system || options.system_prompt) {
+                messages.push({ role: 'system', content: options.system || options.system_prompt });
+            }
+            // Add user message
+            messages.push({ role: 'user', content: prompt });
+            
+            const payload = {
+                model: this.model,
+                messages: messages,
+                // Other parameters...
+            };
+            ```
+            - Add tool calling support:
+            ```typescript
+            // Add tools if provided
+            if (options.tools) {
+                payload.tools = options.tools;
+                // Optional tool choice parameter
+                if (options.tool_choice) {
+                payload.tool_choice = options.tool_choice;
+                }
+            }
+            ```
+            - Implement streaming and onThought callback:
+            ```typescript
+            if (options.onThought) {
+                payload.stream = true;
+                // Streaming logic
+                const response = await fetch(apiUrl, {...});
+                const reader = response.body!.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = '';
+                let thoughtContent = '';
+                
+                while (true) {
+                const {done, value} = await reader.read();
+                if (done) break;
+                
+                buffer += decoder.decode(value, {stream: true});
+                // Parse SSE events and extract delta content
+                // When a complete thought is detected:
+                options.onThought(thoughtContent);
+                }
+            } else {
+                // Non-streaming logic (existing code)
+            }
+            ```
+
+        [D] **3.4.3:** Update Anthropic adapter for Claude 3.7/3.5 series and Messages API.
+            - Update model defaults and add explicit API version:
+            ```typescript
+            this.model = options.model || 'claude-3-7-sonnet-20250219'; // Updated default
+            this.apiVersion = options.apiVersion || '2023-06-01'; // Explicit version
+            ```
+            - Implement the Messages API format correctly:
+            ```typescript
+            const payload = {
+                model: this.model,
+                messages: [
+                { role: 'user', content: prompt }
+                ],
+                max_tokens: maxTokens,
+                system: options.system_prompt || options.system, // System is a separate parameter, not in messages
+                temperature: options.temperature,
+                top_p: options.top_p || options.topP,
+                top_k: options.top_k || options.topK,
+                stop_sequences: options.stop || options.stop_sequences || options.stopSequences,
+            };
+            ```
+            - Implement response parsing to extract content from the Messages API format:
+            ```typescript
+            const data = await response.json() as AnthropicMessagesResponse;
+            // Updated parsing logic for content
+            const responseText = data.content?.find(c => c.type === 'text')?.text;
+            ```
+            - Add tool support (new in Claude 3.5+):
+            ```typescript
+            // Add tools if provided
+            if (options.tools) {
+                payload.tools = options.tools;
+            }
+            ```
+
+        [D] **3.4.4:** Update Gemini adapter for Gemini 2.5, 2.0 and 1.5 models.
+            - Update model defaults:
+            ```typescript
+            this.model = options.model || 'gemini-2.5-pro-exp-03-25';
+            ```
+            - Update API path and parameters to match latest documentation:
+            ```typescript
+            const apiUrl = `${this.apiBaseUrl}/${this.apiVersion}/models/${this.model}:generateContent?key=${this.apiKey}`;
+            
+            const payload = {
+                contents: [
+                // Google uses contents array instead of messages
+                { parts: [{ text: prompt }] }
+                ],
+                generationConfig: {
+                temperature: options.temperature,
+                maxOutputTokens: options.max_tokens || options.maxOutputTokens,
+                topP: options.top_p || options.topP,
+                topK: options.top_k || options.topK,
+                stopSequences: options.stop || options.stop_sequences || options.stopSequences,
+                },
+            };
+            ```
+            - Handle system instructions via content blocks:
+            ```typescript
+            if (options.system || options.system_prompt) {
+                // Gemini doesn't have a system field - prepend to user message or use special priming
+                payload.contents[0].parts.unshift({ text: `${options.system || options.system_prompt}\n\n` });
+            }
+            ```
+            - Update response parsing for latest format:
+            ```typescript
+            const data = await response.json() as GeminiGenerateContentResponse;
+            // Extract text from the first candidate's content parts
+            const responseText = data.candidates?.[0]?.content?.parts?.map(part => part.text).join('');
+            ```
+
+        [D] **3.4.5:** Update DeepSeek adapter for latest models and features.
+            - Update model defaults:
+            ```typescript
+            this.model = options.model || 'DeepSeek-V3-0324'; // Update from deepseek-chat
+            ```
+            - Ensure correct payload formatting (DeepSeek follows OpenAI format):
+            ```typescript
+            const payload = {
+                model: this.model,
+                messages: [
+                // Add system message if provided
+                ...(options.system || options.system_prompt ? [{ role: 'system', content: options.system || options.system_prompt }] : []),
+                { role: 'user', content: prompt }
+                ],
+                temperature: options.temperature,
+                max_tokens: options.max_tokens || options.maxOutputTokens,
+                top_p: options.top_p || options.topP,
+                stop: stopSequences,
+            };
+            ```
+            - Handle DeepSeek-specific reasoning feature if available:
+            ```typescript
+            // DeepSeek V3+ supports explicit reasoning
+            if (options.reasoning === true) {
+                payload.reasoning = true;
+            }
+            
+            // Parse both standard content and reasoning_content if present
+            const content = data.choices[0].message.content;
+            const reasoningContent = data.choices[0].message.reasoning_content;
+            if (options.includeReasoning && reasoningContent) {
+                Logger.debug(`DeepSeek API returned reasoning content of length: ${reasoningContent.length}`);
+            }
+            ```
+
+        [D] **3.4.6:** Update OpenRouter adapter for latest routing capabilities.
+            - Ensure model format handling supports provider/model syntax:
+            ```typescript
+            // Update model validation to handle provider/model format
+            if (!options.model.includes('/') && !this.model.includes('/')) {
+                Logger.warn('OpenRouter model should ideally specify provider, e.g., "openai/gpt-4o"');
+            }
+            ```
+            - Add latest recommended headers:
+            ```typescript
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.apiKey}`,
+            };
+            
+            // Add recommended OpenRouter headers
+            if (this.siteUrl) {
+                headers['HTTP-Referer'] = this.siteUrl;
+            }
+            if (this.appName) {
+                headers['X-Title'] = this.appName;
+            }
+            
+            // Add OpenRouter-specific routing parameters
+            if (options.route_prefix) {
+                payload.route_prefix = options.route_prefix;
+            }
+            ```
+            - Support transformations feature:
+            ```typescript
+            // Add transforms if provided
+            if (options.transforms) {
+                payload.transforms = options.transforms;
+            }
+            ```
+
+    [D] **3.5: Model Registry & Selection System**
+        [D] **3.5.1:** Implement the `ModelRegistry` class.
+            - Create `src/systems/reasoning/model-registry.ts`
+            - Define `ModelCapability` enum (text, vision, streaming, tool_use, etc.)
+            - Implement `ModelInfo` interface with model metadata
+            - Create core registry functionality (registerProvider, getModelInfo, etc.)
+            - Add methods for UI display (getAvailableModelsForUI)
+            - Include capability validation (validateModel, getBestModelForTask)
+            - Add fallback logic (getFallbackModel, getDefaultModelForProvider)
+            - Populate with initial model data for major providers
+            ```
+            // src/systems/reasoning/model-registry.ts
+            import { Logger } from '../../utils/logger';
+
+            // Define model capability flags
+            export enum ModelCapability {
+            TEXT = 'text',               // Basic text generation
+            VISION = 'vision',           // Image understanding
+            STREAMING = 'streaming',     // Supports streaming
+            TOOL_USE = 'tool_use',       // Function/tool calling
+            RAG = 'rag',                 // Optimized for RAG
+            CODE = 'code',               // Code generation
+            REASONING = 'reasoning'      // Strong reasoning
+            }
+
+            // Define model information structure
+            export interface ModelInfo {
+            id: string;                  // Model identifier
+            provider: string;            // Provider name
+            capabilities: ModelCapability[]; // Supported capabilities
+            contextWindow: number;       // Max context window in tokens
+            maxOutputTokens?: number;    // Max output tokens if different
+            deprecated?: boolean;        // If true, model is deprecated
+            beta?: boolean;              // If true, model is in beta/preview
+            releasedAt?: Date;           // Release date if known
+            costPerInputToken?: number;  // Cost per 1K input tokens (USD)
+            costPerOutputToken?: number; // Cost per 1K output tokens (USD)
+            }
+
+            // UI-friendly model information
+            export interface ModelUIInfo {
+            id: string;                  // Combined provider/model ID
+            displayName: string;         // User-friendly name
+            provider: string;            // Provider name
+            modelId: string;             // Model identifier
+            capabilities: {              // UI-friendly capabilities
+                id: ModelCapability;
+                displayName: string;
+            }[];
+            contextWindow: number;
+            isDeprecated?: boolean;
+            isBeta?: boolean;
+            }
+
+            export class ModelRegistry {
+            private models: Map<string, ModelInfo> = new Map();
+            private providerModels: Map<string, string[]> = new Map();
+            
+            constructor() {
+                this.initializeRegistry();
+            }
+            
+            private initializeRegistry(): void {
+                // Register OpenAI models
+                this.registerProvider('openai', [
+                {
+                    id: 'gpt-4o',
+                    provider: 'openai',
+                    capabilities: [ModelCapability.TEXT, ModelCapability.VISION, ModelCapability.STREAMING, ModelCapability.TOOL_USE],
+                    contextWindow: 128000,
+                    releasedAt: new Date('2025-03-01') // Approximate
+                },
+                // Additional models...
+                ]);
+                
+                // Register other providers...
+                
+                Logger.info(`ModelRegistry initialized with ${this.models.size} models from ${this.providerModels.size} providers`);
+            }
+            
+            // Core registry methods...
+            
+            /**
+            * Get all models in a UI-friendly format for display
+            */
+            getAllModelsForUI(): ModelUIInfo[] {
+                const uiModels: ModelUIInfo[] = [];
+                
+                for (const [provider, modelIds] of this.providerModels.entries()) {
+                for (const modelId of modelIds) {
+                    const modelInfo = this.getModelInfo(provider, modelId);
+                    if (modelInfo) {
+                    uiModels.push({
+                        id: `${provider}/${modelId}`,
+                        displayName: this.getDisplayName(provider, modelId),
+                        provider: provider,
+                        modelId: modelId,
+                        capabilities: modelInfo.capabilities.map(cap => ({
+                        id: cap,
+                        displayName: this.getCapabilityDisplayName(cap)
+                        })),
+                        contextWindow: modelInfo.contextWindow,
+                        isDeprecated: !!modelInfo.deprecated,
+                        isBeta: !!modelInfo.beta
+                    });
+                    }
+                }
+                }
+                
+                return uiModels;
+            }
+            
+            /**
+            * Get a user-friendly display name for a capability
+            */
+            private getCapabilityDisplayName(capability: ModelCapability): string {
+                switch (capability) {
+                case ModelCapability.TEXT: return "Text Generation";
+                case ModelCapability.VISION: return "Image Understanding";
+                case ModelCapability.STREAMING: return "Streaming";
+                case ModelCapability.TOOL_USE: return "Tool Usage";
+                case ModelCapability.RAG: return "RAG Optimized";
+                case ModelCapability.CODE: return "Code Generation";
+                case ModelCapability.REASONING: return "Advanced Reasoning";
+                default: return capability;
+                }
+            }
+            
+            /**
+            * Get a user-friendly display name for a model
+            */
+            private getDisplayName(provider: string, modelId: string): string {
+                // Provider-specific naming conventions
+                switch (provider) {
+                case 'openai':
+                    // Format OpenAI models with proper capitalization
+                    return modelId.replace('gpt-', 'GPT-').replace('o', 'o');
+                case 'anthropic':
+                    // Format Claude models with proper capitalization
+                    return modelId.replace('claude-', 'Claude ');
+                // Other providers...
+                default:
+                    return modelId;
+                }
+            }
+            }
+            ```
+
+        [D] **3.5.2:** Update `ReasoningEngine` for ModelRegistry integration.
+            - Modify constructor to accept multiple providers and ModelRegistry
+            - Extend `CallOptions` with provider/capability fields
+            - Implement model selection logic (selectProviderAndModel)
+            - Add thread config integration for model preferences
+            - Update the `call()` method to use selected models
+            - Implement provider fallback handling
+            - Add public validation API (validateModelForCapabilities)
+            - Include UI notification for model mismatches
+            ```
+            // src/systems/reasoning/reasoning-engine.ts
+            import { ReasoningEngine as IReasoningEngine, ProviderAdapter } from '../../core/interfaces';
+            import { FormattedPrompt, CallOptions, ThreadConfig } from '../../types';
+            import { ModelRegistry, ModelCapability } from './model-registry';
+            import { StateManager } from '../context/state-manager';
+            import { ObservationManager } from '../observation/observation-manager';
+            import { UISystem } from '../ui/ui-system';
+            import { Logger } from '../../utils/logger';
+
+            // Add model-related types to CallOptions
+            export interface EnhancedCallOptions extends CallOptions {
+            provider?: string;
+            requiredCapabilities?: ModelCapability[];
+            attemptFallback?: boolean;
+            }
+
+            // Structure for model validation results
+            export interface ModelValidationResult {
+            valid: boolean;
+            requestedModel?: string;
+            suggestedAlternatives?: Array<{
+                provider: string;
+                modelId: string;
+                displayName: string;
+            }>;
+            }
+
+            export class ReasoningEngine implements IReasoningEngine {
+            private providers: Record<string, ProviderAdapter> = {};
+            private defaultProvider: string;
+            private modelRegistry: ModelRegistry;
+            private stateManager?: StateManager;
+            private observationManager?: ObservationManager;
+            private uiSystem?: UISystem;
+            
+            constructor(options: {
+                providers: Record<string, ProviderAdapter>;
+                defaultProvider: string;
+                modelRegistry: ModelRegistry;
+                stateManager?: StateManager;
+                observationManager?: ObservationManager;
+                uiSystem?: UISystem;
+            }) {
+                this.providers = options.providers;
+                this.defaultProvider = options.defaultProvider;
+                this.modelRegistry = options.modelRegistry;
+                this.stateManager = options.stateManager;
+                this.observationManager = options.observationManager;
+                this.uiSystem = options.uiSystem;
+                
+                Logger.info(`ReasoningEngine initialized with providers: ${Object.keys(this.providers).join(', ')}`);
+            }
+            
+            /**
+            * Call the appropriate LLM based on options and capabilities
+            */
+            async call(prompt: FormattedPrompt, options: EnhancedCallOptions): Promise<string> {
+                const { provider, model } = await this.selectProviderAndModel(options);
+                
+                // Update options with selected provider and model
+                const updatedOptions: CallOptions = {
+                ...options,
+                model
+                };
+                
+                try {
+                Logger.debug(`ReasoningEngine calling ${provider}/${model}`, {
+                    threadId: options.threadId,
+                    capabilities: options.requiredCapabilities
+                });
+                
+                return await this.providers[provider].call(prompt, updatedOptions);
+                } catch (error: any) {
+                if (options.attemptFallback && provider !== this.defaultProvider) {
+                    Logger.warn(`Call to ${provider}/${model} failed, falling back to default provider`, {
+                    error: error.message,
+                    threadId: options.threadId
+                    });
+                    
+                    return this.call(prompt, {
+                    ...options,
+                    provider: this.defaultProvider,
+                    model: undefined,
+                    attemptFallback: false // Prevent infinite recursion
+                    });
+                }
+                
+                throw error;
+                }
+            }
+            
+            /**
+            * Determine the provider and model to use based on options and thread config
+            */
+            private async selectProviderAndModel(options: EnhancedCallOptions): Promise<{
+                provider: string;
+                model: string;
+            }> {
+                let provider = options.provider || this.defaultProvider;
+                let model = options.model;
+                
+                // Validate provider exists
+                if (!this.providers[provider]) {
+                Logger.warn(`Provider ${provider} not available, using default: ${this.defaultProvider}`);
+                provider = this.defaultProvider;
+                }
+                
+                // Get required capabilities
+                const requiredCapabilities = options.requiredCapabilities || [ModelCapability.TEXT];
+                
+                // Try to get thread-specific model preferences if stateManager available
+                if (this.stateManager && options.threadId) {
+                try {
+                    const threadConfig = await this.stateManager.getThreadConfig(options.threadId);
+                    if (threadConfig?.reasoning?.modelPreferences) {
+                    const preferences = threadConfig.reasoning.modelPreferences;
+                    
+                    // Check for capability-specific model preference
+                    for (const capability of requiredCapabilities) {
+                        const preferred = preferences.preferredModels?.[capability];
+                        if (preferred) {
+                        const isValid = this.modelRegistry.validateModel(
+                            preferred.provider,
+                            preferred.modelId,
+                            [capability]
+                        );
+                        
+                        if (isValid) {
+                            provider = preferred.provider;
+                            model = preferred.modelId;
+                            break;
+                        }
+                        }
+                    }
+                    
+                    // If no capability-specific preference found, use default provider
+                    if (!model && preferences.defaultProvider) {
+                        provider = preferences.defaultProvider;
+                    }
+                    }
+                } catch (error) {
+                    Logger.warn(`Error getting thread config for model preferences: ${error}`);
+                }
+                }
+                
+                // If model specified, validate it supports required capabilities
+                if (model) {
+                const isValid = this.modelRegistry.validateModel(
+                    provider, model, requiredCapabilities
+                );
+                
+                if (!isValid) {
+                    // Find fallback model for the provider
+                    const fallback = this.modelRegistry.getBestModelForTask(
+                    provider, requiredCapabilities
+                    );
+                    
+                    if (fallback) {
+                    Logger.info(`Model ${model} doesn't support required capabilities, using ${fallback}`);
+                    model = fallback;
+                    
+                    // Notify UI system if available
+                    this.notifyModelMismatch(provider, model, requiredCapabilities, fallback);
+                    } else {
+                    // Try to find a model from any provider
+                    for (const providerName of Object.keys(this.providers)) {
+                        const alternativeModel = this.modelRegistry.getBestModelForTask(
+                        providerName, requiredCapabilities
+                        );
+                        
+                        if (alternativeModel) {
+                        Logger.info(`Using alternative provider ${providerName}/${alternativeModel}`);
+                        provider = providerName;
+                        model = alternativeModel;
+                        
+                        // Notify UI system
+                        this.notifyModelMismatch(provider, model, requiredCapabilities, alternativeModel, providerName);
+                        break;
+                        }
+                    }
+                    }
+                    
+                    // If still no model found, throw error
+                    if (!model) {
+                    throw new Error(`No suitable model found for capabilities: ${requiredCapabilities.join(', ')}`);
+                    }
+                }
+                } else {
+                // No model specified, find best for the task
+                model = this.modelRegistry.getBestModelForTask(provider, requiredCapabilities) || 
+                        this.modelRegistry.getDefaultModelForProvider(provider);
+                        
+                if (!model) {
+                    throw new Error(`No suitable model found for provider ${provider} with capabilities: ${requiredCapabilities.join(', ')}`);
+                }
+                }
+                
+                return { provider, model };
+            }
+            
+            /**
+            * Validate if a model meets capabilities requirements and suggest alternatives
+            * (Public API for application developers to check before calling)
+            */
+            async validateModelForCapabilities(
+                provider: string,
+                modelId: string,
+                requiredCapabilities: ModelCapability[]
+            ): Promise<ModelValidationResult> {
+                const isValid = this.modelRegistry.validateModel(
+                provider, modelId, requiredCapabilities
+                );
+                
+                if (isValid) {
+                return { valid: true, requestedModel: `${provider}/${modelId}` };
+                }
+                
+                // Find alternatives
+                const suggestedAlternatives: Array<{
+                provider: string;
+                modelId: string;
+                displayName: string;
+                }> = [];
+                
+                // First try same provider
+                const sameProviderModel = this.modelRegistry.getBestModelForTask(
+                provider, requiredCapabilities
+                );
+                
+                if (sameProviderModel) {
+                suggestedAlternatives.push({
+                    provider,
+                    modelId: sameProviderModel,
+                    displayName: this.modelRegistry.getDisplayName(provider, sameProviderModel)
+                });
+                }
+                
+                // Then try other providers
+                for (const providerName of Object.keys(this.providers)) {
+                if (providerName !== provider) {
+                    const alternativeModel = this.modelRegistry.getBestModelForTask(
+                    providerName, requiredCapabilities
+                    );
+                    
+                    if (alternativeModel) {
+                    suggestedAlternatives.push({
+                        provider: providerName,
+                        modelId: alternativeModel,
+                        displayName: this.modelRegistry.getDisplayName(providerName, alternativeModel)
+                    });
+                    }
+                }
+                }
+                
+                return {
+                valid: false,
+                requestedModel: `${provider}/${modelId}`,
+                suggestedAlternatives
+                };
+            }
+            
+            /**
+            * Notify UI system about model capability mismatch (if configured)
+            */
+            private notifyModelMismatch(
+                originalProvider: string,
+                originalModel: string,
+                requiredCapabilities: ModelCapability[],
+                suggestedModel: string,
+                suggestedProvider?: string
+            ): void {
+                if (this.uiSystem && this.uiSystem.getModelSocket) {
+                try {
+                    this.uiSystem.getModelSocket().notify({
+                    type: 'MODEL_CAPABILITY_MISMATCH',
+                    originalModel: `${originalProvider}/${originalModel}`,
+                    requiredCapabilities,
+                    suggestedModel: `${suggestedProvider || originalProvider}/${suggestedModel}`
+                    });
+                } catch (error) {
+                    Logger.warn(`Failed to notify UI of model mismatch: ${error}`);
+                }
+                }
+            }
+            
+            /**
+            * Get all available models in UI-friendly format
+            * (Public API for application UI components)
+            */
+            getAvailableModelsForUI(): ModelUIInfo[] {
+                return this.modelRegistry.getAllModelsForUI();
+            }
+            }
+            ```
+
+        [D] **3.5.3:** Add UI System integration for model events.
+            - Create `src/systems/ui/model-socket.ts` for model-related events
+            - Define `ModelEvent` interface for capability mismatches
+            - Implement `ModelSocket` class extending TypedSocket
+            - Update UISystem to expose the ModelSocket (getModelSocket)
+            - Connect ReasoningEngine to UI System for notifications
+            ```
+            // src/systems/ui/model-socket.ts
+            import { TypedSocket } from './typed-socket';
+            import { ModelCapability } from '../reasoning/model-registry';
+
+            export interface ModelEvent {
+            type: 'MODEL_CAPABILITY_MISMATCH' | 'MODEL_SELECTION_CHANGED' | 'MODEL_ERROR';
+            originalModel?: string;
+            requiredCapabilities?: ModelCapability[];
+            suggestedModel?: string;
+            error?: string;
+            metadata?: Record<string, any>;
+            }
+
+            export class ModelSocket extends TypedSocket<ModelEvent> {
+            // Implementation follows TypedSocket pattern already in ART
+            }
+
+            // src/systems/ui/ui-system.ts
+            import { ModelSocket } from './model-socket';
+
+            export class UISystem {
+            private observationSocket: ObservationSocket;
+            private conversationSocket: ConversationSocket;
+            private modelSocket: ModelSocket;
+            
+            constructor() {
+                this.observationSocket = new ObservationSocket();
+                this.conversationSocket = new ConversationSocket();
+                this.modelSocket = new ModelSocket();
+            }
+            
+            getObservationSocket(): ObservationSocket {
+                return this.observationSocket;
+            }
+            
+            getConversationSocket(): ConversationSocket {
+                return this.conversationSocket;
+            }
+            
+            getModelSocket(): ModelSocket {
+                return this.modelSocket;
+            }
+            }
+            ```
+
+        [D] **3.5.4:** Update Thread Configuration for model preferences.
+            - Update `ThreadConfig` interface with `modelPreferences`
+            - Define preference structure for capability-specific models
+            - Implement default provider setting in preferences
+            - Document the configuration structure
+            ```
+            // src/types/thread-config.ts
+            import { ModelCapability } from '../systems/reasoning/model-registry';
+
+            export interface ModelPreferences {
+            defaultProvider?: string;
+            preferredModels?: {
+                [capability in ModelCapability]?: {
+                provider: string;
+                modelId: string;
+                }
+            };
+            }
+
+            export interface ThreadConfig {
+            // Existing fields
+            reasoning: {
+                // Existing reasoning fields
+                modelPreferences?: ModelPreferences;
+            };
+            // Other fields
+            }
+            ```
+
+        [D] **3.5.5:** Create the Provider Factory.
+            - Create `src/systems/reasoning/provider-factory.ts`
+            - Implement `ProviderConfig` interface
+            - Add `createProviders()` static method
+            - Implement `createProvider()` for individual adapters
+            - Include error handling and logging
+            - Support all configured provider adapters
+            ```
+            // src/systems/reasoning/provider-factory.ts
+            import { ProviderAdapter } from '../../core/interfaces';
+            import { OpenAIAdapter } from '../../adapters/reasoning/openai';
+            import { AnthropicAdapter } from '../../adapters/reasoning/anthropic';
+            import { GeminiAdapter } from '../../adapters/reasoning/gemini';
+            import { DeepSeekAdapter } from '../../adapters/reasoning/deepseek';
+            import { OpenRouterAdapter } from '../../adapters/reasoning/openrouter';
+            import { Logger } from '../../utils/logger';
+
+            export interface ProviderConfig {
+            provider: string;
+            apiKey: string;
+            options?: Record<string, any>;
+            }
+
+            export class ProviderFactory {
+            /**
+            * Create provider adapters from configurations
+            */
+            static createProviders(configs: ProviderConfig[]): Record<string, ProviderAdapter> {
+                const providers: Record<string, ProviderAdapter> = {};
+                
+                for (const config of configs) {
+                try {
+                    providers[config.provider] = ProviderFactory.createProvider(config);
+                    Logger.debug(`Created provider adapter for: ${config.provider}`);
+                } catch (error: any) {
+                    Logger.error(`Failed to create provider ${config.provider}: ${error.message}`);
+                }
+                }
+                
+                return providers;
+            }
+            
+            /**
+            * Create a single provider adapter
+            */
+            static createProvider(config: ProviderConfig): ProviderAdapter {
+                switch (config.provider) {
+                case 'openai':
+                    return new OpenAIAdapter({
+                    apiKey: config.apiKey,
+                    ...config.options
+                    });
+                    
+                case 'anthropic':
+                    return new AnthropicAdapter({
+                    apiKey: config.apiKey,
+                    ...config.options
+                    });
+                    
+                // Other provider adapters...
+                    
+                default:
+                    throw new Error(`Unsupported provider: ${config.provider}`);
+                }
+            }
+            }
+            ```
+
+        [D] **3.5.6:** Create Query Analyzer for dynamic model selection.
+            - Create `src/systems/reasoning/query-analyzer.ts`
+            - Implement content detection for different capabilities
+            - Add pattern matching for code/reasoning content
+            - Integrate with ReasoningEngine for automatic capability detection
+            - Add logging and error handling
+            - Unit test the analyzer patterns
+            ```
+            // src/systems/reasoning/query-analyzer.ts
+            import { ModelCapability } from './model-registry';
+            import { Logger } from '../../utils/logger';
+
+            export class QueryAnalyzer {
+            /**
+            * Analyze a query string to determine required capabilities
+            */
+            analyzeQuery(query: string): ModelCapability[] {
+                const requiredCapabilities: ModelCapability[] = [ModelCapability.TEXT];
+                
+                try {
+                // Check for image content
+                if (query.includes('data:image') || 
+                    /https?:.*\.(jpg|jpeg|png|gif|webp)/i.test(query)) {
+                    requiredCapabilities.push(ModelCapability.VISION);
+                }
+                
+                // Check for code-related queries
+                if (/\bcode\b|\bfunction\b|\bclass\b|\bdebug\b|\bprogramming\b/i.test(query)) {
+                    requiredCapabilities.push(ModelCapability.CODE);
+                }
+                
+                // Check for complex reasoning queries
+                if (/\banalyze\b|\bcompare\b|\bevaluate\b|\boptimize\b/i.test(query)) {
+                    requiredCapabilities.push(ModelCapability.REASONING);
+                }
+                
+                Logger.debug(`QueryAnalyzer detected capabilities: ${requiredCapabilities.join(', ')}`);
+                return requiredCapabilities;
+                } catch (error) {
+                Logger.warn(`QueryAnalyzer error: ${error}`);
+                return [ModelCapability.TEXT]; // Default to basic text
+                }
+            }
+            }
+
+            // Update ReasoningEngine to use QueryAnalyzer
+            export class ReasoningEngine {
+            private queryAnalyzer = new QueryAnalyzer();
+            
+            async call(prompt: FormattedPrompt, options: EnhancedCallOptions): Promise<string> {
+                // Auto-detect capabilities if not specified
+                if (!options.requiredCapabilities && typeof prompt === 'string') {
+                options.requiredCapabilities = this.queryAnalyzer.analyzeQuery(prompt);
+                }
+                
+                // Rest of implementation...
+            }
+            }
+            ```
+
+        [ ] **3.5.7:** Create Example Usage Documentation for Developers.
+            - Document ModelRegistry API and capabilities
+            - Create examples for common use cases
+            - Document thread configuration options
+            - Include UI integration examples
+            - Add JSDoc comments throughout code
+            - Ensure ArtFactory integration example
+            - Add comprehensive tests for all components
+            ```
+            /**
+             * Example: Basic ART setup with ModelRegistry
+             */
+
+            // Import from ART framework
+            import { 
+              ArtFactory, 
+              ModelRegistry, 
+              ProviderFactory, 
+              ModelCapability 
+            } from 'art-framework';
+
+            // 1. Create the ART instance with ModelRegistry
+            const art = await ArtFactory.create({
+              // Configure the Reasoning System with ModelRegistry
+              reasoning: {
+                // Create providers with your API keys
+                providers: ProviderFactory.createProviders([
+                  {
+                    provider: 'openai',
+                    apiKey: process.env.OPENAI_API_KEY || '',
+                  },
+                  {
+                    provider: 'anthropic',
+                    apiKey: process.env.ANTHROPIC_API_KEY || '',
+                  }
+                ]),
+                defaultProvider: 'openai', // Default provider to use
+                // The ModelRegistry is automatically created with default registrations
+              }
+            });
+
+            // 2. Simple usage - automatically selects appropriate model
+            await art.process({
+              query: "What's the weather like?",
+              threadId: 'thread-123',
+            });
+
+            // 3. Advanced usage - specify capabilities
+            await art.process({
+              query: "Analyze this image: https://example.com/image.jpg",
+              threadId: 'thread-123',
+              options: {
+                requiredCapabilities: [ModelCapability.VISION],
+              }
+            });
+
+            // 4. Configure thread-specific model preferences
+            await art.stateManager.updateThreadConfig('thread-123', {
+              reasoning: {
+                modelPreferences: {
+                  defaultProvider: 'anthropic',
+                  preferredModels: {
+                    [ModelCapability.REASONING]: {
+                      provider: 'anthropic',
+                      modelId: 'claude-3-7-sonnet-20250219'
+                    },
+                    [ModelCapability.CODE]: {
+                      provider: 'openai',
+                      modelId: 'gpt-4o'
+                    }
+                  }
+                }
+              }
+            });
+
+            // 5. UI integration - get available models for dropdown
+            const models = art.reasoningEngine.getAvailableModelsForUI();
+            // Populate dropdown with models
+
+            // 6. UI integration - validate model before using
+            const validationResult = await art.reasoningEngine.validateModelForCapabilities(
+              'openai',
+              'gpt-3.5-turbo',
+              [ModelCapability.VISION]
+            );
+
+            if (!validationResult.valid) {
+              // Show UI with suggested alternatives from validationResult.suggestedAlternatives
+            }
+
+            // 7. Subscribe to model events from UI System
+            art.uiSystem.getModelSocket().subscribe((event) => {
+              if (event.type === 'MODEL_CAPABILITY_MISMATCH') {
+                // Show UI alert about model mismatch
+                showAlert(`Model ${event.originalModel} doesn't support ${event.requiredCapabilities?.join(', ')}. 
+                           Using ${event.suggestedModel} instead.`);
+              }
+            });
+            ```
 
 **Phase 4: Orchestration & Observation (Est. Complexity: High)**
 

@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "github.com/GLips/Figma-Context-MCP": {
+      "command": "node",
+      "args": [
+        "C:\\Users\\hashan\\OneDrive\\Documents\\Cline\\MCP\\github.com-GLips-Figma-Context-MCP\\dist\\index.js",
+        "--stdio"
+      ],
+      "env": {
+        "FIGMA_API_KEY": "YOUR_FIGMA_API_KEY"
+      },
+      "disabled": false,
+      "autoApprove": []
+    }
+    ,
+    "github.com/tavily-ai/tavily-mcp": {
+      "command": "npx",
+      "args": ["-y", "tavily-mcp@0.1.4"],
+      "env": {
+        "TAVILY_API_KEY": "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"
+      },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}

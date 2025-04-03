@@ -10,18 +10,20 @@ export interface DeepSeekAdapterOptions {
   apiBaseUrl?: string; // Optional override
 }
 
-// Re-use OpenAI-compatible structures
-interface OpenAIChatCompletionPayload {
+// Re-use OpenAI-compatible structures, adding DeepSeek specific fields
+interface DeepSeekChatCompletionPayload {
   model: string;
   messages: { role: 'system' | 'user' | 'assistant'; content: string }[];
   temperature?: number;
   max_tokens?: number;
   top_p?: number;
   stop?: string | string[];
+  reasoning?: boolean; // DeepSeek specific
   // Add other compatible parameters as needed
 }
 
-interface OpenAIChatCompletionResponse {
+// Add DeepSeek specific response fields
+interface DeepSeekChatCompletionResponse {
   id: string;
   object: string;
   created: number;
@@ -31,10 +33,11 @@ interface OpenAIChatCompletionResponse {
     message: {
       role: 'assistant';
       content: string;
+      reasoning_content?: string; // DeepSeek specific
     };
     finish_reason: string;
   }[];
-  usage: { // Note: DeepSeek usage structure matches OpenAI
+  usage: {
     prompt_tokens: number;
     completion_tokens: number;
     total_tokens: number;
@@ -52,9 +55,9 @@ export class DeepSeekAdapter implements ProviderAdapter {
       throw new Error('DeepSeek API key is required.');
     }
     this.apiKey = options.apiKey;
-    this.model = options.model || 'deepseek-chat'; // Default model
-    this.apiBaseUrl = options.apiBaseUrl || 'https://api.deepseek.com/v1';
-    Logger.debug(`DeepSeekAdapter initialized with model: ${this.model}`);
+    this.model = options.model || 'DeepSeek-V3-0324'; // Updated default model
+    this.apiBaseUrl = options.apiBaseUrl || 'https://api.deepseek.com/v1'; // Keep v1 for compatibility unless specified otherwise
+    Logger.info(`DeepSeekAdapter initialized with model: ${this.model}`); // Use info level
   }
 
   /**
@@ -68,30 +71,40 @@ export class DeepSeekAdapter implements ProviderAdapter {
    */
   async call(prompt: FormattedPrompt, options: CallOptions): Promise<string> {
     if (typeof prompt !== 'string') {
-      Logger.warn('DeepSeekAdapter received non-string prompt. Treating as string.');
+      Logger.warn('DeepSeekAdapter received non-string prompt. Treating as string.', { threadId: options.threadId, traceId: options.traceId });
       prompt = String(prompt);
     }
 
     const apiUrl = `${this.apiBaseUrl}/chat/completions`;
 
+    // Build messages array
+    const messages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [];
+    if (options.system || options.system_prompt) {
+      messages.push({ role: 'system', content: options.system || options.system_prompt || '' });
+    }
+    // TODO: Add conversation history handling here
+    messages.push({ role: 'user', content: prompt });
+
     // Map relevant parameters from CallOptions
     const stopSequences = options.stop || options.stop_sequences || options.stopSequences;
 
-    const payload: OpenAIChatCompletionPayload = {
+    const payload: DeepSeekChatCompletionPayload = {
       model: this.model,
-      messages: [
-        // TODO: Add system prompt/history handling
-        { role: 'user', content: prompt },
-      ],
+      messages: messages,
       temperature: options.temperature,
       max_tokens: options.max_tokens || options.maxOutputTokens,
       top_p: options.top_p || options.topP,
       stop: stopSequences,
-      // Add other parameters compatible with DeepSeek spec if needed
     };
 
+    // Handle DeepSeek-specific reasoning feature
+    if (options.reasoning === true) {
+        payload.reasoning = true;
+        Logger.debug('DeepSeek reasoning parameter enabled.', { threadId: options.threadId });
+    }
+
     // Remove undefined parameters from payload
-    Object.keys(payload).forEach(key => payload[key as keyof OpenAIChatCompletionPayload] === undefined && delete payload[key as keyof OpenAIChatCompletionPayload]);
+    Object.keys(payload).forEach(key => payload[key as keyof DeepSeekChatCompletionPayload] === undefined && delete payload[key as keyof DeepSeekChatCompletionPayload]);
 
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -99,6 +112,7 @@ export class DeepSeekAdapter implements ProviderAdapter {
     };
 
     Logger.debug(`Calling DeepSeek API: ${apiUrl} with model ${this.model}`, { threadId: options.threadId, traceId: options.traceId });
+    Logger.debug(`DeepSeek Payload: ${JSON.stringify(payload)}`, { threadId: options.threadId, traceId: options.traceId }); // Log payload
 
     try {
       const response = await fetch(apiUrl, {
@@ -109,33 +123,47 @@ export class DeepSeekAdapter implements ProviderAdapter {
 
       if (!response.ok) {
         const errorBody = await response.text();
-        Logger.error(`DeepSeek API request failed with status ${response.status}: ${errorBody}`, { threadId: options.threadId, traceId: options.traceId });
-        // Attempt to parse error for better message
-         let errorMessage = errorBody;
+        const statusText = response.statusText || 'Unknown Status';
+        let errorMessage = errorBody;
         try {
             const parsedError = JSON.parse(errorBody);
-            if (parsedError?.error?.message) {
-                errorMessage = parsedError.error.message;
-            }
+            errorMessage = parsedError?.error?.message || errorMessage;
         } catch (e) { /* Ignore parsing error */ }
-        throw new Error(`DeepSeek API request failed: ${response.status} ${response.statusText} - ${errorMessage}`);
+        Logger.error(`${this.providerName} API request failed: ${response.status} ${statusText}`, { errorBody, threadId: options.threadId, traceId: options.traceId });
+        // Standard error format
+        throw new Error(`${this.providerName} API request failed: ${response.status} ${statusText} - ${errorMessage}`);
       }
 
-      const data = await response.json() as OpenAIChatCompletionResponse;
+      // TODO: Add streaming support here
 
-      if (!data.choices || data.choices.length === 0 || !data.choices[0].message?.content) {
-         Logger.error('Invalid response structure from DeepSeek API', { responseData: data, threadId: options.threadId, traceId: options.traceId });
-        throw new Error('Invalid response structure from DeepSeek API: No content found.');
+      const data = await response.json() as DeepSeekChatCompletionResponse;
+      Logger.debug('DeepSeek API non-streaming response received.', { threadId: options.threadId, traceId: options.traceId });
+
+      const choice = data.choices?.[0];
+      const responseContent = choice?.message?.content;
+      const reasoningContent = choice?.message?.reasoning_content;
+
+      if (typeof responseContent !== 'string') {
+         Logger.error('Invalid response structure from DeepSeek API: No content found.', { responseData: data, threadId: options.threadId, traceId: options.traceId });
+         throw new Error('Invalid response structure from DeepSeek API: No content found.');
       }
 
-      // TODO: Implement onThought callback if streaming is added later.
+      // Log reasoning content if requested and present
+      if (options.includeReasoning && reasoningContent) {
+          Logger.debug(`DeepSeek API returned reasoning content (length: ${reasoningContent.length})`, { reasoningContent, threadId: options.threadId, traceId: options.traceId });
+          // Note: We are currently only returning the main content, not the reasoning content.
+          // The application layer would need modification to handle both if required.
+      }
 
-      const responseContent = data.choices[0].message.content.trim();
       Logger.debug(`DeepSeek API call successful. Response length: ${responseContent.length}`, { threadId: options.threadId, traceId: options.traceId });
-      return responseContent;
+      return responseContent.trim();
 
     } catch (error: any) {
-      Logger.error(`Error during DeepSeek API call: ${error.message}`, { error, threadId: options.threadId, traceId: options.traceId });
+      // Log error with standard message format if not already formatted
+      if (!error.message.startsWith(`${this.providerName} API request failed:`)) {
+          Logger.error(`Error during ${this.providerName} API call: ${error.message}`, { error, threadId: options.threadId, traceId: options.traceId });
+      }
+      // Re-throw for consistent upstream handling
       throw error;
     }
   }

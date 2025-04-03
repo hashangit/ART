@@ -312,9 +312,12 @@ export interface ConversationSocket extends TypedSocket<ConversationMessage, Mes
 /**
  * Interface for the system providing access to UI communication sockets.
  */
+import { ModelSocket } from '../systems/ui/model-socket'; // Import ModelSocket
+
 export interface UISystem {
   getObservationSocket(): ObservationSocket;
   getConversationSocket(): ConversationSocket;
+  getModelSocket(): ModelSocket; // Added ModelSocket accessor
   // Potentially add getStateSocket(): StateSocket; in the future
 }
 

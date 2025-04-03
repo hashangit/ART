@@ -16,6 +16,9 @@ interface OpenAIChatCompletionPayload {
   messages: { role: 'system' | 'user' | 'assistant'; content: string }[];
   temperature?: number;
   max_tokens?: number;
+  stream?: boolean; // Added for streaming
+  tools?: any[]; // Added for tool calling
+  tool_choice?: any; // Added for tool calling
   // Add other OpenAI parameters as needed
 }
 
@@ -50,9 +53,9 @@ export class OpenAIAdapter implements ProviderAdapter {
       throw new Error('OpenAI API key is required.');
     }
     this.apiKey = options.apiKey;
-    this.model = options.model || 'gpt-3.5-turbo'; // Default model
+    this.model = options.model || 'gpt-4o'; // Updated default model
     this.apiBaseUrl = options.apiBaseUrl || 'https://api.openai.com/v1';
-    Logger.debug(`OpenAIAdapter initialized with model: ${this.model}`);
+    Logger.info(`OpenAIAdapter initialized with model: ${this.model}`); // Use info level for initialization
   }
 
   /**
@@ -68,32 +71,52 @@ export class OpenAIAdapter implements ProviderAdapter {
    * @returns The content string from the API response.
    */
   async call(prompt: FormattedPrompt, options: CallOptions): Promise<string> {
-    // Basic assumption: prompt is the user message string.
-    // TODO: Enhance prompt handling to support system prompts and history from FormattedPrompt if it becomes structured.
+    // Enhanced prompt handling
     if (typeof prompt !== 'string') {
-        Logger.warn('OpenAIAdapter received non-string prompt. Treating as string.');
-        prompt = String(prompt);
+      Logger.warn('OpenAIAdapter received non-string prompt. Treating as string.', { threadId: options.threadId, traceId: options.traceId });
+      prompt = String(prompt);
     }
 
     const apiUrl = `${this.apiBaseUrl}/chat/completions`;
+
+    // Build messages array
+    const messages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [];
+    if (options.system || options.system_prompt) {
+      messages.push({ role: 'system', content: options.system || options.system_prompt || '' });
+    }
+    // TODO: Add conversation history handling here if needed, before the user prompt
+    messages.push({ role: 'user', content: prompt });
+
+    // Build payload
     const payload: OpenAIChatCompletionPayload = {
       model: this.model,
-      messages: [
-        // TODO: Add system prompt handling based on options or thread config
-        { role: 'user', content: prompt },
-        // TODO: Add conversation history handling
-      ],
-      // Pass through relevant LLM parameters from CallOptions
+      messages: messages,
       temperature: options.temperature,
       max_tokens: options.max_tokens,
-      // top_p: options.top_p, // Example of another parameter
+      // Add other common parameters, ensuring they are not undefined
+      ...(options.top_p && { top_p: options.top_p }),
+      ...(options.stop && { stop: options.stop }),
     };
 
-    // Remove undefined parameters from payload
+    // Add tool calling support
+    if (options.tools) {
+      payload.tools = options.tools;
+      if (options.tool_choice) {
+        payload.tool_choice = options.tool_choice;
+      }
+    }
+
+    // Handle streaming
+    const useStreaming = !!options.onThought;
+    if (useStreaming) {
+      payload.stream = true;
+    }
+
+    // Remove undefined top-level keys (like temperature if not provided)
     Object.keys(payload).forEach(key => payload[key as keyof OpenAIChatCompletionPayload] === undefined && delete payload[key as keyof OpenAIChatCompletionPayload]);
 
-
-    Logger.debug(`Calling OpenAI API: ${apiUrl} with model ${this.model}`, { threadId: options.threadId, traceId: options.traceId });
+    Logger.debug(`Calling OpenAI API: ${apiUrl} with model ${this.model}${useStreaming ? ' (streaming)' : ''}`, { threadId: options.threadId, traceId: options.traceId });
+    Logger.debug(`OpenAI Payload: ${JSON.stringify(payload)}`, { threadId: options.threadId, traceId: options.traceId }); // Log payload for debugging
 
     try {
       const response = await fetch(apiUrl, {
@@ -107,27 +130,92 @@ export class OpenAIAdapter implements ProviderAdapter {
 
       if (!response.ok) {
         const errorBody = await response.text();
-        Logger.error(`OpenAI API request failed with status ${response.status}: ${errorBody}`, { threadId: options.threadId, traceId: options.traceId });
-        throw new Error(`OpenAI API request failed: ${response.status} ${response.statusText} - ${errorBody}`);
+        const statusText = response.statusText || 'Unknown Status';
+        Logger.error(`OpenAI API request failed: ${response.status} ${statusText}`, { errorBody, threadId: options.threadId, traceId: options.traceId });
+        // Standard error format
+        throw new Error(`${this.providerName} API request failed: ${response.status} ${statusText} - ${errorBody}`);
       }
 
-      const data = await response.json() as OpenAIChatCompletionResponse;
+      // --- Streaming Logic ---
+      if (useStreaming && response.body) {
+        Logger.debug('OpenAI API streaming response started.', { threadId: options.threadId, traceId: options.traceId });
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+        let fullResponseContent = '';
+        let accumulatedDelta = ''; // Accumulate deltas for onThought
 
-      if (!data.choices || data.choices.length === 0 || !data.choices[0].message?.content) {
-         Logger.error('Invalid response structure from OpenAI API', { responseData: data, threadId: options.threadId, traceId: options.traceId });
-        throw new Error('Invalid response structure from OpenAI API: No content found.');
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            Logger.debug('OpenAI API stream finished.', { threadId: options.threadId, traceId: options.traceId });
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep the last partial line
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataJson = line.substring(6).trim();
+              if (dataJson === '[DONE]') {
+                continue; // End of stream signal
+              }
+              try {
+                const chunk = JSON.parse(dataJson);
+                const delta = chunk.choices?.[0]?.delta?.content;
+                if (delta) {
+                  fullResponseContent += delta;
+                  accumulatedDelta += delta;
+                  // Trigger onThought - potentially debounce or send based on sentence boundaries later
+                  if (options.onThought) {
+                    // Simple immediate trigger for now
+                    options.onThought(accumulatedDelta);
+                    accumulatedDelta = ''; // Reset delta for next thought chunk
+                  }
+                }
+                // TODO: Handle tool calls in streaming if needed
+              } catch (parseError: any) {
+                Logger.warn(`Failed to parse OpenAI stream chunk: ${parseError.message}`, { chunk: dataJson, threadId: options.threadId, traceId: options.traceId });
+              }
+            }
+          }
+        }
+        // Final thought with any remaining delta
+        if (options.onThought && accumulatedDelta) {
+            options.onThought(accumulatedDelta);
+        }
+        Logger.debug(`OpenAI API stream completed. Total length: ${fullResponseContent.length}`, { threadId: options.threadId, traceId: options.traceId });
+        return fullResponseContent.trim();
+
+      // --- Non-Streaming Logic ---
+      } else {
+        const data = await response.json() as OpenAIChatCompletionResponse;
+        Logger.debug('OpenAI API non-streaming response received.', { threadId: options.threadId, traceId: options.traceId });
+
+        // TODO: Handle tool calls in non-streaming response if needed
+        // const toolCalls = data.choices?.[0]?.message?.tool_calls;
+        // if (toolCalls) { ... }
+
+        const responseContent = data.choices?.[0]?.message?.content;
+
+        if (typeof responseContent !== 'string') {
+          Logger.error('Invalid response structure from OpenAI API (non-streaming)', { responseData: data, threadId: options.threadId, traceId: options.traceId });
+          throw new Error('Invalid response structure from OpenAI API: No content found.');
+        }
+
+        Logger.debug(`OpenAI API call successful. Response length: ${responseContent.length}`, { threadId: options.threadId, traceId: options.traceId });
+        return responseContent.trim();
       }
-
-      // TODO: Implement onThought callback if streaming is added later.
-      // if (options.onThought) { options.onThought('Received response chunk...'); }
-
-      const responseContent = data.choices[0].message.content.trim();
-      Logger.debug(`OpenAI API call successful. Response length: ${responseContent.length}`, { threadId: options.threadId, traceId: options.traceId });
-      return responseContent;
 
     } catch (error: any) {
-      Logger.error(`Error during OpenAI API call: ${error.message}`, { error, threadId: options.threadId, traceId: options.traceId });
-      // Re-throw or handle appropriately
+      // Log error with standard message format if not already formatted
+      if (!error.message.startsWith(`${this.providerName} API request failed:`)) {
+          Logger.error(`Error during ${this.providerName} API call: ${error.message}`, { error, threadId: options.threadId, traceId: options.traceId });
+      }
+      // Re-throw for consistent upstream handling
       throw error;
     }
   }

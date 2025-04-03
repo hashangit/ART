@@ -22,7 +22,8 @@ interface AnthropicMessagesPayload {
   top_p?: number;
   top_k?: number;
   stop_sequences?: string[];
-  // stream?: boolean; // For streaming later
+  stream?: boolean; // For streaming later
+  tools?: any[]; // Added for tool calling
   // Add other Anthropic parameters as needed
 }
 
@@ -32,7 +33,7 @@ interface AnthropicMessagesResponse {
   role: 'assistant';
   model: string;
   content: { type: 'text'; text: string }[]; // Assuming text content for now
-  stop_reason: 'end_turn' | 'max_tokens' | 'stop_sequence' | null;
+  stop_reason: 'end_turn' | 'max_tokens' | 'stop_sequence' | 'tool_use' | null; // Added 'tool_use'
   stop_sequence: string | null;
   usage: {
     input_tokens: number;
@@ -55,11 +56,11 @@ export class AnthropicAdapter implements ProviderAdapter {
       throw new Error('Anthropic API key is required.');
     }
     this.apiKey = options.apiKey;
-    // Common default model, user should override if needed
-    this.model = options.model || 'claude-3-haiku-20240307';
-    this.apiVersion = options.apiVersion || '2023-06-01';
+    // Updated default model
+    this.model = options.model || 'claude-3-7-sonnet-20250219';
+    this.apiVersion = options.apiVersion || '2023-06-01'; // Explicit version
     this.apiBaseUrl = options.apiBaseUrl || 'https://api.anthropic.com/v1';
-    Logger.debug(`AnthropicAdapter initialized with model: ${this.model}, version: ${this.apiVersion}`);
+    Logger.info(`AnthropicAdapter initialized with model: ${this.model}, version: ${this.apiVersion}`); // Use info level
   }
 
   /**
@@ -73,29 +74,44 @@ export class AnthropicAdapter implements ProviderAdapter {
    */
   async call(prompt: FormattedPrompt, options: CallOptions): Promise<string> {
     if (typeof prompt !== 'string') {
-      Logger.warn('AnthropicAdapter received non-string prompt. Treating as string.');
+      Logger.warn('AnthropicAdapter received non-string prompt. Treating as string.', { threadId: options.threadId, traceId: options.traceId });
       prompt = String(prompt);
     }
 
     const apiUrl = `${this.apiBaseUrl}/messages`;
     const maxTokens = options.max_tokens || options.maxOutputTokens || options.max_tokens_to_sample || this.defaultMaxTokens;
 
+    // Build messages array - TODO: Add history handling
+    const messages: { role: 'user' | 'assistant'; content: string | object[] }[] = [
+        { role: 'user', content: prompt }
+    ];
+
     const payload: AnthropicMessagesPayload = {
       model: this.model,
-      messages: [
-        // TODO: Add system prompt/history handling by mapping to Anthropic's messages structure
-        { role: 'user', content: prompt }, // Simple user prompt
-      ],
-      system: options.system_prompt || options.system, // Allow system prompt via options
-      max_tokens: maxTokens, // Use mapped or default value
-      // Map relevant parameters from CallOptions
+      messages: messages,
+      system: options.system_prompt || options.system, // System prompt is separate
+      max_tokens: maxTokens,
       temperature: options.temperature,
       top_p: options.top_p || options.topP,
       top_k: options.top_k || options.topK,
       stop_sequences: options.stop || options.stop_sequences || options.stopSequences,
     };
 
-    // Remove undefined parameters from payload (excluding max_tokens which is required)
+    // Add tool support
+    if (options.tools) {
+        payload.tools = options.tools;
+        // Note: Anthropic might have specific tool_choice formats if needed
+    }
+
+    // Handle streaming (basic setup, full implementation requires more)
+    const useStreaming = !!options.onThought;
+    if (useStreaming) {
+        payload.stream = true;
+        // TODO: Implement Anthropic streaming logic similar to OpenAI's
+        Logger.warn('Anthropic streaming with onThought is not fully implemented yet.', { threadId: options.threadId, traceId: options.traceId });
+    }
+
+    // Remove undefined parameters from payload (excluding max_tokens)
     Object.keys(payload).forEach(key => {
         const K = key as keyof AnthropicMessagesPayload;
         if (K !== 'max_tokens' && payload[K] === undefined) {
@@ -104,6 +120,7 @@ export class AnthropicAdapter implements ProviderAdapter {
     });
 
     Logger.debug(`Calling Anthropic API: ${apiUrl} with model ${this.model}`, { threadId: options.threadId, traceId: options.traceId });
+    Logger.debug(`Anthropic Payload: ${JSON.stringify(payload)}`, { threadId: options.threadId, traceId: options.traceId }); // Log payload
 
     try {
       const response = await fetch(apiUrl, {
@@ -112,43 +129,57 @@ export class AnthropicAdapter implements ProviderAdapter {
           'Content-Type': 'application/json',
           'x-api-key': this.apiKey,
           'anthropic-version': this.apiVersion,
-          // 'anthropic-beta': 'messages-2023-12-15', // Might be needed for certain features
+          // 'anthropic-beta': 'tools-2024-04-04', // Example beta header if needed for tools
         },
         body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
         const errorBody = await response.text();
-        Logger.error(`Anthropic API request failed with status ${response.status}: ${errorBody}`, { threadId: options.threadId, traceId: options.traceId });
-        // Attempt to parse error body for better message
+        const statusText = response.statusText || 'Unknown Status';
         let errorMessage = errorBody;
         try {
             const parsedError = JSON.parse(errorBody);
-            if (parsedError?.error?.message) {
-                errorMessage = parsedError.error.message;
-            }
+            errorMessage = parsedError?.error?.message || errorMessage;
         } catch (e) { /* Ignore parsing error */ }
-        throw new Error(`Anthropic API request failed: ${response.status} ${response.statusText} - ${errorMessage}`);
+        Logger.error(`${this.providerName} API request failed: ${response.status} ${statusText}`, { errorBody, threadId: options.threadId, traceId: options.traceId });
+        // Standard error format
+        throw new Error(`${this.providerName} API request failed: ${response.status} ${statusText} - ${errorMessage}`);
       }
 
-      const data = await response.json() as AnthropicMessagesResponse;
+      // TODO: Add streaming response handling here if payload.stream was true
 
-      // Extract text content - assumes simple text response for now
+      const data = await response.json() as AnthropicMessagesResponse;
+      Logger.debug('Anthropic API non-streaming response received.', { threadId: options.threadId, traceId: options.traceId });
+
+      // TODO: Handle tool calls in the response if needed
+      // const toolUseContent = data.content?.find(c => c.type === 'tool_use');
+      // if (toolUseContent) { ... }
+
+      // Extract text content
       const responseText = data.content?.find(c => c.type === 'text')?.text;
 
       if (responseText === undefined || responseText === null) {
+        // Check if it stopped for tool use instead
+        if (data.stop_reason === 'tool_use') {
+            Logger.debug('Anthropic response stopped for tool use.', { responseData: data, threadId: options.threadId, traceId: options.traceId });
+            // Return an empty string or a specific indicator? For now, empty string.
+             return '';
+        }
         Logger.error('Invalid response structure from Anthropic API: No text content found', { responseData: data, threadId: options.threadId, traceId: options.traceId });
         throw new Error('Invalid response structure from Anthropic API: No text content found.');
       }
-
-      // TODO: Implement onThought callback if streaming is added later.
 
       const responseContent = responseText.trim();
       Logger.debug(`Anthropic API call successful. Response length: ${responseContent.length}`, { threadId: options.threadId, traceId: options.traceId });
       return responseContent;
 
     } catch (error: any) {
-      Logger.error(`Error during Anthropic API call: ${error.message}`, { error, threadId: options.threadId, traceId: options.traceId });
+      // Log error with standard message format if not already formatted
+      if (!error.message.startsWith(`${this.providerName} API request failed:`)) {
+          Logger.error(`Error during ${this.providerName} API call: ${error.message}`, { error, threadId: options.threadId, traceId: options.traceId });
+      }
+      // Re-throw for consistent upstream handling
       throw error;
     }
   }
