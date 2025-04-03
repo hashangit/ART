@@ -446,24 +446,24 @@ graph TD
 **Phase 3: Core Logic Systems - Reasoning & Tool (Est. Complexity: High)**
 
 *   *Dependency: Phase 1 completed.*
-*   [ ] **3.1: Reasoning System (RS)**
-    *   [ ] **3.1.1:** Implement `PromptManager` (methods `createPlanningPrompt`, `createSynthesisPrompt`). Use basic templating.
-    *   [ ] **3.1.2:** Unit tests for `PromptManager`.
-    *   [ ] **3.1.3:** Implement `OutputParser` (methods `parsePlanningOutput`, `parseSynthesisOutput`). Handle potential formatting errors. Use regex or structured parsing.
-    *   [ ] **3.1.4:** Unit tests for `OutputParser`.
-    *   [ ] **3.1.5:** Implement a `ProviderAdapter` (e.g., `OpenAIAdapter`). Handle API calls, auth, `onThought` callback triggering.
-    *   [ ] **3.1.6:** Unit tests for `OpenAIAdapter` (mocking API calls).
-    *   [ ] **3.1.7:** Implement `ReasoningEngine` core logic (delegates to adapter, handles `CallOptions`).
-    *   [ ] **3.1.8:** Unit tests for `ReasoningEngine`.
-*   [ ] **3.2: Tool System (TS)**
+*   [D] **3.1: Reasoning System (RS)**
+    *   [D] **3.1.1:** Implement `PromptManager` (methods `createPlanningPrompt`, `createSynthesisPrompt`). Use basic templating.
+    *   [D] **3.1.2:** Unit tests for `PromptManager`.
+    *   [D] **3.1.3:** Implement `OutputParser` (methods `parsePlanningOutput`, `parseSynthesisOutput`). Handle potential formatting errors. Use regex or structured parsing.
+    *   [D] **3.1.4:** Unit tests for `OutputParser`.
+    *   [D] **3.1.5:** Implement a `ProviderAdapter` (e.g., `OpenAIAdapter`). Handle API calls, auth, `onThought` callback triggering.
+    *   [D] **3.1.6:** Unit tests for `OpenAIAdapter` (mocking API calls).
+    *   [D] **3.1.7:** Implement `ReasoningEngine` core logic (delegates to adapter, handles `CallOptions`).
+    *   [D] **3.1.8:** Unit tests for `ReasoningEngine`.
+*   [D] **3.2: Tool System (TS)**
     *   *Dependency: 2.3 (StateManager for tool checks).*
-    *   [ ] **3.2.1:** Implement `ToolRegistry` (register, getExecutor, getAvailableTools).
-    *   [ ] **3.2.2:** Unit tests for `ToolRegistry`.
-    *   [ ] **3.2.3:** Implement JSON Schema validation utility for tool inputs.
-    *   [ ] **3.2.4:** Implement `ToolSystem.executeTools` method. Include loop logic: check enabled (`StateManager`), get executor (`ToolRegistry`), validate args, execute `IToolExecutor`, handle errors/timeouts, format `ToolResult`.
-    *   [ ] **3.2.5:** Unit tests for `ToolSystem` (mocking executor, registry, stateManager).
-    *   [ ] **3.2.6:** Create a simple example `IToolExecutor` (e.g., `CalculatorTool`).
-    *   [ ] **3.2.7:** Unit tests for `CalculatorTool`.
+    *   [D] **3.2.1:** Implement `ToolRegistry` (register, getExecutor, getAvailableTools).
+    *   [D] **3.2.2:** Unit tests for `ToolRegistry`.
+    *   [D] **3.2.3:** Implement JSON Schema validation utility for tool inputs.
+    *   [D] **3.2.4:** Implement `ToolSystem.executeTools` method. Include loop logic: check enabled (`StateManager`), get executor (`ToolRegistry`), validate args, execute `IToolExecutor`, handle errors/timeouts, format `ToolResult`.
+    *   [D] **3.2.5:** Unit tests for `ToolSystem` (mocking executor, registry, stateManager).
+    *   [D] **3.2.6:** Create a simple example `IToolExecutor` (e.g., `CalculatorTool`).
+    *   [D] **3.2.7:** Unit tests for `CalculatorTool`.
 
 **Phase 4: Orchestration & Observation (Est. Complexity: High)**
 
