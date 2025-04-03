@@ -382,42 +382,42 @@ graph TD
 
 **Phase 1: Core Interfaces & Data Models (Est. Complexity: Medium)**
 
-*   [ ] **1.1:** Define core TypeScript types (`src/types`):
-    *   [ ] `ConversationMessage` (including `MessageRole` enum)
-    *   [ ] `Observation` (including `ObservationType` enum)
-    *   [ ] `ToolSchema`
-    *   [ ] `ToolResult`
-    *   [ ] `ParsedToolCall`
-    *   [ ] `ThreadConfig`
-    *   [ ] `AgentState`
-    *   [ ] `ThreadContext`
-    *   [ ] `AgentProps`
-    *   [ ] `AgentFinalResponse`
-    *   [ ] `ExecutionMetadata`
-    *   [ ] `ExecutionContext` (for tools)
-    *   [ ] `CallOptions` (for reasoning)
-    *   [ ] `FormattedPrompt` (type alias)
-    *   [ ] `FilterOptions` (for storage)
-    *   [ ] `MessageOptions` (for history)
-    *   [ ] `ObservationFilter`
-*   [ ] **1.2:** Define core system interfaces (`src/core` or `src/systems/<name>/interfaces.ts`):
-    *   [ ] `IAgentCore`
-    *   [ ] `ReasoningEngine`
-    *   [ ] `PromptManager`
-    *   [ ] `OutputParser`
-    *   [ ] `ProviderAdapter` (extends `ReasoningEngine`)
-    *   [ ] `IToolExecutor`
-    *   [ ] `ToolRegistry`
-    *   [ ] `ToolSystem`
-    *   [ ] `StateManager`
-    *   [ ] `ConversationManager`
-    *   [ ] `ObservationManager`
-    *   [ ] `TypedSocket`
-    *   [ ] `ObservationSocket` (extends `TypedSocket`)
-    *   [ ] `ConversationSocket` (extends `TypedSocket`)
-    *   [ ] `UISystem`
-    *   [ ] `StorageAdapter`
-    *   [ ] Define interfaces for Repositories (`IObservationRepository`, etc.)
+*   [D] **1.1:** Define core TypeScript types (`src/types`):
+    *   [D] `ConversationMessage` (including `MessageRole` enum)
+    *   [D] `Observation` (including `ObservationType` enum)
+    *   [D] `ToolSchema`
+    *   [D] `ToolResult`
+    *   [D] `ParsedToolCall`
+    *   [D] `ThreadConfig`
+    *   [D] `AgentState`
+    *   [D] `ThreadContext`
+    *   [D] `AgentProps`
+    *   [D] `AgentFinalResponse`
+    *   [D] `ExecutionMetadata`
+    *   [D] `ExecutionContext` (for tools)
+    *   [D] `CallOptions` (for reasoning)
+    *   [D] `FormattedPrompt` (type alias)
+    *   [D] `FilterOptions` (for storage)
+    *   [D] `MessageOptions` (for history)
+    *   [D] `ObservationFilter`
+*   [D] **1.2:** Define core system interfaces (`src/core` or `src/systems/<name>/interfaces.ts`):
+    *   [D] `IAgentCore`
+    *   [D] `ReasoningEngine`
+    *   [D] `PromptManager`
+    *   [D] `OutputParser`
+    *   [D] `ProviderAdapter` (extends `ReasoningEngine`)
+    *   [D] `IToolExecutor`
+    *   [D] `ToolRegistry`
+    *   [D] `ToolSystem`
+    *   [D] `StateManager`
+    *   [D] `ConversationManager`
+    *   [D] `ObservationManager`
+    *   [D] `TypedSocket`
+    *   [D] `ObservationSocket` (extends `TypedSocket`)
+    *   [D] `ConversationSocket` (extends `TypedSocket`)
+    *   [D] `UISystem`
+    *   [D] `StorageAdapter`
+    *   [D] Define interfaces for Repositories (`IObservationRepository`, etc.)
 
 **Phase 2: Foundational Systems - Storage & Base Context (Est. Complexity: Medium-High)**
 
