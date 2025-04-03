@@ -198,7 +198,7 @@ export type FormattedPrompt = string | object | Array<object>;
  * Structure depends heavily on the underlying adapter's capabilities.
  */
 export interface FilterOptions {
-  filter: Record<string, any>; // Key-value pairs for filtering (e.g., { type: 'PLAN', threadId: '...' })
+  filter?: Record<string, any>; // Key-value pairs for filtering (e.g., { type: 'PLAN', threadId: '...' }) // Made optional
   sort?: Record<string, 'asc' | 'desc'>; // Key-value pairs for sorting
   limit?: number; // Maximum number of results to return
   skip?: number; // Number of results to skip (for pagination)

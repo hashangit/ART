@@ -211,7 +211,7 @@ export interface StateManager {
   saveStateIfModified(threadId: string): Promise<void>;
 
   // Potentially add methods to update config/state if needed during runtime,
-  // though v1.0 focuses on loading existing config.
+  // though v0.2.4 focuses on loading existing config.
   // updateThreadConfig(threadId: string, updates: Partial<ThreadConfig>): Promise<void>;
   // updateAgentState(threadId: string, updates: Partial<AgentState>): Promise<void>;
 }

@@ -422,26 +422,26 @@ graph TD
 **Phase 2: Foundational Systems - Storage & Base Context (Est. Complexity: Medium-High)**
 
 *   *Dependency: Phase 1 completed.*
-*   [ ] **2.1: Storage System (SS)**
-    *   [ ] **2.1.1:** Implement `InMemoryStorageAdapter` (`src/adapters/storage/inMemory.ts`).
-    *   [ ] **2.1.2:** Write unit tests for `InMemoryStorageAdapter`.
-    *   [ ] **2.1.3:** Implement `IndexedDBStorageAdapter` (`src/adapters/storage/indexedDB.ts`). (Requires careful async handling, schema versioning).
-    *   [ ] **2.1.4:** Write integration tests for `IndexedDBStorageAdapter` (requires browser environment or mock).
-*   [ ] **2.2: Context System (CS) - Repositories**
+*   [D] **2.1: Storage System (SS)**
+    *   [D] **2.1.1:** Implement `InMemoryStorageAdapter` (`src/adapters/storage/inMemory.ts`).
+    *   [D] **2.1.2:** Write unit tests for `InMemoryStorageAdapter`.
+    *   [D] **2.1.3:** Implement `IndexedDBStorageAdapter` (`src/adapters/storage/indexedDB.ts`). (Requires careful async handling, schema versioning).
+    *   [D] **2.1.4:** Write integration tests for `IndexedDBStorageAdapter` (requires browser environment or mock).
+*   [D] **2.2: Context System (CS) - Repositories**
     *   *Dependency: 2.1 completed.*
-    *   [ ] **2.2.1:** Implement `ConversationRepository` (using `StorageAdapter`).
-    *   [ ] **2.2.2:** Unit tests for `ConversationRepository` (mocking adapter).
-    *   [ ] **2.2.3:** Implement `ObservationRepository` (using `StorageAdapter`).
-    *   [ ] **2.2.4:** Unit tests for `ObservationRepository`.
-    *   [ ] **2.2.5:** Implement `StateRepository` (for `ThreadConfig`, `AgentState`).
-    *   [ ] **2.2.6:** Unit tests for `StateRepository`.
-*   [ ] **2.3: Context System (CS) - Managers**
+    *   [D] **2.2.1:** Implement `ConversationRepository` (using `StorageAdapter`).
+    *   [D] **2.2.2:** Unit tests for `ConversationRepository` (mocking adapter).
+    *   [D] **2.2.3:** Implement `ObservationRepository` (using `StorageAdapter`).
+    *   [D] **2.2.4:** Unit tests for `ObservationRepository`.
+    *   [D] **2.2.5:** Implement `StateRepository` (for `ThreadConfig`, `AgentState`).
+    *   [D] **2.2.6:** Unit tests for `StateRepository`.
+*   [D] **2.3: Context System (CS) - Managers**
     *   *Dependency: 2.2 completed.*
-    *   [ ] **2.3.1:** Implement `ConversationManager` (using `ConversationRepository`).
-    *   [ ] **2.3.2:** Unit tests for `ConversationManager`.
-    *   [ ] **2.3.3:** Implement `StateManager` (using `StateRepository`). Include logic for loading context, checking enabled tools, getting config values, saving if modified.
-    *   [ ] **2.3.4:** Unit tests for `StateManager`.
-    *   [ ] **2.3.5:** Implement basic `ContextProvider` (v1.0 might just pass through data).
+    *   [D] **2.3.1:** Implement `ConversationManager` (using `ConversationRepository`).
+    *   [D] **2.3.2:** Unit tests for `ConversationManager`.
+    *   [D] **2.3.3:** Implement `StateManager` (using `StateRepository`). Include logic for loading context, checking enabled tools, getting config values, saving if modified.
+    *   [D] **2.3.4:** Unit tests for `StateManager`.
+    *   [D] **2.3.5:** Implement basic `ContextProvider` (v1.0 might just pass through data).
 
 **Phase 3: Core Logic Systems - Reasoning & Tool (Est. Complexity: High)**
 
