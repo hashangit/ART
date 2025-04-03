@@ -95,7 +95,7 @@ graph TD
 
 **5.1. Agent Core (AC)**
 *   **Purpose:** Orchestrate the agent's execution flow based on a chosen pattern.
-*   **v1.0 Pattern:** Plan-Execute-Synthesize (PES).
+*   **v0.2.4 Pattern:** Plan-Execute-Synthesize (PES).
 *   **Key Features:**
     *   Implement the 6-stage PES flow (Initiation, Planning Context, Planning Call, Tool Execution, Synthesis Call, Finalization).
     *   Coordinate interactions between RS, TS, CS, OS.
@@ -481,21 +481,21 @@ graph TD
 *   *Dependency: Phase 2 & 3 completed.*
 *   [ ] **4.1: Observation System (OS)**
     *   *Dependency: 2.2.3 (ObservationRepository).*
-    *   [ ] **4.1.1:** Implement `ObservationManager.record` method (create Observation object, save via repo).
-    *   [ ] **4.1.2:** Implement `ObservationManager.getObservations` method.
-    *   [ ] **4.1.3:** Unit tests for `ObservationManager`.
+    *   [D] **4.1.1:** Implement `ObservationManager.record` method (create Observation object, save via repo).
+    *   [D] **4.1.2:** Implement `ObservationManager.getObservations` method.
+    *   [D] **4.1.3:** Unit tests for `ObservationManager`.
 *   [ ] **4.2: Agent Core (AC) - PES Implementation**
     *   *Dependency: 4.1, All managers/systems from Phase 2 & 3.*
-    *   [ ] **4.2.1:** Implement `PESAgent.process` method following the 6 stages outlined in PRD Section 6.
-    *   [ ] **4.2.2:** Integrate calls to `StateManager`, `ConversationManager`, `PromptManager`, `ReasoningEngine`, `OutputParser`, `ToolSystem`.
-    *   [ ] **4.2.3:** Integrate calls to `ObservationManager.record` at appropriate points (Thoughts, Intent, Plan, Tool Execution, Errors).
-    *   [ ] **4.2.4:** Implement final message formatting and saving (`ConversationManager`).
-    *   [ ] **4.2.5:** Implement final state saving (`StateManager`).
-    *   [ ] **4.2.6:** Implement robust error handling throughout the flow, generating `ERROR` observations.
-    *   [ ] **4.2.7:** Write integration tests for `PESAgent` (mocking external dependencies like LLM API, complex tools).
+    *   [D] **4.2.1:** Implement `PESAgent.process` method following the 6 stages outlined in PRD Section 6.
+    *   [D] **4.2.2:** Integrate calls to `StateManager`, `ConversationManager`, `PromptManager`, `ReasoningEngine`, `OutputParser`, `ToolSystem`.
+    *   [D] **4.2.3:** Integrate calls to `ObservationManager.record` at appropriate points (Thoughts, Intent, Plan, Tool Execution, Errors).
+    *   [D] **4.2.4:** Implement final message formatting and saving (`ConversationManager`).
+    *   [D] **4.2.5:** Implement final state saving (`StateManager`).
+    *   [D] **4.2.6:** Implement robust error handling throughout the flow, generating `ERROR` observations.
+    *   [D] **4.2.7:** Write integration tests for `PESAgent` (mocking external dependencies like LLM API, complex tools).
 *   [ ] **4.3: Agent Factory**
-    *   [ ] **4.3.1:** Implement `AgentFactory` to instantiate `PESAgent` and inject dependencies (configured StorageAdapter, ReasoningAdapter, Tools, etc.).
-    *   [ ] **4.3.2:** Unit tests for `AgentFactory`.
+    *   [D] **4.3.1:** Implement `AgentFactory` to instantiate `PESAgent` and inject dependencies (configured StorageAdapter, ReasoningAdapter, Tools, etc.).
+    *   [D] **4.3.2:** Unit tests for `AgentFactory`.
 
 **Phase 5: UI Integration (Est. Complexity: Medium)**
 
