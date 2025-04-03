@@ -500,14 +500,14 @@ graph TD
 **Phase 5: UI Integration (Est. Complexity: Medium)**
 
 *   *Dependency: Phase 1 (Interfaces), Phase 4.1 (ObservationManager), Phase 2.3 (ConversationManager).*
-*   [ ] **5.1:** Implement `TypedSocket` base class/logic (simple pub/sub).
-*   [ ] **5.2:** Implement `ObservationSocket` (extends `TypedSocket`).
-*   [ ] **5.3:** Implement `ConversationSocket` (extends `TypedSocket`).
-*   [ ] **5.4:** Integrate `ObservationSocket.notify` call within `ObservationManager.record`.
-*   [ ] **5.5:** Integrate `ConversationSocket.notify` call within `ConversationManager.addMessages` (or AgentCore finalization).
-*   [ ] **5.6:** Implement `UISystem` to provide access to sockets.
-*   [ ] **5.7:** Unit tests for Sockets and UISystem.
-*   [ ] **5.8:** Write basic examples demonstrating socket subscription in plain JS.
+*   [D] **5.1:** Implement `TypedSocket` base class/logic (simple pub/sub).
+*   [D] **5.2:** Implement `ObservationSocket` (extends `TypedSocket`).
+*   [D] **5.3:** Implement `ConversationSocket` (extends `TypedSocket`).
+*   [D] **5.4:** Integrate `ObservationSocket.notify` call within `ObservationManager.record`.
+*   [D] **5.5:** Integrate `ConversationSocket.notify` call within `ConversationManager.addMessages` (or AgentCore finalization).
+*   [D] **5.6:** Implement `UISystem` to provide access to sockets.
+*   [D] **5.7:** Unit tests for Sockets and UISystem.
+*   [D] **5.8:** Write basic examples demonstrating socket subscription in plain JS.
 
 **Phase 6: Integration, Testing, Documentation & Release Prep (Est. Complexity: High)**
 

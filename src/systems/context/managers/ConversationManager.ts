@@ -1,4 +1,5 @@
 import { ConversationManager as IConversationManager, IConversationRepository } from '../../../core/interfaces';
+import { ConversationSocket } from '../../ui/conversation-socket'; // Import the class
 import { ConversationMessage, MessageOptions } from '../../../types';
 
 /**
@@ -6,9 +7,14 @@ import { ConversationMessage, MessageOptions } from '../../../types';
  */
 export class ConversationManager implements IConversationManager {
     private repository: IConversationRepository;
+    private conversationSocket: ConversationSocket; // Add socket property
 
-    constructor(conversationRepository: IConversationRepository) {
+    constructor(
+        conversationRepository: IConversationRepository,
+        conversationSocket: ConversationSocket // Add socket to constructor
+    ) {
         this.repository = conversationRepository;
+        this.conversationSocket = conversationSocket; // Assign socket
     }
 
     /**
@@ -26,7 +32,16 @@ export class ConversationManager implements IConversationManager {
         }
         // Delegate to the repository
         await this.repository.addMessages(threadId, messages);
-        // Potential place to emit events (e.g., via ConversationSocket) in later phases.
+
+        // Notify socket for each added message
+        messages.forEach(message => {
+            try {
+                this.conversationSocket.notifyMessage(message);
+            } catch (error) {
+                // Log error but don't let notification failure stop the flow
+                console.error(`ConversationManager: Failed to notify message ${message.messageId} via socket`, error);
+            }
+        });
     }
 
     /**

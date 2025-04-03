@@ -1,4 +1,5 @@
-import { ObservationManager as ObservationManagerInterface, IObservationRepository, ObservationSocket } from '../../core/interfaces'; // Import the interface defined in core/interfaces
+import { ObservationManager as ObservationManagerInterface, IObservationRepository } from '../../core/interfaces'; // Import the interface defined in core/interfaces
+import { ObservationSocket } from '../ui/observation-socket'; // Import the class implementation
 import { Observation, ObservationFilter } from '../../types'; // Kept ObservationType and Omit removed
 import { generateUUID } from '../../utils/uuid'; // Assuming UUID utility exists as per Phase 0.9
 
@@ -38,7 +39,7 @@ export class ObservationManager implements ObservationManagerInterface { // Impl
 
         try {
             await this.observationRepository.addObservation(observation); // Assuming addObservation exists on IObservationRepository
-            this.observationSocket.notify(observation, { targetThreadId: observation.threadId });
+            this.observationSocket.notifyObservation(observation); // Use the specific method
         } catch (error) {
             console.error("Error recording observation:", error);
             // Decide on error handling strategy - rethrow, log, or generate an ERROR observation?
