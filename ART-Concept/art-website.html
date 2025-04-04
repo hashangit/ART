@@ -1,0 +1,2176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ART Framework - Agent Orchestration Framework</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* === CSS Variables === */
+    :root {
+      /* Primary Colors */
+      --primary: #4F46E5;
+      --primary-light: #EEF2FF;
+      --primary-dark: #3730A3;
+      
+      /* Subsystem Colors */
+      --blue: #3B82F6;
+      --blue-light: #EFF6FF;
+      --green: #10B981;
+      --green-light: #ECFDF5;
+      --purple: #8B5CF6;
+      --purple-light: #F5F3FF;
+      --teal: #14B8A6;
+      --teal-light: #F0FDFA;
+      --orange: #F97316;
+      --orange-light: #FFF7ED;
+      --yellow: #F59E0B;
+      --yellow-light: #FFFBEB;
+      --pink: #EC4899;
+      --pink-light: #FDF2F8;
+      
+      /* Neutrals */
+      --gray-50: #F9FAFB;
+      --gray-100: #F3F4F6;
+      --gray-200: #E5E7EB;
+      --gray-300: #D1D5DB;
+      --gray-400: #9CA3AF;
+      --gray-500: #6B7280;
+      --gray-600: #4B5563;
+      --gray-700: #374151;
+      --gray-800: #1F2937;
+      --gray-900: #111827;
+      
+      /* Shadows */
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      
+      /* Spacing */
+      --space-1: 0.25rem;
+      --space-2: 0.5rem;
+      --space-3: 0.75rem;
+      --space-4: 1rem;
+      --space-5: 1.25rem;
+      --space-6: 1.5rem;
+      --space-8: 2rem;
+      --space-10: 2.5rem;
+      --space-12: 3rem;
+      --space-16: 4rem;
+      --space-20: 5rem;
+      --space-24: 6rem;
+      
+      /* Radius */
+      --radius-sm: 0.125rem;
+      --radius-md: 0.375rem;
+      --radius-lg: 0.5rem;
+      --radius-xl: 0.75rem;
+      --radius-2xl: 1rem;
+      --radius-full: 9999px;
+    }
+    
+    /* === Base Styles === */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 70px;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      line-height: 1.5;
+      color: var(--gray-700);
+      background-color: var(--gray-50);
+    }
+    
+    h1, h2, h3, h4, h5, h6 {
+      color: var(--gray-900);
+      line-height: 1.2;
+      font-weight: 700;
+      margin-bottom: var(--space-4);
+    }
+    
+    h1 {
+      font-size: 3.5rem;
+      letter-spacing: -0.025em;
+    }
+    
+    h2 {
+      font-size: 2.25rem;
+      letter-spacing: -0.015em;
+    }
+    
+    h3 {
+      font-size: 1.5rem;
+    }
+    
+    h4 {
+      font-size: 1.25rem;
+    }
+    
+    p {
+      margin-bottom: var(--space-4);
+    }
+    
+    a {
+      color: var(--primary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    
+    a:hover {
+      color: var(--primary-dark);
+      text-decoration: underline;
+    }
+    
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+    
+    ul, ol {
+      padding-left: var(--space-6);
+      margin-bottom: var(--space-4);
+    }
+    
+    li {
+      margin-bottom: var(--space-2);
+    }
+    
+    /* === Layout === */
+    .container {
+      width: 100%;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 var(--space-6);
+    }
+    
+    .section {
+      padding: var(--space-20) 0;
+      position: relative;
+    }
+    
+    .section-header {
+      text-align: center;
+      margin-bottom: var(--space-12);
+    }
+    
+    .section-title {
+      position: relative;
+      display: inline-block;
+      margin-bottom: var(--space-3);
+      color: var(--primary);
+    }
+    
+    .section-title::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 50px;
+      height: 4px;
+      background-color: var(--primary);
+      border-radius: var(--radius-full);
+    }
+    
+    .section-subtitle {
+      max-width: 800px;
+      margin: var(--space-5) auto 0;
+      color: var(--gray-600);
+      font-size: 1.125rem;
+    }
+    
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      margin: 0 -var(--space-4);
+    }
+    
+    .col {
+      flex: 1 0 0%;
+      padding: 0 var(--space-4);
+    }
+    
+    .col-12 {
+      flex: 0 0 100%;
+      max-width: 100%;
+      padding: 0 var(--space-4);
+    }
+    
+    .col-6 {
+      flex: 0 0 50%;
+      max-width: 50%;
+      padding: 0 var(--space-4);
+    }
+    
+    .col-4 {
+      flex: 0 0 33.333333%;
+      max-width: 33.333333%;
+      padding: 0 var(--space-4);
+    }
+    
+    .col-3 {
+      flex: 0 0 25%;
+      max-width: 25%;
+      padding: 0 var(--space-4);
+    }
+    
+    /* === Components === */
+    /* Navbar */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background-color: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      box-shadow: var(--shadow-md);
+      padding: var(--space-4) 0;
+      transition: all 0.3s ease;
+    }
+    
+    .navbar-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: var(--primary);
+    }
+    
+    .logo-text {
+      margin-left: var(--space-2);
+    }
+    
+    .nav-links {
+      display: flex;
+      list-style: none;
+    }
+    
+    .nav-link {
+      margin-left: var(--space-6);
+      font-weight: 500;
+      color: var(--gray-700);
+      transition: color 0.2s;
+    }
+    
+    .nav-link:hover {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    
+    .nav-link.active {
+      color: var(--primary);
+    }
+    
+    .mobile-menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--gray-700);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    
+    /* Hero Section */
+    .hero {
+      position: relative;
+      padding: var(--space-24) 0;
+      background: linear-gradient(135deg, var(--primary-light) 0%, white 100%);
+      overflow: hidden;
+    }
+    
+    .hero::before, .hero::after {
+      content: '';
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      background-color: rgba(79, 70, 229, 0.1);
+      z-index: 0;
+    }
+    
+    .hero::before {
+      top: -100px;
+      right: -100px;
+    }
+    
+    .hero::after {
+      bottom: -150px;
+      left: -100px;
+    }
+    
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .hero-text {
+      max-width: 600px;
+    }
+    
+    .hero-title {
+      font-size: 3rem;
+      line-height: 1.2;
+      margin-bottom: var(--space-4);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .hero-subtitle {
+      font-size: 1.25rem;
+      color: var(--gray-600);
+      margin-bottom: var(--space-6);
+    }
+    
+    .version-badge {
+      display: inline-block;
+      background-color: var(--primary-light);
+      color: var(--primary);
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-full);
+      margin-bottom: var(--space-4);
+    }
+    
+    .hero-image {
+      flex: 0 0 45%;
+      max-width: 45%;
+      position: relative;
+    }
+    
+    .hero-buttons {
+      display: flex;
+      gap: var(--space-4);
+      margin-top: var(--space-6);
+    }
+    
+    /* Buttons */
+    .btn {
+      display: inline-block;
+      font-weight: 500;
+      padding: var(--space-3) var(--space-6);
+      border-radius: var(--radius-md);
+      text-align: center;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+      outline: none;
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      text-decoration: none;
+    }
+    
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background-color: var(--primary-dark);
+      color: white;
+    }
+    
+    .btn-outline {
+      background-color: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+    
+    .btn-outline:hover {
+      background-color: var(--primary-light);
+      color: var(--primary-dark);
+    }
+    
+    /* Features */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-6);
+      margin-top: var(--space-12);
+    }
+    
+    .feature-card {
+      background-color: white;
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      box-shadow: var(--shadow-md);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .feature-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+    }
+    
+    .feature-browser::before { background-color: var(--blue); }
+    .feature-modular::before { background-color: var(--green); }
+    .feature-observable::before { background-color: var(--purple); }
+    .feature-tools::before { background-color: var(--orange); }
+    .feature-ui::before { background-color: var(--pink); }
+    .feature-patterns::before { background-color: var(--teal); }
+    
+    .feature-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-4);
+      font-size: 1.5rem;
+      color: white;
+    }
+    
+    .feature-browser .feature-icon { background-color: var(--blue); }
+    .feature-modular .feature-icon { background-color: var(--green); }
+    .feature-observable .feature-icon { background-color: var(--purple); }
+    .feature-tools .feature-icon { background-color: var(--orange); }
+    .feature-ui .feature-icon { background-color: var(--pink); }
+    .feature-patterns .feature-icon { background-color: var(--teal); }
+    
+    .feature-title {
+      font-size: 1.25rem;
+      margin-bottom: var(--space-2);
+    }
+    
+    .feature-description {
+      color: var(--gray-600);
+      font-size: 0.95rem;
+    }
+    
+    /* Architecture Section */
+    .architecture-diagram {
+      background-color: white;
+      border-radius: var(--radius-lg);
+      padding: var(--space-8);
+      box-shadow: var(--shadow-md);
+      margin-top: var(--space-10);
+      position: relative;
+    }
+    
+    .diagram-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: auto auto auto auto;
+      gap: var(--space-6);
+    }
+    
+    .diagram-component {
+      background-color: white;
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+      box-shadow: var(--shadow-sm);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s ease;
+    }
+    
+    .diagram-component:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .diagram-component::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+    }
+    
+    .component-agent-core {
+      grid-column: 2;
+      grid-row: 1;
+    }
+    
+    .component-agent-core::before { background-color: var(--blue); }
+    
+    .component-reasoning {
+      grid-column: 1;
+      grid-row: 2;
+    }
+    
+    .component-reasoning::before { background-color: var(--green); }
+    
+    .component-tool {
+      grid-column: 3;
+      grid-row: 2;
+    }
+    
+    .component-tool::before { background-color: var(--purple); }
+    
+    .component-context {
+      grid-column: 1;
+      grid-row: 3;
+    }
+    
+    .component-context::before { background-color: var(--yellow); }
+    
+    .component-observation {
+      grid-column: 3;
+      grid-row: 3;
+    }
+    
+    .component-observation::before { background-color: var(--teal); }
+    
+    .component-ui {
+      grid-column: 2;
+      grid-row: 3;
+    }
+    
+    .component-ui::before { background-color: var(--pink); }
+    
+    .component-storage {
+      grid-column: 2;
+      grid-row: 4;
+    }
+    
+    .component-storage::before { background-color: var(--orange); }
+    
+    .component-title {
+      font-weight: 600;
+      margin-bottom: var(--space-2);
+      font-size: 1.1rem;
+    }
+    
+    .component-description {
+      font-size: 0.9rem;
+      color: var(--gray-600);
+    }
+    
+    /* Connection lines in the diagram would be added with additional styling */
+    
+    /* Technical Details */
+    .tech-details-tabs {
+      display: flex;
+      border-bottom: 2px solid var(--gray-200);
+      margin-bottom: var(--space-8);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .tech-tab {
+      padding: var(--space-3) var(--space-6);
+      font-weight: 500;
+      color: var(--gray-500);
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: -2px;
+      white-space: nowrap;
+    }
+    
+    .tech-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    
+    .tech-tab:hover:not(.active) {
+      color: var(--gray-700);
+    }
+    
+    .tech-content {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    .tech-content.active {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .tech-card {
+      background-color: white;
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      box-shadow: var(--shadow-md);
+      margin-bottom: var(--space-6);
+    }
+    
+    .tech-image {
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: var(--space-6);
+    }
+    
+    /* Comparison Section */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: var(--space-10);
+      background-color: white;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+    }
+    
+    .comparison-table th, .comparison-table td {
+      padding: var(--space-4);
+      text-align: left;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .comparison-table th {
+      background-color: var(--primary);
+      color: white;
+      font-weight: 600;
+    }
+    
+    .comparison-table tr:nth-child(even) {
+      background-color: var(--gray-50);
+    }
+    
+    .comparison-table tr:hover {
+      background-color: var(--primary-light);
+    }
+    
+    .check-icon {
+      color: var(--green);
+    }
+    
+    .minus-icon {
+      color: var(--orange);
+    }
+    
+    .times-icon {
+      color: var(--red);
+    }
+    
+    /* Use Cases */
+    .use-cases-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: var(--space-6);
+      margin-top: var(--space-10);
+    }
+    
+    .use-case-card {
+      background-color: white;
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      box-shadow: var(--shadow-md);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      height: 100%;
+    }
+    
+    .use-case-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .use-case-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      height: 56px;
+      border-radius: var(--radius-full);
+      margin-bottom: var(--space-4);
+      font-size: 1.5rem;
+      color: white;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    }
+    
+    .use-case-title {
+      font-size: 1.25rem;
+      margin-bottom: var(--space-3);
+    }
+    
+    .use-case-description {
+      color: var(--gray-600);
+    }
+    
+    /* Roadmap */
+    .roadmap {
+      position: relative;
+      max-width: 900px;
+      margin: var(--space-10) auto 0;
+    }
+    
+    .roadmap::before {
+      content: '';
+      position: absolute;
+      width: 4px;
+      background-color: var(--gray-200);
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 0;
+    }
+    
+    .roadmap-item {
+      position: relative;
+      padding: var(--space-4) 0;
+      margin-bottom: var(--space-8);
+      z-index: 1;
+    }
+    
+    .roadmap-item::after {
+      content: '';
+      display: table;
+      clear: both;
+    }
+    
+    .roadmap-content {
+      position: relative;
+      width: 45%;
+      padding: var(--space-5);
+      background-color: white;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      transition: transform 0.3s ease;
+    }
+    
+    .roadmap-content:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .left {
+      float: left;
+    }
+    
+    .right {
+      float: right;
+    }
+    
+    .roadmap-date {
+      position: absolute;
+      top: 0;
+      width: 120px;
+      text-align: center;
+      padding: var(--space-1) var(--space-2);
+      background-color: var(--primary-light);
+      color: var(--primary);
+      border-radius: var(--radius-full);
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    
+    .left .roadmap-date {
+      right: -130px;
+    }
+    
+    .right .roadmap-date {
+      left: -130px;
+    }
+    
+    .roadmap-dot {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background-color: white;
+      border: 4px solid var(--primary);
+      border-radius: 50%;
+      top: var(--space-4);
+      z-index: 2;
+    }
+    
+    .left .roadmap-dot {
+      right: -10px;
+    }
+    
+    .right .roadmap-dot {
+      left: -10px;
+    }
+    
+    .roadmap-title {
+      margin-bottom: var(--space-2);
+      font-size: 1.1rem;
+    }
+    
+    .roadmap-features {
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    .roadmap-feature {
+      margin-bottom: var(--space-1);
+      padding-left: var(--space-5);
+      position: relative;
+      font-size: 0.95rem;
+    }
+    
+    .roadmap-feature::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: var(--primary);
+      font-weight: bold;
+    }
+    
+    /* Getting Started */
+    .start-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: var(--space-6);
+      margin-top: var(--space-10);
+    }
+    
+    .step-card {
+      background-color: white;
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      box-shadow: var(--shadow-md);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .step-number {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 1.5rem;
+      border-bottom-left-radius: var(--radius-lg);
+    }
+    
+    .step-title {
+      margin-top: var(--space-2);
+      font-size: 1.15rem;
+    }
+    
+    .code-block {
+      background-color: var(--gray-800);
+      color: var(--gray-100);
+      padding: var(--space-4);
+      border-radius: var(--radius-md);
+      font-family: 'Fira Code', 'Menlo', monospace;
+      font-size: 0.9rem;
+      overflow-x: auto;
+      margin: var(--space-4) 0;
+    }
+    
+    /* Community */
+    .community-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--space-6);
+      margin-top: var(--space-10);
+    }
+    
+    .community-card {
+      background-color: white;
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      box-shadow: var(--shadow-md);
+      text-align: center;
+      transition: transform 0.3s ease;
+    }
+    
+    .community-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .community-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 60px;
+      height: 60px;
+      border-radius: var(--radius-full);
+      margin-bottom: var(--space-4);
+      font-size: 1.75rem;
+      color: white;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    }
+    
+    .community-title {
+      font-size: 1.2rem;
+      margin-bottom: var(--space-2);
+    }
+    
+    .community-description {
+      color: var(--gray-600);
+      margin-bottom: var(--space-4);
+      font-size: 0.95rem;
+    }
+    
+    /* Newsletter */
+    .newsletter {
+      background-color: var(--primary-light);
+      padding: var(--space-12) 0;
+      text-align: center;
+    }
+    
+    .newsletter-title {
+      font-size: 1.75rem;
+      margin-bottom: var(--space-3);
+      color: var(--primary-dark);
+    }
+    
+    .newsletter-description {
+      max-width: 600px;
+      margin: 0 auto var(--space-6);
+      color: var(--gray-600);
+    }
+    
+    .newsletter-form {
+      display: flex;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    
+    .newsletter-input {
+      flex-grow: 1;
+      padding: var(--space-3) var(--space-4);
+      border: 1px solid var(--gray-300);
+      border-top-left-radius: var(--radius-md);
+      border-bottom-left-radius: var(--radius-md);
+      font-family: inherit;
+    }
+    
+    .newsletter-button {
+      background-color: var(--primary);
+      color: white;
+      padding: var(--space-3) var(--space-5);
+      border: none;
+      border-top-right-radius: var(--radius-md);
+      border-bottom-right-radius: var(--radius-md);
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .newsletter-button:hover {
+      background-color: var(--primary-dark);
+    }
+    
+    /* Footer */
+    .footer {
+      background-color: var(--gray-800);
+      color: var(--gray-400);
+      padding: var(--space-12) 0 var(--space-6);
+    }
+    
+    .footer-container {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-8);
+    }
+    
+    .footer-logo {
+      color: white;
+      font-weight: 700;
+      font-size: 1.5rem;
+      margin-bottom: var(--space-4);
+    }
+    
+    .footer-description {
+      margin-bottom: var(--space-6);
+      line-height: 1.6;
+    }
+    
+    .footer-title {
+      color: white;
+      font-weight: 600;
+      margin-bottom: var(--space-4);
+      font-size: 1.1rem;
+    }
+    
+    .footer-links {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .footer-link {
+      margin-bottom: var(--space-2);
+    }
+    
+    .footer-link a {
+      color: var(--gray-400);
+      transition: color 0.2s;
+    }
+    
+    .footer-link a:hover {
+      color: white;
+      text-decoration: none;
+    }
+    
+    .social-links {
+      display: flex;
+      gap: var(--space-3);
+      margin-top: var(--space-4);
+    }
+    
+    .social-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-full);
+      background-color: var(--gray-700);
+      color: white;
+      transition: all 0.2s;
+    }
+    
+    .social-link:hover {
+      background-color: var(--primary);
+      transform: translateY(-2px);
+    }
+    
+    .footer-bottom {
+      text-align: center;
+      padding-top: var(--space-8);
+      margin-top: var(--space-8);
+      border-top: 1px solid var(--gray-700);
+    }
+    
+    /* Responsive Styles */
+    @media (max-width: 1024px) {
+      .hero-content {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .hero-image {
+        max-width: 80%;
+        margin-top: var(--space-10);
+      }
+      
+      .hero-buttons {
+        justify-content: center;
+      }
+      
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .footer-container {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2.5rem;
+      }
+      
+      h2 {
+        font-size: 1.75rem;
+      }
+      
+      .nav-links {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        background-color: white;
+        padding: var(--space-4);
+        box-shadow: var(--shadow-md);
+      }
+      
+      .nav-links.active {
+        display: flex;
+      }
+      
+      .nav-link {
+        margin: var(--space-2) 0;
+      }
+      
+      .mobile-menu-toggle {
+        display: block;
+      }
+      
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .roadmap::before {
+        left: 20px;
+      }
+      
+      .roadmap-content {
+        width: calc(100% - 40px);
+        float: right;
+      }
+      
+      .roadmap-date {
+        left: 20px !important;
+        right: auto !important;
+        top: -30px;
+      }
+      
+      .roadmap-dot {
+        left: 20px !important;
+        right: auto !important;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .hero {
+        padding: var(--space-16) 0;
+      }
+      
+      .hero-title {
+        font-size: 2rem;
+      }
+      
+      .hero-subtitle {
+        font-size: 1.1rem;
+      }
+      
+      .hero-buttons {
+        flex-direction: column;
+      }
+      
+      .section {
+        padding: var(--space-12) 0;
+      }
+      
+      .footer-container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container navbar-container">
+      <a href="#" class="logo">
+        <span class="logo-text">ART Framework</span>
+      </a>
+      <button class="mobile-menu-toggle">
+        <i class="fas fa-bars"></i>
+      </button>
+      <ul class="nav-links">
+        <li><a href="#overview" class="nav-link">Overview</a></li>
+        <li><a href="#architecture" class="nav-link">Architecture</a></li>
+        <li><a href="#technical" class="nav-link">Technical</a></li>
+        <li><a href="#comparison" class="nav-link">Comparison</a></li>
+        <li><a href="#use-cases" class="nav-link">Use Cases</a></li>
+        <li><a href="#roadmap" class="nav-link">Roadmap</a></li>
+        <li><a href="#get-started" class="nav-link">Get Started</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero" id="home">
+    <div class="container hero-content">
+      <div class="hero-text">
+        <span class="version-badge">v0.2.3</span>
+        <h1 class="hero-title">Agent Orchestration Framework</h1>
+        <p class="hero-subtitle">A powerful, modular framework for building LLM-powered intelligent agents with browser-first architecture, designed for flexibility and observability.</p>
+        <div class="hero-buttons">
+          <a href="#get-started" class="btn btn-primary">Get Started</a>
+          <a href="https://github.com/infer-q/art-framework" class="btn btn-outline">View on GitHub</a>
+        </div>
+      </div>
+      <div class="hero-image">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="500" height="300">
+          <!-- Background Elements -->
+          <defs>
+            <!-- Gradients -->
+            <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#EEF2FF" />
+              <stop offset="100%" stop-color="#FFFFFF" />
+            </linearGradient>
+            
+            <linearGradient id="primary-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#4F46E5" />
+              <stop offset="100%" stop-color="#3730A3" />
+            </linearGradient>
+            
+            <linearGradient id="blue-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#3B82F6" />
+              <stop offset="100%" stop-color="#1E40AF" />
+            </linearGradient>
+            
+            <linearGradient id="green-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#10B981" />
+              <stop offset="100%" stop-color="#047857" />
+            </linearGradient>
+            
+            <linearGradient id="purple-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#8B5CF6" />
+              <stop offset="100%" stop-color="#6D28D9" />
+            </linearGradient>
+            
+            <linearGradient id="teal-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#14B8A6" />
+              <stop offset="100%" stop-color="#0F766E" />
+            </linearGradient>
+            
+            <linearGradient id="orange-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#F97316" />
+              <stop offset="100%" stop-color="#C2410C" />
+            </linearGradient>
+            
+            <linearGradient id="yellow-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#F59E0B" />
+              <stop offset="100%" stop-color="#B45309" />
+            </linearGradient>
+            
+            <linearGradient id="pink-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#EC4899" />
+              <stop offset="100%" stop-color="#BE185D" />
+            </linearGradient>
+            
+            <!-- Filters -->
+            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.2" />
+            </filter>
+            
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="5" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+          </defs>
+          
+          <!-- Background -->
+          <rect width="800" height="500" fill="url(#bg-gradient)" />
+          
+          <!-- Decorative Background Elements -->
+          <circle cx="700" cy="100" r="80" fill="#4F46E5" opacity="0.1" />
+          <circle cx="100" cy="400" r="60" fill="#4F46E5" opacity="0.08" />
+          <circle cx="750" cy="350" r="40" fill="#3B82F6" opacity="0.07" />
+          
+          <!-- Browser Frame -->
+          <g transform="translate(100, 50)">
+            <!-- Browser Window -->
+            <rect x="0" y="0" width="600" height="400" rx="10" ry="10" fill="white" filter="url(#shadow)" />
+            
+            <!-- Browser Header -->
+            <rect x="0" y="0" width="600" height="40" rx="10" ry="10" fill="#F3F4F6" />
+            <rect x="0" y="30" width="600" height="10" fill="white" />
+            
+            <!-- Browser Controls -->
+            <circle cx="20" cy="20" r="6" fill="#EF4444" />
+            <circle cx="40" cy="20" r="6" fill="#F59E0B" />
+            <circle cx="60" cy="20" r="6" fill="#10B981" />
+            
+            <!-- URL Bar -->
+            <rect x="90" y="10" width="400" height="20" rx="5" ry="5" fill="white" stroke="#D1D5DB" stroke-width="1" />
+            <text x="100" y="24" font-family="Arial" font-size="11" fill="#6B7280">https://art-framework.dev</text>
+            
+            <!-- ART Logo in Browser -->
+            <g transform="translate(550, 20)">
+              <circle cx="0" cy="0" r="12" fill="url(#primary-gradient)" />
+              <text x="0" y="4" font-family="Arial" font-weight="bold" font-size="12" fill="white" text-anchor="middle">ART</text>
+            </g>
+            
+            <!-- Core Agent Structure -->
+            <g transform="translate(300, 200)">
+              <!-- Central Hub - Agent Core -->
+              <circle cx="0" cy="0" r="70" fill="white" stroke="url(#blue-gradient)" stroke-width="4" filter="url(#shadow)" />
+              <text x="0" y="0" font-family="Arial" font-weight="bold" font-size="14" fill="#3B82F6" text-anchor="middle" dominant-baseline="middle">Agent Core</text>
+              <text x="0" y="20" font-family="Arial" font-size="10" fill="#6B7280" text-anchor="middle" dominant-baseline="middle">Orchestration Layer</text>
+              
+              <!-- Subsystems -->
+              <!-- Reasoning System -->
+              <g transform="translate(-150, -80)">
+                <rect x="-50" y="-25" width="100" height="50" rx="10" ry="10" fill="white" stroke="url(#green-gradient)" stroke-width="3" filter="url(#shadow)" />
+                <text x="0" y="-5" font-family="Arial" font-weight="bold" font-size="11" fill="#10B981" text-anchor="middle" dominant-baseline="middle">Reasoning System</text>
+                <text x="0" y="10" font-family="Arial" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="middle">LLM Interaction</text>
+              </g>
+              
+              <!-- Tool System -->
+              <g transform="translate(150, -80)">
+                <rect x="-50" y="-25" width="100" height="50" rx="10" ry="10" fill="white" stroke="url(#purple-gradient)" stroke-width="3" filter="url(#shadow)" />
+                <text x="0" y="-5" font-family="Arial" font-weight="bold" font-size="11" fill="#8B5CF6" text-anchor="middle" dominant-baseline="middle">Tool System</text>
+                <text x="0" y="10" font-family="Arial" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="middle">Tool Execution</text>
+              </g>
+              
+              <!-- Context System -->
+              <g transform="translate(-150, 80)">
+                <rect x="-50" y="-25" width="100" height="50" rx="10" ry="10" fill="white" stroke="url(#yellow-gradient)" stroke-width="3" filter="url(#shadow)" />
+                <text x="0" y="-5" font-family="Arial" font-weight="bold" font-size="11" fill="#F59E0B" text-anchor="middle" dominant-baseline="middle">Context System</text>
+                <text x="0" y="10" font-family="Arial" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="middle">State & History</text>
+              </g>
+              
+              <!-- Observation System -->
+              <g transform="translate(150, 80)">
+                <rect x="-50" y="-25" width="100" height="50" rx="10" ry="10" fill="white" stroke="url(#teal-gradient)" stroke-width="3" filter="url(#shadow)" />
+                <text x="0" y="-5" font-family="Arial" font-weight="bold" font-size="11" fill="#14B8A6" text-anchor="middle" dominant-baseline="middle">Observation System</text>
+                <text x="0" y="10" font-family="Arial" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="middle">Transparency</text>
+              </g>
+              
+              <!-- UI System -->
+              <g transform="translate(0, 120)">
+                <rect x="-50" y="-25" width="100" height="50" rx="10" ry="10" fill="white" stroke="url(#pink-gradient)" stroke-width="3" filter="url(#shadow)" />
+                <text x="0" y="-5" font-family="Arial" font-weight="bold" font-size="11" fill="#EC4899" text-anchor="middle" dominant-baseline="middle">UI System</text>
+                <text x="0" y="10" font-family="Arial" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="middle">Interface Sockets</text>
+              </g>
+              
+              <!-- Storage System -->
+              <g transform="translate(0, -120)">
+                <rect x="-50" y="-25" width="100" height="50" rx="10" ry="10" fill="white" stroke="url(#orange-gradient)" stroke-width="3" filter="url(#shadow)" />
+                <text x="0" y="-5" font-family="Arial" font-weight="bold" font-size="11" fill="#F97316" text-anchor="middle" dominant-baseline="middle">Storage System</text>
+                <text x="0" y="10" font-family="Arial" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="middle">Persistence Layer</text>
+              </g>
+              
+              <!-- Connecting Lines -->
+              <line x1="0" y1="-70" x2="0" y2="-120" stroke="#D1D5DB" stroke-width="2" stroke-dasharray="5,3" />
+              <line x1="0" y1="70" x2="0" y2="120" stroke="#D1D5DB" stroke-width="2" stroke-dasharray="5,3" />
+              <line x1="-70" y1="0" x2="-150" y2="-80" stroke="#D1D5DB" stroke-width="2" stroke-dasharray="5,3" />
+              <line x1="-70" y1="0" x2="-150" y2="80" stroke="#D1D5DB" stroke-width="2" stroke-dasharray="5,3" />
+              <line x1="70" y1="0" x2="150" y2="-80" stroke="#D1D5DB" stroke-width="2" stroke-dasharray="5,3" />
+              <line x1="70" y1="0" x2="150" y2="80" stroke="#D1D5DB" stroke-width="2" stroke-dasharray="5,3" />
+            </g>
+            
+            <!-- PES Flow -->
+            <g transform="translate(40, 140)">
+              <!-- Flow Steps -->
+              <g transform="translate(0, 0)">
+                <circle cx="0" cy="0" r="15" fill="url(#primary-gradient)" filter="url(#shadow)" />
+                <text x="0" y="4" font-family="Arial" font-weight="bold" font-size="10" fill="white" text-anchor="middle">P</text>
+                <text x="0" y="25" font-family="Arial" font-size="9" fill="#6B7280" text-anchor="middle">Plan</text>
+              </g>
+              
+              <g transform="translate(0, 50)">
+                <circle cx="0" cy="0" r="15" fill="url(#primary-gradient)" filter="url(#shadow)" />
+                <text x="0" y="4" font-family="Arial" font-weight="bold" font-size="10" fill="white" text-anchor="middle">E</text>
+                <text x="0" y="25" font-family="Arial" font-size="9" fill="#6B7280" text-anchor="middle">Execute</text>
+              </g>
+              
+              <g transform="translate(0, 100)">
+                <circle cx="0" cy="0" r="15" fill="url(#primary-gradient)" filter="url(#shadow)" />
+                <text x="0" y="4" font-family="Arial" font-weight="bold" font-size="10" fill="white" text-anchor="middle">S</text>
+                <text x="0" y="25" font-family="Arial" font-size="9" fill="#6B7280" text-anchor="middle">Synthesize</text>
+              </g>
+              
+              <!-- Connecting Lines -->
+              <line x1="0" y1="15" x2="0" y2="35" stroke="#4F46E5" stroke-width="2" />
+              <line x1="0" y1="65" x2="0" y2="85" stroke="#4F46E5" stroke-width="2" />
+            </g>
+            
+            <!-- WebAssembly Symbol -->
+            <g transform="translate(520, 140)">
+              <rect x="-30" y="-30" width="60" height="60" rx="5" ry="5" fill="white" stroke="#D1D5DB" stroke-width="2" filter="url(#shadow)" />
+              <text x="0" y="-8" font-family="Arial" font-weight="bold" font-size="9" fill="#374151" text-anchor="middle">WebAssembly</text>
+              <text x="0" y="8" font-family="Courier" font-weight="bold" font-size="16" fill="#4F46E5" text-anchor="middle">Wasm</text>
+              <text x="0" y="25" font-family="Arial" font-size="8" fill="#6B7280" text-anchor="middle">Browser-First</text>
+            </g>
+          </g>
+          
+          <!-- Framework Name -->
+          <g transform="translate(400, 30)">
+            <text x="0" y="0" font-family="Arial" font-weight="bold" font-size="28" fill="url(#primary-gradient)" text-anchor="middle" filter="url(#glow)">ART Framework</text>
+            <text x="0" y="25" font-family="Arial" font-size="14" fill="#6B7280" text-anchor="middle">Agent Orchestration Framework</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- Overview Section -->
+  <section class="section" id="overview">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">What is ART?</h2>
+        <p class="section-subtitle">ART is a standalone, browser-first framework for building LLM-powered intelligent agents capable of complex reasoning, planning, and tool usage. It provides the building blocks for sophisticated agent systems that can run entirely client-side or with server integration.</p>
+      </div>
+      
+      <div class="features-grid">
+        <div class="feature-card feature-browser">
+          <div class="feature-icon">
+            <i class="fas fa-globe"></i>
+          </div>
+          <h3 class="feature-title">Browser-First Design</h3>
+          <p class="feature-description">Built to run fully in the browser using WebAssembly for local LLM inference, enabling privacy-preserving and offline-capable applications.</p>
+        </div>
+        
+        <div class="feature-card feature-modular">
+          <div class="feature-icon">
+            <i class="fas fa-cubes"></i>
+          </div>
+          <h3 class="feature-title">Modular Architecture</h3>
+          <p class="feature-description">Seven specialized subsystems with clear boundaries, enabling mix-and-match capabilities and easy extension with new functionality.</p>
+        </div>
+        
+        <div class="feature-card feature-observable">
+          <div class="feature-icon">
+            <i class="fas fa-eye"></i>
+          </div>
+          <h3 class="feature-title">Rich Observability</h3>
+          <p class="feature-description">Detailed typed observation system provides transparent insights into agent operations for debugging, monitoring, and visualization.</p>
+        </div>
+        
+        <div class="feature-card feature-tools">
+          <div class="feature-icon">
+            <i class="fas fa-tools"></i>
+          </div>
+          <h3 class="feature-title">Robust Tool Integration</h3>
+          <p class="feature-description">Schema-driven tool system with registry, validation, and secure execution, planned MCP protocol support for thousands of integrations.</p>
+        </div>
+        
+        <div class="feature-card feature-ui">
+          <div class="feature-icon">
+            <i class="fas fa-desktop"></i>
+          </div>
+          <h3 class="feature-title">Flexible UI Integration</h3>
+          <p class="feature-description">Socket-based publish/subscribe pattern for reactive UI updates with fine-grained filtering and type safety.</p>
+        </div>
+        
+        <div class="feature-card feature-patterns">
+          <div class="feature-icon">
+            <i class="fas fa-sitemap"></i>
+          </div>
+          <h3 class="feature-title">Multiple Reasoning Patterns</h3>
+          <p class="feature-description">Support for various agent reasoning patterns (PES, ReAct, CoT) that can be hot-swapped at runtime, plus multi-agent delegation.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture Section -->
+  <section class="section" id="architecture" style="background-color: var(--gray-100);">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Architecture Overview</h2>
+        <p class="section-subtitle">ART is organized into seven subsystems, each with clearly defined boundaries and responsibilities, promoting modularity and testability.</p>
+      </div>
+      
+      <div class="architecture-diagram">
+        <div class="diagram-grid">
+          <div class="diagram-component component-agent-core">
+            <h4 class="component-title">Agent Core</h4>
+            <p class="component-description">Orchestrates reasoning patterns</p>
+          </div>
+          
+          <div class="diagram-component component-reasoning">
+            <h4 class="component-title">Reasoning System</h4>
+            <p class="component-description">LLM interaction layer</p>
+          </div>
+          
+          <div class="diagram-component component-tool">
+            <h4 class="component-title">Tool System</h4>
+            <p class="component-description">Tool definition & execution</p>
+          </div>
+          
+          <div class="diagram-component component-context">
+            <h4 class="component-title">Context System</h4>
+            <p class="component-description">State & conversation history</p>
+          </div>
+          
+          <div class="diagram-component component-observation">
+            <h4 class="component-title">Observation System</h4>
+            <p class="component-description">Transparency & tracking</p>
+          </div>
+          
+          <div class="diagram-component component-ui">
+            <h4 class="component-title">UI System</h4>
+            <p class="component-description">Typed interface sockets</p>
+          </div>
+          
+          <div class="diagram-component component-storage">
+            <h4 class="component-title">Storage System</h4>
+            <p class="component-description">Unified persistence layer</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="row" style="margin-top: var(--space-16);">
+        <div class="col-6">
+          <h3>Plan-Execute-Synthesize Pattern</h3>
+          <p>The default execution flow in ART follows the Plan-Execute-Synthesize (PES) pattern, which separates reasoning into three distinct phases:</p>
+          <ul>
+            <li><strong>Plan:</strong> The agent analyzes the input and creates a structured plan with tool calls.</li>
+            <li><strong>Execute:</strong> The planned tool calls are executed in sequence.</li>
+            <li><strong>Synthesize:</strong> The agent creates a final response based on the tool execution results.</li>
+          </ul>
+          <p>This pattern provides robust error handling, observability, and separation of concerns.</p>
+        </div>
+        
+        <div class="col-6">
+          <h3>Alternative Patterns</h3>
+          <p>ART also supports other reasoning patterns that can be selected or even hot-swapped at runtime:</p>
+          <ul>
+            <li><strong>ReAct Pattern:</strong> Interleaves reasoning and acting in iterative cycles for dynamic adaptation.</li>
+            <li><strong>Chain of Thought (CoT):</strong> Focuses on generating explicit step-by-step reasoning.</li>
+            <li><strong>Custom Patterns:</strong> Developers can create specialized patterns for specific use cases.</li>
+          </ul>
+          <p>The flexible Agent Core makes it easy to switch between patterns based on your needs.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Technical Details Section -->
+  <section class="section" id="technical">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Technical Capabilities</h2>
+        <p class="section-subtitle">Deep dive into the technical features that make ART a powerful framework for building intelligent agents.</p>
+      </div>
+      
+      <div class="tech-details-tabs">
+        <div class="tech-tab active" data-tab="tools">Tool Integration</div>
+        <div class="tech-tab" data-tab="reasoning">Reasoning System</div>
+        <div class="tech-tab" data-tab="ui">UI System</div>
+        <div class="tech-tab" data-tab="storage">Storage System</div>
+        <div class="tech-tab" data-tab="multi-agent">Multi-Agent</div>
+        <div class="tech-tab" data-tab="wasm">WebAssembly</div>
+      </div>
+      
+      <div class="tech-content active" id="tools">
+        <div class="tech-card">
+          <h3>Schema-Registry-Executor Pattern</h3>
+          <p>ART implements a robust tool integration system based on three key components:</p>
+          <ul>
+            <li><strong>Tool Schema:</strong> Defines the tool interface using JSON Schema for LLM understanding and runtime validation.</li>
+            <li><strong>Tool Registry:</strong> Manages registration and discovery of available Tool Executors.</li>
+            <li><strong>Tool Executor:</strong> Implements the actual tool logic with input validation and error handling.</li>
+          </ul>
+          <p>This approach provides clear contracts, strong validation, and secure execution. Each tool call is tracked via the Observation System, providing full transparency into tool operations.</p>
+          
+          <h4 style="margin-top: var(--space-6);">MCP Integration (Planned)</h4>
+          <p>Future versions will integrate with Anthropic's Model Context Protocol (MCP), enabling thousands of tool integrations through a standardized interface. The WebAssembly-based MCP servers will allow these integrations to run client-side for privacy and performance.</p>
+        </div>
+      </div>
+      
+      <div class="tech-content" id="reasoning">
+        <div class="tech-card">
+          <h3>LLM Interaction Layer</h3>
+          <p>The Reasoning System manages interactions with Large Language Models through several components:</p>
+          <ul>
+            <li><strong>Reasoning Engine:</strong> Abstract interface for LLM interaction with unified call API.</li>
+            <li><strong>Prompt Manager:</strong> Constructs context-aware prompts for different reasoning phases.</li>
+            <li><strong>Output Parser:</strong> Extracts structured data from raw LLM responses.</li>
+            <li><strong>Provider Adapters:</strong> Concrete implementations for specific LLM APIs or local models.</li>
+          </ul>
+          <p>Plans for future versions include:</p>
+          <ul>
+            <li><strong>LiteLLM-inspired Unified API:</strong> Single interface for many LLM providers.</li>
+            <li><strong>Hybrid Inference:</strong> Support for Ollama minions architecture.</li>
+            <li><strong>Speculative Decoding:</strong> Performance optimization using smaller models to draft content.</li>
+            <li><strong>WebAssembly Inference:</strong> Local model execution for privacy and offline use.</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="tech-content" id="ui">
+        <div class="tech-card">
+          <h3>Typed Interface Sockets</h3>
+          <p>The UI System provides standardized, typed sockets using a publish/subscribe pattern that decouples the framework's internal events from the application's UI implementation:</p>
+          <ul>
+            <li><strong>Typed Socket Interface:</strong> Generic design that supports filtering and type safety.</li>
+            <li><strong>ObservationSocket:</strong> Emits Observation objects filterable by ObservationType.</li>
+            <li><strong>ConversationSocket:</strong> Emits ConversationMessage objects filterable by MessageRole.</li>
+            <li><strong>StateSocket:</strong> Optional socket for agent state changes.</li>
+          </ul>
+          <p>This approach enables reactive UI development by allowing components to subscribe only to the events they care about, with strong typing for robust integration.</p>
+          
+          <div class="code-block">
+// Example React hook using the socket system
+function useArtObservations(threadId, typeFilter) {
+  const [observations, setObservations] = useState([]);
+  const artInstance = useArt();
+
+  useEffect(() => {
+    const socket = artInstance.uiSystem.getObservationSocket();
+    const unsubscribe = socket.subscribe((newObs) => {
+      setObservations(prev => [...prev, newObs]);
+    }, typeFilter); // Subscribe only to specific type
+
+    return unsubscribe;
+  }, [artInstance, threadId, typeFilter]);
+
+  return observations;
+}
+          </div>
+        </div>
+      </div>
+      
+      <div class="tech-content" id="storage">
+        <div class="tech-card">
+          <h3>Unified Persistence Layer</h3>
+          <p>The Storage System provides a consistent API for persisting and retrieving all framework data, including conversation history, observations, agent state, and vector embeddings:</p>
+          <ul>
+            <li><strong>Storage Adapter Interface:</strong> Common API regardless of backend.</li>
+            <li><strong>Specialized Repositories:</strong> Type-specific data access.</li>
+            <li><strong>Browser-Native Storage:</strong> IndexedDB adapter for client-side persistence.</li>
+            <li><strong>Vector Storage:</strong> Support for embeddings and semantic search.</li>
+          </ul>
+          <p>The modular design allows for different storage backends while maintaining a consistent API. Future versions will add WebAssembly-based vector stores and graph databases for powerful client-side RAG capabilities.</p>
+        </div>
+      </div>
+      
+      <div class="tech-content" id="multi-agent">
+        <div class="tech-card">
+          <h3>Multi-Agent Architecture</h3>
+          <p>ART's approach to multi-agent functionality has two complementary aspects:</p>
+          <ul>
+            <li><strong>Runtime Pattern Swapping:</strong> The Agent Core can dynamically switch between reasoning patterns (PES, ReAct, CoT) at runtime, allowing flexible adaptation to different tasks.</li>
+            <li><strong>Specialized Agent Delegation:</strong> The primary Agent Core can delegate tasks to specialized agents with domain-specific knowledge and capabilities.</li>
+          </ul>
+          <p>Future development will expand these capabilities with:</p>
+          <ul>
+            <li><strong>Agent Collaboration Protocols:</strong> Standardized communication between agents.</li>
+            <li><strong>Cross-Agent Memory:</strong> Shared state and knowledge between agents.</li>
+            <li><strong>Role-Based Orchestration:</strong> Coordinating multiple agents with different roles.</li>
+            <li><strong>Agent Marketplace:</strong> Ecosystem of specialized agents for different domains.</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="tech-content" id="wasm">
+        <div class="tech-card">
+          <h3>WebAssembly Integration</h3>
+          <p>ART is designed with WebAssembly as a first-class citizen, enabling powerful browser-based capabilities:</p>
+          <ul>
+            <li><strong>Client-Side Execution:</strong> Run agents entirely in the browser without server dependencies.</li>
+            <li><strong>Local LLM Inference:</strong> Execute smaller models directly in the browser.</li>
+            <li><strong>WebAssembly-Based Tools:</strong> Integrate complex tools that run locally.</li>
+            <li><strong>Client-Side RAG:</strong> Implement retrieval-augmented generation without server roundtrips.</li>
+          </ul>
+          <p>Future development focuses on expanding WebAssembly capabilities:</p>
+          <ul>
+            <li><strong>WebAssembly MCP Servers:</strong> Run Model Context Protocol servers locally.</li>
+            <li><strong>Browser-Based Vector Stores:</strong> Efficient vector databases in IndexedDB.</li>
+            <li><strong>Local Embedding Generation:</strong> Generate embeddings in the browser.</li>
+            <li><strong>WebAssembly GraphDB:</strong> Graph databases for complex knowledge representation.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Comparison Section -->
+  <section class="section" id="comparison" style="background-color: var(--gray-100);">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Framework Comparison</h2>
+        <p class="section-subtitle">See how ART compares to other popular agent orchestration frameworks in the ecosystem.</p>
+      </div>
+      
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>ART Framework</th>
+            <th>LangGraph</th>
+            <th>LlamaIndex</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Primary Focus</td>
+            <td>Browser-first agent orchestration with modular components</td>
+            <td>Graph-based orchestration with state management</td>
+            <td>RAG-focused data connectivity and retrieval</td>
+          </tr>
+          <tr>
+            <td>Execution Environment</td>
+            <td><i class="fas fa-check check-icon"></i> Browser-first with WebAssembly</td>
+            <td><i class="fas fa-minus minus-icon"></i> Server-side primarily</td>
+            <td><i class="fas fa-minus minus-icon"></i> Server-side primarily</td>
+          </tr>
+          <tr>
+            <td>Core Pattern</td>
+            <td>Plan-Execute-Synthesize with hot-swappable alternatives</td>
+            <td>Graph-based state transitions</td>
+            <td>Context augmentation with indexing</td>
+          </tr>
+          <tr>
+            <td>Tool Integration</td>
+            <td>Schema-Registry-Executor pattern; planned MCP integration</td>
+            <td>Function-based tools with Pydantic validation</td>
+            <td>Data connector-focused with specialized tools</td>
+          </tr>
+          <tr>
+            <td>RAG Support</td>
+            <td><i class="fas fa-minus minus-icon"></i> Basic with plans for WebAssembly-based improvements</td>
+            <td><i class="fas fa-minus minus-icon"></i> Via LangChain</td>
+            <td><i class="fas fa-check check-icon"></i> First-class with many connectors</td>
+          </tr>
+          <tr>
+            <td>UI Integration</td>
+            <td><i class="fas fa-check check-icon"></i> Rich typed socket system</td>
+            <td><i class="fas fa-minus minus-icon"></i> Basic via LangGraph Studio</td>
+            <td><i class="fas fa-minus minus-icon"></i> Various integrations</td>
+          </tr>
+          <tr>
+            <td>Multi-Agent Support</td>
+            <td>Hot-swappable patterns and planned agent delegation</td>
+            <td><i class="fas fa-check check-icon"></i> Strong graph-based orchestration</td>
+            <td>Via AgentWorkflow</td>
+          </tr>
+          <tr>
+            <td>State Management</td>
+            <td>Centralized via StateManager</td>
+            <td><i class="fas fa-check check-icon"></i> Robust checkpointing</td>
+            <td>Multiple memory options</td>
+          </tr>
+          <tr>
+            <td>Language Support</td>
+            <td>JavaScript/TypeScript</td>
+            <td>Python primary, JavaScript secondary</td>
+            <td>Python primary, limited TypeScript</td>
+          </tr>
+          <tr>
+            <td>Maturity</td>
+            <td><i class="fas fa-minus minus-icon"></i> Early stage (v0.2.3)</td>
+            <td>Growing with enterprise users</td>
+            <td><i class="fas fa-check check-icon"></i> Mature ecosystem</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Use Cases Section -->
+  <section class="section" id="use-cases">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Ideal Use Cases</h2>
+        <p class="section-subtitle">ART excels in a variety of scenarios where browser-first operation, UI integration, and modularity are important.</p>
+      </div>
+      
+      <div class="use-cases-grid">
+        <div class="use-case-card">
+          <div class="use-case-icon">
+            <i class="fas fa-shield-alt"></i>
+          </div>
+          <h3 class="use-case-title">Privacy-Sensitive Applications</h3>
+          <p class="use-case-description">Build agents that process sensitive data entirely client-side using WebAssembly, without sending data to external servers. Ideal for healthcare, legal, and financial assistants where data privacy is paramount.</p>
+        </div>
+        
+        <div class="use-case-card">
+          <div class="use-case-icon">
+            <i class="fas fa-globe"></i>
+          </div>
+          <h3 class="use-case-title">Browser Extensions & Web Apps</h3>
+          <p class="use-case-description">Create browser extensions and web applications with embedded AI capabilities that run locally. Perfect for content analysis, research assistants, and productivity tools that enhance browsing experiences.</p>
+        </div>
+        
+        <div class="use-case-card">
+          <div class="use-use-icon">
+            <i class="fas fa-laptop-code"></i>
+          </div>
+          <h3 class="use-case-title">Developer Tools</h3>
+          <p class="use-case-description">Build coding assistants, documentation generators, and development environments with integrated AI capabilities. Leverage the typed socket system for real-time UI updates as agents analyze and generate code.</p>
+        </div>
+        
+        <div class="use-case-card">
+          <div class="use-case-icon">
+            <i class="fas fa-wifi"></i>
+          </div>
+          <h3 class="use-case-title">Offline-Capable Assistants</h3>
+          <p class="use-case-description">Develop assistants that can function without internet connectivity using local model inference and storage. Ideal for field work, remote areas, or situations with unreliable connectivity.</p>
+        </div>
+        
+        <div class="use-case-card">
+          <div class="use-case-icon">
+            <i class="fas fa-robot"></i>
+          </div>
+          <h3 class="use-case-title">Multi-Agent Systems</h3>
+          <p class="use-case-description">Create sophisticated applications with multiple specialized agents that collaborate to solve complex problems. The runtime pattern-swapping and delegation capabilities make ART ideal for adaptive, multi-step workflows.</p>
+        </div>
+        
+        <div class="use-case-card">
+          <div class="use-case-icon">
+            <i class="fas fa-cogs"></i>
+          </div>
+          <h3 class="use-case-title">Tool-Rich Applications</h3>
+          <p class="use-case-description">Build agents that integrate with numerous tools and APIs using the robust Schema-Registry-Executor pattern. Planned MCP integration will enable thousands of tool connections with minimal effort.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Roadmap Section -->
+  <section class="section" id="roadmap" style="background-color: var(--gray-100);">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Product Roadmap</h2>
+        <p class="section-subtitle">Our development plan for evolving ART into a comprehensive agent orchestration framework.</p>
+      </div>
+      
+      <div class="roadmap">
+        <div class="roadmap-item">
+          <div class="roadmap-content left current">
+            <span class="roadmap-date">Q2 2025</span>
+            <div class="roadmap-dot"></div>
+            <h3 class="roadmap-title">v1.0 Release</h3>
+            <ul class="roadmap-features">
+              <li class="roadmap-feature">Complete PES, ReAct, and CoT reasoning patterns</li>
+              <li class="roadmap-feature">Stable Tool Schema, Registry, and Executor interfaces</li>
+              <li class="roadmap-feature">Typed UI System with socket-based publish/subscribe</li>
+              <li class="roadmap-feature">Robust Storage System with IndexedDB adapter</li>
+              <li class="roadmap-feature">Basic Embedding Repository for simple RAG</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="roadmap-item">
+          <div class="roadmap-content right next">
+            <span class="roadmap-date">Q3 2025</span>
+            <div class="roadmap-dot"></div>
+            <h3 class="roadmap-title">v1.1 Inference Update</h3>
+            <ul class="roadmap-features">
+              <li class="roadmap-feature">LiteLLM-inspired unified provider adapter system</li>
+              <li class="roadmap-feature">Initial WebAssembly inference support</li>
+              <li class="roadmap-feature">Support for Ollama minions hybrid inference</li>
+              <li class="roadmap-feature">Speculative decoding implementation</li>
+              <li class="roadmap-feature">Initial MCP protocol integration</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="roadmap-item">
+          <div class="roadmap-content left future">
+            <span class="roadmap-date">Q4 2025</span>
+            <div class="roadmap-dot"></div>
+            <h3 class="roadmap-title">v1.2 WebAssembly RAG</h3>
+            <ul class="roadmap-features">
+              <li class="roadmap-feature">WebAssembly-based vector store implementations</li>
+              <li class="roadmap-feature">Client-side embedding generation</li>
+              <li class="roadmap-feature">Pre-built RAG systems as drop-in integrations</li>
+              <li class="roadmap-feature">Enhanced Context Providers for dynamic retrieval</li>
+              <li class="roadmap-feature">Multiple retrieval strategies</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="roadmap-item">
+          <div class="roadmap-content right vision">
+            <span class="roadmap-date">Q1 2026</span>
+            <div class="roadmap-dot"></div>
+            <h3 class="roadmap-title">v1.3 Multi-Agent Orchestra</h3>
+            <ul class="roadmap-features">
+              <li class="roadmap-feature">Specialized agent delegation system</li>
+              <li class="roadmap-feature">Agent collaboration protocols</li>
+              <li class="roadmap-feature">Cross-agent memory and state sharing</li>
+              <li class="roadmap-feature">Enhanced Agent Core with role-based orchestration</li>
+              <li class="roadmap-feature">Agent marketplace for specialized capabilities</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Getting Started Section -->
+  <section class="section" id="get-started">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Getting Started</h2>
+        <p class="section-subtitle">Follow these simple steps to begin building with the ART Framework.</p>
+      </div>
+      
+      <div class="start-steps">
+        <div class="step-card">
+          <div class="step-number">1</div>
+          <h3 class="step-title">Installation</h3>
+          <p>Install the ART Framework using npm or yarn:</p>
+          <div class="code-block">npm install art-framework</div>
+          <p>Or using yarn:</p>
+          <div class="code-block">yarn add art-framework</div>
+        </div>
+        
+        <div class="step-card">
+          <div class="step-number">2</div>
+          <h3 class="step-title">Initialize the Framework</h3>
+          <p>Create and configure your ART instance:</p>
+          <div class="code-block">
+import { createArtInstance, PESAgent } from 'art-framework';
+
+const art = await createArtInstance({
+  agentCore: PESAgent,
+  storageAdapter: new IndexedDBStorageAdapter({ 
+    dbName: 'my-agent-db' 
+  }),
+  // Additional configuration options
+});
+          </div>
+        </div>
+        
+        <div class="step-card">
+          <div class="step-number">3</div>
+          <h3 class="step-title">Process User Input</h3>
+          <p>Handle user queries through the ART instance:</p>
+          <div class="code-block">
+const response = await art.process({
+  query: "Compare the weather in London and Paris today.",
+  threadId: "user-session-123",
+  // Other options
+});
+
+console.log(response);
+          </div>
+        </div>
+        
+        <div class="step-card">
+          <div class="step-number">4</div>
+          <h3 class="step-title">Connect to UI</h3>
+          <p>Subscribe to events for real-time UI updates:</p>
+          <div class="code-block">
+// In your UI component:
+const conversationSocket = art.uiSystem.getConversationSocket();
+const unsubscribe = conversationSocket.subscribe((message) => {
+  if (message.role === 'AI') {
+    // Update UI with AI response
+    renderAIMessage(message.content);
+  }
+});
+
+// Later, when component unmounts:
+unsubscribe();
+          </div>
+        </div>
+      </div>
+      
+      <div style="text-align: center; margin-top: var(--space-12);">
+        <a href="#" class="btn btn-primary">Full Documentation</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Community Section -->
+  <section class="section" id="community" style="background-color: var(--primary-light);">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Community & Resources</h2>
+        <p class="section-subtitle">Join the ART Framework community and access resources to enhance your development experience.</p>
+      </div>
+      
+      <div class="community-grid">
+        <div class="community-card">
+          <div class="community-icon">
+            <i class="fab fa-github"></i>
+          </div>
+          <h3 class="community-title">GitHub Repository</h3>
+          <p class="community-description">Access the source code, submit issues, and contribute to the project.</p>
+          <a href="#" class="btn btn-outline">View on GitHub</a>
+        </div>
+        
+        <div class="community-card">
+          <div class="community-icon">
+            <i class="fas fa-book"></i>
+          </div>
+          <h3 class="community-title">Documentation</h3>
+          <p class="community-description">Comprehensive guides, API references, and examples to help you build.</p>
+          <a href="#" class="btn btn-outline">Read Docs</a>
+        </div>
+        
+        <div class="community-card">
+          <div class="community-icon">
+            <i class="fab fa-discord"></i>
+          </div>
+          <h3 class="community-title">Discord Community</h3>
+          <p class="community-description">Join discussions, get help, and connect with other developers.</p>
+          <a href="#" class="btn btn-outline">Join Discord</a>
+        </div>
+        
+        <div class="community-card">
+          <div class="community-icon">
+            <i class="fas fa-code"></i>
+          </div>
+          <h3 class="community-title">Code Examples</h3>
+          <p class="community-description">Browse example projects and applications built with ART.</p>
+          <a href="#" class="btn btn-outline">See Examples</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Newsletter Section -->
+  <section class="newsletter">
+    <div class="container">
+      <h3 class="newsletter-title">Stay Updated</h3>
+      <p class="newsletter-description">Subscribe to our newsletter to receive updates about new features, releases, and community news.</p>
+      <form class="newsletter-form">
+        <input type="email" class="newsletter-input" placeholder="Your email address" required>
+        <button type="submit" class="newsletter-button">Subscribe</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-container">
+        <div>
+          <div class="footer-logo">ART Framework</div>
+          <p class="footer-description">A browser-first agent orchestration framework for building intelligent LLM-powered applications.</p>
+          <div class="social-links">
+            <a href="#" class="social-link"><i class="fab fa-github"></i></a>
+            <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
+            <a href="#" class="social-link"><i class="fab fa-discord"></i></a>
+            <a href="#" class="social-link"><i class="fab fa-linkedin"></i></a>
+          </div>
+        </div>
+        
+        <div>
+          <h4 class="footer-title">Resources</h4>
+          <ul class="footer-links">
+            <li class="footer-link"><a href="#">Documentation</a></li>
+            <li class="footer-link"><a href="#">API Reference</a></li>
+            <li class="footer-link"><a href="#">Examples</a></li>
+            <li class="footer-link"><a href="#">Tutorials</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 class="footer-title">Community</h4>
+          <ul class="footer-links">
+            <li class="footer-link"><a href="#">GitHub</a></li>
+            <li class="footer-link"><a href="#">Discord</a></li>
+            <li class="footer-link"><a href="#">Twitter</a></li>
+            <li class="footer-link"><a href="#">Contributing</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 class="footer-title">About</h4>
+          <ul class="footer-links">
+            <li class="footer-link"><a href="#">Team</a></li>
+            <li class="footer-link"><a href="#">Roadmap</a></li>
+            <li class="footer-link"><a href="#">License</a></li>
+            <li class="footer-link"><a href="#">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="footer-bottom">
+        <p>&copy; 2025 ART Framework. Released under the MIT License.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Simple JavaScript for the webpage functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      // Mobile menu toggle
+      const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+      const navLinks = document.querySelector('.nav-links');
+      
+      if (mobileMenuToggle && navLinks) {
+        mobileMenuToggle.addEventListener('click', function() {
+          navLinks.classList.toggle('active');
+        });
+      }
+      
+      // Smooth scrolling for navigation links
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+          e.preventDefault();
+          
+          const targetId = this.getAttribute('href');
+          if (targetId === '#') return;
+          
+          const targetElement = document.querySelector(targetId);
+          if (targetElement) {
+            targetElement.scrollIntoView({
+              behavior: 'smooth'
+            });
+            
+            // Update active nav link
+            document.querySelectorAll('.nav-link').forEach(link => {
+              link.classList.remove('active');
+            });
+            this.classList.add('active');
+            
+            // Close mobile menu if open
+            if (navLinks.classList.contains('active')) {
+              navLinks.classList.remove('active');
+            }
+          }
+        });
+      });
+      
+      // Technical tabs
+      const techTabs = document.querySelectorAll('.tech-tab');
+      const techContents = document.querySelectorAll('.tech-content');
+      
+      techTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const target = tab.getAttribute('data-tab');
+          
+          // Update active tab
+          techTabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          
+          // Show corresponding content
+          techContents.forEach(content => {
+            content.classList.remove('active');
+            if (content.id === target) {
+              content.classList.add('active');
+            }
+          });
+        });
+      });
+      
+      // Add active class to nav link based on scroll position
+      const sections = document.querySelectorAll('section');
+      const navLinks = document.querySelectorAll('.nav-link');
+      
+      function onScroll() {
+        const scrollPosition = window.scrollY + 100;
+        
+        sections.forEach(section => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.offsetHeight;
+          
+          if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+            const sectionId = section.getAttribute('id');
+            
+            navLinks.forEach(link => {
+              link.classList.remove('active');
+              if (link.getAttribute('href') === `#${sectionId}`) {
+                link.classList.add('active');
+              }
+            });
+          }
+        });
+      }
+      
+      window.addEventListener('scroll', onScroll);
+    });
+  </script>
+</body>
+</html>

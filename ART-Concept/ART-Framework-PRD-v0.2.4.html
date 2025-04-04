@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRD - ART Framework v0.2.4</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4F46E5; --primary-light: #e0e7ff; --primary-dark: #3730A3;
+            --secondary: #10B981; --secondary-light: #d1fae5;
+            --text-primary: #1f2937; --text-secondary: #4b5563; --text-tertiary: #6b7280;
+            --bg-white: #ffffff; --bg-light: #f9fafb; --bg-code: #1e293b;
+            --border-light: #e5e7eb; --border-medium: #d1d5db;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --radius-md: 0.375rem; --radius-lg: 0.5rem; --radius-xl: 0.75rem;
+            --spacing-1: 0.25rem; --spacing-2: 0.5rem; --spacing-3: 0.75rem; --spacing-4: 1rem;
+            --spacing-5: 1.25rem; --spacing-6: 1.5rem; --spacing-8: 2rem; --spacing-10: 2.5rem; --spacing-12: 3rem;
+            --font-body: 'Inter', sans-serif; --font-code: 'JetBrains Mono', monospace;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: var(--font-body); background-color: var(--bg-light); color: var(--text-primary);
+            line-height: 1.65; padding: var(--spacing-8); font-size: 15px;
+        }
+        .container {
+            max-width: 1100px; margin: 0 auto; background-color: var(--bg-white);
+            border-radius: var(--radius-xl); box-shadow: var(--shadow-md); padding: var(--spacing-8);
+            border-top: 5px solid var(--primary);
+        }
+        header {
+            border-bottom: 1px solid var(--border-light); padding-bottom: var(--spacing-6); margin-bottom: var(--spacing-8);
+        }
+        header h1 {
+            font-size: 2rem; font-weight: 700; color: var(--primary-dark); margin-bottom: var(--spacing-4);
+            line-height: 1.2;
+        }
+        nav { display: flex; flex-wrap: wrap; gap: var(--spacing-4); align-items: center; }
+        nav a {
+            text-decoration: none; color: var(--primary); font-weight: 500; font-size: 0.9rem;
+            padding: var(--spacing-2) var(--spacing-3); border-radius: var(--radius-md);
+            transition: background-color 0.2s ease, color 0.2s ease; border: 1px solid transparent;
+        }
+        nav a:hover { background-color: var(--primary-light); border-color: var(--primary); }
+        nav a.active { background-color: var(--primary); color: var(--bg-white); border-color: var(--primary); }
+
+        main h2 {
+            font-size: 1.5rem; font-weight: 600; color: var(--primary-dark);
+            margin-top: var(--spacing-10); margin-bottom: var(--spacing-6); padding-bottom: var(--spacing-3);
+            border-bottom: 2px solid var(--border-light);
+        }
+        main h3 {
+            font-size: 1.25rem; font-weight: 600; color: var(--text-primary);
+            margin-top: var(--spacing-8); margin-bottom: var(--spacing-4);
+        }
+        main h4 {
+            font-size: 1.1rem; font-weight: 600; color: var(--text-secondary);
+            margin-top: var(--spacing-6); margin-bottom: var(--spacing-3);
+        }
+        p { margin-bottom: var(--spacing-4); color: var(--text-secondary); }
+        ul, ol { margin-left: var(--spacing-5); margin-bottom: var(--spacing-4); padding-left: var(--spacing-4); }
+        li { margin-bottom: var(--spacing-2); }
+        strong { font-weight: 600; color: var(--text-primary); }
+        code:not(pre > code) { /* Inline code */
+            font-family: var(--font-code); font-size: 0.875em; background-color: var(--primary-light);
+            color: var(--primary-dark); padding: 0.15em 0.4em; border-radius: var(--radius-md);
+            border: 1px solid var(--border-medium); white-space: nowrap;
+        }
+        .toc { background-color: var(--bg-light); padding: var(--spacing-6); border-radius: var(--radius-lg); margin-bottom: var(--spacing-8); }
+        .toc h3 { margin-top: 0; margin-bottom: var(--spacing-4); font-size: 1.2rem; color: var(--primary-dark); }
+        .toc ul { list-style: none; margin: 0; padding: 0; }
+        .toc li a { text-decoration: none; color: var(--primary); }
+        .toc li a:hover { text-decoration: underline; }
+
+        .code-block-wrapper { position: relative; margin: var(--spacing-6) 0; }
+        pre {
+            font-family: var(--font-code); background-color: var(--bg-code); color: #e2e8f0;
+            padding: var(--spacing-6); border-radius: var(--radius-lg); overflow-x: auto;
+            font-size: 0.875rem; line-height: 1.6; white-space: pre;
+        }
+        pre code { background-color: transparent; color: inherit; padding: 0; border: none; font-size: inherit; }
+        /* Basic syntax highlighting */
+        pre .token.keyword { color: #c792ea; }
+        pre .token.string { color: #c3e88d; }
+        pre .token.comment { color: #546e7a; font-style: italic; }
+        pre .token.punctuation { color: #89ddff; }
+        pre .token.operator { color: #89ddff; }
+        pre .token.function { color: #82aaff; }
+        pre .token.boolean { color: #ff5370; }
+        pre .token.number { color: #f78c6c; }
+        pre .token.type { color: #ffcb6b; } /* For types like string, boolean */
+        pre .token.interface { color: #ffcb6b; font-style: italic; } /* For interface names */
+        pre .token.parameter { color: #f07178; }
+        pre .token.class-name { color: #ffcb6b; }
+
+        .copy-button {
+            position: absolute; top: var(--spacing-3); right: var(--spacing-3);
+            background-color: rgba(255, 255, 255, 0.1); color: var(--bg-light); border: none;
+            padding: var(--spacing-1) var(--spacing-2); border-radius: var(--radius-md);
+            font-size: 0.75rem; cursor: pointer; transition: background-color 0.2s ease;
+        }
+        .copy-button:hover { background-color: rgba(255, 255, 255, 0.2); }
+        .copy-button:active { background-color: rgba(255, 255, 255, 0.3); }
+        .copy-button.copied { background-color: var(--secondary); color: var(--bg-white); }
+
+        .mermaid-diagram {
+            background-color: var(--bg-light); padding: var(--spacing-6); border-radius: var(--radius-lg);
+            margin: var(--spacing-6) 0; display: flex; justify-content: center; align-items: center;
+            border: 1px solid var(--border-light); min-height: 300px;
+        }
+        .mermaid-diagram svg { max-width: 100%; height: auto; }
+
+        .component-spec { border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: var(--spacing-6); margin-bottom: var(--spacing-6); background-color: var(--bg-light); }
+        .component-spec h4 { margin-top: 0; color: var(--primary); }
+
+        @media (max-width: 768px) {
+            body { padding: var(--spacing-4); }
+            .container { padding: var(--spacing-6); }
+            header h1 { font-size: 1.75rem; }
+            nav { gap: var(--spacing-2); }
+            nav a { padding: var(--spacing-1) var(--spacing-2); }
+            main h2 { font-size: 1.3rem; margin-top: var(--spacing-8); }
+            main h3 { font-size: 1.15rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Product Requirements Document (PRD) - ART Framework v0.2.4</h1>
+            <nav>
+                <a href="#" class="active">PRD Home</a>
+                <a href="ART-Framework-Checklist-v0.2.4.html">Task Checklist</a>
+                <a href="ART-Framework-v0.2.4.html">Framework Overview (v0.2.4)</a>
+                <a href="ART-Execution-Flow-v0.2.4.html">Execution Flow (v0.2.4)</a>
+                <a href="ART-Framework-Feature-Roadmap-v0.2.4.html">Feature Roadmap</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="toc">
+                <h3>Table of Contents</h3>
+                <ul>
+                    <li><a href="#executive-summary">1. Executive Summary & Project Vision</a></li>
+                    <li><a href="#goals-v1">2. Goals for v1.0</a></li>
+                    <li><a href="#non-goals-v1">3. Non-Goals for v1.0</a></li>
+                    <li><a href="#architecture">4. System Architecture (v1.0)</a></li>
+                    <li><a href="#component-specs">5. Core Components Specifications (v1.0)</a>
+                        <ul>
+                            <li><a href="#spec-ac">5.1. Agent Core (AC)</a></li>
+                            <li><a href="#spec-rs">5.2. Reasoning System (RS)</a></li>
+                            <li><a href="#spec-ts">5.3. Tool System (TS)</a></li>
+                            <li><a href="#spec-cs">5.4. Context System (CS)</a></li>
+                            <li><a href="#spec-os">5.5. Observation System (OS)</a></li>
+                            <li><a href="#spec-ui">5.6. UI System (UI)</a></li>
+                            <li><a href="#spec-ss">5.7. Storage System (SS)</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="#execution-flow">6. Core Execution Flow (PES v1.0)</a></li>
+                    <li><a href="#tech-reqs">7. Technical Requirements & Constraints</a></li>
+                    <li><a href="#api-design">8. API Design Principles & DX</a></li>
+                    <li><a href="#observability">9. Observability & Debugging</a></li>
+                    <li><a href="#testing">10. Testing Strategy</a></li>
+                    <li><a href="#release-criteria">11. Release Criteria (v1.0)</a></li>
+                    <li><a href="#future">12. Future Considerations (Post v1.0)</a></li>
+                </ul>
+            </div>
+
+            <section id="executive-summary">
+                <h2>1. Executive Summary & Project Vision</h2>
+                <p><strong>Product:</strong> Agent Reasoning & Tooling (ART) Framework</p>
+                <p><strong>Vision:</strong> To provide developers with a powerful, modular, and browser-first JavaScript/TypeScript framework for building sophisticated LLM-powered intelligent agents capable of complex reasoning, planning, and tool usage, running primarily client-side.</p>
+                <p><strong>Problem:</strong> Existing agent frameworks (LangChain, AutoGen, LangGraph) often require server-side components, limiting privacy, offline capability, and ease of deployment for purely web-based applications.</p>
+                <p><strong>Solution:</strong> ART offers a comprehensive, standalone toolkit designed for the browser environment, leveraging WebAssembly (WASM) where feasible for local processing (LLMs, vector stores) and providing robust components for building production-ready agents.</p>
+                <p><strong>Target Audience:</strong> Web developers (JavaScript/TypeScript) building applications requiring agentic capabilities (chatbots, assistants, automation tools) directly within the browser.</p>
+            </section>
+
+            <section id="goals-v1">
+                <h2>2. Goals for v1.0</h2>
+                <ul>
+                    <li>Deliver a stable, well-tested core framework implementing the 7 key subsystems (Agent Core, Reasoning, Tool, Context, Observation, UI, Storage).</li>
+                    <li>Provide a robust implementation of the Plan-Execute-Synthesize (PES) reasoning pattern as the default Agent Core.</li>
+                    <li>Establish clear, well-defined TypeScript interfaces for all major components and data models.</li>
+                    <li>Implement foundational Storage Adapters (In-Memory, IndexedDB).</li>
+                    <li>Implement foundational Reasoning Provider Adapters (e.g., OpenAI, potentially a placeholder for WASM LLM).</li>
+                    <li>Implement a secure and observable Tool System with schema validation and basic execution capabilities.</li>
+                    <li>Implement a functional Observation System capturing key execution events (Intent, Plan, Thoughts, Tool Execution, Error).</li>
+                    <li>Implement typed UI Sockets (Observation, Conversation) for decoupled UI updates.</li>
+                    <li>Ensure the core framework operates entirely client-side without mandatory server components.</li>
+                    <li>Provide basic examples and documentation for getting started.</li>
+                </ul>
+            </section>
+
+            <section id="non-goals-v1">
+                <h2>3. Non-Goals for v1.0</h2>
+                 <ul>
+                    <li>Implementation of <em>all</em> roadmap features (e.g., Multi-Agent Coordination, GraphAgent, advanced WASM integrations like vector DBs/LLMs are future goals).</li>
+                    <li>Extensive library of pre-built tools (focus on the <em>system</em> first, provide 1-2 examples).</li>
+                    <li>Sophisticated RAG capabilities beyond basic context provision (advanced RAG is roadmap).</li>
+                    <li>Advanced checkpointing and workflow resumption.</li>
+                    <li>UI component libraries (focus on the backend framework and UI <em>sockets</em>).</li>
+                    <li>Server-side synchronization adapters for storage.</li>
+                </ul>
+            </section>
+
+            <section id="architecture">
+                <h2>4. System Architecture (v1.0)</h2>
+                <p>ART comprises 7 interconnected subsystems orchestrated by the Agent Core:</p>
+                <div class="mermaid-diagram">
+                    <pre class="mermaid">
+                  graph TD
+                      AC[Agent Core (PES)] -- Orchestrates --> RS(Reasoning System)
+                      AC -- Orchestrates --> TS(Tool System)
+                      AC -- Uses --> CS(Context System)
+                      AC -- Reports To --> OS(Observation System)
+                      AC -- Returns Result --> App(Application)
+                  
+                      RS -- Uses --> CS
+                      RS -- Reports To --> OS
+                      RS -- Interacts With --> LLM(LLM Provider/WASM)
+                  
+                      TS -- Uses --> CS
+                      TS -- Reports To --> OS
+                      TS -- Executes --> ExtTool(External Tool/WASM Env)
+                  
+                      CS -- Manages --> SS(Storage System)
+                      CS -- Manages --> RAG(Context Providers)
+                  
+                      OS -- Stores In --> SS
+                      OS -- Notifies --> UI(UI System)
+                  
+                      UI -- Subscribes To --> OS
+                      UI -- Subscribes To --> CS
+                      UI -- Updates --> App
+                  
+                      SS -- Persists Data For --> CS
+                      SS -- Persists Data For --> OS
+                  
+                      App -- Initiates --> AC
+                      App -- Consumes --> UI
+                  
+                      subgraph "ART Framework"
+                          AC
+                          RS
+                          TS
+                          CS
+                          OS
+                          UI
+                          SS
+                          RAG
+                      end
+                    </pre>
+                  </div>
+                  
+                
+                 <ul>
+                    <li><strong>Agent Core (AC):</strong> Central orchestrator (PES pattern for v1.0). Manages the flow, calls other systems.</li>
+                    <li><strong>Reasoning System (RS):</strong> Handles LLM interactions (prompting, calls, parsing). Interfaces with LLM providers or local WASM models.</li>
+                    <li><strong>Tool System (TS):</strong> Manages tool definition (schema), registration, validation, and secure execution.</li>
+                    <li><strong>Context System (CS):</strong> Manages conversation history (<code>ConversationManager</code>), thread configuration/state (<code>StateManager</code>), and dynamic context (<code>ContextProvider</code>). Relies on Storage System.</li>
+                    <li><strong>Observation System (OS):</strong> Creates, manages, and broadcasts structured records (Observations) of agent activities. Relies on Storage System and notifies UI System.</li>
+                    <li><strong>UI System (UI):</strong> Provides typed sockets (<code>ObservationSocket</code>, <code>ConversationSocket</code>) for decoupled communication with the application frontend.</li>
+                    <li><strong>Storage System (SS):</strong> Provides a unified persistence layer (via Adapters) for history, state, observations, etc.</li>
+                </ul>
+            </section>
+
+            <section id="component-specs">
+                <h2>5. Core Components Specifications (v1.0)</h2>
+                <p>Detailed interfaces and features for each core system.</p>
+
+                <div id="spec-ac" class="component-spec">
+                    <h4>5.1. Agent Core (AC)</h4>
+                    <p><strong>Purpose:</strong> Orchestrate the agent's execution flow based on a chosen pattern.</p>
+                    <p><strong>v1.0 Pattern:</strong> Plan-Execute-Synthesize (PES).</p>
+                    <p><strong>Key Features:</strong></p>
+                    <ul>
+                        <li>Implement the 6-stage PES flow (Initiation, Planning Context, Planning Call, Tool Execution, Synthesis Call, Finalization).</li>
+                        <li>Coordinate interactions between RS, TS, CS, OS.</li>
+                        <li>Handle top-level error management during orchestration.</li>
+                        <li>Manage data flow (query, history, tool results, final response) between stages.</li>
+                    </ul>
+                    <p><strong>Core Interface:</strong></p>
+                    <div class="code-block-wrapper">
+                        <pre><code class="language-typescript"><span class="token keyword">interface</span> <span class="token interface">AgentProps</span> <span class="token punctuation">{</span>
+  <span class="token parameter">query</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span>
+  <span class="token parameter">threadId</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token comment">// Mandatory identifier</span>
+  <span class="token parameter">sessionId</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span>
+  <span class="token parameter">userId</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span>
+  <span class="token parameter">traceId</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token comment">// For E2E tracing</span>
+  <span class="token parameter">options</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token interface">AgentOptions</span><span class="token punctuation">;</span> <span class="token comment">// Runtime overrides</span>
+  <span class="token comment">// Injected Dependencies (via Factory)</span>
+  <span class="token parameter">stateManager</span><span class="token punctuation">:</span> <span class="token interface">StateManager</span><span class="token punctuation">;</span>
+  <span class="token parameter">conversationManager</span><span class="token punctuation">:</span> <span class="token interface">ConversationManager</span><span class="token punctuation">;</span>
+  <span class="token parameter">toolRegistry</span><span class="token punctuation">:</span> <span class="token interface">ToolRegistry</span><span class="token punctuation">;</span>
+  <span class="token parameter">promptManager</span><span class="token punctuation">:</span> <span class="token interface">PromptManager</span><span class="token punctuation">;</span>
+  <span class="token parameter">reasoningEngine</span><span class="token punctuation">:</span> <span class="token interface">ReasoningEngine</span><span class="token punctuation">;</span>
+  <span class="token parameter">outputParser</span><span class="token punctuation">:</span> <span class="token interface">OutputParser</span><span class="token punctuation">;</span>
+  <span class="token parameter">observationManager</span><span class="token punctuation">:</span> <span class="token interface">ObservationManager</span><span class="token punctuation">;</span>
+  <span class="token parameter">toolSystem</span><span class="token punctuation">:</span> <span class="token interface">ToolSystem</span><span class="token punctuation">;</span>
+  <span class="token comment">// ... other dependencies</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">interface</span> <span class="token interface">AgentFinalResponse</span> <span class="token punctuation">{</span>
+  <span class="token parameter">response</span><span class="token punctuation">:</span> <span class="token interface">ConversationMessage</span><span class="token punctuation">;</span> <span class="token comment">// Final AI message</span>
+  <span class="token parameter">metadata</span><span class="token punctuation">:</span> <span class="token interface">ExecutionMetadata</span><span class="token punctuation">;</span> <span class="token comment">// Status, duration, IDs, etc.</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">interface</span> <span class="token interface">ExecutionMetadata</span> <span class="token punctuation">{</span>
+  <span class="token parameter">threadId</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span>
+  <span class="token parameter">traceId</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span>
+  <span class="token parameter">userId</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span>
+  <span class="token parameter">status</span><span class="token punctuation">:</span> <span class="token string">'success'</span> <span class="token operator">|</span> <span class="token string">'error'</span> <span class="token operator">|</span> <span class="token string">'partial'</span><span class="token punctuation">;</span>
+  <span class="token parameter">totalDurationMs</span><span class="token punctuation">:</span> <span class="token type">number</span><span class="token punctuation">;</span>
+  <span class="token parameter">llmCost</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">number</span><span class="token punctuation">;</span> <span class="token comment">// Optional cost tracking</span>
+  <span class="token parameter">error</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">interface</span> <span class="token interface">IAgentCore</span> <span class="token punctuation">{</span>
+  <span class="token function">process</span><span class="token punctuation">(</span><span class="token parameter">props</span><span class="token punctuation">:</span> <span class="token interface">AgentProps</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token interface">AgentFinalResponse</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+                        <button class="copy-button" aria-label="Copy code">Copy</button>
+                    </div>
+                    <p><strong>Subcomponents:</strong> <code>PESAgent</code> (implements <code>IAgentCore</code>), <code>AgentFactory</code> (constructs instances).</p>
+                </div>
+
+                <div id="spec-rs" class="component-spec">
+                    <h4>5.2. Reasoning System (RS)</h4>
+                     <p><strong>Purpose:</strong> Manage all interactions with Language Models.</p>
+                    <p><strong>Key Features:</strong></p>
+                     <ul>
+                        <li>Construct prompts tailored for different phases (planning, synthesis).</li>
+                        <li>Execute LLM calls via Provider Adapters, handling configuration (<code>threadId</code> specific).</li>
+                        <li>Support streaming intermediate thoughts (<code>onThought</code> callback).</li>
+                        <li>Parse structured output from LLM responses (intent, plan, tool calls, final answer).</li>
+                        <li>Provide adapters for common LLM providers (e.g., OpenAI).</li>
+                    </ul>
+                    <p><strong>Core Interfaces:</strong></p>
+                     <div class="code-block-wrapper">
+                         <pre><code class="language-typescript"><span class="token keyword">interface</span> <span class="token interface">ReasoningEngine</span> <span class="token punctuation">{</span>
+    <span class="token function">call</span><span class="token punctuation">(</span><span class="token parameter">prompt</span><span class="token punctuation">:</span> <span class="token interface">FormattedPrompt</span><span class="token punctuation">,</span> <span class="token parameter">options</span><span class="token punctuation">:</span> <span class="token interface">CallOptions</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token type">string</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">PromptManager</span> <span class="token punctuation">{</span>
+    <span class="token function">createPlanningPrompt</span><span class="token punctuation">(</span><span class="token parameter">...</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token interface">FormattedPrompt</span><span class="token punctuation">;</span>
+    <span class="token function">createSynthesisPrompt</span><span class="token punctuation">(</span><span class="token parameter">...</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token interface">FormattedPrompt</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">OutputParser</span> <span class="token punctuation">{</span>
+    <span class="token function">parsePlanningOutput</span><span class="token punctuation">(</span><span class="token parameter">...</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token punctuation">{</span> <span class="token parameter">intent</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token parameter">plan</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token parameter">toolCalls</span><span class="token punctuation">:</span> <span class="token interface">ParsedToolCall</span><span class="token punctuation">[</span><span class="token punctuation">]</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token function">parseSynthesisOutput</span><span class="token punctuation">(</span><span class="token parameter">...</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">ProviderAdapter</span> <span class="token keyword">extends</span> <span class="token interface">ReasoningEngine</span> <span class="token punctuation">{</span> <span class="token comment">/* Provider-specific logic */</span> <span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">CallOptions</span> <span class="token punctuation">{</span>
+    <span class="token parameter">threadId</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span>
+    <span class="token parameter">traceId</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span>
+    <span class="token function">onThought</span><span class="token punctuation">?</span><span class="token punctuation">(</span><span class="token parameter">thought</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token type">void</span><span class="token punctuation">;</span>
+    <span class="token comment">// + LLM params</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">type</span> <span class="token interface">FormattedPrompt</span> <span class="token operator">=</span> <span class="token type">string</span> <span class="token operator">|</span> <span class="token type">object</span><span class="token punctuation">;</span> <span class="token comment">// Provider-specific format</span>
+<span class="token keyword">interface</span> <span class="token interface">ParsedToolCall</span> <span class="token punctuation">{</span> <span class="token parameter">callId</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token parameter">toolName</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token parameter">arguments</span><span class="token punctuation">:</span> <span class="token type">any</span><span class="token punctuation">;</span> <span class="token punctuation">}</span></code></pre>
+                        <button class="copy-button" aria-label="Copy code">Copy</button>
+                    </div>
+                    <p><strong>Subcomponents:</strong> <code>PromptManager</code>, <code>ReasoningEngine</code>, <code>OutputParser</code>, <code>ProviderAdapter</code>(s) (e.g., <code>OpenAIAdapter</code>).</p>
+                </div>
+
+                <div id="spec-ts" class="component-spec">
+                    <h4>5.3. Tool System (TS)</h4>
+                    <p><strong>Purpose:</strong> Define, discover, validate, and securely execute tools.</p>
+                    <p><strong>Key Features:</strong></p>
+                     <ul>
+                        <li>Define tools using JSON Schema (<code>ToolSchema</code>).</li>
+                        <li>Register and retrieve tool executors (<code>ToolRegistry</code>).</li>
+                        <li>Validate tool calls against schemas and thread permissions (<code>StateManager</code>).</li>
+                        <li>Execute tool logic via <code>IToolExecutor</code> interface.</li>
+                        <li>Capture structured results (<code>ToolResult</code>) including status, output/error, metadata.</li>
+                        <li>Basic security considerations (timeouts).</li>
+                        <li>Report execution via <code>ObservationManager</code>.</li>
+                    </ul>
+                     <p><strong>Core Interfaces:</strong></p>
+                     <div class="code-block-wrapper">
+                         <pre><code class="language-typescript"><span class="token keyword">interface</span> <span class="token interface">ToolSchema</span> <span class="token punctuation">{</span> <span class="token parameter">name</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token parameter">description</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token parameter">inputSchema</span><span class="token punctuation">:</span> <span class="token type">object</span><span class="token punctuation">;</span> <span class="token comment">/* ... */</span> <span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">IToolExecutor</span> <span class="token punctuation">{</span>
+    <span class="token parameter">schema</span><span class="token punctuation">:</span> <span class="token interface">ToolSchema</span><span class="token punctuation">;</span>
+    <span class="token function">execute</span><span class="token punctuation">(</span><span class="token parameter">input</span><span class="token punctuation">:</span> <span class="token type">any</span><span class="token punctuation">,</span> <span class="token parameter">context</span><span class="token punctuation">:</span> <span class="token interface">ExecutionContext</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token interface">ToolResult</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">ExecutionContext</span> <span class="token punctuation">{</span> <span class="token parameter">threadId</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token parameter">traceId</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token comment">/* ... */</span> <span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">ToolResult</span> <span class="token punctuation">{</span>
+    <span class="token parameter">callId</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token parameter">toolName</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token parameter">status</span><span class="token punctuation">:</span> <span class="token string">'success'</span> <span class="token operator">|</span> <span class="token string">'error'</span><span class="token punctuation">;</span>
+    <span class="token parameter">output</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">any</span><span class="token punctuation">;</span> <span class="token parameter">error</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token parameter">metadata</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">object</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">ToolRegistry</span> <span class="token punctuation">{</span>
+    <span class="token function">registerTool</span><span class="token punctuation">(</span><span class="token parameter">...</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token type">void</span><span class="token punctuation">;</span>
+    <span class="token function">getToolExecutor</span><span class="token punctuation">(</span><span class="token parameter">...</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token interface">IToolExecutor</span> <span class="token operator">|</span> <span class="token keyword">undefined</span><span class="token punctuation">;</span>
+    <span class="token function">getAvailableTools</span><span class="token punctuation">(</span><span class="token parameter">...</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token interface">ToolSchema</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">ToolSystem</span> <span class="token punctuation">{</span>
+    <span class="token function">executeTools</span><span class="token punctuation">(</span><span class="token parameter">toolCalls</span><span class="token punctuation">:</span> <span class="token interface">ParsedToolCall</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token parameter">threadId</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">,</span> <span class="token parameter">traceId</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token interface">ToolResult</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span></code></pre>
+                        <button class="copy-button" aria-label="Copy code">Copy</button>
+                    </div>
+                     <p><strong>Subcomponents:</strong> <code>ToolSchema</code>, <code>IToolExecutor</code>, <code>ToolRegistry</code>, <code>ToolSystem</code>.</p>
+                </div>
+
+                 <div id="spec-cs" class="component-spec">
+                    <h4>5.4. Context System (CS)</h4>
+                    <p><strong>Purpose:</strong> Manage conversation history, thread configuration/state, and dynamic context.</p>
+                    <p><strong>Key Features:</strong></p>
+                    <ul>
+                        <li>Manage conversation messages per <code>threadId</code> (<code>ConversationManager</code>).</li>
+                        <li>Manage thread-specific configuration (LLM, tools, prompts) and persistent state (<code>StateManager</code>).</li>
+                        <li>Retrieve context data (history, config) for prompts and execution checks.</li>
+                        <li>Interact with <code>StorageSystem</code> for persistence.</li>
+                        <li>(v1.0) Basic context provision; advanced RAG is future.</li>
+                    </ul>
+                     <p><strong>Core Interfaces:</strong></p>
+                    <div class="code-block-wrapper">
+                        <pre><code class="language-typescript"><span class="token keyword">interface</span> <span class="token interface">StateManager</span> <span class="token punctuation">{</span>
+    <span class="token function">loadThreadContext</span><span class="token punctuation">(</span><span class="token parameter">threadId</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">,</span> <span class="token parameter">userId</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token interface">ThreadContext</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+    <span class="token function">isToolEnabled</span><span class="token punctuation">(</span><span class="token parameter">threadId</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">,</span> <span class="token parameter">toolName</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token type">boolean</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+    <span class="token function">getThreadConfigValue</span><span class="token punctuation"><</span><span class="token class-name">T</span><span class="token punctuation">></span><span class="token punctuation">(</span><span class="token parameter">threadId</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">,</span> <span class="token parameter">key</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token class-name">T</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+    <span class="token function">saveStateIfModified</span><span class="token punctuation">(</span><span class="token parameter">threadId</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token type">void</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">ConversationManager</span> <span class="token punctuation">{</span>
+    <span class="token function">addMessages</span><span class="token punctuation">(</span><span class="token parameter">threadId</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">,</span> <span class="token parameter">messages</span><span class="token punctuation">:</span> <span class="token interface">ConversationMessage</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token type">void</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+    <span class="token function">getMessages</span><span class="token punctuation">(</span><span class="token parameter">threadId</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">,</span> <span class="token parameter">options</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token interface">MessageOptions</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token interface">ConversationMessage</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">ThreadConfig</span> <span class="token punctuation">{</span> <span class="token parameter">reasoning</span><span class="token punctuation">:</span> <span class="token type">object</span><span class="token punctuation">;</span> <span class="token parameter">enabledTools</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token comment">/* ... */</span> <span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">AgentState</span> <span class="token punctuation">{</span> <span class="token comment">/* User preferences, non-config state */</span> <span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">ThreadContext</span> <span class="token punctuation">{</span> <span class="token parameter">config</span><span class="token punctuation">:</span> <span class="token interface">ThreadConfig</span><span class="token punctuation">;</span> <span class="token parameter">state</span><span class="token punctuation">:</span> <span class="token interface">AgentState</span> <span class="token operator">|</span> <span class="token null keyword">null</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">ConversationMessage</span> <span class="token punctuation">{</span> <span class="token comment">/* ... see ART-Framework doc ... */</span> <span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">MessageOptions</span> <span class="token punctuation">{</span> <span class="token parameter">limit</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">number</span><span class="token punctuation">;</span> <span class="token parameter">beforeTimestamp</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">number</span><span class="token punctuation">;</span> <span class="token punctuation">}</span></code></pre>
+                        <button class="copy-button" aria-label="Copy code">Copy</button>
+                    </div>
+                     <p><strong>Subcomponents:</strong> <code>StateManager</code>, <code>ConversationManager</code>, <code>ContextProvider</code> (basic implementation for v1.0).</p>
+                </div>
+
+                 <div id="spec-os" class="component-spec">
+                    <h4>5.5. Observation System (OS)</h4>
+                     <p><strong>Purpose:</strong> Provide transparency into agent operations by recording key events.</p>
+                    <p><strong>Key Features:</strong></p>
+                     <ul>
+                        <li>Define standard <code>Observation</code> structure and types (<code>INTENT</code>, <code>PLAN</code>, <code>THOUGHTS</code>, <code>TOOL_EXECUTION</code>, <code>ERROR</code>).</li>
+                        <li>Generate observations with unique IDs, timestamps, <code>threadId</code>, <code>traceId</code>.</li>
+                        <li>Record observations triggered by other systems (AC, RS, TS).</li>
+                        <li>Persist observations via <code>StorageSystem</code>.</li>
+                        <li>Notify <code>UISystem</code> (<code>ObservationSocket</code>) of new observations.</li>
+                    </ul>
+                     <p><strong>Core Interfaces:</strong></p>
+                    <div class="code-block-wrapper">
+                        <pre><code class="language-typescript"><span class="token keyword">enum</span> <span class="token class-name">ObservationType</span> <span class="token punctuation">{</span> <span class="token constant property">INTENT</span> <span class="token operator">=</span> <span class="token string">"INTENT"</span><span class="token punctuation">,</span> <span class="token constant property">PLAN</span> <span class="token operator">=</span> <span class="token string">"PLAN"</span><span class="token punctuation">,</span> <span class="token comment">/* ... */</span> <span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">Observation</span> <span class="token punctuation">{</span>
+    <span class="token parameter">id</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token parameter">threadId</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token parameter">traceId</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token parameter">timestamp</span><span class="token punctuation">:</span> <span class="token type">number</span><span class="token punctuation">;</span>
+    <span class="token parameter">type</span><span class="token punctuation">:</span> <span class="token interface">ObservationType</span><span class="token punctuation">;</span> <span class="token parameter">title</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token parameter">content</span><span class="token punctuation">:</span> <span class="token type">any</span><span class="token punctuation">;</span> <span class="token parameter">metadata</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">object</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">ObservationManager</span> <span class="token punctuation">{</span>
+    <span class="token function">record</span><span class="token punctuation">(</span><span class="token parameter">observationData</span><span class="token punctuation">:</span> <span class="token class-name">Omit</span><span class="token punctuation"><</span><span class="token interface">Observation</span><span class="token punctuation">,</span> <span class="token string">'id'</span> <span class="token operator">|</span> <span class="token string">'timestamp'</span> <span class="token operator">|</span> <span class="token string">'title'</span><span class="token punctuation">></span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token type">void</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+    <span class="token function">getObservations</span><span class="token punctuation">(</span><span class="token parameter">threadId</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">,</span> <span class="token parameter">filter</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token interface">ObservationFilter</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token interface">Observation</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">ObservationFilter</span> <span class="token punctuation">{</span> <span class="token parameter">types</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token interface">ObservationType</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token comment">/* ... */</span> <span class="token punctuation">}</span></code></pre>
+                        <button class="copy-button" aria-label="Copy code">Copy</button>
+                    </div>
+                     <p><strong>Subcomponents:</strong> <code>ObservationManager</code>, <code>ObservationRepository</code> (uses Storage Adapter).</p>
+                </div>
+
+                 <div id="spec-ui" class="component-spec">
+                    <h4>5.6. UI System (UI)</h4>
+                    <p><strong>Purpose:</strong> Decouple framework events from the application UI via typed sockets.</p>
+                    <p><strong>Key Features:</strong></p>
+                    <ul>
+                        <li>Provide <code>TypedSocket</code> interface for publish/subscribe pattern.</li>
+                        <li>Implement <code>ObservationSocket</code> (filterable by <code>ObservationType</code>, <code>threadId</code>).</li>
+                        <li>Implement <code>ConversationSocket</code> (filterable by <code>MessageRole</code>, <code>threadId</code>).</li>
+                        <li>Allow UI to subscribe to specific data streams for efficient updates.</li>
+                    </ul>
+                     <p><strong>Core Interfaces:</strong></p>
+                    <div class="code-block-wrapper">
+                        <pre><code class="language-typescript"><span class="token keyword">interface</span> <span class="token interface">TypedSocket</span><span class="token punctuation"><</span><span class="token class-name">DataType</span><span class="token punctuation">,</span> <span class="token class-name">FilterType</span> <span class="token operator">=</span> <span class="token keyword">any</span><span class="token punctuation">></span> <span class="token punctuation">{</span>
+    <span class="token function">subscribe</span><span class="token punctuation">(</span>
+        <span class="token parameter">callback</span><span class="token punctuation">:</span> <span class="token punctuation">(</span><span class="token parameter">data</span><span class="token punctuation">:</span> <span class="token class-name">DataType</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token type">void</span><span class="token punctuation">,</span>
+        <span class="token parameter">filter</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token class-name">FilterType</span><span class="token punctuation">,</span>
+        <span class="token parameter">options</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token punctuation">{</span> <span class="token parameter">threadId</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">string</span> <span class="token punctuation">}</span>
+    <span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token type">void</span><span class="token punctuation">;</span> <span class="token comment">// Returns unsubscribe fn</span>
+
+    <span class="token function">notify</span><span class="token punctuation">(</span><span class="token parameter">data</span><span class="token punctuation">:</span> <span class="token class-name">DataType</span><span class="token punctuation">,</span> <span class="token parameter">options</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token punctuation">{</span> <span class="token parameter">targetThreadId</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token parameter">targetSessionId</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">string</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token type">void</span><span class="token punctuation">;</span>
+
+    <span class="token function">getHistory</span><span class="token punctuation">?</span><span class="token punctuation">(</span><span class="token parameter">filter</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token class-name">FilterType</span><span class="token punctuation">,</span> <span class="token parameter">options</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token punctuation">{</span> <span class="token parameter">threadId</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">;</span> <span class="token parameter">limit</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">number</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token class-name">DataType</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">interface</span> <span class="token interface">ObservationSocket</span> <span class="token keyword">extends</span> <span class="token interface">TypedSocket</span><span class="token punctuation"><</span><span class="token interface">Observation</span><span class="token punctuation">,</span> <span class="token interface">ObservationType</span><span class="token punctuation">></span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">ConversationSocket</span> <span class="token keyword">extends</span> <span class="token interface">TypedSocket</span><span class="token punctuation"><</span><span class="token interface">ConversationMessage</span><span class="token punctuation">,</span> <span class="token string">'USER'</span> <span class="token operator">|</span> <span class="token string">'AI'</span><span class="token punctuation">></span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+
+<span class="token keyword">interface</span> <span class="token interface">UISystem</span> <span class="token punctuation">{</span>
+    <span class="token function">getObservationSocket</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token interface">ObservationSocket</span><span class="token punctuation">;</span>
+    <span class="token function">getConversationSocket</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token interface">ConversationSocket</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span></code></pre>
+                        <button class="copy-button" aria-label="Copy code">Copy</button>
+                    </div>
+                     <p><strong>Subcomponents:</strong> <code>TypedSocket</code> (implementation), <code>ObservationSocket</code>, <code>ConversationSocket</code>.</p>
+                </div>
+
+                <div id="spec-ss" class="component-spec">
+                    <h4>5.7. Storage System (SS)</h4>
+                    <p><strong>Purpose:</strong> Provide a unified, adaptable persistence layer.</p>
+                    <p><strong>Key Features:</strong></p>
+                     <ul>
+                        <li>Define <code>StorageAdapter</code> interface for CRUD and query operations.</li>
+                        <li>Implement <code>InMemoryStorageAdapter</code> (for testing/simple use).</li>
+                        <li>Implement <code>IndexedDBStorageAdapter</code> (for browser persistence).</li>
+                        <li>Provide specialized Repositories (<code>ObservationRepository</code>, <code>ConversationRepository</code>, <code>StateRepository</code>) that use the configured adapter.</li>
+                        <li>Ensure data is keyed/queryable by <code>threadId</code>.</li>
+                    </ul>
+                     <p><strong>Core Interfaces:</strong></p>
+                    <div class="code-block-wrapper">
+                        <pre><code class="language-typescript"><span class="token keyword">interface</span> <span class="token interface">StorageAdapter</span> <span class="token punctuation">{</span>
+    <span class="token function">init</span><span class="token punctuation">?</span><span class="token punctuation">(</span><span class="token parameter">config</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">any</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token type">void</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+    <span class="token function">get</span><span class="token punctuation"><</span><span class="token class-name">T</span><span class="token punctuation">></span><span class="token punctuation">(</span><span class="token parameter">collection</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">,</span> <span class="token parameter">id</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token class-name">T</span> <span class="token operator">|</span> <span class="token null keyword">null</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+    <span class="token function">set</span><span class="token punctuation"><</span><span class="token class-name">T</span><span class="token punctuation">></span><span class="token punctuation">(</span><span class="token parameter">collection</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">,</span> <span class="token parameter">id</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">,</span> <span class="token parameter">data</span><span class="token punctuation">:</span> <span class="token class-name">T</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token type">void</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+    <span class="token function">delete</span><span class="token punctuation">(</span><span class="token parameter">collection</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">,</span> <span class="token parameter">id</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token type">void</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+    <span class="token function">query</span><span class="token punctuation"><</span><span class="token class-name">T</span><span class="token punctuation">></span><span class="token punctuation">(</span><span class="token parameter">collection</span><span class="token punctuation">:</span> <span class="token type">string</span><span class="token punctuation">,</span> <span class="token parameter">filter</span><span class="token punctuation">:</span> <span class="token interface">FilterOptions</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token class-name">Promise</span><span class="token punctuation"><</span><span class="token class-name">T</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">></span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">interface</span> <span class="token interface">FilterOptions</span> <span class="token punctuation">{</span> <span class="token parameter">filter</span><span class="token punctuation">:</span> <span class="token type">object</span><span class="token punctuation">;</span> <span class="token parameter">sort</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">object</span><span class="token punctuation">;</span> <span class="token parameter">limit</span><span class="token punctuation">?</span><span class="token punctuation">:</span> <span class="token type">number</span><span class="token punctuation">;</span> <span class="token comment">/* ... */</span> <span class="token punctuation">}</span></code></pre>
+                        <button class="copy-button" aria-label="Copy code">Copy</button>
+                    </div>
+                    <p><strong>Subcomponents:</strong> <code>StorageAdapter</code> (interface), <code>InMemoryStorageAdapter</code>, <code>IndexedDBStorageAdapter</code>, <code>ObservationRepository</code>, <code>ConversationRepository</code>, <code>StateRepository</code>.</p>
+                </div>
+            </section>
+
+            <section id="execution-flow">
+                <h2>6. Core Execution Flow (PES v1.0)</h2>
+                <p>The v1.0 implementation will follow the 6-stage Plan-Execute-Synthesize flow detailed in the <a href="ART-Execution-Flow-v0.2.4.html">ART Execution Flow v0.2.4 document</a>.</p>
+                 <ol>
+                    <li><strong>Initiation & Config:</strong> <code>AgentCore.process</code> receives <code>AgentProps</code>. <code>StateManager</code> loads <code>ThreadConfig</code> and <code>AgentState</code> for <code>threadId</code> from <code>StateRepository</code> (using <code>StorageAdapter</code>). <code>traceId</code> established.</li>
+                    <li><strong>Planning Context:</strong> <code>ConversationManager</code> gets history for <code>threadId</code> (via <code>ConversationRepository</code>). <code>StateManager</code> provides <code>enabledTools</code> list. <code>ToolRegistry</code> provides schemas for enabled tools. <code>StateManager</code> provides <code>systemPrompt</code>.</li>
+                    <li><strong>Planning Call:</strong> <code>PromptManager</code> creates planning prompt. <code>ReasoningEngine</code> calls LLM (using config from <code>StateManager</code>), streams <code>THOUGHTS</code> via <code>onThought</code> -> <code>ObservationManager.record</code>. <code>OutputParser</code> extracts <code>intent</code>, <code>plan</code>, <code>toolCalls</code>. <code>ObservationManager</code> records <code>INTENT</code>, <code>PLAN</code> (or <code>ERROR</code>). Observations persisted via <code>ObservationRepository</code>. <code>ObservationSocket</code> notifies UI.</li>
+                    <li><strong>Tool Execution:</strong> <code>AgentCore</code> passes <code>toolCalls</code> to <code>ToolSystem</code>. <code>ToolSystem</code> iterates: verifies tool enabled (<code>StateManager</code>), gets executor (<code>ToolRegistry</code>), validates args (schema), executes <code>IToolExecutor.execute()</code>, captures <code>ToolResult</code>. <code>ObservationManager</code> records <code>TOOL_EXECUTION</code> (or <code>ERROR</code>). Observation persisted. <code>ObservationSocket</code> notifies UI. <code>ToolSystem</code> returns array of <code>ToolResult</code>.</li>
+                    <li><strong>Synthesis Call:</strong> <code>PromptManager</code> creates synthesis prompt (using query, intent, plan, <code>toolResults</code>, history, system prompt). <code>ReasoningEngine</code> calls LLM, streams <code>THOUGHTS</code> -> <code>ObservationManager.record</code>. <code>OutputParser</code> extracts final response content. <code>ObservationManager</code> records <code>THOUGHTS</code> (or <code>ERROR</code> on parse fail). Observations persisted. <code>ObservationSocket</code> notifies UI.</li>
+                    <li><strong>Finalization:</strong> <code>AgentCore</code> formats <code>UserMessage</code> and <code>AgentMessage</code> with IDs, <code>threadId</code>, metadata. <code>ConversationManager</code> saves messages (via <code>ConversationRepository</code>). <code>StateManager</code> saves modified state (via <code>StateRepository</code>). <code>ConversationSocket</code> notifies UI of both messages. <code>AgentCore.process</code> resolves with <code>AgentFinalResponse</code>.</li>
+                </ol>
+            </section>
+
+            <section id="tech-reqs">
+                <h2>7. Technical Requirements & Constraints</h2>
+                 <ul>
+                    <li><strong>Language:</strong> TypeScript (latest stable version, strict mode).</li>
+                    <li><strong>Environment:</strong> Modern Web Browsers (Chrome, Firefox, Safari, Edge latest versions). Node.js compatibility for testing/tooling.</li>
+                    <li><strong>Modules:</strong> ES Modules (ESM).</li>
+                    <li><strong>Build System:</strong> Standard tool like Vite, esbuild, or Rollup.</li>
+                    <li><strong>Testing:</strong> Jest or Vitest for unit/integration tests. Playwright or Cypress for E2E browser tests.</li>
+                    <li><strong>Dependencies:</strong> Minimize external dependencies. Core logic should be self-contained.</li>
+                    <li><strong>Performance:</strong> Minimize bundle size, optimize for low memory usage, efficient IndexedDB operations, prioritize asynchronous operations.</li>
+                    <li><strong>Security:</strong> Input validation for tool arguments (JSON Schema), basic timeouts for tool execution.</li>
+                    <li><strong>WASM Integration:</strong> Design interfaces to accommodate future WASM implementations.</li>
+                </ul>
+            </section>
+
+            <section id="api-design">
+                <h2>8. API Design Principles & DX</h2>
+                <ul>
+                    <li><strong>Modularity:</strong> Components should be loosely coupled and replaceable.</li>
+                    <li><strong>Clarity:</strong> Interfaces and data models should be explicit and well-typed.</li>
+                    <li><strong>Consistency:</strong> Naming conventions and API patterns should be consistent.</li>
+                    <li><strong>Extensibility:</strong> Design for extension (new patterns, adapters, tools).</li>
+                    <li><strong>Documentation:</strong> Comprehensive TSDoc, conceptual docs, examples.</li>
+                    <li><strong>Error Handling:</strong> Robust error types, clear messages, predictable propagation.</li>
+                </ul>
+            </section>
+
+            <section id="observability">
+                <h2>9. Observability & Debugging</h2>
+                <ul>
+                    <li>Leverage the <code>ObservationSystem</code> for detailed event logging.</li>
+                    <li>Include <code>threadId</code> and <code>traceId</code> in logs and observations.</li>
+                    <li>Provide configurable logging levels.</li>
+                    <li>Ensure error observations contain sufficient context.</li>
+                </ul>
+            </section>
+
+            <section id="testing">
+                <h2>10. Testing Strategy</h2>
+                <ul>
+                    <li><strong>Unit Tests:</strong> Test individual functions/classes in isolation (mocking dependencies). High coverage for core logic.</li>
+                    <li><strong>Integration Tests:</strong> Test interactions between components (e.g., AC orchestrating RS/TS). Test full PES flow with mocks. Test Storage Adapters.</li>
+                    <li><strong>E2E Tests:</strong> Test framework in a simple browser app via UI sockets, verify IndexedDB persistence.</li>
+                    <li><strong>Typing Tests:</strong> Ensure TypeScript definitions are accurate.</li>
+                </ul>
+            </section>
+
+            <section id="release-criteria">
+                <h2>11. Release Criteria (v1.0)</h2>
+                <ul>
+                    <li>All 7 core systems implemented with specified v1.0 features.</li>
+                    <li>PES Agent Core implementation stable and passes integration tests.</li>
+                    <li><code>InMemoryStorageAdapter</code> and <code>IndexedDBStorageAdapter</code> functional.</li>
+                    <li>At least one <code>ProviderAdapter</code> (e.g., OpenAI) functional.</li>
+                    <li><code>ToolSystem</code> correctly validates and executes tools.</li>
+                    <li><code>ObservationSystem</code> correctly records/broadcasts v1.0 event types.</li>
+                    <li><code>UISystem</code> sockets function with type/thread filtering.</li>
+                    <li>Core PES flow passes E2E tests in target browsers.</li>
+                    <li>Basic usage documentation and examples available.</li>
+                    <li>Minimum defined code coverage targets met.</li>
+                </ul>
+            </section>
+
+            <section id="future">
+                <h2>12. Future Considerations (Post v1.0)</h2>
+                <ul>
+                    <li>Implement features from the <a href="ART-Framework-Feature-Roadmap-v0.2.4.html">Feature Roadmap</a> (GraphAgent, WASM LLMs/VectorDBs, RAG, Multi-Agent, etc.).</li>
+                    <li>Expand the library of built-in tools and provider adapters.</li>
+                    <li>Develop UI component libraries.</li>
+                    <li>Implement advanced checkpointing and state synchronization.</li>
+                    <li>Performance profiling and optimization.</li>
+                </ul>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        // Initialize Mermaid diagrams
+        mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+            primaryColor: '#EEF2FF', // Light background for nodes
+            primaryTextColor: '#1F2937', // Dark text
+            primaryBorderColor: '#4F46E5', // Primary border
+            lineColor: '#4B5563', // Darker lines
+            secondaryColor: '#D1FAE5', // Secondary node color
+            tertiaryColor: '#FFF7ED' // Tertiary node color
+        } });
+
+        // Add copy button functionality
+        document.querySelectorAll('.copy-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const pre = button.closest('.code-block-wrapper').querySelector('pre');
+                const code = pre.querySelector('code');
+                const text = code.innerText;
+
+                navigator.clipboard.writeText(text).then(() => {
+                    button.textContent = 'Copied!';
+                    button.classList.add('copied');
+                    setTimeout(() => {
+                        button.textContent = 'Copy';
+                        button.classList.remove('copied');
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                    button.textContent = 'Error';
+                     setTimeout(() => {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
