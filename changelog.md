@@ -84,3 +84,18 @@
     *   **Error Handling:** Improved error reporting to return specific messages from `mathjs` or internal validation (e.g., "Unsupported type", "Undefined symbol").
     *   **Clarity:** Updated the tool's schema description and examples to accurately reflect the allowed functions and complex number support. Removed the optional `outputSchema` due to type complexities with `oneOf`.
     *   **Testing:** Updated unit tests (`src/tools/CalculatorTool.test.ts`) to verify the function allowlist, complex number handling, and improved error messages.
+24. **E2E Testing Setup (Phase 6.1):**
+    *   Installed Playwright (`@playwright/test`) as the E2E testing framework.
+    *   Created `e2e/` directory for test specifications.
+    *   Added `playwright.config.ts` with basic configuration.
+    *   Added `test:e2e` script to root `package.json`.
+    *   Created a dedicated `e2e-test-app/` directory containing a minimal Express web server specifically for E2E testing (to avoid modifying the original `sample-app`).
+        *   Initialized `e2e-test-app` with `package.json`, `tsconfig.json`.
+        *   Installed necessary dependencies (`express`, `art-framework`, `dotenv`, etc.) in `e2e-test-app`.
+        *   Implemented the server logic in `e2e-test-app/src/index.ts` with a `/process` endpoint to run ART.
+    *   Updated `playwright.config.ts` to use `e2e-test-app` as the `webServer`.
+    *   Created initial E2E test suite `e2e/pes-flow.spec.ts` covering:
+        *   PES flow execution via the test app's API endpoint.
+        *   Testing with both `InMemoryStorageAdapter` and `IndexedDBStorageAdapter`.
+        *   Verification of successful responses for simple queries and tool-requiring queries (using live LLM calls).
+    *   Updated `ART-PRD-Checklist-plan.md` to mark tasks 6.1.1, 6.1.2, 6.1.3 as complete.

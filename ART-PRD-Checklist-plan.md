@@ -519,9 +519,9 @@ graph TD
 
 *   *Dependency: All previous phases.*
 *   [ ] **6.1: End-to-End (E2E) Testing**
-    *   [ ] **6.1.1:** Setup E2E test environment (e.g., Playwright).
-    *   [ ] **6.1.2:** E2E test: PES flow w/ InMemoryStorage + mocks.
-    *   [ ] **6.1.3:** E2E test: PES flow w/ IndexedDBStorage in browser.
+    *   [D] **6.1.1:** Setup E2E test environment (e.g., Playwright).
+    *   [D] **6.1.2:** E2E test: PES flow w/ InMemoryStorage + mocks. (Implemented with live LLM via e2e-test-app)
+    *   [D] **6.1.3:** E2E test: PES flow w/ IndexedDBStorage in browser. (Implemented with live LLM via e2e-test-app)
 *   [ ] **6.2: Documentation**
 *   [ ] **6.X: Tooling Improvements**
     *   [D] **6.X.1:** Enhance `CalculatorTool` schema with usage examples to improve LLM guidance.

@@ -25,7 +25,8 @@
     "lint": "eslint . --ext .ts",
     "format": "prettier --write 'src/**/*.ts'",
     "type-check": "tsc --noEmit",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "test:e2e": "playwright test"
   },
   "keywords": [
     "llm",
@@ -38,6 +39,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@playwright/test": "^1.51.1",
     "@types/node": "^20.0.0",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
