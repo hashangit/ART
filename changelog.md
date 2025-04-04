@@ -126,3 +126,9 @@
 5.  **Documented Framework Issue:**
     *   Created `E2E-Persistence-Issue-Analysis.md` detailing the investigation steps, the specific error, and suspected causes within the framework related to `InMemoryStorageAdapter` and thread context reloading.
 6.  **Updated E2E Plan:** Marked persistence test setup tasks as complete in `E2E-Testing-Plan.md`. (Note: Full context verification is blocked by the framework issue).
+7.  **Enhanced `sample-app` for Persistence Testing:**
+    *   Refactored `sample-app/src/index.ts` to support two modes:
+        *   **Single Query Mode:** (Original behavior) Processes a query passed via command-line arguments.
+        *   **Interactive Mode:** (New) If no arguments are provided, starts an interactive CLI session using `readline/promises`. This mode uses a consistent `threadId` throughout the session, allowing manual testing of conversation history persistence with `InMemoryStorageAdapter`.
+    *   Unified ART initialization, default configuration (`InMemoryStorageAdapter`, `GeminiReasoningAdapter`), and detailed observation logging for both modes.
+    *   Updated `sample-app/package.json` `start` script to execute compiled code (`node dist/index.js`) for better performance, while `prestart` ensures the code is built.
