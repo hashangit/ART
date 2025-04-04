@@ -210,9 +210,15 @@ export interface StateManager {
    */
   saveStateIfModified(threadId: string): Promise<void>;
 
+  /**
+   * Sets or updates the configuration for a specific thread.
+   * @param threadId The ID of the thread.
+   * @param config The complete configuration object to set.
+   */
+  setThreadConfig(threadId: string, config: ThreadConfig): Promise<void>; // Add this method
+
   // Potentially add methods to update config/state if needed during runtime,
   // though v0.2.4 focuses on loading existing config.
-  // updateThreadConfig(threadId: string, updates: Partial<ThreadConfig>): Promise<void>;
   // updateAgentState(threadId: string, updates: Partial<AgentState>): Promise<void>;
 }
 
@@ -309,12 +315,16 @@ export interface ObservationSocket extends TypedSocket<Observation, ObservationT
  */
 export interface ConversationSocket extends TypedSocket<ConversationMessage, MessageRole | MessageRole[]> {}
 
+// Import concrete socket classes for use in the UISystem interface return types
+import { ObservationSocket as ObservationSocketImpl } from '../systems/ui/observation-socket';
+import { ConversationSocket as ConversationSocketImpl } from '../systems/ui/conversation-socket';
+
 /**
  * Interface for the system providing access to UI communication sockets.
  */
 export interface UISystem {
-  getObservationSocket(): ObservationSocket;
-  getConversationSocket(): ConversationSocket;
+  getObservationSocket(): ObservationSocketImpl; // Use concrete class type
+  getConversationSocket(): ConversationSocketImpl; // Use concrete class type
   // Potentially add getStateSocket(): StateSocket; in the future
 }
 
@@ -388,4 +398,17 @@ export interface IStateRepository {
   // Potentially combine get/set into a single get/set ThreadContext method
   getThreadContext(threadId: string): Promise<ThreadContext | null>;
   setThreadContext(threadId: string, context: ThreadContext): Promise<void>;
+}
+
+/**
+ * Represents the initialized ART instance returned by the factory function.
+ */
+export interface ArtInstance {
+    process: IAgentCore['process']; // The main agent processing method
+    uiSystem: UISystem; // Access to UI sockets
+    stateManager: StateManager; // Access to State Manager
+    conversationManager: ConversationManager; // Access to Conversation Manager
+    toolRegistry: ToolRegistry; // Access to Tool Registry
+    observationManager: ObservationManager; // Access to Observation Manager
+    // Add other components if direct access is commonly needed
 }

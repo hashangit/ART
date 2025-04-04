@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ART Framework Model Management</title>
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-light: #EEF2FF;
+            --primary-dark: #3730A3;
+            --secondary: #10B981;
+            --secondary-light: #D1FAE5;
+            --text-primary: #1F2937;
+            --text-secondary: #4B5563;
+            --bg-white: #FFFFFF;
+            --bg-light: #F9FAFB;
+            --border-light: #E5E7EB;
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --radius-lg: 0.5rem;
+            
+            /* Provider Colors */
+            --openai: #10A37F;
+            --openai-light: #E6F6F3;
+            --anthropic: #B53FDE;
+            --anthropic-light: #F8EBFA;
+            --gemini: #4285F4;
+            --gemini-light: #ECF3FE;
+            --deepseek: #F97316;
+            --deepseek-light: #FFF1E7;
+            --openrouter: #6366F1;
+            --openrouter-light: #EEF2FF;
+
+            /* Capability Colors */
+            --text: #3B82F6;
+            --vision: #8B5CF6;
+            --streaming: #10B981;
+            --tool-use: #F59E0B;
+            --rag: #EC4899;
+            --code: #6366F1;
+            --reasoning: #EF4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            color: var(--text-primary);
+            line-height: 1.5;
+            padding: 2rem;
+            background-color: var(--bg-light);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            color: var(--primary-dark);
+            font-size: 2.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        h2 {
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .section {
+            background-color: var(--bg-white);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--border-light);
+        }
+
+        .architecture-diagram {
+            width: 100%;
+            background-color: var(--bg-light);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .architecture-box {
+            background-color: var(--bg-white);
+            border-radius: var(--radius-lg);
+            padding: 1rem;
+            box-shadow: var(--shadow-md);
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .provider-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .provider-card {
+            background-color: var(--bg-white);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+
+        .provider-header {
+            padding: 1rem;
+            color: white;
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+
+        .provider-models {
+            padding: 1rem;
+        }
+
+        .model-card {
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .model-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .model-details {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+
+        .capability-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .capability-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .registry-api {
+            background-color: var(--bg-light);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            margin-top: 1.5rem;
+            overflow-x: auto;
+        }
+
+        .api-section {
+            margin-bottom: 1rem;
+        }
+
+        .api-method {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .flowchart {
+            margin: 2rem 0;
+        }
+
+        /* Provider-specific styles */
+        .openai-header {
+            background-color: var(--openai);
+        }
+        .anthropic-header {
+            background-color: var(--anthropic);
+        }
+        .gemini-header {
+            background-color: var(--gemini);
+        }
+        .deepseek-header {
+            background-color: var(--deepseek);
+        }
+        .openrouter-header {
+            background-color: var(--openrouter);
+        }
+
+        /* Capability-specific styles */
+        .badge-text {
+            background-color: var(--text);
+            color: white;
+        }
+        .badge-vision {
+            background-color: var(--vision);
+            color: white;
+        }
+        .badge-streaming {
+            background-color: var(--streaming);
+            color: white;
+        }
+        .badge-tool_use {
+            background-color: var(--tool-use);
+            color: white;
+        }
+        .badge-rag {
+            background-color: var(--rag);
+            color: white;
+        }
+        .badge-code {
+            background-color: var(--code);
+            color: white;
+        }
+        .badge-reasoning {
+            background-color: var(--reasoning);
+            color: white;
+        }
+
+        /* Sequence diagram */
+        .sequence-diagram {
+            width: 100%;
+            background-color: var(--bg-white);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            margin: 2rem 0;
+            position: relative;
+        }
+
+        .sequence-step {
+            display: flex;
+            margin-bottom: 1.5rem;
+            align-items: flex-start;
+        }
+
+        .step-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background-color: var(--primary);
+            color: white;
+            font-weight: 600;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            flex-grow: 1;
+        }
+
+        .step-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-description {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* Visualization layout */
+        .arch-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: auto auto auto auto;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .arch-item {
+            background-color: var(--bg-white);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+            text-align: center;
+        }
+
+        .arch-item h3 {
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .arch-item p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Connect components */
+        .arch-arrow {
+            position: absolute;
+            border-top: 2px solid var(--primary);
+            width: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .arch-arrow::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: -6px;
+            border-left: 10px solid var(--primary);
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            .provider-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .arch-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ART Framework Model Management</h1>
+            <p class="subtitle">A unified system for managing interactions with multiple LLM providers and models</p>
+        </header>
+
+        <section class="section">
+            <h2 class="section-title">Architecture Overview</h2>
+            <p>The Model Management components extend the ART Framework's Reasoning System to support multiple LLM providers and intelligent model selection based on capabilities and requirements.</p>
+            
+            <div class="arch-grid">
+                <div class="arch-item" style="grid-column: 2; grid-row: 1; border-top: 5px solid var(--primary);">
+                    <h3>Agent Core (AC)</h3>
+                    <p>Orchestrates the agent's execution flow</p>
+                </div>
+                
+                <div class="arch-item" style="grid-column: 1; grid-row: 2; border-top: 5px solid var(--secondary);">
+                    <h3>Reasoning System (RS)</h3>
+                    <p>Manages LLM interactions</p>
+                </div>
+                
+                <div class="arch-item" style="grid-column: 3; grid-row: 2; border-top: 5px solid var(--text);">
+                    <h3>Other Systems</h3>
+                    <p>Tool, Context, Observation, UI, Storage</p>
+                </div>
+                
+                <div class="arch-item" style="grid-column: 1; grid-row: 3; border-left: 5px solid var(--openai);">
+                    <h3>Model Registry</h3>
+                    <p>Catalogs models and their capabilities</p>
+                </div>
+                
+                <div class="arch-item" style="grid-column: 2; grid-row: 3; border-left: 5px solid var(--anthropic);">
+                    <h3>Provider Factory</h3>
+                    <p>Creates provider adapters</p>
+                </div>
+                
+                <div class="arch-item" style="grid-column: 3; grid-row: 3; border-left: 5px solid var(--gemini);">
+                    <h3>Query Analyzer</h3>
+                    <p>Detects required capabilities</p>
+                </div>
+                
+                <div class="arch-item" style="grid-column: 1; grid-row: 4; border-left: 5px solid var(--deepseek);">
+                    <h3>Provider Adapters</h3>
+                    <p>Interface with LLM APIs</p>
+                </div>
+                
+                <div class="arch-item" style="grid-column: 2; grid-row: 4; border-left: 5px solid var(--reasoning);">
+                    <h3>Model Selection</h3>
+                    <p>Chooses appropriate models</p>
+                </div>
+                
+                <div class="arch-item" style="grid-column: 3; grid-row: 4; border-left: 5px solid var(--tool-use);">
+                    <h3>Model Validation</h3>
+                    <p>Verifies capability support</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Model Selection Process</h2>
+            
+            <div class="sequence-diagram">
+                <div class="sequence-step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <div class="step-title">Check Explicit Model</div>
+                        <div class="step-description">Look for explicitly specified provider/model in the call options</div>
+                    </div>
+                </div>
+                
+                <div class="sequence-step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <div class="step-title">Check Thread Configuration</div>
+                        <div class="step-description">If no model specified, check thread configuration preferences:
+                            <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                                <li>Look for capability-specific model preferences</li>
+                                <li>Fall back to default provider preference if no capability match</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="sequence-step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <div class="step-title">Validate Model Capabilities</div>
+                        <div class="step-description">Verify the selected model supports all required capabilities</div>
+                    </div>
+                </div>
+                
+                <div class="sequence-step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <div class="step-title">Find Best Alternative</div>
+                        <div class="step-description">If validation fails, find best alternative from same provider</div>
+                    </div>
+                </div>
+                
+                <div class="sequence-step">
+                    <div class="step-number">5</div>
+                    <div class="step-content">
+                        <div class="step-title">Try Other Providers</div>
+                        <div class="step-description">If no suitable model found in same provider, try others (if attemptFallback=true)</div>
+                    </div>
+                </div>
+                
+                <div class="sequence-step">
+                    <div class="step-number">6</div>
+                    <div class="step-content">
+                        <div class="step-title">Return Result or Error</div>
+                        <div class="step-description">Either proceed with chosen model or throw meaningful error</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Registered Models by Provider</h2>
+            
+            <div class="provider-grid">
+                <!-- OpenAI Provider -->
+                <div class="provider-card">
+                    <div class="provider-header openai-header">OpenAI</div>
+                    <div class="provider-models">
+                        <div class="model-card">
+                            <div class="model-name">GPT-4o</div>
+                            <div class="model-details">Context: 128K tokens | Cost: $2.50/$10.00 per 1M tokens</div>
+                            <div class="capability-badges">
+                                <span class="capability-badge badge-text">Text</span>
+                                <span class="capability-badge badge-vision">Vision</span>
+                                <span class="capability-badge badge-streaming">Streaming</span>
+                                <span class="capability-badge badge-tool_use">Tool Use</span>
+                                <span class="capability-badge badge-rag">RAG</span>
+                                <span class="capability-badge badge-code">Code</span>
+                                <span class="capability-badge badge-reasoning">Reasoning</span>
+                            </div>
+                        </div>
+                        
+                        <div class="model-card">
+                            <div class="model-name">GPT-4o-mini</div>
+                            <div class="model-details">Context: 128K tokens | Cost: $1.50/$6.00 per 1M tokens</div>
+                            <div class="capability-badges">
+                                <span class="capability-badge badge-text">Text</span>
+                                <span class="capability-badge badge-vision">Vision</span>
+                                <span class="capability-badge badge-streaming">Streaming</span>
+                                <span class="capability-badge badge-tool_use">Tool Use</span>
+                                <span class="capability-badge badge-code">Code</span>
+                            </div>
+                        </div>
+                        
+                        <div class="model-card">
+                            <div class="model-name">GPT-4o-long-output (Beta)</div>
+                            <div class="model-details">Context: 128K tokens | Max Output: 65K tokens</div>
+                            <div class="capability-badges">
+                                <span class="capability-badge badge-text">Text</span>
+                                <span class="capability-badge badge-vision">Vision</span>
+                                <span class="capability-badge badge-streaming">Streaming</span>
+                                <span class="capability-badge badge-tool_use">Tool Use</span>
+                                <span class="capability-badge badge-rag">RAG</span>
+                                <span class="capability-badge badge-code">Code</span>
+                                <span class="capability-badge badge-reasoning">Reasoning</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Anthropic Provider -->
+                <div class="provider-card">
+                    <div class="provider-header anthropic-header">Anthropic</div>
+                    <div class="provider-models">
+                        <div class="model-card">
+                            <div class="model-name">Claude 3.7 Sonnet</div>
+                            <div class="model-details">Context: 200K tokens | Max Output: 128K tokens</div>
+                            <div class="capability-badges">
+                                <span class="capability-badge badge-text">Text</span>
+                                <span class="capability-badge badge-vision">Vision</span>
+                                <span class="capability-badge badge-streaming">Streaming</span>
+                                <span class="capability-badge badge-tool_use">Tool Use</span>
+                                <span class="capability-badge badge-rag">RAG</span>
+                                <span class="capability-badge badge-code">Code</span>
+                                <span class="capability-badge badge-reasoning">Reasoning</span>
+                            </div>
+                        </div>
+                        
+                        <div class="model-card">
+                            <div class="model-name">Claude 3.7 Sonnet 500K (Beta)</div>
+                            <div class="model-details">Context: 500K tokens | Cost: $3.50/$17.00 per 1M tokens</div>
+                            <div class="capability-badges">
+                                <span class="capability-badge badge-text">Text</span>
+                                <span class="capability-badge badge-vision">Vision</span>
+                                <span class="capability-badge badge-streaming">Streaming</span>
+                                <span class="capability-badge badge-tool_use">Tool Use</span>
+                                <span class="capability-badge badge-rag">RAG</span>
+                                <span class="capability-badge badge-code">Code</span>
+                                <span class="capability-badge badge-reasoning">Reasoning</span>
+                            </div>
+                        </div>
+                        
+                        <div class="model-card">
+                            <div class="model-name">Claude 3.5 Haiku</div>
+                            <div class="model-details">Context: 200K tokens | Cost: $0.80/$4.00 per 1M tokens</div>
+                            <div class="capability-badges">
+                                <span class="capability-badge badge-text">Text</span>
+                                <span class="capability-badge badge-vision">Vision</span>
+                                <span class="capability-badge badge-streaming">Streaming</span>
+                                <span class="capability-badge badge-tool_use">Tool Use</span>
+                                <span class="capability-badge badge-code">Code</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gemini Provider -->
+                <div class="provider-card">
+                    <div class="provider-header gemini-header">Gemini</div>
+                    <div class="provider-models">
+                        <div class="model-card">
+                            <div class="model-name">Gemini 2.5 Pro</div>
+                            <div class="model-details">Context: 1M tokens | Cost: $3.50/$10.50 per 1M tokens</div>
+                            <div class="capability-badges">
+                                <span class="capability-badge badge-text">Text</span>
+                                <span class="capability-badge badge-vision">Vision</span>
+                                <span class="capability-badge badge-streaming">Streaming</span>
+                                <span class="capability-badge badge-tool_use">Tool Use</span>
+                                <span class="capability-badge badge-rag">RAG</span>
+                                <span class="capability-badge badge-code">Code</span>
+                                <span class="capability-badge badge-reasoning">Reasoning</span>
+                            </div>
+                        </div>
+                        
+                        <div class="model-card">
+                            <div class="model-name">Gemini 2.5 Pro 2M (Beta)</div>
+                            <div class="model-details">Context: 2M tokens | Cost: $4.00/$12.00 per 1M tokens</div>
+                            <div class="capability-badges">
+                                <span class="capability-badge badge-text">Text</span>
+                                <span class="capability-badge badge-vision">Vision</span>
+                                <span class="capability-badge badge-streaming">Streaming</span>
+                                <span class="capability-badge badge-tool_use">Tool Use</span>
+                                <span class="capability-badge badge-rag">RAG</span>
+                                <span class="capability-badge badge-code">Code</span>
+                                <span class="capability-badge badge-reasoning">Reasoning</span>
+                            </div>
+                        </div>
+                        
+                        <div class="model-card">
+                            <div class="model-name">Gemini 2.5 Flash</div>
+                            <div class="model-details">Context: 1M tokens | Cost: $1.50/$5.00 per 1M tokens</div>
+                            <div class="capability-badges">
+                                <span class="capability-badge badge-text">Text</span>
+                                <span class="capability-badge badge-vision">Vision</span>
+                                <span class="capability-badge badge-streaming">Streaming</span>
+                                <span class="capability-badge badge-tool_use">Tool Use</span>
+                                <span class="capability-badge badge-code">Code</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- DeepSeek Provider -->
+                <div class="provider-card">
+                    <div class="provider-header deepseek-header">DeepSeek</div>
+                    <div class="provider-models">
+                        <div class="model-card">
+                            <div class="model-name">DeepSeek V3</div>
+                            <div class="model-details">Context: 130K tokens | Cost: $1.50/$3.00 per 1M tokens</div>
+                            <div class="capability-badges">
+                                <span class="capability-badge badge-text">Text</span>
+                                <span class="capability-badge badge-streaming">Streaming</span>
+                                <span class="capability-badge badge-tool_use">Tool Use</span>
+                                <span class="capability-badge badge-rag">RAG</span>
+                                <span class="capability-badge badge-code">Code</span>
+                            </div>
+                        </div>
+                        
+                        <div class="model-card">
+                            <div class="model-name">DeepSeek R1</div>
+                            <div class="model-details">Context: 130K tokens | Max Output: 8K tokens</div>
+                            <div class="capability-badges">
+                                <span class="capability-badge badge-text">Text</span>
+                                <span class="capability-badge badge-streaming">Streaming</span>
+                                <span class="capability-badge badge-tool_use">Tool Use</span>
+                                <span class="capability-badge badge-rag">RAG</span>
+                                <span class="capability-badge badge-code">Code</span>
+                                <span class="capability-badge badge-reasoning">Reasoning</span>
+                            </div>
+                        </div>
+                        
+                        <div class="model-card">
+                            <div class="model-name">DeepSeek Coder V2</div>
+                            <div class="model-details">Context: 128K tokens | Cost: $1.20/$2.50 per 1M tokens</div>
+                            <div class="capability-badges">
+                                <span class="capability-badge badge-text">Text</span>
+                                <span class="capability-badge badge-streaming">Streaming</span>
+                                <span class="capability-badge badge-code">Code</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- OpenRouter Provider -->
+                <div class="provider-card">
+                    <div class="provider-header openrouter-header">OpenRouter</div>
+                    <div class="provider-models">
+                        <div class="model-card">
+                            <div class="model-name">OpenAI/GPT-4o</div>
+                            <div class="model-details">Context: 128K tokens | Cost: $3.00/$12.00 per 1M tokens</div>
+                            <div class="capability-badges">
+                                <span class="capability-badge badge-text">Text</span>
+                                <span class="capability-badge badge-vision">Vision</span>
+                                <span class="capability-badge badge-streaming">Streaming</span>
+                                <span class="capability-badge badge-tool_use">Tool Use</span>
+                                <span class="capability-badge badge-rag">RAG</span>
+                                <span class="capability-badge badge-code">Code</span>
+                                <span class="capability-badge badge-reasoning">Reasoning</span>
+                            </div>
+                        </div>
+                        
+                        <div class="model-card">
+                            <div class="model-name">Anthropic/Claude 3.7 Sonnet</div>
+                            <div class="model-details">Context: 200K tokens | OpenRouter markup pricing</div>
+                            <div class="capability-badges">
+                                <span class="capability-badge badge-text">Text</span>
+                                <span class="capability-badge badge-vision">Vision</span>
+                                <span class="capability-badge badge-streaming">Streaming</span>
+                                <span class="capability-badge badge-tool_use">Tool Use</span>
+                                <span class="capability-badge badge-rag">RAG</span>
+                                <span class="capability-badge badge-code">Code</span>
+                                <span class="capability-badge badge-reasoning">Reasoning</span>
+                            </div>
+                        </div>
+                        
+                        <div class="model-card">
+                            <div class="model-name">Google/Gemini 2.5 Pro</div>
+                            <div class="model-details">Context: 1M tokens | OpenRouter markup pricing</div>
+                            <div class="capability-badges">
+                                <span class="capability-badge badge-text">Text</span>
+                                <span class="capability-badge badge-vision">Vision</span>
+                                <span class="capability-badge badge-streaming">Streaming</span>
+                                <span class="capability-badge badge-tool_use">Tool Use</span>
+                                <span class="capability-badge badge-rag">RAG</span>
+                                <span class="capability-badge badge-code">Code</span>
+                                <span class="capability-badge badge-reasoning">Reasoning</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Model Registry API</h2>
+            
+            <div class="registry-api">
+                <div class="api-section">
+                    <span class="api-method">registerProvider(provider: string, modelInfos: ModelInfo[]): void</span><br>
+                    Register a provider with its models
+                </div>
+                
+                <div class="api-section">
+                    <span class="api-method">getModelInfo(provider: string, modelId: string): ModelInfo | null</span><br>
+                    Get information about a specific model
+                </div>
+                
+                <div class="api-section">
+                    <span class="api-method">getModelsForProvider(provider: string): ModelInfo[]</span><br>
+                    Get all models for a specific provider
+                </div>
+                
+                <div class="api-section">
+                    <span class="api-method">validateModel(provider: string, modelId: string, requiredCapabilities?: ModelCapability[]): boolean</span><br>
+                    Check if a model supports the required capabilities
+                </div>
+                
+                <div class="api-section">
+                    <span class="api-method">getBestModelForTask(provider: string, requiredCapabilities: ModelCapability[]): string | null</span><br>
+                    Find the best model from a provider for a set of required capabilities
+                </div>
+                
+                <div class="api-section">
+                    <span class="api-method">getFallbackModel(provider: string, originalModelId: string): string | null</span><br>
+                    Get a fallback model when the original model is unavailable
+                </div>
+                
+                <div class="api-section">
+                    <span class="api-method">getDefaultModelForProvider(provider: string): string | null</span><br>
+                    Get the default model for a provider
+                </div>
+                
+                <div class="api-section">
+                    <span class="api-method">getAllModelsForUI(): ModelUIInfo[]</span><br>
+                    Get all models in a UI-friendly format
+                </div>
+                
+                <div class="api-section">
+                    <span class="api-method">getDisplayName(provider: string, modelId: string): string</span><br>
+                    Get a user-friendly display name for a model
+                </div>
+                
+                <div class="api-section">
+                    <span class="api-method">getCapabilityDisplayName(capability: ModelCapability): string</span><br>
+                    Get a user-friendly display name for a capability
+                </div>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

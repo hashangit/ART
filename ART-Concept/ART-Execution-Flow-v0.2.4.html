@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ART Framework - Detailed Execution Flow v0.2.4 (Architect View)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Color Palette (same as before) */
+            --primary: #4F46E5; --primary-light: #EEF2FF; --primary-dark: #3730A3;
+            --blue: #3B82F6; --blue-light: #EFF6FF; --blue-dark: #1E40AF;
+            --green: #10B981; --green-light: #ECFDF5; --green-dark: #047857;
+            --purple: #8B5CF6; --purple-light: #F5F3FF; --purple-dark: #6D28D9;
+            --teal: #14B8A6; --teal-light: #F0FDFA; --teal-dark: #0F766E;
+            --orange: #F97316; --orange-light: #FFF7ED; --orange-dark: #C2410C;
+            --yellow: #F59E0B; --yellow-light: #FFFBEB; --yellow-dark: #B45309;
+            --pink: #EC4899; --pink-light: #FDF2F8; --pink-dark: #BE185D;
+            --red: #EF4444; --red-light: #FEE2E2; --red-dark: #B91C1C;
+            --gray-50: #F9FAFB; --gray-100: #F3F4F6; --gray-200: #E5E7EB; --gray-300: #D1D5DB;
+            --gray-400: #9CA3AF; --gray-500: #6B7280; --gray-600: #4B5563; --gray-700: #374151; --gray-800: #1F2937; --gray-900: #111827;
+
+            /* Text & Background */
+            --text-primary: var(--gray-900); --text-secondary: var(--gray-700); --text-tertiary: var(--gray-500);
+            --bg-white: #FFFFFF; --bg-light: var(--gray-50); --bg-lighter: var(--gray-100);
+
+            /* Borders & Shadows */
+            --border-light: var(--gray-200); --border-medium: var(--gray-300);
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+            /* Radii & Spacing */
+            --radius-sm: 0.25rem; --radius-md: 0.375rem; --radius-lg: 0.5rem; --radius-xl: 0.75rem; --radius-2xl: 1rem;
+            --spacing-1: 0.25rem; --spacing-2: 0.5rem; --spacing-3: 0.75rem; --spacing-4: 1rem;
+            --spacing-5: 1.25rem; --spacing-6: 1.5rem; --spacing-8: 2rem; --spacing-10: 2.5rem; --spacing-12: 3rem;
+        }
+
+        /* Base & Reset Styles */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-lighter); color: var(--text-primary); line-height: 1.65; padding: var(--spacing-8); font-size: 15px; }
+        h1, h2, h3 { color: var(--text-primary); line-height: 1.3; font-weight: 600; }
+        h1 { font-size: 2rem; text-align: center; margin-bottom: var(--spacing-6); color: var(--primary-dark); }
+        h2 { font-size: 1.5rem; margin-top: var(--spacing-10); margin-bottom: var(--spacing-6); color: var(--primary); border-bottom: 2px solid var(--border-light); padding-bottom: var(--spacing-2); }
+        code { font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 0.9em; background-color: rgba(0,0,0,0.04); padding: 0.15em 0.4em; border-radius: var(--radius-sm); border: 1px solid var(--border-light); }
+
+        /* Layout & Containers */
+        .container { max-width: 1280px; margin: 0 auto; background-color: var(--bg-white); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); padding: var(--spacing-8); position: relative; }
+        .nav-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-8); flex-wrap: wrap; gap: var(--spacing-4); }
+        .intro { text-align: center; max-width: 900px; margin: 0 auto var(--spacing-10); }
+        .intro p { color: var(--text-secondary); font-size: 1.1rem; }
+        .pattern-selector { display: flex; justify-content: center; margin-bottom: var(--spacing-8); flex-wrap: wrap; gap: var(--spacing-4); }
+        .flow-header { text-align: center; margin-bottom: var(--spacing-8); padding-bottom: var(--spacing-4); border-bottom: 1px solid var(--border-light); }
+        .flow-header h2 { margin-top: 0; color: var(--primary); }
+        .flow-header p { color: var(--text-secondary); }
+        .execution-flow { position: relative; padding: var(--spacing-8) 0; }
+        .flow-stage { margin-bottom: var(--spacing-12); position: relative; padding-top: var(--spacing-2); }
+        .stage-header { display: flex; align-items: center; margin-bottom: var(--spacing-6); }
+        .stage-number { width: 44px; height: 44px; border-radius: 50%; background-color: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; margin-right: var(--spacing-4); flex-shrink: 0; box-shadow: var(--shadow-sm); }
+        .stage-title { font-size: 1.3rem; font-weight: 600; color: var(--primary); }
+        .stage-description { color: var(--text-secondary); margin-left: calc(44px + var(--spacing-4)); margin-bottom: var(--spacing-6); padding-left: var(--spacing-4); border-left: 3px solid var(--border-light); font-size: 0.98rem; }
+
+        /* Flow Components & Interactions */
+        .component-flow { margin-left: calc(44px + var(--spacing-4)); position: relative; }
+        .component-flow::before { content: ''; position: absolute; top: var(--spacing-4); bottom: var(--spacing-4); left: 14px; width: 3px; background-color: var(--border-medium); z-index: 1; border-radius: 2px; }
+        .component-interaction { display: flex; margin-bottom: var(--spacing-6); position: relative; align-items: flex-start; }
+        .component-interaction:last-child { margin-bottom: 0; }
+        .interaction-line { position: absolute; top: calc(15px + var(--spacing-2)); left: 15px; width: calc(var(--spacing-4) - 1px); height: 3px; background-color: var(--border-medium); z-index: 1; border-radius: 1px; }
+        .interaction-dot { width: 30px; height: 30px; border-radius: 50%; background-color: var(--bg-white); border: 3px solid var(--gray-400); margin-right: var(--spacing-4); flex-shrink: 0; position: relative; z-index: 2; margin-top: var(--spacing-2); box-shadow: var(--shadow-sm); }
+        .interaction-details { flex-grow: 1; padding: var(--spacing-5); background-color: var(--bg-light); border-radius: var(--radius-lg); border: 1px solid var(--border-light); transition: transform 0.2s ease, box-shadow 0.2s ease; border-left-width: 4px; }
+        .interaction-details:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--border-medium); }
+        .interaction-details.type-init { border-left-color: var(--gray-400); background-color: var(--gray-50); }
+        .interaction-details.type-storage { border-left-color: var(--orange); background-color: var(--orange-light); }
+        .interaction-details.type-context { border-left-color: var(--yellow); background-color: var(--yellow-light); }
+        .interaction-details.type-reasoning { border-left-color: var(--green); background-color: var(--green-light); }
+        .interaction-details.type-tool { border-left-color: var(--purple); background-color: var(--purple-light); }
+        .interaction-details.type-observation { border-left-color: var(--teal); background-color: var(--teal-light); }
+        .interaction-details.type-ui { border-left-color: var(--pink); background-color: var(--pink-light); }
+        .interaction-details.type-core { border-left-color: var(--blue); background-color: var(--blue-light); }
+
+        .component-label { font-weight: 600; margin-bottom: var(--spacing-3); display: flex; align-items: center; font-size: 1.05rem; }
+        .component-badge { font-size: 0.7rem; font-weight: 600; padding: 0.2rem 0.4rem; border-radius: var(--radius-sm); margin-right: 0.6rem; text-transform: uppercase; letter-spacing: 0.03em; display: inline-block; line-height: 1; border: 1px solid; }
+        .badge-agent-core { background-color: var(--blue-light); color: var(--blue-dark); border-color: var(--blue); }
+        .badge-reasoning { background-color: var(--green-light); color: var(--green-dark); border-color: var(--green); }
+        .badge-tool { background-color: var(--purple-light); color: var(--purple-dark); border-color: var(--purple); }
+        .badge-observation { background-color: var(--teal-light); color: var(--teal-dark); border-color: var(--teal); }
+        .badge-context { background-color: var(--yellow-light); color: var(--yellow-dark); border-color: var(--yellow); }
+        .badge-storage { background-color: var(--orange-light); color: var(--orange-dark); border-color: var(--orange); }
+        .badge-ui { background-color: var(--pink-light); color: var(--pink-dark); border-color: var(--pink); }
+        .interaction-description { font-size: 0.98rem; color: var(--text-secondary); margin-bottom: var(--spacing-4); }
+        .interaction-data { margin-top: var(--spacing-4); padding-top: var(--spacing-4); border-top: 1px dashed var(--border-medium); font-size: 0.9rem; color: var(--text-tertiary); }
+        .data-flow { display: flex; align-items: flex-start; margin-bottom: var(--spacing-3); }
+        .data-direction { font-weight: 600; margin-right: var(--spacing-3); color: var(--text-secondary); flex-shrink: 0; min-width: 70px; text-align: right; }
+        .data-content { padding: var(--spacing-2) var(--spacing-3); background-color: var(--bg-white); border-radius: var(--radius-md); border: 1px solid var(--border-medium); font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 0.85rem; word-break: break-word; line-height: 1.5; white-space: pre-wrap; color: var(--gray-800); flex-grow: 1; }
+        .data-comment { color: var(--gray-600); font-style: italic; margin-top: var(--spacing-1); padding-left: calc(70px + var(--spacing-3)); font-size: 0.85rem; }
+
+        /* Other Elements */
+        .button { display: inline-block; padding: var(--spacing-2) var(--spacing-4); background-color: var(--primary); color: white; border: none; border-radius: var(--radius-md); font-weight: 500; font-size: 0.9rem; text-decoration: none; cursor: pointer; transition: background-color 0.2s ease; box-shadow: var(--shadow-sm); text-align: center; }
+        .button:hover { background-color: var(--primary-dark); box-shadow: var(--shadow-md); }
+        .pattern-note { margin: var(--spacing-10) 0; padding: var(--spacing-6); background-color: var(--blue-light); border-radius: var(--radius-lg); border-left: 5px solid var(--blue); box-shadow: var(--shadow-sm); }
+        .pattern-note h3 { color: var(--blue-dark); margin-bottom: 0.5rem; font-size: 1.15rem; }
+        .pattern-note p { color: var(--text-secondary); font-size: 1rem; }
+        .pattern-alternatives { margin-top: var(--spacing-8); display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--spacing-6); }
+        .pattern-card { padding: var(--spacing-6); border-radius: var(--radius-lg); background-color: var(--bg-light); border: 1px solid var(--border-light); transition: transform 0.2s ease, box-shadow 0.2s ease; display: flex; flex-direction: column; box-shadow: var(--shadow-sm); }
+        .pattern-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--border-medium); }
+        .pattern-card h4 { margin-bottom: 0.75rem; color: var(--primary); font-size: 1.1rem; }
+        .pattern-card p { font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 0.75rem; flex-grow: 1; }
+        .pattern-difference { font-size: 0.9rem; color: var(--text-tertiary); padding-top: 0.75rem; border-top: 1px dashed var(--border-medium); margin-top: auto; }
+        .pattern-difference-item { display: flex; align-items: flex-start; margin-bottom: 0.5rem; }
+        .difference-icon { margin-right: 0.5rem; color: var(--primary); flex-shrink: 0; margin-top: 0.2rem; font-weight: bold; }
+        .system-legend { display: flex; flex-wrap: wrap; gap: var(--spacing-4); margin: var(--spacing-8) 0; padding: var(--spacing-6); background-color: var(--bg-light); border-radius: var(--radius-lg); border: 1px solid var(--border-light); }
+        .legend-item { display: flex; align-items: center; margin-right: 1rem; }
+        .legend-color { width: 1rem; height: 1rem; border-radius: var(--radius-sm); margin-right: 0.5rem; border: 1px solid rgba(0,0,0,0.1); }
+        .legend-label { font-size: 0.9rem; font-weight: 500; color: var(--text-secondary); }
+        .color-agent-core { background-color: var(--blue-light); border-color: var(--blue); }
+        .color-reasoning { background-color: var(--green-light); border-color: var(--green); }
+        .color-tool { background-color: var(--purple-light); border-color: var(--purple); }
+        .color-observation { background-color: var(--teal-light); border-color: var(--teal); }
+        .color-context { background-color: var(--yellow-light); border-color: var(--yellow); }
+        .color-storage { background-color: var(--orange-light); border-color: var(--orange); }
+        .color-ui { background-color: var(--pink-light); border-color: var(--pink); }
+
+        /* Tool Loop Indentation */
+        .tool-loop-indent { margin-left: var(--spacing-8); border-left: 3px dashed var(--purple); padding-left: var(--spacing-6); margin-top: var(--spacing-6); margin-bottom: var(--spacing-6); }
+        .tool-loop-header .interaction-dot { border-color: var(--purple); background-color: var(--purple-light); }
+        .tool-loop-item .interaction-dot { border-color: var(--purple); }
+
+        /* Internal Navigation */
+        .stage-nav { margin-bottom: var(--spacing-8); padding: var(--spacing-4) 0; border-bottom: 1px solid var(--border-light); }
+        .stage-nav ol { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: var(--spacing-4); justify-content: center; } /* Centered nav */
+        .stage-nav a { text-decoration: none; color: var(--primary); font-weight: 500; padding: var(--spacing-1) var(--spacing-3); border-radius: var(--radius-md); transition: background-color 0.2s ease, color 0.2s ease; border: 1px solid transparent; }
+        .stage-nav a:hover { background-color: var(--primary-light); border-color: var(--primary); }
+
+        /* Back to Top */
+        .back-to-top { display: block; text-align: center; margin-top: var(--spacing-10); }
+        .back-to-top a { color: var(--text-secondary); text-decoration: none; font-weight: 500; }
+        .back-to-top a:hover { color: var(--primary); text-decoration: underline; }
+
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body { padding: var(--spacing-4); }
+            .container { padding: var(--spacing-6); }
+            .nav-header { flex-direction: column; align-items: center; }
+            .pattern-alternatives { grid-template-columns: 1fr; }
+            .system-legend { flex-direction: column; gap: var(--spacing-3); align-items: flex-start;}
+            .interaction-details { padding: var(--spacing-3); }
+            .component-flow { margin-left: calc(44px + var(--spacing-2)); }
+            .stage-description { margin-left: calc(44px + var(--spacing-2)); }
+            .interaction-line { width: calc(var(--spacing-2) - 1px); }
+            .interaction-dot { margin-right: var(--spacing-2); }
+            .stage-nav ol { flex-direction: column; align-items: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-header">
+             <h1>ART Framework: Detailed Execution Flow v0.2.3 (Architect View)</h1>
+             <a href="./ART-framework-v0.2.4.html" class="button">Back to Framework Overview</a>
+        </div>
+
+        <div class="intro">
+            <p>This diagram presents a system architect's view of the ART framework's **Plan-Execute-Synthesize (PES)** execution flow (v0.2.3). It details robust component interactions, centralized configuration management via the State Manager, critical data propagation (IDs, metadata), observability points, and error handling essential for production-grade agent systems, reflecting the correct PES logic.</p>
+        </div>
+
+         <nav class="stage-nav" aria-label="Flow Stages">
+             <ol>
+                 <li><a href="#stage-1">1. Initiation & Config</a></li>
+                 <li><a href="#stage-2">2. Planning Context</a></li>
+                 <li><a href="#stage-3">3. Planning Call</a></li>
+                 <li><a href="#stage-4">4. Tool Execution</a></li>
+                 <li><a href="#stage-5">5. Synthesis Call</a></li>
+                 <li><a href="#stage-6">6. Finalization</a></li>
+             </ol>
+         </nav>
+
+        <div class="pattern-selector">
+            <button class="pattern-button active">PES Pattern</button>
+            <button class="pattern-button">ReAct Pattern</button>
+            <button class="pattern-button">Chain of Thought</button>
+            <button class="pattern-button">Custom Pattern</button>
+        </div>
+
+        <div class="system-legend">
+            <div class="legend-item"><div class="legend-color color-agent-core"></div><div class="legend-label">Agent Core (AC)</div></div>
+            <div class="legend-item"><div class="legend-color color-reasoning"></div><div class="legend-label">Reasoning System (RS)</div></div>
+            <div class="legend-item"><div class="legend-color color-tool"></div><div class="legend-label">Tool System (TS)</div></div>
+            <div class="legend-item"><div class="legend-color color-observation"></div><div class="legend-label">Observation System (OS)</div></div>
+            <div class="legend-item"><div class="legend-color color-context"></div><div class="legend-label">Context System (CS)</div></div>
+            <div class="legend-item"><div class="legend-color color-storage"></div><div class="legend-label">Storage System (SS)</div></div>
+            <div class="legend-item"><div class="legend-color color-ui"></div><div class="legend-label">UI System (UI)</div></div>
+        </div>
+
+        <div class="flow-header">
+            <h2>Plan-Execute-Synthesize (PES) Pattern Execution Flow</h2>
+            <p>A robust, observable flow separating planning, execution, and synthesis.</p>
+        </div>
+
+        <div class="execution-flow">
+            <!-- Stage 1: Initiation & Configuration Loading -->
+            <div class="flow-stage" id="stage-1">
+                <div class="stage-header"><div class="stage-number">1</div><div class="stage-title">Request Initiation & Configuration Loading</div></div>
+                <div class="stage-description">
+                    An execution request arrives for a conversation thread. The `StateManager` retrieves the thread's configuration (LLM, tools, params) and any persistent non-conversational state, establishing the execution context. Traceability IDs are established.
+                </div>
+                <div class="component-flow">
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-core">
+                            <div class="component-label"><span class="component-badge badge-agent-core">AC</span> Agent Core Receives Request</div>
+                            <div class="interaction-description">Application invokes `artInstance.process()` with mandatory identifiers. `threadId` is the key for conversation context and configuration. `sessionId` might track the UI session.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Input:</span><code class="data-content">AgentProps {
+  query: string;
+  threadId: string;        // Key for conversation & config
+  sessionId?: string;       // Optional: UI session context
+  userId?: string;         // Optional: User context
+  traceId?: string;        // Optional: E2E tracing ID
+  options?: AgentOptions;  // Runtime overrides
+}</code></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-context">
+                            <div class="component-label"><span class="component-badge badge-context">CS</span> State Manager Loads Thread Configuration & State</div>
+                            <div class="interaction-description">Uses `threadId` (and potentially `userId`) to query `StateRepository` for operational config (LLM choice, tool settings) and persistent `AgentState` (preferences). This config governs the current run.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Request:</span><code class="data-content">stateManager.loadThreadContext(threadId, userId?)</code></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-storage">
+                            <div class="component-label"><span class="component-badge badge-storage">SS</span> Storage System Provides Config & State</div>
+                            <div class="interaction-description">`StateRepository` uses `StorageAdapter` to fetch config (e.g., from 'threadConfigs') and state (from 'agentState'). Handles defaults/errors.</div>
+                             <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Query 1:</span><code class="data-content">storageAdapter.get('threadConfigs', threadId)</code></div>
+                                <div class="data-flow"><span class="data-direction">Query 2:</span><code class="data-content">storageAdapter.get('agentState', threadId) // Or keyed by userId</code></div>
+                                <div class="data-flow"><span class="data-direction">Response:</span><code class="data-content">Promise<{ config: ThreadConfig, state: AgentState | null }></code></div>
+                                <div class="data-comment"><code>ThreadConfig { reasoning: {...}, enabledTools: [], params: {...} }</code></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-core">
+                            <div class="component-label"><span class="component-badge badge-agent-core">AC</span> Agent Factory Configures Instance</div>
+                            <div class="interaction-description">Instantiates PES Agent Core and injects dependencies pre-configured with the specific settings loaded by `StateManager` for this `threadId`.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Context:</span><code class="data-content">// Instance ready, using thread's config (e.g., specific LLM)</code></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage 2: Planning Context Assembly -->
+            <div class="flow-stage" id="stage-2">
+                <div class="stage-header"><div class="stage-number">2</div><div class="stage-title">Planning Context Assembly</div></div>
+                <div class="stage-description">
+                    Information required *specifically for the planning LLM call* is gathered: conversation history for dialogue context, and the schemas of tools *enabled* for this thread to inform the LLM of available capabilities. **No dynamic context (RAG, files) is gathered at this stage in PES.**
+                </div>
+                 <div class="component-flow">
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-context">
+                            <div class="component-label"><span class="component-badge badge-context">CS</span> Conversation Manager Retrieves History</div>
+                            <div class="interaction-description">Fetches recent messages for the `threadId` via `ConversationRepository`, respecting configured limits.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Request:</span><code class="data-content">conversationManager.getMessages(threadId, { limit: threadConfig.historyLimit })</code></div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-storage">
+                            <div class="component-label"><span class="component-badge badge-storage">SS</span> Storage System Provides History</div>
+                            <div class="interaction-description">`ConversationRepository` queries `StorageAdapter` for messages linked to `threadId`.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Query:</span><code class="data-content">storageAdapter.query('messages', { filter: {threadId}, sort: {ts:'desc'}, limit })</code></div>
+                                <div class="data-flow"><span class="data-direction">Response:</span><code class="data-content">Promise<ConversationMessage[]></code></div>
+                                <div class="data-comment"><code>Message { messageId, threadId, role, content, timestamp, metadata? }</code></div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-context">
+                            <div class="component-label"><span class="component-badge badge-context">CS</span> State Manager Provides Enabled Tool Names</div>
+                            <div class="interaction-description">Provides the list of tool names enabled for this specific thread, retrieved from the loaded `ThreadConfig`.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Request:</span><code class="data-content">stateManager.getThreadConfigValue(threadId, 'enabledTools')</code></div>
+                                <div class="data-flow"><span class="data-direction">Response:</span><code class="data-content">string[] // e.g., ['WebSearchTool', 'CalculatorTool']</code></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-tool">
+                            <div class="component-label"><span class="component-badge badge-tool">TS</span> Tool Registry Provides Enabled Tool Schemas</div>
+                            <div class="interaction-description">Uses the list of enabled tool names to retrieve only the relevant `ToolSchema` definitions from the central registry.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Request:</span><code class="data-content">toolRegistry.getAvailableTools(enabledToolNames)</code></div>
+                                <div class="data-flow"><span class="data-direction">Response:</span><code class="data-content">ToolSchema[]</code></div>
+                                <div class="data-comment"><code>Schema { name, description, inputSchema: JSONSchema }</code></div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-context">
+                            <div class="component-label"><span class="component-badge badge-context">CS</span> State Manager Provides System Prompt</div>
+                            <div class="interaction-description">Retrieves the base system prompt / instructions configured for this thread or user from the loaded config.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Request:</span><code class="data-content">stateManager.getThreadConfigValue(threadId, 'systemPrompt')</code></div>
+                                <div class="data-flow"><span class="data-direction">Response:</span><code class="data-content">string // Base system instructions</code></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage 3: Planning Call -->
+            <div class="flow-stage" id="stage-3">
+                <div class="stage-header"><div class="stage-number">3</div><div class="stage-title">Planning Call (1st LLM Call)</div></div>
+                 <div class="stage-description">
+                    The first LLM interaction generates the plan. The `PromptManager` builds the prompt with query, history, system instructions, and available tool schemas. `ReasoningEngine` uses the thread's configured LLM. Thoughts, intent, and the plan (including tool calls with *planned* inputs) are parsed and observed.
+                </div>
+                <div class="component-flow">
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-core">
+                            <div class="component-label"><span class="component-badge badge-agent-core">AC</span> Orchestrates Planning Sequence</div>
+                            <div class="interaction-description">Manages the flow: Create Prompt -> Call LLM -> Parse Response -> Record Observations.</div>
+                        </div>
+                    </div>
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-reasoning">
+                            <div class="component-label"><span class="component-badge badge-reasoning">RS</span> Prompt Manager Creates Planning Prompt</div>
+                            <div class="interaction-description">Constructs the prompt using gathered history, enabled tool schemas, system prompt, and the user query.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Input:</span><code class="data-content">{ query, history, toolSchemas, systemPrompt }</code></div>
+                                <div class="data-flow"><span class="data-direction">Output:</span><code class="data-content">FormattedPrompt</code></div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-context">
+                            <div class="component-label"><span class="component-badge badge-context">CS</span> State Manager Provides Reasoning Config</div>
+                            <div class="interaction-description">`ReasoningEngine` confirms/retrieves the specific LLM config (adapter, model, params) for this thread from `StateManager`.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Request:</span><code class="data-content">stateManager.getThreadConfigValue(threadId, 'reasoning')</code></div>
+                                <div class="data-flow"><span class="data-direction">Response:</span><code class="data-content">ReasoningConfig { adapter, model, params }</code></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-reasoning">
+                            <div class="component-label"><span class="component-badge badge-reasoning">RS</span> Reasoning Engine Executes LLM Call</div>
+                            <div class="interaction-description">Uses the thread's config to invoke the correct `ProviderAdapter`. Passes IDs and `onThought` callback to `OS`. Handles API errors/retries.</div>
+                             <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Call:</span><code class="data-content">reasoningEngine.call(prompt, callOptions)</code></div>
+                                <div class="data-comment"><code>CallOptions { threadId, sessionId?, userId?, traceId?, model, params, onThought }</code></div>
+                                <div class="data-flow"><span class="data-direction">Response:</span><code class="data-content">Promise<string> // Raw LLM Response</code></div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-observation">
+                            <div class="component-label"><span class="component-badge badge-observation">OS</span> Observation Manager Records Thoughts (Callback)</div>
+                            <div class="interaction-description">`onThought` triggers `observationManager.record` for `THOUGHTS` observations.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Creates:</span><code class="data-content">Observation { observationId, threadId, ..., type: THOUGHTS, metadata: { sourcePhase: 'planning', modelUsed } }</code></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-reasoning">
+                            <div class="component-label"><span class="component-badge badge-reasoning">RS</span> Output Parser Processes Planning Response</div>
+                            <div class="interaction-description">Parses raw response for `<intent>`, `<plan>`, and `toolCalls` (with *planned* arguments). Handles errors robustly.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Input:</span><code class="data-content">rawLLMResponse: string</code></div>
+                                <div class="data-flow"><span class="data-direction">Output:</span><code class="data-content">ParsedPlanningOutput | ParsingError</code></div>
+                                <div class="data-comment"><code>ParsedPlanningOutput { intent, plan, toolCalls: [{ callId, toolName, arguments }] }</code></div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-observation">
+                            <div class="component-label"><span class="component-badge badge-observation">OS</span> Observation Manager Records Parsing Outcome</div>
+                            <div class="interaction-description">Creates `INTENT`, `PLAN` observations on success, or `ERROR` on failure.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Creates:</span><code class="data-content">// Success: INTENT, PLAN Observations
+// Failure: ERROR Observation</code></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-storage">
+                            <div class="component-label"><span class="component-badge badge-storage">SS</span> Storage System Persists Planning Observations</div>
+                            <div class="interaction-description">`ObservationRepository` saves all planning observations (`THOUGHTS`, `INTENT`, `PLAN`, `ERROR`).</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Operation:</span><code class="data-content">observationRepository.save(observation)</code></div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-ui">
+                            <div class="component-label"><span class="component-badge badge-ui">UI</span> UI System Notifies Subscribers</div>
+                            <div class="interaction-description">`ObservationSocket` emits observations, filterable by type.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Event:</span><code class="data-content">observationSocket.notify(Observation<THOUGHTS | INTENT | PLAN | ERROR>)</code></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+             <!-- Stage 4: Tool Execution Phase -->
+            <div class="flow-stage" id="stage-4">
+                <div class="stage-header"><div class="stage-number">4</div><div class="stage-title">Tool Execution Phase</div></div>
+                 <div class="stage-description">
+                    The `ToolSystem` executes the sequence of tool calls specified in the validated plan. Each call is validated against its schema, run securely, and the outcome (success/failure, output/error, metadata) is captured as an observation.
+                </div>
+                <div class="component-flow">
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-core">
+                            <div class="component-label"><span class="component-badge badge-agent-core">AC</span> Initiates Tool Execution (Conditional)</div>
+                            <div class="interaction-description">If planning succeeded, passes the `parsedToolCalls` from the plan to `ToolSystem`.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Request:</span><code class="data-content">toolSystem.executeTools(parsedToolCalls, threadId, traceId?, userId?)</code></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Start Tool Loop -->
+                    <div class="component-interaction tool-loop-header">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-tool" style="border-left: 3px solid var(--purple);">
+                            <div class="component-label"><span class="component-badge badge-tool">TS</span> Tool System Iterates Through Planned Tool Calls:</div>
+                            <div class="interaction-description">Processes each `ParsedToolCall` from the plan.</div>
+                        </div>
+                    </div>
+                    <div class="tool-loop-indent">
+                        <div class="component-interaction tool-loop-item">
+                            <div class="interaction-dot"></div><div class="interaction-line"></div>
+                            <div class="interaction-details type-tool">
+                                <div class="component-label"><span class="component-badge badge-tool">TS</span> Look Up & Validate Executor</div>
+                                <div class="interaction-description">Finds `IToolExecutor` via `ToolRegistry`. Verifies tool is in thread's `enabledTools` list (from `StateManager`). Handles errors.</div>
+                                <div class="interaction-data">
+                                     <div class="data-flow"><span class="data-direction">Lookup:</span><code class="data-content">toolRegistry.getToolExecutor(call.toolName)</code></div>
+                                     <div class="data-flow"><span class="data-direction">Check:</span><code class="data-content">stateManager.isToolEnabled(threadId, call.toolName)</code></div>
+                                </div>
+                            </div>
+                        </div>
+                         <div class="component-interaction tool-loop-item">
+                            <div class="interaction-dot"></div><div class="interaction-line"></div>
+                            <div class="interaction-details type-tool">
+                                <div class="component-label"><span class="component-badge badge-tool">TS</span> Validate Input Arguments (Schema)</div>
+                                <div class="interaction-description">Uses Zod/JSON Schema against `executor.schema.inputSchema` to validate the *planned* `call.arguments`. Handles `ValidationError`.</div>
+                                <div class="interaction-data">
+                                    <div class="data-flow"><span class="data-direction">Validation:</span><code class="data-content">validate(call.arguments, schema)</code></div>
+                                </div>
+                            </div>
+                        </div>
+                         <div class="component-interaction tool-loop-item">
+                            <div class="interaction-dot"></div><div class="interaction-line"></div>
+                            <div class="interaction-details type-tool">
+                                <div class="component-label"><span class="component-badge badge-tool">TS</span> Execute Tool Logic Securely</div>
+                                <div class="interaction-description">Invokes `executor.execute()` with validated args and `ExecutionContext`. Enforces timeouts. Catches runtime errors.</div>
+                                <div class="interaction-data">
+                                    <div class="data-flow"><span class="data-direction">Execution:</span><code class="data-content">executor.execute(validatedArgs, execCtx)</code></div>
+                                    <div class="data-comment"><code>ExecCtx { threadId, sessionId?, userId?, traceId?, /* scopedCredentials? */ }</code></div>
+                                    <div class="data-flow"><span class="data-direction">Returns:</span><code class="data-content">Promise<ToolResult></code></div>
+                                    <div class="data-comment"><code>ToolResult { callId, ..., status, output?, error?, metadata }</code></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="component-interaction tool-loop-item">
+                            <div class="interaction-dot"></div><div class="interaction-line"></div>
+                            <div class="interaction-details type-observation">
+                                <div class="component-label"><span class="component-badge badge-observation">OS</span> Record Tool Execution Observation</div>
+                                <div class="interaction-description">Creates `TOOL_EXECUTION` or `ERROR` observation with full `ToolResult` (sanitized if needed).</div>
+                                <div class="interaction-data">
+                                    <div class="data-flow"><span class="data-direction">Creates:</span><code class="data-content">Observation { observationId, threadId, traceId?, type: TOOL_EXECUTION | ERROR, content: ToolResult, metadata: { toolName, callId, inputArgs? } }</code></div>
+                                 </div>
+                            </div>
+                        </div>
+                         <div class="component-interaction tool-loop-item">
+                            <div class="interaction-dot"></div><div class="interaction-line"></div>
+                            <div class="interaction-details type-storage">
+                                <div class="component-label"><span class="component-badge badge-storage">SS</span> Persist Tool Observation</div>
+                                <div class="interaction-description">`ObservationRepository` saves the observation.</div>
+                            </div>
+                        </div>
+                         <div class="component-interaction tool-loop-item">
+                            <div class="interaction-dot"></div><div class="interaction-line"></div>
+                            <div class="interaction-details type-ui">
+                                <div class="component-label"><span class="component-badge badge-ui">UI</span> Notify UI of Tool Result</div>
+                                <div class="interaction-description">`ObservationSocket` emits the observation.</div>
+                                 <div class="interaction-data">
+                                    <div class="data-flow"><span class="data-direction">Event:</span><code class="data-content">observationSocket.notify(Observation<TOOL_EXECUTION | ERROR>)</code></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- End Tool Loop Indent -->
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-tool">
+                            <div class="component-label"><span class="component-badge badge-tool">TS</span> Return Aggregate Tool Results</div>
+                            <div class="interaction-description">Returns the array of `ToolResult` objects (success/error) to `AgentCore`.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Returns:</span><code class="data-content">Promise<ToolResult[]></code></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage 5: Synthesis Phase -->
+            <div class="flow-stage" id="stage-5">
+                <div class="stage-header"><div class="stage-number">5</div><div class="stage-title">Synthesis Phase (2nd LLM Call)</div></div>
+                <div class="stage-description">
+                    The final response is generated. The `PromptManager` creates a synthesis prompt using the original query, planning context (intent, plan), and the collected tool execution *results*. `ReasoningEngine` calls the configured LLM. The output text is parsed as the final answer.
+                </div>
+                 <div class="component-flow">
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-core">
+                            <div class="component-label"><span class="component-badge badge-agent-core">AC</span> Orchestrates Synthesis</div>
+                            <div class="interaction-description">Initiates final response generation using planning context and tool results.</div>
+                        </div>
+                    </div>
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-context">
+                            <div class="component-label"><span class="component-badge badge-context">CS</span> State Manager Provides Reasoning Config</div>
+                            <div class="interaction-description">Confirms/retrieves LLM config for synthesis call from `StateManager`.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Request:</span><code class="data-content">stateManager.getThreadConfigValue(threadId, 'reasoning')</code></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-reasoning">
+                            <div class="component-label"><span class="component-badge badge-reasoning">RS</span> Prompt Manager Creates Synthesis Prompt</div>
+                            <div class="interaction-description">Constructs prompt using query, intent, plan, formatted `toolResults` (clearly indicating success/error/output), history, system prompt.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Input:</span><code class="data-content">{ query, intent, plan, toolResults: ToolResult[], history?, systemPrompt? }</code></div>
+                                <div class="data-flow"><span class="data-direction">Output:</span><code class="data-content">FormattedPrompt</code></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-reasoning">
+                            <div class="component-label"><span class="component-badge badge-reasoning">RS</span> Reasoning Engine Executes Synthesis LLM Call</div>
+                            <div class="interaction-description">Calls configured LLM via `ProviderAdapter`. Captures thoughts via `onThought` -> `OS`.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Call:</span><code class="data-content">reasoningEngine.call(prompt, callOptions)</code></div>
+                                <div class="data-flow"><span class="data-direction">Response:</span><code class="data-content">Promise<string> // Raw LLM Response</code></div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-observation">
+                            <div class="component-label"><span class="component-badge badge-observation">OS</span> Record Synthesis Thoughts (Callback)</div>
+                            <div class="interaction-description">`onThought` triggers recording of `THOUGHTS` observations tagged `sourcePhase: 'synthesis'`.</div>
+                             <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Creates:</span><code class="data-content">Observation { ..., type: THOUGHTS, metadata: { sourcePhase: 'synthesis', modelUsed } }</code></div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-storage">
+                            <div class="component-label"><span class="component-badge badge-storage">SS</span> Persist Synthesis Thoughts</div>
+                            <div class="interaction-description">`ObservationRepository` saves synthesis `THOUGHTS`.</div>
+                        </div>
+                    </div>
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-ui">
+                            <div class="component-label"><span class="component-badge badge-ui">UI</span> Notify UI of Synthesis Thoughts</div>
+                            <div class="interaction-description">`ObservationSocket` emits synthesis `THOUGHTS`.</div>
+                             <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Event:</span><code class="data-content">observationSocket.notify(Observation<THOUGHTS>)</code></div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-reasoning">
+                            <div class="component-label"><span class="component-badge badge-reasoning">RS</span> Output Parser Extracts Final Response Text</div>
+                            <div class="interaction-description">Extracts the clean user-facing answer from the raw synthesis response. Handles errors.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Input:</span><code class="data-content">rawLLMResponse: string</code></div>
+                                <div class="data-flow"><span class="data-direction">Output:</span><code class="data-content">finalResponseContent: string | ParsingError</code></div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-observation">
+                            <div class="component-label"><span class="component-badge badge-observation">OS</span> Record Parsing Outcome (Optional Error)</div>
+                            <div class="interaction-description">If final response parsing fails, creates an `ERROR` observation.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Creates:</span><code class="data-content">// On Failure: ERROR Observation</code></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage 6: Finalization & Response Delivery -->
+            <div class="flow-stage" id="stage-6">
+                <div class="stage-header"><div class="stage-number">6</div><div class="stage-title">Finalization & Response Delivery</div></div>
+                <div class="stage-description">
+                    The cycle concludes. Structured messages (User & AI) are created with full context (IDs, metadata), persisted to the thread's history, and broadcast via UI sockets. State changes are saved. The final result is returned to the caller.
+                </div>
+                 <div class="component-flow">
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-core">
+                            <div class="component-label"><span class="component-badge badge-agent-core">AC</span> Format Final User & Agent Messages</div>
+                            <div class="interaction-description">Creates `ConversationMessage` objects with unique `messageId`s, roles, timestamps, `threadId`, and rich metadata linking agent response to trace, tools, observations.</div>
+                              <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Creates:</span><code class="data-content">UserMessage { messageId, threadId, role: 'USER', content: query, timestamp, metadata: { userId?, sessionId? } }</code></div>
+                                <div class="data-flow"><span class="data-direction">Creates:</span><code class="data-content">AgentMessage { messageId, threadId, role: 'AI', content: finalResponseContent, timestamp, metadata: { traceId?, userId?, sessionId?, modelUsed?, toolCallIds?, relatedObsIds?, durationMs?, cost? } }</code></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-context">
+                            <div class="component-label"><span class="component-badge badge-context">CS</span> Persist Conversation History</div>
+                            <div class="interaction-description">`ConversationManager` instructs `ConversationRepository` to save both messages associated with the `threadId`.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Method:</span><code class="data-content">conversationManager.addMessages(threadId, [userMsg, agentMsg])</code></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-storage">
+                            <div class="component-label"><span class="component-badge badge-storage">SS</span> Storage Adapter Saves Messages</div>
+                            <div class="interaction-description">`ConversationRepository` uses `StorageAdapter` to persist messages, keyed by `messageId` and queryable by `threadId`.</div>
+                             <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Operation:</span><code class="data-content">storageAdapter.set('messages', msg.messageId, msg) // For each</code></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-context">
+                            <div class="component-label"><span class="component-badge badge-context">CS</span> Persist State Changes (If Any)</div>
+                            <div class="interaction-description">If `StateManager` tracked modifications to `AgentState` (preferences etc.), instructs `StateRepository` to save changes for the `threadId`/`userId`.</div>
+                             <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Method:</span><code class="data-content">stateManager.saveStateIfModified(threadId)</code></div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-storage">
+                            <div class="component-label"><span class="component-badge badge-storage">SS</span> Storage Adapter Saves State (If Changed)</div>
+                            <div class="interaction-description">`StateRepository` uses `StorageAdapter` to persist `AgentState`.</div>
+                        </div>
+                    </div>
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-ui">
+                            <div class="component-label"><span class="component-badge badge-ui">UI</span> Notify UI of New Messages</div>
+                            <div class="interaction-description">`ConversationSocket` emits both `UserMessage` and `AgentMessage`. UI subscribes by `role` to render chat. `sessionId` might be used for targeting specific UI instances.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Event:</span><code class="data-content">conversationSocket.notify(UserMessage, { targetSessionId: sessionId? })</code></div>
+                                <div class="data-flow"><span class="data-direction">Event:</span><code class="data-content">conversationSocket.notify(AgentMessage, { targetSessionId: sessionId? })</code></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="component-interaction">
+                        <div class="interaction-dot"></div><div class="interaction-line"></div>
+                        <div class="interaction-details type-core">
+                            <div class="component-label"><span class="component-badge badge-agent-core">AC</span> Return Final Result Structure</div>
+                            <div class="interaction-description">`artInstance.process()` promise resolves, returning the final `AgentMessage` and `ExecutionMetadata` (status, duration, IDs, costs) to the application.</div>
+                            <div class="interaction-data">
+                                <div class="data-flow"><span class="data-direction">Returns:</span><code class="data-content">Promise<AgentFinalResponse>
+// AgentFinalResponse { response: AgentMessage, metadata: ExecutionMetadata }
+// ExecutionMetadata { threadId, traceId?, userId?, status, totalDurationMs, ... }</code></div>
+                            </div>
+                        </div>
+                    </div>
+                     <div class="component-interaction">
+                        <div class="interaction-dot"></div>
+                         <div class="interaction-line" style="height:0px;"></div> <!-- End of line -->
+                        <div class="interaction-details type-ui">
+                            <div class="component-label"><span class="component-badge badge-ui">UI</span> Application Renders Final Response</div>
+                            <div class="interaction-description">The application's UI component, subscribed to `ConversationSocket` (likely filtered for `role: 'AI'` and maybe `sessionId`), receives the `AgentMessage` and displays its `content`.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pattern-note">
+            <h3>Architectural Summary</h3>
+            <p>This refined flow demonstrates a thread-centric PES execution using centralized configuration via `StateManager`. Components interact through robust interfaces, passing necessary context (`threadId`, `traceId`, `userId`). Emphasis is placed on detailed observability via typed `Observations`, comprehensive metadata, explicit error handling, and persistent storage, aligning with production system requirements.</p>
+        </div>
+
+        <h2>Alternative Reasoning Patterns</h2>
+        <div class="pattern-alternatives">
+             <!-- Same alternative pattern cards as previous version -->
+             <div class="pattern-card">
+                <h4>ReAct Pattern</h4>
+                <p>Interleaves Reasoning (thought, action planning) and Acting (tool use) in iterative cycles. Suitable for tasks requiring dynamic adaptation based on intermediate results.</p>
+                <div class="pattern-difference">
+                    <div class="pattern-difference-item"><span class="difference-icon">•</span><span>Iterative loop: Reason -> Act -> Observe -> Reason...</span></div>
+                    <div class="pattern-difference-item"><span class="difference-icon">•</span><span>Single LLM call per cycle determines next thought/action.</span></div>
+                    <div class="pattern-difference-item"><span class="difference-icon">•</span><span>Tool calls executed immediately based on 'Act' step.</span></div>
+                     <div class="pattern-difference-item"><span class="difference-icon">•</span><span>Observations crucial for feeding back results into the loop.</span></div>
+                </div>
+            </div>
+             <div class="pattern-card">
+                <h4>Chain of Thought (CoT)</h4>
+                <p>Focuses on generating explicit, step-by-step reasoning before producing a final answer. Often used for complex problem-solving where the reasoning path itself is important.</p>
+                 <div class="pattern-difference">
+                    <div class="pattern-difference-item"><span class="difference-icon">•</span><span>Typically involves a single, detailed LLM prompt encouraging step-by-step thinking.</span></div>
+                    <div class="pattern-difference-item"><span class="difference-icon">•</span><span>Emphasis on generating detailed `THOUGHTS` observations.</span></div>
+                    <div class="pattern-difference-item"><span class="difference-icon">•</span><span>May not involve external tools, or uses them minimally after reasoning.</span></div>
+                </div>
+            </div>
+            <div class="pattern-card">
+                <h4>Custom Patterns</h4>
+                <p>Developers can implement the `AgentCore` interface with bespoke logic, creating specialized flows tailored to specific requirements or domains.</p>
+                 <div class="pattern-difference">
+                    <div class="pattern-difference-item"><span class="difference-icon">•</span><span>Allows defining unique sequences of planning, reasoning, and action.</span></div>
+                    <div class="pattern-difference-item"><span class="difference-icon">•</span><span>Can combine elements from standard patterns (e.g., multi-stage planning).</span></div>
+                    <div class="pattern-difference-item"><span class="difference-icon">•</span><span>Still leverages all underlying ART subsystems (Tools, Storage, UI etc.).</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="back-to-top">
+            <a href="#">Back to Top</a>
+        </div>
+    </div>
+</body>
+</html>

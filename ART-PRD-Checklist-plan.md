@@ -451,6 +451,12 @@ graph TD
     *   [D] **3.1.2:** Unit tests for `PromptManager`.
     *   [D] **3.1.3:** Implement `OutputParser` (methods `parsePlanningOutput`, `parseSynthesisOutput`). Handle potential formatting errors. Use regex or structured parsing.
     *   [D] **3.1.4:** Unit tests for `OutputParser`.
+    *   [D] **3.1.4.1:** Add `zod` dependency. (Completed)
+    *   [D] **3.1.4.2:** Enhance `OutputParser.parsePlanningOutput` to find JSON array within potential markdown/text. (Completed - Covers original fence stripping and text issue)
+    *   [D] **3.1.4.3:** Define Zod schema for `ParsedToolCall[]` in `OutputParser`. (Completed)
+    *   [D] **3.1.4.4:** Implement Zod validation for parsed tool calls in `OutputParser.parsePlanningOutput`. (Completed)
+    *   [D] **3.1.4.5:** Update `OutputParser` unit tests for enhanced parsing and Zod validation cases. (Completed)
+    *   [D] **3.1.4.6:** (Optional) Refine planning prompt instruction in `PromptManager` to explicitly forbid extra text in the `Tool Calls:` section.
     *   [D] **3.1.5:** Implement a `ProviderAdapter` (e.g., `OpenAIAdapter`). Handle API calls, auth, `onThought` callback triggering.
     *   [D] **3.1.6:** Unit tests for `OpenAIAdapter` (mocking API calls).
     *   [D] **3.1.7:** Implement `ReasoningEngine` core logic (delegates to adapter, handles `CallOptions`).
@@ -499,46 +505,59 @@ graph TD
 
 **Phase 5: UI Integration (Est. Complexity: Medium)**
 
-*   *Dependency: Phase 1 (Interfaces), Phase 4.1 (ObservationManager), Phase 2.3 (ConversationManager).*
-*   [D] **5.1:** Implement `TypedSocket` base class/logic (simple pub/sub).
-*   [D] **5.2:** Implement `ObservationSocket` (extends `TypedSocket`).
-*   [D] **5.3:** Implement `ConversationSocket` (extends `TypedSocket`).
-*   [D] **5.4:** Integrate `ObservationSocket.notify` call within `ObservationManager.record`.
-*   [D] **5.5:** Integrate `ConversationSocket.notify` call within `ConversationManager.addMessages` (or AgentCore finalization).
-*   [D] **5.6:** Implement `UISystem` to provide access to sockets.
+*   *Dependency: Phase 1, 4.1, 2.3.*
+*   [D] **5.1:** Implement `TypedSocket` base class/logic.
+*   [D] **5.2:** Implement `ObservationSocket`.
+*   [D] **5.3:** Implement `ConversationSocket`.
+*   [D] **5.4:** Integrate `ObservationSocket.notify` in `ObservationManager`.
+*   [D] **5.5:** Integrate `ConversationSocket.notify` in `ConversationManager` / `AgentCore`.
+*   [D] **5.6:** Implement `UISystem` provider.
 *   [D] **5.7:** Unit tests for Sockets and UISystem.
-*   [D] **5.8:** Write basic examples demonstrating socket subscription in plain JS.
+*   [D] **5.8:** Write basic JS examples for socket subscription.
 
 **Phase 6: Integration, Testing, Documentation & Release Prep (Est. Complexity: High)**
 
 *   *Dependency: All previous phases.*
 *   [ ] **6.1: End-to-End (E2E) Testing**
-    *   [ ] **6.1.1:** Set up E2E test environment (e.g., Playwright with a simple HTML page).
-    *   [ ] **6.1.2:** Write E2E test for full PES flow using `InMemoryStorageAdapter` and mocked LLM/Tool.
-    *   [ ] **6.1.3:** Write E2E test for full PES flow using `IndexedDBStorageAdapter` in a browser context. Verify persistence and UI socket updates.
+    *   [ ] **6.1.1:** Setup E2E test environment (e.g., Playwright).
+    *   [ ] **6.1.2:** E2E test: PES flow w/ InMemoryStorage + mocks.
+    *   [ ] **6.1.3:** E2E test: PES flow w/ IndexedDBStorage in browser.
 *   [ ] **6.2: Documentation**
-    *   [ ] **6.2.1:** Review and complete TSDoc comments for all public APIs.
-    *   [ ] **6.2.2:** Write conceptual documentation (README, Architecture Overview, Getting Started Guide).
-    *   [ ] **6.2.3:** Create usage examples for core PES flow.
-    *   [ ] **6.2.4:** Generate API documentation from TSDoc.
+*   [ ] **6.X: Tooling Improvements**
+    *   [D] **6.X.1:** Enhance `CalculatorTool` schema with usage examples to improve LLM guidance.
+    *   [D] **6.X.2:** Add `mathjs` dependency.
+    *   [D] **6.X.3:** Refactor `CalculatorTool.ts` to use `mathjs.evaluate`, removing unsafe `Function` constructor and sanitization.
+    *   [D] **6.X.4:** Update `CalculatorTool` schema (description, add optional `scope` input, update examples for `mathjs` features).
+    *   [D] **6.X.5:** Update `CalculatorTool.test.ts` to cover `mathjs` usage (including scope, modulo, errors).
+    *   [ ] **6.2.1:** Review & complete TSDoc comments.
+    *   [ ] **6.X.6:** Implement function allowlist in `CalculatorTool` for security and predictability.
+    *   [ ] **6.X.7:** Add complex number support to `CalculatorTool` (result validation and output formatting).
+    *   [ ] **6.X.8:** Enhance error reporting in `CalculatorTool` to use specific `mathjs` error messages.
+    *   [ ] **6.X.9:** Update `CalculatorTool` schema description and examples for allowlist and complex numbers.
+    *   [ ] **6.2.2:** Write conceptual docs (README, Architecture, Getting Started).
+    *   [ ] **6.2.3:** Create usage examples.
+    *   [ ] **6.2.4:** Generate API documentation.
 *   [ ] **6.3: Build & Packaging**
-    *   [ ] **6.3.1:** Configure build process for production output (minification, tree-shaking).
-    *   [ ] **6.3.2:** Configure packaging for NPM (`package.json`).
+    *   [D] **6.3.1:** Configure production build (minify, tree-shake).
+    *   [D] **6.3.2:** Configure `package.json` for NPM.
 *   [ ] **6.4: Performance & Refinement**
-    *   [ ] **6.4.1:** Basic performance profiling in browser (memory, load time). Address obvious bottlenecks.
-    *   [ ] **6.4.2:** Code review and refactoring for clarity and consistency.
+    *   [ ] **6.4.1:** Basic performance profiling & optimization.
+    *   [ ] **6.4.2:** Code review and refactoring.
 *   [ ] **6.5: Release Checklist**
-    *   [ ] **6.5.1:** All tests passing (Unit, Integration, E2E).
-    *   [ ] **6.5.2:** Documentation complete and reviewed.
+    *   [ ] **6.5.1:** All tests passing.
+    *   [ ] **6.5.2:** Documentation complete.
     *   [ ] **6.5.3:** Build process verified.
-    *   [ ] **6.5.4:** Version bumped appropriately.
+    *   [ ] **6.5.4:** Version bumped.
     *   [ ] **6.5.5:** (Optional) Publish to NPM.
 
-**Cross-Cutting Concerns (Ongoing Tasks)**
+**Cross-Cutting Concerns (Ongoing)**
 
-*   [ ] Implement consistent error handling patterns across all components. Define custom error types if necessary.
-*   [ ] Integrate logging utility calls at appropriate levels (debug, info, warn, error).
-*   [ ] Ensure TypeScript strict mode compliance throughout development.
-*   [ ] Continuously write and update unit/integration tests as features are implemented.
-*   [ ] Maintain code quality standards (linting, formatting).
+*   [D] Implement consistent error handling.
+*   [D] Integrate logging utility calls.
+*   [D] Ensure TypeScript strict mode compliance.
+*   [D] Continuously write/update unit & integration tests.
+*   [D] Maintain code quality (linting, formatting).
 *   [ ] Identify and track technical debt.
+
+---
+

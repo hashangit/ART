@@ -25,7 +25,7 @@ describe('OutputParser', () => {
 
   // --- parsePlanningOutput Tests ---
 
-  it('should parse valid planning output with all sections', async () => {
+  it('should parse valid planning output with all sections (no fences)', async () => {
     const output = `
       Intent: Find the capital of France and calculate 5 + 7.
       Plan:
@@ -44,6 +44,92 @@ describe('OutputParser', () => {
     expect(result.toolCalls).toEqual([
       { callId: 'call_1', toolName: 'search', arguments: { query: 'capital of France' } },
       { callId: 'call_2', toolName: 'calculator', arguments: { expression: '5 + 7' } },
+    ]);
+    expect(Logger.warn).not.toHaveBeenCalled();
+    expect(Logger.error).not.toHaveBeenCalled();
+  });
+
+  it('should parse valid planning output with ```json fences', async () => {
+    const output = `
+      Intent: Calculate 2*3.
+      Plan: Use calculator.
+      Tool Calls: \`\`\`json
+      [
+        {"callId": "calc1", "toolName": "calculator", "arguments": {"expression": "2*3"}}
+      ]
+      \`\`\`
+    `;
+    const result = await outputParser.parsePlanningOutput(output);
+
+    expect(result.intent).toBe('Calculate 2*3.');
+    expect(result.plan).toBe('Use calculator.');
+    expect(result.toolCalls).toEqual([
+      { callId: 'calc1', toolName: 'calculator', arguments: { expression: '2*3' } },
+    ]);
+    expect(Logger.warn).not.toHaveBeenCalled();
+    expect(Logger.error).not.toHaveBeenCalled();
+  });
+
+  it('should parse valid planning output with ``` fences', async () => {
+    const output = `
+      Intent: Calculate 4/2.
+      Plan: Use calculator.
+      Tool Calls: \`\`\`
+      [
+        {"callId": "calc2", "toolName": "calculator", "arguments": {"expression": "4/2"}}
+      ]
+      \`\`\`
+    `;
+    const result = await outputParser.parsePlanningOutput(output);
+
+    expect(result.intent).toBe('Calculate 4/2.');
+    expect(result.plan).toBe('Use calculator.');
+    expect(result.toolCalls).toEqual([
+      { callId: 'calc2', toolName: 'calculator', arguments: { expression: '4/2' } },
+    ]);
+    expect(Logger.warn).not.toHaveBeenCalled();
+    expect(Logger.error).not.toHaveBeenCalled();
+  });
+
+  it('should parse valid planning output with introductory text before JSON array', async () => {
+    const output = `
+      Intent: Test text before JSON.
+      Plan: Extract the JSON correctly.
+      Tool Calls: Here is the JSON you requested:
+      [
+        {"callId": "intro_1", "toolName": "testTool", "arguments": {"value": 123}}
+      ]
+      Some trailing text maybe.
+    `;
+    const result = await outputParser.parsePlanningOutput(output);
+
+    expect(result.intent).toBe('Test text before JSON.');
+    expect(result.plan).toBe('Extract the JSON correctly.');
+    expect(result.toolCalls).toEqual([
+      { callId: 'intro_1', toolName: 'testTool', arguments: { value: 123 } },
+    ]);
+    expect(Logger.warn).not.toHaveBeenCalled();
+    expect(Logger.error).not.toHaveBeenCalled();
+  });
+
+  it('should parse valid planning output with introductory text before fenced JSON array', async () => {
+    const output = `
+      Intent: Test text before fenced JSON.
+      Plan: Extract the JSON correctly.
+      Tool Calls: Please find the tool calls below:
+      \`\`\`json
+      [
+        {"callId": "intro_fenced", "toolName": "anotherTool", "arguments": [1, 2, 3]}
+      ]
+      \`\`\`
+      Thank you.
+    `;
+    const result = await outputParser.parsePlanningOutput(output);
+
+    expect(result.intent).toBe('Test text before fenced JSON.');
+    expect(result.plan).toBe('Extract the JSON correctly.');
+    expect(result.toolCalls).toEqual([
+      { callId: 'intro_fenced', toolName: 'anotherTool', arguments: [1, 2, 3] },
     ]);
     expect(Logger.warn).not.toHaveBeenCalled();
     expect(Logger.error).not.toHaveBeenCalled();
@@ -112,10 +198,27 @@ describe('OutputParser', () => {
     expect(result.plan).toBe('See what happens.');
     expect(result.toolCalls).toEqual([]); // Should default to empty array on parse error
     expect(Logger.error).toHaveBeenCalledOnce();
-    expect(Logger.error).toHaveBeenCalledWith(expect.stringContaining('Failed to parse Tool Calls JSON'));
+    expect(Logger.error).toHaveBeenCalledWith(expect.stringContaining('Failed to parse Tool Calls JSON'), expect.anything());
   });
 
-   it('should handle non-array JSON in Tool Calls and return empty array', async () => {
+  it('should handle malformed JSON inside fences and return empty array', async () => {
+    const output = `
+      Intent: Test malformed JSON in fences.
+      Plan: See what happens.
+      Tool Calls: \`\`\`json
+      [{"callId": "c1", "toolName": "test", "arguments": {"arg": "value"}] // Missing closing brace
+      \`\`\`
+    `;
+    const result = await outputParser.parsePlanningOutput(output);
+
+    expect(result.intent).toBe('Test malformed JSON in fences.');
+    expect(result.plan).toBe('See what happens.');
+    expect(result.toolCalls).toEqual([]); // Should default to empty array on parse error
+    expect(Logger.error).toHaveBeenCalledOnce();
+    expect(Logger.error).toHaveBeenCalledWith(expect.stringContaining('Failed to parse Tool Calls JSON'), expect.anything());
+  });
+
+  it('should handle non-array JSON (Zod validation failure) and return empty array', async () => {
     const output = `
       Intent: Test non-array JSON.
       Plan: See what happens.
@@ -125,9 +228,48 @@ describe('OutputParser', () => {
 
     expect(result.intent).toBe('Test non-array JSON.');
     expect(result.plan).toBe('See what happens.');
-    expect(result.toolCalls).toEqual([]); // Should default to empty array if not an array
+    expect(result.toolCalls).toEqual([]); // Should default to empty array on Zod validation failure
+    // Check that warn was called due to Zod validation failure
     expect(Logger.warn).toHaveBeenCalledOnce();
-    expect(Logger.warn).toHaveBeenCalledWith(expect.stringContaining('Tool Calls section was not a valid JSON array'));
+    expect(Logger.warn).toHaveBeenCalledWith(expect.stringContaining('Tool Calls JSON structure validation failed'), expect.anything());
+  });
+
+  it('should handle invalid tool call structure (Zod validation failure) and return empty array', async () => {
+    const output = `
+      Intent: Test invalid structure.
+      Plan: See what happens.
+      Tool Calls: [
+        {"callId": "c1", "arguments": {"arg": "value"}} // Missing toolName
+      ]
+    `;
+    const result = await outputParser.parsePlanningOutput(output);
+
+    expect(result.intent).toBe('Test invalid structure.');
+    expect(result.plan).toBe('See what happens.');
+    expect(result.toolCalls).toEqual([]); // Should default to empty array on Zod validation failure
+    // Check that warn was called due to Zod validation failure
+    expect(Logger.warn).toHaveBeenCalledOnce();
+    expect(Logger.warn).toHaveBeenCalledWith(expect.stringContaining('Tool Calls JSON structure validation failed'), expect.anything());
+  });
+
+   it('should handle invalid tool call structure inside fences (Zod validation failure) and return empty array', async () => {
+    const output = `
+      Intent: Test invalid structure in fences.
+      Plan: See what happens.
+      Tool Calls: \`\`\`
+      [
+        {"toolName": "test", "arguments": {}} // Missing callId
+      ]
+      \`\`\`
+    `;
+    const result = await outputParser.parsePlanningOutput(output);
+
+    expect(result.intent).toBe('Test invalid structure in fences.');
+    expect(result.plan).toBe('See what happens.');
+    expect(result.toolCalls).toEqual([]); // Should default to empty array on Zod validation failure
+    // Check that warn was called due to Zod validation failure
+    expect(Logger.warn).toHaveBeenCalledOnce();
+    expect(Logger.warn).toHaveBeenCalledWith(expect.stringContaining('Tool Calls JSON structure validation failed'), expect.anything());
   });
 
   it('should handle completely unstructured output', async () => {

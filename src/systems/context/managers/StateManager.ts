@@ -1,6 +1,5 @@
 import { StateManager as IStateManager, IStateRepository } from '../../../core/interfaces';
-// Removed unused AgentState and ThreadConfig imports
-import { ThreadContext } from '../../../types';
+import { ThreadContext, ThreadConfig } from '../../../types'; // Import ThreadConfig
 
 /**
  * Manages thread-specific configuration (ThreadConfig) and state (AgentState)
@@ -96,9 +95,24 @@ export class StateManager implements IStateManager {
         // No-op in this v1.0 implementation.
         console.warn(`StateManager: saveStateIfModified called for thread ${threadId}, but state modification tracking/saving is not implemented in this version. State must be saved explicitly via repository methods.`);
         return Promise.resolve();
+      }
+    
+      /**
+       * Sets or updates the configuration for a specific thread.
+       * Delegates the call to the state repository.
+       * @param threadId The ID of the thread.
+       * @param config The complete configuration object to set.
+       */
+      async setThreadConfig(threadId: string, config: ThreadConfig): Promise<void> {
+        if (!threadId || !config) {
+          throw new Error("StateManager: threadId and config are required for setThreadConfig.");
+        }
+        // Logger.debug(`StateManager: Setting thread config for ${threadId}`); // Assuming Logger is available
+        // Assuming IStateRepository has a setThreadConfig method
+        await this.repository.setThreadConfig(threadId, config);
+      }
+    
+      // Potential future methods:
+      // async updateThreadConfig(threadId: string, updates: Partial<ThreadConfig>): Promise<void> { ... }
+      // async updateAgentState(threadId: string, updates: Partial<AgentState>): Promise<void> { ... }
     }
-
-    // Potential future methods:
-    // async updateThreadConfig(threadId: string, updates: Partial<ThreadConfig>): Promise<void> { ... }
-    // async updateAgentState(threadId: string, updates: Partial<AgentState>): Promise<void> { ... }
-}

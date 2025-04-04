@@ -1,0 +1,2034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ART: Agent Orchestration Framework v0.2.4</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-light: #EEF2FF;
+            --primary-dark: #3730A3;
+            --secondary: #6366F1;
+            --success: #10B981;
+            --success-light: #ECFDF5;
+            --warning: #F59E0B;
+            --warning-light: #FFFBEB;
+            --danger: #EF4444;
+            --danger-light: #FEF2F2;
+            --purple: #8B5CF6;
+            --purple-light: #F5F3FF;
+            --teal: #14B8A6;
+            --teal-light: #F0FDFA;
+            --blue: #3B82F6;
+            --blue-light: #EFF6FF;
+            --orange: #F97316;
+            --orange-light: #FFF7ED;
+            --pink: #EC4899;
+            --pink-light: #FDF2F8;
+
+            --text-primary: #1F2937;
+            --text-secondary: #4B5563;
+            --text-tertiary: #6B7280;
+            --text-light: #9CA3AF;
+
+            --bg-white: #FFFFFF;
+            --bg-light: #F9FAFB;
+            --bg-lighter: #F3F4F6;
+
+            --border-light: #E5E7EB;
+            --border-medium: #D1D5DB;
+
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+            --radius-sm: 0.25rem;
+            --radius-md: 0.375rem;
+            --radius-lg: 0.5rem;
+            --radius-xl: 0.75rem;
+            --radius-2xl: 1rem;
+
+            --spacing-1: 0.25rem;
+            --spacing-2: 0.5rem;
+            --spacing-3: 0.75rem;
+            --spacing-4: 1rem;
+            --spacing-5: 1.25rem;
+            --spacing-6: 1.5rem;
+            --spacing-8: 2rem;
+            --spacing-10: 2.5rem;
+            --spacing-12: 3rem;
+            --spacing-16: 4rem;
+            --spacing-20: 5rem;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-lighter);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: var(--spacing-6);
+            font-size: 15px;
+        }
+
+        h1, h2, h3, h4 {
+            color: var(--text-primary);
+            line-height: 1.3;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-size: 1.875rem;
+            margin-bottom: var(--spacing-8);
+            text-align: center;
+            color: var(--primary-dark);
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            margin-top: var(--spacing-10);
+            margin-bottom: var(--spacing-6);
+            padding-bottom: var(--spacing-4);
+            border-bottom: 2px solid var(--border-light);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            margin-top: var(--spacing-8);
+            margin-bottom: var(--spacing-4);
+            color: var(--text-secondary);
+        }
+
+        p {
+            margin-bottom: var(--spacing-4);
+            color: var(--text-secondary);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--bg-white);
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-lg);
+            padding: var(--spacing-10);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+        }
+
+        .intro {
+            padding: var(--spacing-6);
+            background-color: var(--primary-light);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--spacing-10);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .intro::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 150px;
+            height: 150px;
+            background-color: rgba(79, 70, 229, 0.1);
+            border-radius: 50%;
+            transform: translate(30%, -30%);
+        }
+
+        .intro h3 {
+            font-weight: 600;
+            color: var(--primary-dark);
+            margin-top: 0;
+        }
+
+        .component {
+            margin-bottom: var(--spacing-16);
+            border-radius: var(--radius-lg);
+            background-color: var(--bg-white);
+            padding: var(--spacing-8);
+            box-shadow: var(--shadow-md);
+            position: relative;
+        }
+
+        .component::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 5%;
+            right: 5%;
+            height: 10px;
+            background-color: var(--bg-white);
+            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            z-index: -1;
+        }
+
+        .component-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: var(--spacing-6);
+        }
+
+        .component-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            margin-right: var(--spacing-5);
+            flex-shrink: 0;
+            box-shadow: var(--shadow-md);
+        }
+
+        .component-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: var(--spacing-1);
+        }
+
+        .component-subtitle {
+            color: var(--text-tertiary);
+            font-size: 1rem;
+        }
+
+        .subcomponents {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-5);
+            margin-top: var(--spacing-8);
+        }
+
+        .subcomponent {
+            background-color: var(--bg-light);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-6);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-light);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .subcomponent:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--border-medium);
+        }
+
+        .subcomponent-title {
+            font-weight: 600;
+            margin-bottom: var(--spacing-3);
+            font-size: 1.05rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+        }
+
+        .subcomponent-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: var(--spacing-3);
+            font-size: 14px;
+            flex-shrink: 0;
+            font-weight: 700;
+        }
+
+        .subcomponent-description {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-4);
+        }
+
+        .features {
+            margin-top: var(--spacing-4);
+            padding-top: var(--spacing-4);
+            border-top: 1px solid var(--border-light);
+        }
+
+        .feature {
+            font-size: 0.9rem;
+            margin-bottom: var(--spacing-2);
+            display: flex;
+            align-items: baseline;
+            color: var(--text-tertiary);
+        }
+
+        .feature::before {
+            content: "•";
+            margin-right: var(--spacing-2);
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .info-box {
+            background-color: var(--blue-light);
+            padding: var(--spacing-6);
+            margin: var(--spacing-8) 0;
+            border-radius: var(--radius-lg);
+            position: relative;
+            box-shadow: var(--shadow-sm);
+            border-left: 4px solid var(--blue);
+        }
+
+        .warning-box {
+            background-color: var(--warning-light);
+            padding: var(--spacing-6);
+            margin: var(--spacing-8) 0;
+            border-radius: var(--radius-lg);
+            position: relative;
+            box-shadow: var(--shadow-sm);
+            border-left: 4px solid var(--warning);
+        }
+
+        .success-box {
+            background-color: var(--success-light);
+            padding: var(--spacing-6);
+            margin: var(--spacing-8) 0;
+            border-radius: var(--radius-lg);
+            position: relative;
+            box-shadow: var(--shadow-sm);
+            border-left: 4px solid var(--success);
+        }
+
+        .danger-box {
+            background-color: var(--danger-light);
+            padding: var(--spacing-6);
+            margin: var(--spacing-8) 0;
+            border-radius: var(--radius-lg);
+            position: relative;
+            box-shadow: var(--shadow-sm);
+            border-left: 4px solid var(--danger);
+        }
+
+        .box-title {
+            font-weight: 600;
+            margin-bottom: var(--spacing-2);
+            font-size: 1.05rem;
+        }
+
+        .info-box .box-title {
+            color: var(--blue);
+        }
+
+        .warning-box .box-title {
+            color: var(--warning);
+        }
+
+        .success-box .box-title {
+            color: var(--success);
+        }
+
+        .danger-box .box-title {
+            color: var(--danger);
+        }
+
+        .code-box {
+            background-color: #1E293B;
+            color: #E2E8F0;
+            padding: var(--spacing-6);
+            margin: var(--spacing-8) 0;
+            border-radius: var(--radius-lg);
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            position: relative;
+            box-shadow: var(--shadow-md);
+        }
+
+        .code-box::before {
+            content: 'Code Example';
+            position: absolute;
+            top: 0;
+            right: var(--spacing-4);
+            background-color: rgba(99, 102, 241, 0.4);
+            padding: 0 var(--spacing-3);
+            font-size: 0.75rem;
+            color: white;
+            border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+        }
+
+        /* Component-specific colors */
+        .agent-core {
+            background: linear-gradient(135deg, var(--blue), var(--blue-light));
+            color: var(--blue);
+        }
+
+        .reasoning-system {
+            background: linear-gradient(135deg, var(--success), var(--success-light));
+            color: var(--success);
+        }
+
+        .tool-system {
+            background: linear-gradient(135deg, var(--purple), var(--purple-light));
+            color: var(--purple);
+        }
+
+        .context-system {
+            background: linear-gradient(135deg, var(--warning), var(--warning-light));
+            color: var(--warning);
+        }
+
+        .observation-system {
+            background: linear-gradient(135deg, var(--teal), var(--teal-light));
+            color: var(--teal);
+        }
+
+        .ui-system {
+            background: linear-gradient(135deg, var(--pink), var(--pink-light));
+            color: var(--pink);
+        }
+
+        .storage-system {
+            background: linear-gradient(135deg, var(--orange), var(--orange-light));
+            color: var(--orange);
+        }
+
+        /* Button styling */
+        .button {
+          display: inline-block;
+          padding: var(--spacing-3) var(--spacing-6);
+          background-color: var(--primary);
+          color: white;
+          border: none;
+          border-radius: var(--radius-md);
+          font-weight: 600;
+          text-decoration: none;
+          cursor: pointer;
+          transition: background-color 0.2s ease;
+          box-shadow: var(--shadow-sm);
+        }
+
+        .button:hover {
+          background-color: var(--primary-dark);
+          box-shadow: var(--shadow-md);
+        }
+
+        /* Architecture diagram */
+        .architecture-diagram {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(4, auto);
+            gap: var(--spacing-4);
+            margin: var(--spacing-10) 0;
+        }
+
+        .arch-component {
+            padding: var(--spacing-4);
+            border-radius: var(--radius-lg);
+            background-color: var(--bg-white);
+            box-shadow: var(--shadow-md);
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            min-height: 120px;
+            justify-content: center;
+        }
+
+        .arch-component h4 {
+            font-size: 1rem;
+            margin-bottom: var(--spacing-2);
+        }
+
+        .arch-component p {
+            font-size: 0.85rem;
+            color: var(--text-tertiary);
+        }
+
+        .arch-component-agent-core {
+            grid-column: 2;
+            grid-row: 1;
+            border-top: 4px solid var(--blue);
+        }
+
+        .arch-component-reasoning {
+            grid-column: 1;
+            grid-row: 2;
+            border-top: 4px solid var(--success);
+        }
+
+        .arch-component-tool {
+            grid-column: 3;
+            grid-row: 2;
+            border-top: 4px solid var(--purple);
+        }
+
+        .arch-component-observation {
+            grid-column: 1;
+            grid-row: 3;
+            border-top: 4px solid var(--teal);
+        }
+
+        .arch-component-context {
+            grid-column: 3;
+            grid-row: 3;
+            border-top: 4px solid var(--warning);
+        }
+
+        .arch-component-ui {
+            grid-column: 2;
+            grid-row: 3;
+            border-top: 4px solid var(--pink);
+        }
+
+        .arch-component-storage {
+            grid-column: 2;
+            grid-row: 4;
+            border-top: 4px solid var(--orange);
+        }
+
+        /* Version tag */
+        .version-tag {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        .update-badge {
+            display: inline-block;
+            background-color: var(--success-light);
+            color: var(--success);
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--radius-md);
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: var(--spacing-2);
+            border: 1px solid var(--success);
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            body {
+                padding: var(--spacing-4);
+            }
+
+            .container {
+                padding: var(--spacing-5);
+            }
+
+            .subcomponents {
+                grid-template-columns: 1fr;
+            }
+
+            .architecture-diagram {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+            }
+
+            .arch-component {
+                grid-column: 1 !important;
+                grid-row: auto !important;
+            }
+
+            .version-tag {
+                position: static;
+                display: inline-block;
+                margin-bottom: var(--spacing-4);
+            }
+        }
+
+        /* Custom component-specific styling */
+        .agent-core-component {
+            border-top: 5px solid var(--blue);
+        }
+
+        .tool-system-component {
+            border-top: 5px solid var(--purple);
+        }
+
+        .reasoning-system-component {
+            border-top: 5px solid var(--success);
+        }
+
+        .observation-system-component {
+            border-top: 5px solid var(--teal);
+        }
+
+        .context-system-component {
+            border-top: 5px solid var(--warning);
+        }
+
+        .ui-system-component {
+            border-top: 5px solid var(--pink);
+        }
+
+        .storage-system-component {
+            border-top: 5px solid var(--orange);
+        }
+
+        /* Button-like tags */
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .tag-blue {
+            background-color: var(--blue-light);
+            color: var(--blue);
+        }
+
+        .tag-purple {
+            background-color: var(--purple-light);
+            color: var(--purple);
+        }
+
+        .tag-green {
+            background-color: var(--success-light);
+            color: var(--success);
+        }
+
+        .tag-orange {
+            background-color: var(--warning-light);
+            color: var(--warning);
+        }
+
+        .tag-teal {
+            background-color: var(--teal-light);
+            color: var(--teal);
+        }
+
+        .tag-pink {
+            background-color: var(--pink-light);
+            color: var(--pink);
+        }
+
+        /* Logo styling */
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: var(--spacing-8);
+        }
+
+        .logo-text {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-right: var(--spacing-4);
+        }
+
+        .logo-separator {
+            width: 2px;
+            height: 60px;
+            background: linear-gradient(to bottom, var(--primary-light), var(--primary), var(--primary-light));
+            margin: 0 var(--spacing-4);
+        }
+
+        .logo-tagline {
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="version-tag">v0.2.4</div>
+
+        <div class="logo">
+            <div class="logo-text">ART</div>
+            <div class="logo-separator"></div>
+            <div class="logo-tagline">Agent Orchestration Framework</div>
+        </div>
+
+        <div class="intro">
+            <h3>Building Intelligent Agent Systems</h3>
+            <p>ART is a powerful, standalone framework for building LLM-powered intelligent agents capable of complex reasoning, planning, and tool usage, similar to platforms like LangGraph or AutoGen. Focusing on modularity, extensibility, and practical application, ART provides the building blocks for sophisticated agent systems that can run entirely client-side or with server integration.</p>
+            <div style="margin-top: 1rem;">
+                <span class="tag tag-blue">Modular</span>
+                <span class="tag tag-purple">Extensible</span>
+                <span class="tag tag-green">Pragmatic</span>
+                <span class="tag tag-orange">Flexible</span>
+                <span class="tag tag-teal">Browser-First</span>
+                <span class="tag tag-pink">Production-Ready</span>
+            </div>
+        </div>
+
+        <div class="success-box">
+            <div class="box-title">v0.2.4 Update Highlights</div>
+            <p>This version refines the architecture to align with PES execution flow, clarifies terminology, and enhances component responsibilities:</p>
+            <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                <li>Standardized on <code>threadId</code> as the primary identifier for conversation context, configuration, and state.</li>
+                <li>Enhanced State Manager's central role in managing thread configuration and settings across components.</li>
+                <li>Refined Observation System with specifically defined types (<code>INTENT</code>, <code>PLAN</code>, <code>THOUGHTS</code>, <code>TOOL_EXECUTION</code>, <code>ERROR</code>).</li>
+                <li>Strengthened Tool System with detailed validation, secure execution, and observability features.</li>
+                <li>Improved UI System with type-specific socket filtering for efficient UI updates.</li>
+                <li>Updated all code examples to reflect the refined PES execution flow pattern.</li>
+            </ul>
+        </div>
+
+        <!-- Architecture Overview -->
+        <h2>Architecture Overview</h2>
+        <p>The ART framework is organized into several subsystems, each with clearly defined boundaries and responsibilities, promoting modularity and testability. The following diagram shows how these subsystems interact:</p>
+
+        <div class="architecture-diagram">
+            <div class="arch-component arch-component-agent-core">
+                <h4>Agent Core</h4>
+                <p>Orchestrates reasoning patterns</p>
+            </div>
+
+            <div class="arch-component arch-component-reasoning">
+                <h4>Reasoning System</h4>
+                <p>LLM interaction layer</p>
+            </div>
+
+            <div class="arch-component arch-component-tool">
+                <h4>Tool System</h4>
+                <p>Tool definition & execution</p>
+            </div>
+
+            <div class="arch-component arch-component-observation">
+                <h4>Observation System</h4>
+                <p>Transparency & tracking</p>
+            </div>
+
+            <div class="arch-component arch-component-context">
+                <h4>Context System</h4>
+                <p>State & conversation history</p>
+            </div>
+
+            <div class="arch-component arch-component-ui">
+                <h4>UI System</h4>
+                <p>Typed interface sockets</p>
+            </div>
+
+            <div class="arch-component arch-component-storage">
+                <h4>Storage System</h4>
+                <p>Unified persistence layer</p>
+            </div>
+        </div>
+
+        <!-- Agent Core Section -->
+        <div class="component agent-core-component">
+            <div class="component-header">
+                <div class="component-icon agent-core">AC</div>
+                <div>
+                    <div class="component-title">Agent Core</div>
+                    <div class="component-subtitle">Orchestrates the agent's reasoning and execution flow</div>
+                </div>
+            </div>
+
+            <p>The Agent Core is the central orchestration layer, managing the sequence of operations defined by the chosen reasoning pattern (e.g., PES, ReAct). It delegates specific tasks like prompt generation, LLM calls, tool execution, and state management to the specialized subsystems, ensuring a clean separation of concerns.</p>
+
+            <div class="success-box">
+                <div class="box-title">Focus on Orchestration <span class="update-badge">Updated in v0.2.4</span></div>
+                <p>The Agent Core strictly adheres to orchestration logic, calling other subsystems via well-defined interfaces. This allows different reasoning patterns (PES, ReAct, etc.) to be implemented by swapping the Agent Core logic while reusing all other subsystems.</p>
+                 <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li>Initiates planning, execution, synthesis phases (for PES).</li>
+                    <li>Delegates prompt creation to Prompt Manager.</li>
+                    <li>Delegates LLM calls to Reasoning System.</li>
+                    <li>Delegates parsing to Output Parser.</li>
+                    <li>Delegates tool execution to Tool System.</li>
+                    <li>Delegates state/history updates to Context/Storage Systems.</li>
+                </ul>
+            </div>
+
+            <div class="code-box">
+// Conceptual Agent Core (PES Pattern)
+async function processPES(props: AgentProps): Promise<AgentFinalResponse> {
+  // Ensure critical props like threadId are present
+  if (!props.threadId) throw new Error("Thread ID is required.");
+
+  // 1. Initiation & Configuration Loading
+  const threadConfig = await props.stateManager.loadThreadContext(props.threadId, props.userId);
+
+  // 2. Planning Context Assembly
+  const history = await props.conversationManager.getMessages(props.threadId, { limit: threadConfig.historyLimit });
+  const enabledTools = await props.stateManager.getThreadConfigValue(props.threadId, 'enabledTools');
+  const toolSchemas = await props.toolRegistry.getAvailableTools(enabledTools);
+  const systemPrompt = await props.stateManager.getThreadConfigValue(props.threadId, 'systemPrompt');
+
+  // 3. Planning Call
+  const planningPrompt = props.promptManager.createPlanningPrompt({ 
+    query: props.query,
+    history,
+    toolSchemas,
+    systemPrompt
+  });
+
+  const planningLLMResponse = await props.reasoningEngine.call(planningPrompt, { 
+    threadId: props.threadId,
+    traceId: props.traceId,
+    onThought: (thought) => props.observationManager.record({
+      type: 'THOUGHTS',
+      content: thought,
+      threadId: props.threadId,
+      metadata: { sourcePhase: 'planning' }
+    })
+  });
+
+  const { intent, plan, toolCalls } = props.outputParser.parsePlanningOutput(planningLLMResponse);
+  props.observationManager.record({ type: 'INTENT', content: intent, threadId: props.threadId });
+  props.observationManager.record({ type: 'PLAN', content: plan, threadId: props.threadId });
+
+  // 4. Tool Execution
+  const toolResults = await props.toolSystem.executeTools(toolCalls, props.threadId, props.traceId);
+
+  // 5. Synthesis Call
+  const synthesisPrompt = props.promptManager.createSynthesisPrompt({ 
+    query: props.query,
+    intent,
+    plan,
+    toolResults,
+    history,
+    systemPrompt
+  });
+
+  const finalResponseContent = await props.reasoningEngine.call(synthesisPrompt, { 
+    threadId: props.threadId,
+    traceId: props.traceId,
+    onThought: (thought) => props.observationManager.record({
+      type: 'THOUGHTS',
+      content: thought,
+      threadId: props.threadId,
+      metadata: { sourcePhase: 'synthesis' }
+    })
+  });
+
+  // 6. Finalization & Response Delivery
+  const userMessage = { 
+    messageId: generateUUID(), 
+    threadId: props.threadId, 
+    role: 'USER', 
+    content: props.query, 
+    timestamp: Date.now(),
+    metadata: { userId: props.userId, sessionId: props.sessionId }
+  };
+
+  const agentMessage = { 
+    messageId: generateUUID(), 
+    threadId: props.threadId, 
+    role: 'AI', 
+    content: finalResponseContent, 
+    timestamp: Date.now(), 
+    metadata: { 
+      traceId: props.traceId,
+      userId: props.userId,
+      sessionId: props.sessionId,
+      modelUsed: threadConfig.reasoning.model,
+      toolCallIds: toolCalls.map(call => call.callId),
+      relatedObsIds: [], // IDs of related observations
+      durationMs: performance.now() - startTime,
+    }
+  };
+
+  await props.conversationManager.addMessages(props.threadId, [userMessage, agentMessage]);
+  await props.stateManager.saveStateIfModified(props.threadId);
+
+  return {
+    response: agentMessage,
+    metadata: {
+      threadId: props.threadId,
+      traceId: props.traceId,
+      userId: props.userId,
+      status: 'success',
+      totalDurationMs: performance.now() - startTime,
+    }
+  };
+}
+            </div>
+
+            <div class="subcomponents">
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon agent-core">1</div>
+                        AgentCore Interface
+                    </div>
+                    <div class="subcomponent-description">
+                        Defines the primary `process` method and configuration contract.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Standard `process(props: AgentProps)` signature</div>
+                        <div class="feature">Requires essential props like `threadId`</div>
+                        <div class="feature">Returns structured `AgentFinalResponse`</div>
+                        <div class="feature">Handles top-level error management</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon agent-core">2</div>
+                        PES Agent <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Implements the Plan-Execute-Synthesize pattern orchestration.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Follows the strict 6-stage PES flow</div>
+                        <div class="feature">Delegates tasks as per the pattern</div>
+                        <div class="feature">Handles sequential tool execution logic</div>
+                        <div class="feature">Manages data flow between phases</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon agent-core">3</div>
+                        Alternative Patterns
+                    </div>
+                    <div class="subcomponent-description">
+                        Support for other reasoning patterns like ReAct.
+                    </div>
+                    <div class="features">
+                        <div class="feature">ReAct Agent implementation (iterative Reason -> Act)</div>
+                        <div class="feature">Chain of Thought (focused reasoning)</div>
+                        <div class="feature">Custom pattern implementation guide</div>
+                        <div class="feature">Pattern selection via Agent Factory</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon agent-core">4</div>
+                        Agent Factory
+                    </div>
+                    <div class="subcomponent-description">
+                        Constructs and configures agent instances with dependencies.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Selects Agent Core implementation (PES, ReAct)</div>
+                        <div class="feature">Injects dependencies (Reasoning, Tools, Storage etc.)</div>
+                        <div class="feature">Handles default configurations</div>
+                        <div class="feature">Ensures all required components are provided</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tool System Section -->
+        <div class="component tool-system-component">
+             <div class="component-header">
+                <div class="component-icon tool-system">TS</div>
+                <div>
+                    <div class="component-title">Tool System</div>
+                    <div class="component-subtitle">Enables interaction with external capabilities</div>
+                </div>
+            </div>
+
+            <p>The Tool System provides a robust and standardized way to define (Schema), discover (Registry), and execute (Executor) tools. It ensures tools are used correctly and securely within the agent's workflow.</p>
+
+            <div class="success-box">
+                <div class="box-title">Robust Tool Handling <span class="update-badge">Updated in v0.2.4</span></div>
+                <p>The Tool System implements a comprehensive execution flow including verification, validation, secure execution, and detailed observation recording. Each step is carefully orchestrated with proper error handling:</p>
+                <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li>Verifies each tool is enabled for the specific thread via StateManager</li>
+                    <li>Validates input arguments against the tool's schema</li>
+                    <li>Executes tool logic with security constraints and timeouts</li>
+                    <li>Records structured tool results with unique IDs linked to plan steps</li>
+                    <li>Generates detailed TOOL_EXECUTION observations with execution context</li>
+                </ul>
+            </div>
+
+            <div class="code-box">
+// Tool Executor Interface (Conceptual)
+interface IToolExecutor {
+  schema: ToolSchema; // JSON schema definition
+  execute(input: ValidatedInput, context: ExecutionContext): Promise<ToolResult>;
+}
+
+interface ExecutionContext {
+  threadId: string;
+  traceId?: string;
+  userId?: string;
+  sessionId?: string;
+  // Potentially credentials or permissions scoped to this context
+}
+
+interface ToolResult {
+  callId: string; // Correlates with plan step or call
+  toolName: string;
+  status: 'success' | 'error';
+  output?: any; // Structured output on success
+  error?: string; // Error message on failure
+  metadata?: { // Additional execution info
+    executionTimeMs: number;
+    inputSummary?: string;
+    outputSize?: number;
+  };
+}
+
+// Example: Tool System executing a call
+async executeTools(toolCalls: ParsedToolCall[], threadId: string, traceId?: string): Promise<ToolResult[]> {
+  const results: ToolResult[] = [];
+  
+  for (const call of toolCalls) {
+    // 1. Verify the tool is enabled for this thread
+    const isEnabled = await this.stateManager.isToolEnabled(threadId, call.toolName);
+    if (!isEnabled) {
+      const result = this.createErrorResult(call, `Tool '${call.toolName}' is not enabled for this thread.`);
+      results.push(result);
+      this.recordToolObservation(result, threadId, traceId, call.arguments);
+      continue;
+    }
+    
+    // 2. Get the tool executor
+    const executor = this.registry.getToolExecutor(call.toolName);
+    if (!executor) {
+      const result = this.createErrorResult(call, `Tool '${call.toolName}' not found in registry.`);
+      results.push(result);
+      this.recordToolObservation(result, threadId, traceId, call.arguments);
+      continue;
+    }
+    
+    // 3. Validate input arguments against schema
+    try {
+      const validationResult = validate(call.arguments, executor.schema.inputSchema);
+      if (!validationResult.valid) {
+        const result = this.createErrorResult(call, `Validation failed: ${validationResult.errors.join(', ')}`);
+        results.push(result);
+        this.recordToolObservation(result, threadId, traceId, call.arguments);
+        continue;
+      }
+      
+      // 4. Execute the tool with timeout and security constraints
+      const startTime = performance.now();
+      const execContext: ExecutionContext = { threadId, traceId };
+      
+      try {
+        const result = await Promise.race([
+          executor.execute(call.arguments, execContext),
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error("Tool execution timed out")), 
+              this.getToolTimeout(call.toolName))
+          )
+        ]);
+        
+        // 5. Add callId and metadata to result
+        const finalResult: ToolResult = {
+          ...result,
+          callId: call.callId,
+          toolName: call.toolName,
+          metadata: {
+            ...(result.metadata || {}),
+            executionTimeMs: performance.now() - startTime
+          }
+        };
+        
+        results.push(finalResult);
+        this.recordToolObservation(finalResult, threadId, traceId, call.arguments);
+        
+      } catch (error) {
+        const result = this.createErrorResult(call, error.message);
+        results.push(result);
+        this.recordToolObservation(result, threadId, traceId, call.arguments);
+      }
+    } catch (error) {
+      const result = this.createErrorResult(call, `Tool execution error: ${error.message}`);
+      results.push(result);
+      this.recordToolObservation(result, threadId, traceId, call.arguments);
+    }
+  }
+  
+  return results;
+}
+
+// Record a tool observation
+private recordToolObservation(result: ToolResult, threadId: string, traceId?: string, inputArgs?: any): void {
+  this.observationManager.record({
+    type: 'TOOL_EXECUTION',
+    threadId,
+    traceId,
+    content: result,
+    metadata: {
+      toolName: result.toolName,
+      callId: result.callId,
+      status: result.status,
+      inputArgs: this.sanitizeIfNeeded(inputArgs)
+    }
+  });
+}
+            </div>
+
+            <div class="subcomponents">
+               <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon tool-system">1</div>
+                        Tool Schema
+                    </div>
+                    <div class="subcomponent-description">
+                        Defines tool interfaces using JSON Schema for LLM understanding and validation.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Clear `name`, `description` for LLM</div>
+                        <div class="feature">Strict `inputSchema` (JSON Schema)</div>
+                        <div class="feature">Optional `outputSchema` for expected results</div>
+                        <div class="feature">Examples for few-shot prompting</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon tool-system">2</div>
+                        Tool Executor <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Implements the actual tool logic, including validation and error handling.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Implements `IToolExecutor` interface</div>
+                        <div class="feature">Contains core execution logic with timeouts</div>
+                        <div class="feature">Performs input validation against schema</div>
+                        <div class="feature">Returns standardized `ToolResult` object</div>
+                        <div class="feature">Handles security boundaries and permissions</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon tool-system">3</div>
+                        Tool Registry <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Manages registration and discovery of available Tool Executors.
+                    </div>
+                    <div class="features">
+                        <div class="feature">`registerTool(executor: IToolExecutor)`</div>
+                        <div class="feature">`getToolExecutor(name: string)`</div>
+                        <div class="feature">`getAvailableTools(enabledTools: string[]): ToolSchema[]`</div>
+                        <div class="feature">Ensures unique tool names and validation</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon tool-system">4</div>
+                        Built-in Tools
+                    </div>
+                    <div class="subcomponent-description">
+                        Commonly used tools provided out-of-the-box (optional).
+                    </div>
+                    <div class="features">
+                        <div class="feature">Web Search (e.g., Tavily, SearxNG)</div>
+                        <div class="feature">Code Interpreter (Python, JS via isolated env)</div>
+                        <div class="feature">Web Scraper (Basic HTML content)</div>
+                        <div class="feature">RAG Retriever (using Embedding Storage)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reasoning System Section -->
+        <div class="component reasoning-system-component">
+            <div class="component-header">
+                <div class="component-icon reasoning-system">RS</div>
+                <div>
+                    <div class="component-title">Reasoning System</div>
+                    <div class="component-subtitle">Manages interactions with language models</div>
+                </div>
+            </div>
+
+            <p>The Reasoning System is the gateway to Large Language Models. It handles prompt construction, manages API calls via Provider Adapters, parses structured outputs, and supports features like streaming thoughts.</p>
+
+            <div class="success-box">
+                <div class="box-title">Enhanced LLM Interaction <span class="update-badge">Updated in v0.2.4</span></div>
+                <p>Provides a robust interface for LLM communication, including phase-specific prompting strategies, support for streaming intermediate thoughts (`<thoughts>` tags), and parsing structured planning outputs (`<intent>`, `<plan>`, and tool calls). Clearly separates responsibilities:</p>
+                <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li><strong>Prompt Manager:</strong> Creates phase-specific prompts (planning vs. synthesis)</li>
+                    <li><strong>Reasoning Engine:</strong> Handles LLM communication with traceability</li> 
+                    <li><strong>Output Parser:</strong> Extracts structured data from LLM responses</li>
+                    <li><strong>Provider Adapters:</strong> Implements provider-specific API calls</li>
+                </ul>
+            </div>
+
+            <div class="code-box">
+// Reasoning Engine Interface
+interface ReasoningEngine {
+    // Makes the LLM call, potentially streaming thoughts via callback
+    call(
+        prompt: string | FormattedPrompt,
+        options: CallOptions
+    ): Promise<string>; // Returns the final raw LLM response string
+
+    getCapabilities(): EngineCapabilities;
+}
+
+interface CallOptions {
+    threadId: string;
+    traceId?: string;
+    userId?: string;
+    sessionId?: string;
+    // Callback for streaming intermediate thoughts
+    onThought?: (thought: string) => void;
+    // Other LLM parameters (temp, max_tokens, stop_sequences)
+    [key: string]: any;
+}
+
+// Output Parser Interface
+interface OutputParser {
+    // Parses the raw response from the planning phase LLM call
+    parsePlanningOutput(rawResponse: string): { 
+        intent: string; 
+        plan: string; 
+        toolCalls: ParsedToolCall[] 
+    };
+
+    // Extracts the final response text from the synthesis phase LLM call
+    parseSynthesisOutput(rawResponse: string): string;
+}
+
+// Prompt Manager Interface
+interface PromptManager {
+    // Creates a planning prompt
+    createPlanningPrompt(context: {
+        query: string;
+        history: ConversationMessage[];
+        toolSchemas: ToolSchema[];
+        systemPrompt: string;
+    }): FormattedPrompt;
+
+    // Creates a synthesis prompt
+    createSynthesisPrompt(context: {
+        query: string;
+        intent: string;
+        plan: string;
+        toolResults: ToolResult[];
+        history?: ConversationMessage[];
+        systemPrompt?: string;
+    }): FormattedPrompt;
+}
+            </div>
+
+            <div class="subcomponents">
+                 <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon reasoning-system">1</div>
+                        Reasoning Engine <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Abstract interface and core logic for LLM interaction strategy.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Defines `call` method with options including `threadId` and `traceId`</div>
+                        <div class="feature">Uses thread-specific model config via StateManager</div>
+                        <div class="feature">Handles common logic (e.g., retries, logging)</div>
+                        <div class="feature">Coordinates streaming callbacks (`onThought`)</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon reasoning-system">2</div>
+                        Prompt Manager <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Constructs context-aware prompts for different phases.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Creates planning prompt (with query, history, tool schemas)</div>
+                        <div class="feature">Creates synthesis prompt (with query, intent, plan, tool results)</div>
+                        <div class="feature">Handles prompt templating and injection</div>
+                        <div class="feature">Adapts formatting for specific LLMs/providers</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon reasoning-system">3</div>
+                        Output Parser <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Extracts structured data or final text from raw LLM responses.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Parses planning output (e.g., `<intent>`, `<plan>`, tool calls)</div>
+                        <div class="feature">Generates structured `toolCalls` with typed `callId` and `arguments`</div>
+                        <div class="feature">Extracts final response text from synthesis</div>
+                        <div class="feature">Handles potential formatting errors gracefully</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon reasoning-system">4</div>
+                        Provider Adapters <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Concrete implementations for specific LLM APIs or local models.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Implements `ReasoningEngine` interface</div>
+                        <div class="feature">Handles API authentication and requests</div>
+                        <div class="feature">Forwards tracing IDs (`traceId`, `threadId`) to APIs when possible</div>
+                        <div class="feature">Adapters for OpenAI, Anthropic, Gemini, Ollama, etc.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Storage System Section -->
+        <div class="component storage-system-component">
+            <div class="component-header">
+                <div class="component-icon storage-system">SS</div>
+                <div>
+                    <div class="component-title">Storage System <span class="update-badge">Updated in v0.2.4</span></div>
+                    <div class="component-subtitle">Unified persistence layer for all agent data</div>
+                </div>
+            </div>
+
+            <p>The Storage System provides a consistent API for persisting and retrieving all framework data, including conversation history, observations, agent state, and vector embeddings. It uses adapters for different backends (browser, server) and specialized repositories for data access.</p>
+
+             <div class="success-box">
+                <div class="box-title">Centralized & Reliable Persistence</div>
+                <p>Ensures data integrity and accessibility across sessions using a single, well-defined storage interface. Supports different storage needs from simple key-value state to complex vector searches, organized by `threadId` for reliable context management.</p>
+            </div>
+
+            <div class="code-box">
+// Storage Adapter Interface (Conceptual)
+interface StorageAdapter {
+  init(config: AdapterConfig): Promise<void>;
+  get<T>(collection: string, id: string): Promise<T | null>;
+  set<T>(collection: string, id: string, data: T): Promise<void>;
+  delete(collection: string, id: string): Promise<void>;
+  query<T>(collection: string, filter: FilterOptions): Promise<T[]>;
+  // Optional vector search methods
+  addVectors?(collection: string, vectors: VectorData[]): Promise<void>;
+  searchVectors?<T>(collection: string, queryVector: number[], options: VectorSearchOptions): Promise<SearchResult<T>[]>;
+}
+
+// Specialized Repository Example (using adapter)
+class ConversationRepository {
+  constructor(private adapter: StorageAdapter, private collectionName = 'messages') {}
+
+  async getMessages(threadId: string, options?: { limit?: number; beforeTimestamp?: number }): Promise<ConversationMessage[]> {
+    return this.adapter.query(this.collectionName, {
+      filter: { threadId },
+      sort: { timestamp: 'desc' },
+      limit: options?.limit,
+      // Additional filter for timestamp if provided
+      ...(options?.beforeTimestamp ? { filter: { 
+        threadId, 
+        timestamp: { $lt: options.beforeTimestamp } 
+      } } : {})
+    });
+  }
+
+  async addMessages(threadId: string, messages: ConversationMessage[]): Promise<void> {
+    // Batch save messages with their unique messageId
+    const savePromises = messages.map(message => 
+      this.adapter.set(this.collectionName, message.messageId, message)
+    );
+    await Promise.all(savePromises);
+  }
+}
+            </div>
+
+            <div class="subcomponents">
+                 <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon storage-system">1</div>
+                        Storage Interface & Adapters
+                    </div>
+                    <div class="subcomponent-description">
+                        Defines the core storage contract and provides backend implementations.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Adapter for IndexedDB (browser default)</div>
+                        <div class="feature">Adapter for In-Memory (testing)</div>
+                        <div class="feature">Adapter for Remote API (server sync)</div>
+                        <div class="feature">Consistent API across adapters</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon storage-system">2</div>
+                        Observation Repository <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Manages persistence of agent observations.
+                    </div>
+                    <div class="features">
+                        <div class="feature">`save(observation: Observation)`</div>
+                        <div class="feature">`getObservations(threadId: string, filter?: ObservationFilter)`</div>
+                        <div class="feature">Specific filtering by observation type</div>
+                        <div class="feature">Indexes by threadId, timestamp, observationId</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon storage-system">3</div>
+                        Conversation Repository <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Manages persistence of user and AI messages.
+                    </div>
+                    <div class="features">
+                        <div class="feature">`addMessages(threadId: string, messages: ConversationMessage[])`</div>
+                        <div class="feature">`getMessages(threadId: string, options?: MessageOptions)`</div>
+                        <div class="feature">Supports timestamp and limit-based pagination</div>
+                        <div class="feature">Messages include `threadId`, `messageId`, `role`, `content`, etc.</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon storage-system">4</div>
+                        Embedding Repository
+                    </div>
+                    <div class="subcomponent-description">
+                        Handles storage and retrieval of vector embeddings for RAG.
+                    </div>
+                    <div class="features">
+                        <div class="feature">`addVectors(threadId: string, vectors: VectorData[])`</div>
+                        <div class="feature">`search(threadId: string, queryVector: number[], k: number, filter?: Filter)`</div>
+                        <div class="feature">Vector DB adapter integration (optional)</div>
+                        <div class="feature">Associates embeddings with threadId for context</div>
+                    </div>
+                </div>
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon storage-system">5</div>
+                        State Repository <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Manages persistence of thread configuration and agent state.
+                    </div>
+                    <div class="features">
+                        <div class="feature">`getThreadState(threadId: string)`</div>
+                        <div class="feature">`setThreadState(threadId: string, state: AgentState)`</div>
+                        <div class="feature">`getThreadConfig(threadId: string)`</div>
+                        <div class="feature">`updateThreadConfig(threadId: string, updates: Partial<ThreadConfig>)`</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Observation System Section -->
+        <div class="component observation-system-component">
+            <div class="component-header">
+                <div class="component-icon observation-system">OS</div>
+                <div>
+                    <div class="component-title">Observation System</div>
+                    <div class="component-subtitle">Provides transparency into agent operations</div>
+                </div>
+            </div>
+
+            <p>The Observation System is crucial for understanding and debugging agent behavior. It creates structured records (Observations) of key events like planning decisions, tool usage, errors, and streamed thoughts, making them available for persistence and UI display.</p>
+
+             <div class="success-box">
+                <div class="box-title">Detailed & Typed Observations <span class="update-badge">Updated in v0.2.4</span></div>
+                <p>The Observation System produces structured, typed observations with comprehensive metadata for traceability and analysis:</p>
+                <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li><strong>INTENT:</strong> Captured from planning phase - the agent's understanding of the user's request</li>
+                    <li><strong>PLAN:</strong> Formulated action sequence from planning phase</li>
+                    <li><strong>THOUGHTS:</strong> Streamed reasoning steps from both planning and synthesis phases</li>
+                    <li><strong>TOOL_EXECUTION:</strong> Detailed tool execution results with input/output, status, and metadata</li>
+                    <li><strong>ERROR:</strong> Structured error records from any phase of execution</li>
+                </ul>
+            </div>
+
+            <div class="code-box">
+// Observation Structure
+enum ObservationType {
+  INTENT = "INTENT",
+  PLAN = "PLAN",
+  THOUGHTS = "THOUGHTS",
+  TOOL_EXECUTION = "TOOL_EXECUTION", // Base type, specific tool name in metadata
+  ERROR = "ERROR",
+  // Potentially others like STATE_CHANGE
+}
+
+interface Observation {
+    id: string; // Unique identifier for this observation
+    threadId: string; // Thread this belongs to
+    traceId?: string; // Optional trace ID for cross-component correlation
+    timestamp: number; // Unix timestamp (ms)
+    type: ObservationType;
+    title: string; // Human-readable title
+    content: any; // Structured content (string, object, etc.)
+    metadata?: Record<string, any>; // Additional context like:
+    // - For THOUGHTS: sourcePhase: 'planning' | 'synthesis'
+    // - For TOOL_EXECUTION: toolName, callId, inputArgs, status
+    // - For ERROR: component, errorCode, etc.
+}
+
+// Observation Manager Interface (Conceptual)
+interface ObservationManager {
+  record(observationData: Omit<Observation, 'id' | 'timestamp'>): Promise<void>;
+  getObservations(threadId: string, types?: ObservationType[]): Promise<Observation[]>;
+}
+
+// Manager Implementation Snippet
+async record(observationData: Omit<Observation, 'id' | 'timestamp'>): Promise<void> {
+  // 1. Create fully-formed observation with ID and timestamp
+  const observation: Observation = {
+    ...observationData,
+    id: generateUUID(),
+    timestamp: Date.now(),
+    title: this.generateTitle(observationData.type, observationData.metadata)
+  };
+
+  // 2. Save to storage
+  await this.observationRepository.save(observation);
+  
+  // 3. Notify UI System
+  this.uiSystem.getObservationSocket().notify(observation);
+  
+  // 4. Log for debugging if needed
+  if (this.debugMode) {
+    console.debug(`[Observation] ${observation.type}: ${observation.title}`, observation);
+  }
+}
+            </div>
+
+            <div class="subcomponents">
+                 <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon observation-system">1</div>
+                        Observation Creator/Manager <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Creates and manages the lifecycle of observations.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Generates observations with standard structure and IDs</div>
+                        <div class="feature">Associates with `threadId` and optional `traceId`</div>
+                        <div class="feature">Coordinates saving via `ObservationRepository`</div>
+                        <div class="feature">Triggers UI updates via `ObservationSocket`</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon observation-system">2</div>
+                        Observation Types <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Specific categories for different agent events.
+                    </div>
+                    <div class="features">
+                        <div class="feature">`INTENT`: Parsed user intent (from planning)</div>
+                        <div class="feature">`PLAN`: Generated execution plan (from planning)</div>
+                        <div class="feature">`THOUGHTS`: Streamed reasoning steps from LLM</div>
+                        <div class="feature">`TOOL_EXECUTION`: Records tool call details (input, output/error, status)</div>
+                        <div class="feature">`ERROR`: Captures errors during execution</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon observation-system">3</div>
+                        Observation Structure <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Standardized format for all observation records.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Unique `id` for traceability</div>
+                        <div class="feature">`threadId` for primary context association</div>
+                        <div class="feature">`timestamp` for ordering</div>
+                        <div class="feature">`type` for filtering/categorization</div>
+                        <div class="feature">`content` holding the core structured data</div>
+                        <div class="feature">`metadata` for additional context and references</div>
+                    </div>
+                </div>
+
+                 <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon observation-system">4</div>
+                        UI Notification Integration
+                    </div>
+                    <div class="subcomponent-description">
+                        Connects observations to the user interface.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Uses `ObservationSocket` from UI System</div>
+                        <div class="feature">Sends complete `Observation` object</div>
+                        <div class="feature">Allows UI to subscribe to specific types</div>
+                        <div class="feature">Enables real-time monitoring</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Context System Section -->
+        <div class="component context-system-component">
+             <div class="component-header">
+                <div class="component-icon context-system">CS</div>
+                <div>
+                    <div class="component-title">Context System <span class="update-badge">Updated in v0.2.4</span></div>
+                    <div class="component-subtitle">Manages state, history, and runtime context</div>
+                </div>
+            </div>
+
+            <p>The Context System maintains the agent's understanding of the ongoing interaction, including conversation history, thread configuration, and any additional context provided (like files or RAG results). It ensures the agent has the necessary information for coherent and relevant responses.</p>
+
+             <div class="success-box">
+                <div class="box-title">Centralized Thread Management <span class="update-badge">Updated in v0.2.4</span></div>
+                <p>The Context System now emphasizes the central role of the State Manager in providing thread-specific configuration and settings to other components:</p>
+                <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li><strong>State Manager:</strong> Central service for thread configuration, tool settings, and preferences</li>
+                    <li><strong>Conversation Manager:</strong> Handles message history organized by threadId</li>
+                    <li><strong>Context Provider:</strong> Retrieves and formats dynamic context like RAG results</li>
+                </ul>
+            </div>
+
+            <div class="code-box">
+// Thread Configuration & State
+interface ThreadConfig {
+  reasoning: {
+    adapter: string;  // "openai", "anthropic", etc.
+    model: string;    // "gpt-4", "claude-3", etc.
+    params: Record<string, any>; // temperature, etc.
+  };
+  enabledTools: string[]; // Which tools are allowed for this thread
+  historyLimit: number;  // How many messages to include in context
+  systemPrompt: string;  // Base system instructions
+  // Other thread-specific settings
+}
+
+// Conversation Message Structure
+enum MessageRole { USER = "USER", AI = "AI" }
+
+interface ConversationMessage {
+  messageId: string; // Unique message ID
+  threadId: string;  // Thread this message belongs to
+  role: MessageRole;
+  content: string;
+  timestamp: number;
+  metadata?: Record<string, any>; // e.g., references to observations, tool calls
+}
+
+// State Manager Interface (Conceptual)
+interface StateManager {
+  // Load configuration and state for a thread
+  loadThreadContext(threadId: string, userId?: string): Promise<ThreadContext>;
+  
+  // Check if a tool is enabled for a thread
+  isToolEnabled(threadId: string, toolName: string): Promise<boolean>;
+  
+  // Get a specific config value
+  getThreadConfigValue<T>(threadId: string, key: string): Promise<T>;
+  
+  // Update thread state (if modified)
+  saveStateIfModified(threadId: string): Promise<void>;
+}
+
+// Conversation Manager Interface (Conceptual)
+interface ConversationManager {
+  addMessages(threadId: string, messages: ConversationMessage[]): Promise<void>;
+  getMessages(threadId: string, options?: { limit?: number; beforeTimestamp?: number }): Promise<ConversationMessage[]>;
+}
+            </div>
+
+            <div class="subcomponents">
+                 <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon context-system">1</div>
+                        State Manager <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Central service for thread configuration and persistent preferences.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Manages thread-specific configuration (LLM, tools, params)</div>
+                        <div class="feature">Provides interface for enabled tool verification</div>
+                        <div class="feature">Handles system prompt management per thread</div>
+                        <div class="feature">Coordinates with StateRepository for persistence</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon context-system">2</div>
+                        Conversation Manager <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Manages the history of user and AI messages within a thread.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Associates messages with `threadId` for context organization</div>
+                        <div class="feature">Uses `ConversationRepository` for persistence</div>
+                        <div class="feature">Provides history retrieval for prompts with limits</div>
+                        <div class="feature">Notifies `ConversationSocket` of new messages</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon context-system">3</div>
+                        Context Provider
+                    </div>
+                    <div class="subcomponent-description">
+                        Gathers and formats dynamic, non-historical context for prompts.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Integrates RAG results (from Embedding Repo)</div>
+                        <div class="feature">Includes details from uploaded files (if applicable)</div>
+                        <div class="feature">Formats context snippets for LLM</div>
+                        <div class="feature">Provides context to Prompt Manager</div>
+                    </div>
+                </div>
+
+                 <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon context-system">4</div>
+                        Context Retrieval Strategies
+                    </div>
+                    <div class="subcomponent-description">
+                        Methods for fetching relevant context based on the query.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Vector similarity search via Embedding Repo</div>
+                        <div class="feature">Keyword-based retrieval</div>
+                        <div class="feature">Hybrid search approaches</div>
+                        <div class="feature">Context ranking and filtering</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- UI System Section -->
+        <div class="component ui-system-component">
+            <div class="component-header">
+                <div class="component-icon ui-system">UI</div>
+                <div>
+                    <div class="component-title">UI System <span class="update-badge">Updated in v0.2.4</span></div>
+                    <div class="component-subtitle">Typed interface sockets for flexible application integration</div>
+                </div>
+            </div>
+
+            <p>The UI System provides standardized, typed sockets (using a publish/subscribe pattern) that decouple the ART framework's internal events from the application's UI implementation. Developers can subscribe to specific types of data (e.g., only AI messages, only tool execution observations) for fine-grained UI updates.</p>
+
+            <div class="success-box">
+                <div class="box-title">Flexible & Typed UI Integration <span class="update-badge">Updated in v0.2.4</span></div>
+                <p>Enables developers to build reactive UIs by subscribing only to the data streams they need, using type-specific filtering for efficient UI updates:</p>
+                <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li><strong>ObservationSocket:</strong> Subscribe to specific observation types (THOUGHTS, TOOL_EXECUTION, etc.)</li>
+                    <li><strong>ConversationSocket:</strong> Filter by message roles (USER, AI)</li>
+                    <li><strong>StateSocket:</strong> Optional subscription to specific state changes</li>
+                </ul>
+            </div>
+
+            <div class="code-box">
+// Generic Typed Socket Interface
+interface TypedSocket<DataType, FilterType = any> {
+  // Subscribe to specific types or all data
+  subscribe(
+      callback: (data: DataType) => void,
+      filter?: FilterType, // e.g., ObservationType.TOOL_EXECUTION or MessageRole.AI
+      options?: { threadId?: string } // Optional thread filter
+  ): () => void; // Returns unsubscribe function
+
+  // Notify subscribers, potentially with type info for filtering
+  notify(data: DataType, options?: { targetThreadId?: string }): void;
+
+  // Optional: Get historical data based on filter
+  getHistory?(filter?: FilterType, options?: { threadId?: string, limit?: number }): Promise<DataType[]>;
+}
+
+// Specific Socket Types
+interface ObservationSocket extends TypedSocket<Observation, ObservationType> {
+  // Additional observation-specific methods
+}
+
+interface ConversationSocket extends TypedSocket<ConversationMessage, MessageRole> {
+  // Additional conversation-specific methods
+}
+
+// Example Usage (Conceptual React Hook)
+function useArtObservations(threadId: string, typeFilter?: ObservationType) {
+  const [observations, setObservations] = useState<Observation[]>([]);
+  const artInstance = useArt(); // Get ART instance
+
+  useEffect(() => {
+    const socket = artInstance.uiSystem.getObservationSocket();
+    
+    // Subscribe only to specific type for the selected thread
+    const unsubscribe = socket.subscribe(
+      (newObs) => {
+        setObservations(prev => [...prev, newObs]);
+      }, 
+      typeFilter, // Filter by observation type
+      { threadId } // Filter by thread
+    );
+
+    // Optional: Fetch initial history
+    socket.getHistory(typeFilter, { threadId }).then(setObservations);
+
+    return unsubscribe;
+  }, [artInstance, threadId, typeFilter]);
+
+  return observations;
+}
+            </div>
+
+            <div class="subcomponents">
+                 <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon ui-system">1</div>
+                        Typed Socket Interface <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Core contract defining `subscribe`, `notify`, and optional `getHistory`.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Generic design for various data types</div>
+                        <div class="feature">Supports specific type filtering during subscription</div>
+                        <div class="feature">Includes optional threadId filtering</div>
+                        <div class="feature">Returns unsubscribe function for cleanup</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon ui-system">2</div>
+                        Socket Implementations <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Concrete sockets for specific framework data streams.
+                    </div>
+                    <div class="features">
+                        <div class="feature">`ObservationSocket`: Filterable by `ObservationType` (PLAN, THOUGHTS, etc.)</div>
+                        <div class="feature">`ConversationSocket`: Filterable by `MessageRole` (USER, AI)</div>
+                        <div class="feature">`StateSocket`: Optional filterable by state key changes</div>
+                        <div class="feature">Each socket can filter by threadId for multi-thread UIs</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon ui-system">3</div>
+                        UI Integration Helpers
+                    </div>
+                    <div class="subcomponent-description">
+                        Utilities to simplify integration with popular UI frameworks.
+                    </div>
+                    <div class="features">
+                        <div class="feature">React Hooks (`useArtObservations`, `useArtConversation`)</div>
+                        <div class="feature">Vue Composables (`useArtSocket`)</div>
+                        <div class="feature">Svelte Stores integration</div>
+                        <div class="feature">Plain JS examples</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon ui-system">4</div>
+                        Example UI Components <span class="update-badge">Updated in v0.2.4</span>
+                    </div>
+                    <div class="subcomponent-description">
+                        Reference implementations showcasing socket usage.
+                    </div>
+                    <div class="features">
+                        <div class="feature">`ObservationPanel` (filtered by observation types)</div>
+                        <div class="feature">`ChatInterface` (filtered by USER/AI message roles)</div>
+                        <div class="feature">`ThoughtStream` (filtered to THOUGHTS observations)</div>
+                        <div class="feature">`ToolExecutionMonitor` (filtered to TOOL_EXECUTION)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Execution Flow Section -->
+        <div class="component">
+            <h2>End-to-End Execution Flow <span class="update-badge">Updated in v0.2.4</span></h2>
+
+            <p>The ART framework orchestrates a 6-stage process to handle user queries, following the Plan-Execute-Synthesize (PES) pattern. This detailed flow ensures robust, observable, and maintainable agent behavior:</p>
+
+            <ol style="margin-left: 1.5rem; margin-top: 1rem; margin-bottom: 1rem;">
+                <li><strong>Request Initiation & Configuration Loading</strong> - Thread configuration, state, and traceability IDs are established</li>
+                <li><strong>Planning Context Assembly</strong> - Conversation history and enabled tool schemas are gathered</li>
+                <li><strong>Planning Call (1st LLM Call)</strong> - First LLM interaction to generate intent, plan, and tool calls</li>
+                <li><strong>Tool Execution Phase</strong> - Sequential execution of planned tool calls with validation and observability</li>
+                <li><strong>Synthesis Phase (2nd LLM Call)</strong> - Second LLM call to generate final response using tool results</li>
+                <li><strong>Finalization & Response Delivery</strong> - Conversation persistence, UI updates, and result return</li>
+            </ol>
+
+            <a href="./ART-Execution-Flow-v0.2.4.html" class="button" style="margin-top: 1rem;">View Detailed PES Execution Flow</a>
+
+        </div>
+
+        <!-- Architecture Improvements Section -->
+        <div class="component">
+            <h2>Architecture Improvements Summary (v0.2.4)</h2>
+
+            <p>Version 0.2.4 brings significant refinements to align with the detailed execution flow, unifying terminology and component responsibilities for more robust agent systems.</p>
+
+            <div class="subcomponents">
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon" style="background: linear-gradient(135deg, var(--success), var(--success-light)); color: var(--success);">1</div>
+                        ThreadId Standardization
+                    </div>
+                    <div class="subcomponent-description">
+                        Unifies the primary identifier for conversations and configuration.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Consistent use of `threadId` across all components</div>
+                        <div class="feature">Clear distinction from optional `sessionId` (UI session)</div>
+                        <div class="feature">Better alignment with other conversation-based frameworks</div>
+                        <div class="feature">Improved traceability with `traceId` for cross-component correlation</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon" style="background: linear-gradient(135deg, var(--success), var(--success-light)); color: var(--success);">2</div>
+                        Enhanced State Management
+                    </div>
+                    <div class="subcomponent-description">
+                        Emphasizes StateManager's central role in configuration.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Thread-specific configuration for LLMs, tools, and parameters</div>
+                        <div class="feature">Centralized control of enabled tools per thread</div>
+                        <div class="feature">System prompt management</div>
+                        <div class="feature">Clean integration with Storage System</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon" style="background: linear-gradient(135deg, var(--success), var(--success-light)); color: var(--success);">3</div>
+                        Enhanced Tool Security
+                    </div>
+                    <div class="subcomponent-description">
+                        Improves tool validation, execution, and error handling.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Multi-step validation: thread permissions, schema, runtime checks</div>
+                        <div class="feature">Timeout and sandbox protections</div>
+                        <div class="feature">Detailed error handling in all execution phases</div>
+                        <div class="feature">Standardized result formatting with rich metadata</div>
+                    </div>
+                </div>
+
+                <div class="subcomponent">
+                    <div class="subcomponent-title">
+                        <div class="subcomponent-icon" style="background: linear-gradient(135deg, var(--success), var(--success-light)); color: var(--success);">4</div>
+                        Type-Specific UI Sockets
+                    </div>
+                    <div class="subcomponent-description">
+                        Enables fine-grained UI subscriptions for efficiency.
+                    </div>
+                    <div class="features">
+                        <div class="feature">Filter observations by specific ObservationType</div>
+                        <div class="feature">Filter messages by specific MessageRole</div>
+                        <div class="feature">Optional thread-based filtering</div>
+                        <div class="feature">Improved UI component reusability</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="component">
+            <h2>Getting Started with ART v0.2.4</h2>
+
+            <p>ART v0.2.4 makes it straightforward to build and integrate intelligent agents. Here's a conceptual example demonstrating the setup and key interactions:</p>
+
+            <div class="code-box">
+// Initialize ART framework components (Conceptual)
+import {
+  createArtInstance,
+  PESAgent, // Choose the reasoning pattern
+  IndexedDBStorageAdapter, // Choose storage
+  OpenAIAdapter, // Choose LLM provider
+  WebSearchTool, // Choose tools
+  ObservationType, MessageRole // Import enums for typed subscriptions
+} from 'art-framework'; // Adjust import paths as needed
+
+async function setupAgent() {
+  const art = await createArtInstance({
+    agentCore: PESAgent,
+    reasoningAdapter: new OpenAIAdapter({ apiKey: '...' }),
+    storageAdapter: new IndexedDBStorageAdapter({ dbName: 'art-agent-db' }),
+    tools: [new WebSearchTool()],
+    // Default components (PromptManager, OutputParser, etc.) are often included
+  });
+
+  const threadId = 'conversation-thread-123';
+  const sessionId = 'ui-session-abc'; // Optional UI session tracking
+
+  // --- UI Integration Example (React-like pseudocode) ---
+  // In ChatComponent.tsx
+  // const messages = useArtConversation(threadId); // Subscribes to USER and AI messages
+  const conversationSocket = art.uiSystem.getConversationSocket();
+  conversationSocket.subscribe((message) => {
+    if (message.role === MessageRole.AI) { /* Render AI bubble */ }
+    else { /* Render User bubble */ }
+  }, null, { threadId }); // Filter by thread
+
+  // In ObservationPanel.tsx
+  // const toolObservations = useArtObservations(threadId, ObservationType.TOOL_EXECUTION);
+  const observationSocket = art.uiSystem.getObservationSocket();
+  observationSocket.subscribe((obs) => {
+     if (obs.type === ObservationType.TOOL_EXECUTION) { /* Display tool step */ }
+     if (obs.type === ObservationType.THOUGHTS) { /* Display thinking step */ }
+     // etc.
+  }, ObservationType.TOOL_EXECUTION, { threadId }); // Filter by type and thread
+  // --- End UI Integration ---
+
+  // Process a query
+  const finalResponse = await art.process({
+    query: "Compare the weather in London and Paris today.",
+    threadId: threadId,
+    sessionId: sessionId, // Optional
+    traceId: generateUUID(), // Optional for end-to-end tracing
+    // Other options: userId, context data, etc.
+  });
+
+  // finalResponse contains the structured AI message already sent to ConversationSocket
+  console.log('Agent finished. Final AI Message ID:', finalResponse.response.messageId);
+}
+
+setupAgent();
+            </div>
+
+            <div class="info-box">
+                <div class="box-title">WebAssembly & Client-Side Operation</div>
+                <p>ART's architecture facilitates running agents entirely in the browser using WebAssembly for local LLM inference (via specific Provider Adapters) and IndexedDB for storage, enabling privacy-preserving and offline-capable applications.</p>
+            </div>
+
+            <div class="warning-box">
+                <div class="box-title">Security Considerations</div>
+                <p>When using tools like code interpreters or web scrapers, especially in a browser context, implementing proper sandboxing, input validation against schemas, timeouts, and permission controls is critical to prevent security vulnerabilities.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ART Framework - AI Model Comparison</title>
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-light: #EEF2FF;
+            --primary-dark: #3730A3;
+            --openai: #10a37f;
+            --openai-light: #d1fae5;
+            --anthropic: #b362ff;
+            --anthropic-light: #f5eaff;
+            --google: #4285f4;
+            --google-light: #e8f0fe;
+            --deepseek: #ff8c39;
+            --deepseek-light: #fff4ea;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --bg: #ffffff;
+            --bg-light: #f9fafb;
+            --bg-darker: #f3f4f6;
+            --border: #e5e7eb;
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        
+        body {
+            background-color: var(--bg-light);
+            color: var(--text);
+            line-height: 1.5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .header h1 {
+            color: var(--primary-dark);
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            color: var(--text-light);
+            font-size: 1.1rem;
+        }
+        
+        .model-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .provider-section {
+            margin-bottom: 2rem;
+        }
+        
+        .provider-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .provider-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .provider-logo.openai {
+            background-color: var(--openai);
+        }
+        
+        .provider-logo.anthropic {
+            background-color: var(--anthropic);
+        }
+        
+        .provider-logo.google {
+            background-color: var(--google);
+        }
+        
+        .provider-logo.deepseek {
+            background-color: var(--deepseek);
+        }
+        
+        .provider-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .model-card {
+            background-color: var(--bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .model-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .model-card.openai {
+            border-top: 4px solid var(--openai);
+        }
+        
+        .model-card.anthropic {
+            border-top: 4px solid var(--anthropic);
+        }
+        
+        .model-card.google {
+            border-top: 4px solid var(--google);
+        }
+        
+        .model-card.deepseek {
+            border-top: 4px solid var(--deepseek);
+        }
+        
+        .model-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .model-date {
+            font-size: 0.875rem;
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+        
+        .model-specs {
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .model-spec {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        
+        .model-spec-label {
+            color: var(--text-light);
+        }
+        
+        .model-spec-value {
+            font-weight: 500;
+        }
+        
+        .model-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .model-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 20px;
+            background-color: var(--bg-darker);
+            color: var(--text-light);
+        }
+        
+        .model-badge.deprecated {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+        
+        .model-badge.beta {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        
+        .model-capabilities {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        
+        .capability-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .capability-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .capability-pill {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            background-color: var(--primary-light);
+            color: var(--primary);
+        }
+        
+        .context-bar-container {
+            height: 8px;
+            background-color: var(--bg-darker);
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+        
+        .context-bar {
+            height: 100%;
+            border-radius: 4px;
+        }
+        
+        .context-bar.openai {
+            background-color: var(--openai);
+        }
+        
+        .context-bar.anthropic {
+            background-color: var(--anthropic);
+        }
+        
+        .context-bar.google {
+            background-color: var(--google);
+        }
+        
+        .context-bar.deepseek {
+            background-color: var(--deepseek);
+        }
+        
+        .pricing {
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+        
+        .chart-container {
+            margin-top: 3rem;
+            padding: 2rem;
+            background-color: var(--bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+        
+        .chart-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+        
+        .legend-color.openai {
+            background-color: var(--openai);
+        }
+        
+        .legend-color.anthropic {
+            background-color: var(--anthropic);
+        }
+        
+        .legend-color.google {
+            background-color: var(--google);
+        }
+        
+        .legend-color.deepseek {
+            background-color: var(--deepseek);
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .model-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ART Framework - AI Model Comparison</h1>
+            <p>Latest models as of April 2025 from major AI providers</p>
+        </div>
+        
+        <!-- OpenAI Section -->
+        <div class="provider-section">
+            <div class="provider-header">
+                <div class="provider-logo openai">O</div>
+                <div class="provider-name">OpenAI</div>
+            </div>
+            
+            <div class="model-cards">
+                <!-- GPT-4.5 Orion -->
+                <div class="model-card openai">
+                    <div class="model-name">GPT-4.5 Orion</div>
+                    <div class="model-date">Released: February 27, 2025</div>
+                    
+                    <div class="model-specs">
+                        <div class="model-spec">
+                            <span class="model-spec-label">Context Window:</span>
+                            <span class="model-spec-value">128K tokens</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="model-spec-label">Max Output:</span>
+                            <span class="model-spec-value">4K tokens</span>
+                        </div>
+                    </div>
+                    
+                    <div class="context-bar-container">
+                        <div class="context-bar openai" style="width: 12.8%"></div>
+                    </div>
+                    
+                    <div class="pricing">
+                        Input: $75 per million tokens<br>
+                        Output: $150 per million tokens
+                    </div>
+                    
+                    <div class="model-capabilities">
+                        <div class="capability-title">Capabilities</div>
+                        <div class="capability-pills">
+                            <div class="capability-pill">Text</div>
+                            <div class="capability-pill">Vision</div>
+                            <div class="capability-pill">Tool Use</div>
+                            <div class="capability-pill">Reasoning</div>
+                            <div class="capability-pill">RAG</div>
+                            <div class="capability-pill">Code</div>
+                            <div class="capability-pill">Streaming</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- GPT-4o -->
+                <div class="model-card openai">
+                    <div class="model-name">GPT-4o</div>
+                    <div class="model-date">Released: August 6, 2024</div>
+                    
+                    <div class="model-specs">
+                        <div class="model-spec">
+                            <span class="model-spec-label">Context Window:</span>
+                            <span class="model-spec-value">128K tokens</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="model-spec-label">Max Output:</span>
+                            <span class="model-spec-value">4K tokens</span>
+                        </div>
+                    </div>
+                    
+                    <div class="context-bar-container">
+                        <div class="context-bar openai" style="width: 12.8%"></div>
+                    </div>
+                    
+                    <div class="pricing">
+                        Input: $2.50 per million tokens<br>
+                        Output: $10 per million tokens
+                    </div>
+                    
+                    <div class="model-capabilities">
+                        <div class="capability-title">Capabilities</div>
+                        <div class="capability-pills">
+                            <div class="capability-pill">Text</div>
+                            <div class="capability-pill">Vision</div>
+                            <div class="capability-pill">Tool Use</div>
+                            <div class="capability-pill">Reasoning</div>
+                            <div class="capability-pill">RAG</div>
+                            <div class="capability-pill">Code</div>
+                            <div class="capability-pill">Streaming</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- GPT-4o-mini -->
+                <div class="model-card openai">
+                    <div class="model-name">GPT-4o mini</div>
+                    <div class="model-date">Released: November 15, 2024</div>
+                    
+                    <div class="model-specs">
+                        <div class="model-spec">
+                            <span class="model-spec-label">Context Window:</span>
+                            <span class="model-spec-value">128K tokens</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="model-spec-label">Max Output:</span>
+                            <span class="model-spec-value">4K tokens</span>
+                        </div>
+                    </div>
+                    
+                    <div class="context-bar-container">
+                        <div class="context-bar openai" style="width: 12.8%"></div>
+                    </div>
+                    
+                    <div class="pricing">
+                        Input: $1.50 per million tokens<br>
+                        Output: $6 per million tokens
+                    </div>
+                    
+                    <div class="model-capabilities">
+                        <div class="capability-title">Capabilities</div>
+                        <div class="capability-pills">
+                            <div class="capability-pill">Text</div>
+                            <div class="capability-pill">Vision</div>
+                            <div class="capability-pill">Tool Use</div>
+                            <div class="capability-pill">Code</div>
+                            <div class="capability-pill">Streaming</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- GPT-4o Long Output -->
+                <div class="model-card openai">
+                    <div class="model-name">GPT-4o Long Output</div>
+                    <div class="model-date">Released: October 15, 2024</div>
+                    
+                    <div class="model-specs">
+                        <div class="model-spec">
+                            <span class="model-spec-label">Context Window:</span>
+                            <span class="model-spec-value">128K tokens</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="model-spec-label">Max Output:</span>
+                            <span class="model-spec-value">16K tokens</span>
+                        </div>
+                    </div>
+                    
+                    <div class="context-bar-container">
+                        <div class="context-bar openai" style="width: 12.8%"></div>
+                    </div>
+                    
+                    <div class="pricing">
+                        Input: $2.50 per million tokens<br>
+                        Output: $15 per million tokens
+                    </div>
+                    
+                    <div class="model-capabilities">
+                        <div class="capability-title">Capabilities</div>
+                        <div class="capability-pills">
+                            <div class="capability-pill">Text</div>
+                            <div class="capability-pill">Vision</div>
+                            <div class="capability-pill">Tool Use</div>
+                            <div class="capability-pill">Reasoning</div>
+                            <div class="capability-pill">RAG</div>
+                            <div class="capability-pill">Code</div>
+                            <div class="capability-pill">Streaming</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Anthropic Section -->
+        <div class="provider-section">
+            <div class="provider-header">
+                <div class="provider-logo anthropic">A</div>
+                <div class="provider-name">Anthropic</div>
+            </div>
+            
+            <div class="model-cards">
+                <!-- Claude 3.7 Sonnet -->
+                <div class="model-card anthropic">
+                    <div class="model-name">Claude 3.7 Sonnet</div>
+                    <div class="model-date">Released: February 19, 2025</div>
+                    
+                    <div class="model-specs">
+                        <div class="model-spec">
+                            <span class="model-spec-label">Context Window:</span>
+                            <span class="model-spec-value">200K tokens</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="model-spec-label">Max Output:</span>
+                            <span class="model-spec-value">4K tokens</span>
+                        </div>
+                    </div>
+                    
+                    <div class="context-bar-container">
+                        <div class="context-bar anthropic" style="width: 20%"></div>
+                    </div>
+                    
+                    <div class="pricing">
+                        Input: $3 per million tokens<br>
+                        Output: $15 per million tokens
+                    </div>
+                    
+                    <div class="model-capabilities">
+                        <div class="capability-title">Capabilities</div>
+                        <div class="capability-pills">
+                            <div class="capability-pill">Text</div>
+                            <div class="capability-pill">Vision</div>
+                            <div class="capability-pill">Tool Use</div>
+                            <div class="capability-pill">Reasoning</div>
+                            <div class="capability-pill">RAG</div>
+                            <div class="capability-pill">Code</div>
+                            <div class="capability-pill">Streaming</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Claude 3.7 Sonnet Thinking -->
+                <div class="model-card anthropic">
+                    <div class="model-name">Claude 3.7 Sonnet Thinking</div>
+                    <div class="model-date">Released: February 19, 2025</div>
+                    
+                    <div class="model-specs">
+                        <div class="model-spec">
+                            <span class="model-spec-label">Context Window:</span>
+                            <span class="model-spec-value">200K tokens</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="model-spec-label">Max Output:</span>
+                            <span class="model-spec-value">128K tokens</span>
+                        </div>
+                    </div>
+                    
+                    <div class="context-bar-container">
+                        <div class="context-bar anthropic" style="width: 20%"></div>
+                    </div>
+                    
+                    <div class="pricing">
+                        Input: $3 per million tokens<br>
+                        Output: $15 per million tokens
+                    </div>
+                    
+                    <div class="model-capabilities">
+                        <div class="capability-title">Capabilities</div>
+                        <div class="capability-pills">
+                            <div class="capability-pill">Text</div>
+                            <div class="capability-pill">Vision</div>
+                            <div class="capability-pill">Tool Use</div>
+                            <div class="capability-pill">Reasoning</div>
+                            <div class="capability-pill">RAG</div>
+                            <div class="capability-pill">Code</div>
+                            <div class="capability-pill">Streaming</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Claude 3.5 Sonnet -->
+                <div class="model-card anthropic">
+                    <div class="model-name">Claude 3.5 Sonnet</div>
+                    <div class="model-date">Released: September 25, 2024</div>
+                    
+                    <div class="model-specs">
+                        <div class="model-spec">
+                            <span class="model-spec-label">Context Window:</span>
+                            <span class="model-spec-value">200K tokens</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="model-spec-label">Max Output:</span>
+                            <span class="model-spec-value">4K tokens</span>
+                        </div>
+                    </div>
+                    
+                    <div class="context-bar-container">
+                        <div class="context-bar anthropic" style="width: 20%"></div>
+                    </div>
+                    
+                    <div class="pricing">
+                        Input: $3 per million tokens<br>
+                        Output: $15 per million tokens
+                    </div>
+                    
+                    <div class="model-capabilities">
+                        <div class="capability-title">Capabilities</div>
+                        <div class="capability-pills">
+                            <div class="capability-pill">Text</div>
+                            <div class="capability-pill">Vision</div>
+                            <div class="capability-pill">Tool Use</div>
+                            <div class="capability-pill">Reasoning</div>
+                            <div class="capability-pill">RAG</div>
+                            <div class="capability-pill">Code</div>
+                            <div class="capability-pill">Streaming</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Claude 3.5 Haiku -->
+                <div class="model-card anthropic">
+                    <div class="model-name">Claude 3.5 Haiku</div>
+                    <div class="model-date">Released: December 3, 2024</div>
+                    
+                    <div class="model-specs">
+                        <div class="model-spec">
+                            <span class="model-spec-label">Context Window:</span>
+                            <span class="model-spec-value">200K tokens</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="model-spec-label">Max Output:</span>
+                            <span class="model-spec-value">4K tokens</span>
+                        </div>
+                    </div>
+                    
+                    <div class="context-bar-container">
+                        <div class="context-bar anthropic" style="width: 20%"></div>
+                    </div>
+                    
+                    <div class="pricing">
+                        Input: $0.80 per million tokens<br>
+                        Output: $4 per million tokens
+                    </div>
+                    
+                    <div class="model-capabilities">
+                        <div class="capability-title">Capabilities</div>
+                        <div class="capability-pills">
+                            <div class="capability-pill">Text</div>
+                            <div class="capability-pill">Vision</div>
+                            <div class="capability-pill">Tool Use</div>
+                            <div class="capability-pill">Code</div>
+                            <div class="capability-pill">Streaming</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Google Section -->
+        <div class="provider-section">
+            <div class="provider-header">
+                <div class="provider-logo google">G</div>
+                <div class="provider-name">Google</div>
+            </div>
+            
+            <div class="model-cards">
+                <!-- Gemini 2.5 Pro -->
+                <div class="model-card google">
+                    <div class="model-name">Gemini 2.5 Pro</div>
+                    <div class="model-date">Released: March 25, 2025</div>
+                    
+                    <div class="model-specs">
+                        <div class="model-spec">
+                            <span class="model-spec-label">Context Window:</span>
+                            <span class="model-spec-value">1M tokens</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="model-spec-label">Max Output:</span>
+                            <span class="model-spec-value">8K tokens</span>
+                        </div>
+                    </div>
+                    
+                    <div class="context-bar-container">
+                        <div class="context-bar google" style="width: 100%"></div>
+                    </div>
+                    
+                    <div class="pricing">
+                        Input: $3.50 per million tokens<br>
+                        Output: $10.50 per million tokens
+                    </div>
+                    
+                    <div class="model-capabilities">
+                        <div class="capability-title">Capabilities</div>
+                        <div class="capability-pills">
+                            <div class="capability-pill">Text</div>
+                            <div class="capability-pill">Vision</div>
+                            <div class="capability-pill">Tool Use</div>
+                            <div class="capability-pill">Reasoning</div>
+                            <div class="capability-pill">RAG</div>
+                            <div class="capability-pill">Code</div>
+                            <div class="capability-pill">Streaming</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gemini 2.0 Pro -->
+                <div class="model-card google">
+                    <div class="model-name">Gemini 2.0 Pro</div>
+                    <div class="model-date">Released: December 15, 2024</div>
+                    
+                    <div class="model-specs">
+                        <div class="model-spec">
+                            <span class="model-spec-label">Context Window:</span>
+                            <span class="model-spec-value">1M tokens</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="model-spec-label">Max Output:</span>
+                            <span class="model-spec-value">8K tokens</span>
+                        </div>
+                    </div>
+                    
+                    <div class="context-bar-container">
+                        <div class="context-bar google" style="width: 100%"></div>
+                    </div>
+                    
+                    <div class="pricing">
+                        Input: $2.50 per million tokens<br>
+                        Output: $7.50 per million tokens
+                    </div>
+                    
+                    <div class="model-capabilities">
+                        <div class="capability-title">Capabilities</div>
+                        <div class="capability-pills">
+                            <div class="capability-pill">Text</div>
+                            <div class="capability-pill">Vision</div>
+                            <div class="capability-pill">Tool Use</div>
+                            <div class="capability-pill">Reasoning</div>
+                            <div class="capability-pill">RAG</div>
+                            <div class="capability-pill">Code</div>
+                            <div class="capability-pill">Streaming</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gemini 2.0 Flash -->
+                <div class="model-card google">
+                    <div class="model-name">Gemini 2.0 Flash</div>
+                    <div class="model-date">Released: December 15, 2024</div>
+                    
+                    <div class="model-specs">
+                        <div class="model-spec">
+                            <span class="model-spec-label">Context Window:</span>
+                            <span class="model-spec-value">1M tokens</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="model-spec-label">Max Output:</span>
+                            <span class="model-spec-value">8K tokens</span>
+                        </div>
+                    </div>
+                    
+                    <div class="context-bar-container">
+                        <div class="context-bar google" style="width: 100%"></div>
+                    </div>
+                    
+                    <div class="pricing">
+                        Input: $1.50 per million tokens<br>
+                        Output: $5 per million tokens
+                    </div>
+                    
+                    <div class="model-capabilities">
+                        <div class="capability-title">Capabilities</div>
+                        <div class="capability-pills">
+                            <div class="capability-pill">Text</div>
+                            <div class="capability-pill">Vision</div>
+                            <div class="capability-pill">Tool Use</div>
+                            <div class="capability-pill">Code</div>
+                            <div class="capability-pill">Streaming</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- DeepSeek Section -->
+        <div class="provider-section">
+            <div class="provider-header">
+                <div class="provider-logo deepseek">D</div>
+                <div class="provider-name">DeepSeek</div>
+            </div>
+            
+            <div class="model-cards">
+                <!-- DeepSeek V3-0324 -->
+                <div class="model-card deepseek">
+                    <div class="model-name">DeepSeek V3-0324</div>
+                    <div class="model-date">Released: March 24, 2025</div>
+                    
+                    <div class="model-specs">
+                        <div class="model-spec">
+                            <span class="model-spec-label">Context Window:</span>
+                            <span class="model-spec-value">130K tokens</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="model-spec-label">Max Output:</span>
+                            <span class="model-spec-value">4K tokens</span>
+                        </div>
+                    </div>
+                    
+                    <div class="context-bar-container">
+                        <div class="context-bar deepseek" style="width: 13%"></div>
+                    </div>
+                    
+                    <div class="pricing">
+                        Input: $1.50 per million tokens<br>
+                        Output: $3 per million tokens
+                    </div>
+                    
+                    <div class="model-capabilities">
+                        <div class="capability-title">Capabilities</div>
+                        <div class="capability-pills">
+                            <div class="capability-pill">Text</div>
+                            <div class="capability-pill">Tool Use</div>
+                            <div class="capability-pill">Reasoning</div>
+                            <div class="capability-pill">RAG</div>
+                            <div class="capability-pill">Code</div>
+                            <div class="capability-pill">Streaming</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- DeepSeek V3 -->
+                <div class="model-card deepseek">
+                    <div class="model-name">DeepSeek V3</div>
+                    <div class="model-date">Released: January 13, 2025</div>
+                    
+                    <div class="model-specs">
+                        <div class="model-spec">
+                            <span class="model-spec-label">Context Window:</span>
+                            <span class="model-spec-value">130K tokens</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="model-spec-label">Max Output:</span>
+                            <span class="model-spec-value">4K tokens</span>
+                        </div>
+                    </div>
+                    
+                    <div class="context-bar-container">
+                        <div class="context-bar deepseek" style="width: 13%"></div>
+                    </div>
+                    
+                    <div class="pricing">
+                        Input: $1.50 per million tokens<br>
+                        Output: $3 per million tokens
+                    </div>
+                    
+                    <div class="model-capabilities">
+                        <div class="capability-title">Capabilities</div>
+                        <div class="capability-pills">
+                            <div class="capability-pill">Text</div>
+                            <div class="capability-pill">Tool Use</div>
+                            <div class="capability-pill">Reasoning</div>
+                            <div class="capability-pill">RAG</div>
+                            <div class="capability-pill">Code</div>
+                            <div class="capability-pill">Streaming</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- DeepSeek Coder V2 -->
+                <div class="model-card deepseek">
+                    <div class="model-name">DeepSeek Coder V2</div>
+                    <div class="model-date">Released: July 1, 2024</div>
+                    
+                    <div class="model-specs">
+                        <div class="model-spec">
+                            <span class="model-spec-label">Context Window:</span>
+                            <span class="model-spec-value">128K tokens</span>
+                        </div>
+                        <div class="model-spec">
+                            <span class="model-spec-label">Max Output:</span>
+                            <span class="model-spec-value">8K tokens</span>
+                        </div>
+                    </div>
+                    
+                    <div class="context-bar-container">
+                        <div class="context-bar deepseek" style="width: 12.8%"></div>
+                    </div>
+                    
+                    <div class="pricing">
+                        Input: $1.20 per million tokens<br>
+                        Output: $2.50 per million tokens
+                    </div>
+                    
+                    <div class="model-capabilities">
+                        <div class="capability-title">Capabilities</div>
+                        <div class="capability-pills">
+                            <div class="capability-pill">Text</div>
+                            <div class="capability-pill">Code</div>
+                            <div class="capability-pill">Streaming</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Context Window Comparison Chart -->
+        <div class="chart-container">
+            <div class="chart-title">Context Window Comparison (Tokens)</div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color openai"></div>
+                    <span>OpenAI</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color anthropic"></div>
+                    <span>Anthropic</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color google"></div>
+                    <span>Google</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color deepseek"></div>
+                    <span>DeepSeek</span>
+                </div>
+            </div>
+            
+            <svg width="100%" height="400" style="overflow: visible">
+                <!-- X and Y Axes -->
+                <line x1="60" y1="350" x2="60" y2="50" stroke="#6b7280" stroke-width="2" />
+                <line x1="60" y1="350" x2="950" y2="350" stroke="#6b7280" stroke-width="2" />
+                
+                <!-- X-Axis Labels -->
+                <text x="510" y="390" text-anchor="middle" font-size="14">Models</text>
+                
+                <!-- Y-Axis Labels -->
+                <text x="30" y="200" text-anchor="middle" font-size="14" transform="rotate(-90, 30, 200)">Tokens</text>
+                <text x="55" y="350" text-anchor="end" font-size="12">0</text>
+                <text x="55" y="300" text-anchor="end" font-size="12">200K</text>
+                <text x="55" y="250" text-anchor="end" font-size="12">400K</text>
+                <text x="55" y="200" text-anchor="end" font-size="12">600K</text>
+                <text x="55" y="150" text-anchor="end" font-size="12">800K</text>
+                <text x="55" y="100" text-anchor="end" font-size="12">1M</text>
+                <text x="55" y="50" text-anchor="end" font-size="12">1.2M</text>
+                
+                <!-- Grid Lines -->
+                <line x1="60" y1="300" x2="950" y2="300" stroke="#e5e7eb" stroke-width="1" />
+                <line x1="60" y1="250" x2="950" y2="250" stroke="#e5e7eb" stroke-width="1" />
+                <line x1="60" y1="200" x2="950" y2="200" stroke="#e5e7eb" stroke-width="1" />
+                <line x1="60" y1="150" x2="950" y2="150" stroke="#e5e7eb" stroke-width="1" />
+                <line x1="60" y1="100" x2="950" y2="100" stroke="#e5e7eb" stroke-width="1" />
+                <line x1="60" y1="50" x2="950" y2="50" stroke="#e5e7eb" stroke-width="1" />
+                
+                <!-- OpenAI Bars -->
+                <g transform="translate(120, 0)">
+                    <rect x="0" y="325" width="30" height="25" fill="#10a37f" />
+                    <text x="15" y="365" text-anchor="middle" font-size="12">GPT-4.5</text>
+                    <text x="15" y="320" text-anchor="middle" font-size="10" fill="white">128K</text>
+                </g>
+                
+                <g transform="translate(170, 0)">
+                    <rect x="0" y="325" width="30" height="25" fill="#10a37f" />
+                    <text x="15" y="365" text-anchor="middle" font-size="12">GPT-4o</text>
+                    <text x="15" y="320" text-anchor="middle" font-size="10" fill="white">128K</text>
+                </g>
+                
+                <!-- Anthropic Bars -->
+                <g transform="translate(320, 0)">
+                    <rect x="0" y="310" width="30" height="40" fill="#b362ff" />
+                    <text x="15" y="365" text-anchor="middle" font-size="12">Claude 3.7</text>
+                    <text x="15" y="305" text-anchor="middle" font-size="10" fill="white">200K</text>
+                </g>
+                
+                <g transform="translate(370, 0)">
+                    <rect x="0" y="310" width="30" height="40" fill="#b362ff" />
+                    <text x="15" y="365" text-anchor="middle" font-size="12">Claude 3.5</text>
+                    <text x="15" y="305" text-anchor="middle" font-size="10" fill="white">200K</text>
+                </g>
+                
+                <!-- Google Bars -->
+                <g transform="translate(520, 0)">
+                    <rect x="0" y="100" width="30" height="250" fill="#4285f4" />
+                    <text x="15" y="365" text-anchor="middle" font-size="12">Gemini 2.5</text>
+                    <text x="15" y="95" text-anchor="middle" font-size="10" fill="white">1M</text>
+                </g>
+                
+                <g transform="translate(570, 0)">
+                    <rect x="0" y="100" width="30" height="250" fill="#4285f4" />
+                    <text x="15" y="365" text-anchor="middle" font-size="12">Gemini 2.0</text>
+                    <text x="15" y="95" text-anchor="middle" font-size="10" fill="white">1M</text>
+                </g>
+                
+                <!-- DeepSeek Bars -->
+                <g transform="translate(720, 0)">
+                    <rect x="0" y="324" width="30" height="26" fill="#ff8c39" />
+                    <text x="15" y="365" text-anchor="middle" font-size="12">DeepSeek V3</text>
+                    <text x="15" y="319" text-anchor="middle" font-size="10" fill="white">130K</text>
+                </g>
+                
+                <g transform="translate(770, 0)">
+                    <rect x="0" y="324.5" width="30" height="25.5" fill="#ff8c39" />
+                    <text x="15" y="365" text-anchor="middle" font-size="12">DeepSeek V2</text>
+                    <text x="15" y="320" text-anchor="middle" font-size="10" fill="white">128K</text>
+                </g>
+            </svg>
+        </div>
+    </div>
+</body>
+</html>

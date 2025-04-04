@@ -37,7 +37,7 @@ Based on the user query and conversation history, identify the user's intent and
 Respond in the following format:
 Intent: [Briefly describe the user's goal]
 Plan: [Provide a step-by-step plan. If tools are needed, list them clearly.]
-Tool Calls: [List any tool calls required in JSON format: [{"callId": "call_1", "toolName": "tool_name", "arguments": {"arg1": "value1"}}]] If no tools are needed, respond with [].`;
+Tool Calls: [Output *only* the JSON array of tool calls required: [{"callId": "call_1", "toolName": "tool_name", "arguments": {"arg1": "value1"}}] or [] if no tools are needed. Do not add any other text in this section.]`;
 
   private defaultSynthesisPromptTemplate = `System Prompt:
 {{systemPrompt}}
