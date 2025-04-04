@@ -78,3 +78,9 @@
         *   Updated the tool's `description` and `examples` to reflect the capabilities of `mathjs` (including functions, modulo, and variables).
         *   Refined the `ToolSchema` type definition in `src/types/index.ts` (using `JsonSchema`) to provide better type safety for schema properties.
         *   Updated unit tests (`src/tools/CalculatorTool.test.ts`) to cover the new `mathjs` implementation, including scope usage, various operators/functions, and error handling. Explicitly imported test globals (`describe`, `it`, etc.) from `vitest`.
+23. **Enhanced `CalculatorTool` Robustness & Capabilities (`src/tools/CalculatorTool.ts` & `*.test.ts`):**
+    *   **Security/Predictability:** Implemented a function allowlist (`sqrt`, `log`, `sin`, etc.) passed explicitly to `mathjs.evaluate` to prevent execution of arbitrary or disallowed functions.
+    *   **Capability:** Added support for complex number results (e.g., from `sqrt(-4)`). Complex results are returned as strings (e.g., `"2i"`).
+    *   **Error Handling:** Improved error reporting to return specific messages from `mathjs` or internal validation (e.g., "Unsupported type", "Undefined symbol").
+    *   **Clarity:** Updated the tool's schema description and examples to accurately reflect the allowed functions and complex number support. Removed the optional `outputSchema` due to type complexities with `oneOf`.
+    *   **Testing:** Updated unit tests (`src/tools/CalculatorTool.test.ts`) to verify the function allowlist, complex number handling, and improved error messages.

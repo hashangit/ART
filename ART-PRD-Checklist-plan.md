@@ -530,6 +530,10 @@ graph TD
     *   [D] **6.X.4:** Update `CalculatorTool` schema (description, add optional `scope` input, update examples for `mathjs` features).
     *   [D] **6.X.5:** Update `CalculatorTool.test.ts` to cover `mathjs` usage (including scope, modulo, errors).
     *   [ ] **6.2.1:** Review & complete TSDoc comments.
+    *   [ ] **6.X.6:** Implement function allowlist in `CalculatorTool` for security and predictability.
+    *   [ ] **6.X.7:** Add complex number support to `CalculatorTool` (result validation and output formatting).
+    *   [ ] **6.X.8:** Enhance error reporting in `CalculatorTool` to use specific `mathjs` error messages.
+    *   [ ] **6.X.9:** Update `CalculatorTool` schema description and examples for allowlist and complex numbers.
     *   [ ] **6.2.2:** Write conceptual docs (README, Architecture, Getting Started).
     *   [ ] **6.2.3:** Create usage examples.
     *   [ ] **6.2.4:** Generate API documentation.
