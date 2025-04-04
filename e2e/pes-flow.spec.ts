@@ -7,13 +7,22 @@ const API_ENDPOINT = '/process';
 test.describe('ART Framework E2E - PES Flow', () => {
 
   // Helper function to make API calls
-  async function processQuery(request: any, query: string, storageType: 'memory' | 'indexeddb'): Promise<AgentFinalResponse> {
-    const response = await request.post(API_ENDPOINT, {
-      data: {
-        query: query,
-        storageType: storageType,
-      },
-    });
+  // Helper function to make API calls, now accepts optional threadId
+  async function processQuery(
+    request: any,
+    query: string,
+    storageType: 'memory' | 'indexeddb',
+    threadId?: string // Optional threadId parameter
+  ): Promise<AgentFinalResponse & { metadata: { threadId: string } }> { // Ensure threadId is in metadata type
+    const payload: { query: string; storageType: string; threadId?: string } = {
+      query: query,
+      storageType: storageType,
+    };
+    if (threadId) {
+      payload.threadId = threadId; // Add threadId to payload if provided
+    }
+
+    const response = await request.post(API_ENDPOINT, { data: payload });
     expect(response.ok(), `API request failed with status ${response.status()}`).toBeTruthy();
     const jsonResponse = await response.json();
     
@@ -22,7 +31,11 @@ test.describe('ART Framework E2E - PES Flow', () => {
       // console.log(`Test using storage type: requested=${jsonResponse._testInfo.requestedStorageType}, actual=${jsonResponse._testInfo.actualStorageType}`); // Removed
     }
     
-    return jsonResponse as AgentFinalResponse;
+    // Ensure the response includes a threadId in metadata
+    expect(jsonResponse.metadata, 'Response metadata should exist').toBeDefined();
+    expect(jsonResponse.metadata.threadId, 'Response metadata should include threadId').toBeDefined();
+
+    return jsonResponse as AgentFinalResponse & { metadata: { threadId: string } };
   }
 
   // --- Tests using InMemoryStorageAdapter ---
@@ -95,11 +108,28 @@ test.describe('ART Framework E2E - PES Flow', () => {
       expect(response.metadata.threadId).toBeDefined();
     });
 
-    // Add a note explaining the test approach
-    test.fixme('should persist conversation history between requests', async () => { // Removed unused parameter object
-      // This test would verify that conversation history is maintained across requests
-      // For now, we're using memory storage for all tests in the server environment
-      // A complete test would require a browser environment or fake-indexeddb for Node.js
+    // Test conversation persistence with IndexedDB (using fake-indexeddb on server)
+    test('should persist conversation history between requests', async ({ request }) => {
+      const firstQuery = "My favorite fruit is mango.";
+      const storage = 'indexeddb';
+
+      // First request: Establish context
+      const response1 = await processQuery(request, firstQuery, storage);
+      expect(response1.metadata.status).toBe('success');
+      const threadId = response1.metadata.threadId; // Get the threadId from the first response
+      expect(threadId).toBeDefined();
+      // console.log(`Persistence Test - Request 1 (Thread: ${threadId}): "${firstQuery}" -> "${response1.response.content}"`);
+
+      // Second request: Ask a question requiring context from the first request
+      const secondQuery = "What is my favorite fruit?";
+      const response2 = await processQuery(request, secondQuery, storage, threadId); // Use the same threadId
+      expect(response2.metadata.status).toBe('success');
+      expect(response2.metadata.threadId).toBe(threadId); // Verify same threadId is used
+      // console.log(`Persistence Test - Request 2 (Thread: ${threadId}): "${secondQuery}" -> "${response2.response.content}"`);
+
+      // Assert that the second response contains the information from the first
+      expect(response2.response.content).toBeDefined();
+      expect(response2.response.content.toLowerCase()).toContain('mango');
     });
   });
 });

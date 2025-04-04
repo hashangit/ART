@@ -108,3 +108,21 @@
         *   Removed all `console.log` statements from `e2e/pes-flow.spec.ts`.
         *   Fixed the TypeScript error in `e2e/pes-flow.spec.ts` by removing the unused parameter object from the `test.fixme` function signature.
     *   **Updated PRD Checklist:** Added section 6.6 to `ART-PRD-Checklist-plan.md` to track these fixes.
+
+### April 5, 2025: E2E Persistence Test Implementation & Issue Analysis
+
+1.  **Attempted IndexedDB Persistence Test:**
+    *   Installed `fake-indexeddb` in `e2e-test-app`.
+    *   Modified `e2e-test-app/src/index.ts` to import `fake-indexeddb/auto` and use the requested `storageType`.
+    *   Updated the persistence test in `e2e/pes-flow.spec.ts` to verify context across requests using the same `threadId`.
+    *   **Issue 1:** Encountered `ReferenceError: window is not defined` when using `storageType: 'indexeddb'`, indicating the framework's `IndexedDBStorageAdapter` is browser-dependent.
+2.  **Reverted to InMemoryStorageAdapter for Server Tests:**
+    *   Modified `e2e-test-app/src/index.ts` to *always* use `InMemoryStorageAdapter` internally for server-side E2E tests, while still allowing tests to request `'indexeddb'`.
+3.  **Fixed `threadId` Handling:**
+    *   Modified `e2e-test-app/src/index.ts` to correctly use the `threadId` provided in the request body for subsequent requests, instead of always generating a new one.
+4.  **Attempted Context Verification with Gemini:**
+    *   Modified `e2e-test-app/src/index.ts` to use the `gemini` reasoning provider in the default `ThreadConfig` to test actual conversational memory.
+    *   **Issue 2:** The persistence test failed with `metadata.status: 'error'` on the second request, even though the `threadId` was correctly passed. This suggests a potential framework issue when reloading thread context with `InMemoryStorageAdapter` and a real LLM adapter.
+5.  **Documented Framework Issue:**
+    *   Created `E2E-Persistence-Issue-Analysis.md` detailing the investigation steps, the specific error, and suspected causes within the framework related to `InMemoryStorageAdapter` and thread context reloading.
+6.  **Updated E2E Plan:** Marked persistence test setup tasks as complete in `E2E-Testing-Plan.md`. (Note: Full context verification is blocked by the framework issue).

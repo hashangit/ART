@@ -1,3 +1,4 @@
+import 'fake-indexeddb/auto'; // Import fake-indexeddb FIRST to patch global indexedDB
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import {
@@ -26,7 +27,8 @@ app.get('/', (req: Request, res: Response): void => {
 // Endpoint to process queries
 app.post('/process', async (req: Request, res: Response): Promise<void> => {
   // console.log('Received request on /process'); // Removed for linting
-  const { query, storageType = 'memory' } = req.body; // Default to memory storage
+  // Extract query, storageType, and optional threadId from request body
+  const { query, storageType = 'memory', threadId: requestThreadId } = req.body;
 
   if (!query) {
     res.status(400).json({
@@ -36,26 +38,25 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
   }
 
   // Validate storage type
-  if (storageType !== 'memory' && storageType !== 'indexeddb') {
+  // Validate storage type - allow 'indexeddb' from request but use 'indexedDB' internally
+  if (storageType !== 'memory' && storageType !== 'indexeddb') { // Keep request validation lowercase
     res.status(400).json({
-      error: 'Invalid storage type. Must be "memory" or "indexeddb"',
+      error: 'Invalid storage type. Must be "memory" or "indexeddb"', // Keep error message consistent with request
     });
     return;
   }
 
-  // For e2e tests in Node environment, we'll use in-memory storage for both types
-  // This allows tests to pass while demonstrating the concept
+  // For e2e tests in Node environment, we MUST use in-memory storage because
+  // the framework's IndexedDB adapter relies on the 'window' object.
+  // fake-indexeddb provides the API but not the browser environment context.
   try {
-    // console.log(`Creating ART instance with storage type: ${storageType}`); // Removed for linting
-    
+    // console.log(`Creating ART instance with storage type: ${storageType} (using memory)`); // Removed for linting
+
     // Create ART instance - always use memory storage for server-side e2e tests
-    // We tell the client we're using their requested type, but internally always use memory
-    // This is a special adaptation for the e2e test environment
     const art = await createArtInstance({
       // agent: PESAgent, // Removed - Agent type is likely handled by the factory/default
       storage: {
-        type: 'memory'
-        // Removed the incorrect config property
+        type: 'memory' // Force memory storage on the server
       },
       // Add the required reasoning configuration
       reasoning: {
@@ -67,39 +68,37 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
       tools: [new CalculatorTool()] // Create instance instead of passing the class
     });
 
-    // Generate a unique thread ID for this request unless one was provided
-    const threadId = `e2e-thread-${Date.now()}`;
+    // Use the provided threadId if available, otherwise generate a new one
+    const threadId = requestThreadId || `e2e-thread-${Date.now()}`;
 
     // Set up a default thread configuration
     const threadConfig: ThreadConfig = {
       reasoning: {
-        provider: 'mock',  // Using mock provider for tests (faster/deterministic)
-        model: 'mock-model',
-        parameters: { temperature: 0.7 }
+        // Use the same provider/model as the main instance for consistency in tests
+        provider: 'gemini',
+        model: 'gemini-2.0-flash-lite',
+        parameters: { temperature: 0.7 } // Keep parameters if needed
       },
       enabledTools: ['calculator'],
       historyLimit: 10,
       systemPrompt: 'You are a helpful assistant.'
     };
 
-    try {
-      // Load and configure the thread
-      // const threadContext = await art.stateManager.loadThreadContext(threadId); // Removed - Unused variable
-      // Set thread configuration - use StateManager API to configure the thread
-      // console.log(`Setting default thread config for ${threadId}`); // Removed for linting
-      // The implementation details here depend on your StateManager's API
-      // This would typically involve setting the threadConfig via your API
-      
-      // Set the default thread config using the StateManager
-      await art.stateManager.setThreadConfig(threadId, threadConfig);
-    } catch (configError) {
-      console.error(`Error setting up thread: ${configError}`);
-      res.status(500).json({
-        error: 'Failed to configure thread',
-        details: configError instanceof Error ? configError.message : String(configError)
-      });
-      return;
+    // Only set the default thread config if it's a new thread (no threadId provided in request)
+    if (!requestThreadId) {
+      try {
+        // console.log(`Setting default thread config for new thread ${threadId}`); // Removed for linting
+        await art.stateManager.setThreadConfig(threadId, threadConfig);
+      } catch (configError) {
+        console.error(`Error setting up new thread: ${configError}`);
+        res.status(500).json({
+          error: 'Failed to configure new thread',
+          details: configError instanceof Error ? configError.message : String(configError)
+        });
+        return;
+      }
     }
+    // If requestThreadId exists, assume the framework will load existing context/config during art.process
 
     // Process the query
     // console.log(`Processing query: "${query}"`); // Removed for linting
@@ -118,7 +117,8 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
       // @ts-expect-error - Adding custom field for testing
       finalResponse._testInfo = {
         requestedStorageType: storageType,
-        actualStorageType: 'memory', // For transparency in tests
+        // Reflect the actual storage used, mapping to the correct framework type name
+        actualStorageType: 'memory', // Always memory on the server
         processingTimeMs: duration
       };
 
@@ -146,3 +146,4 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
 app.listen(port, () => {
   // console.log(`E2E Test App server running at http://localhost:${port}`); // Removed for linting
 });
+
