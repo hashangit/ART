@@ -8,7 +8,9 @@ import {
   AgentProps,
   AgentFinalResponse,
   ThreadConfig,
-  ArtInstance // Import the ArtInstance type
+  ArtInstance, // Import the ArtInstance type
+  Observation // Import the Observation type
+  // Remove unused ThreadContext import
 } from 'art-framework';
 
 // Load environment variables from .env file (if present)
@@ -31,8 +33,9 @@ async function initializeArt(): Promise<ArtInstance | null> {
         type: 'memory' // Force memory storage on the server
       },
       reasoning: {
+        // Provide a default reasoning config for the instance
         provider: 'gemini',
-        model: 'gemini-2.0-flash-lite',
+        model: 'gemini-2.0-flash-lite', // Use the updated default model
         apiKey: process.env.GEMINI_API_KEY || '',
       },
       tools: [new CalculatorTool()]
@@ -60,7 +63,7 @@ app.get('/', (req: Request, res: Response): void => {
 app.post('/process', async (req: Request, res: Response): Promise<void> => {
   // console.log('Received request on /process'); // Removed for linting
   // Extract query, storageType, and optional threadId from request body
-  const { query, storageType = 'memory', threadId: requestThreadId } = req.body;
+  const { query, storageType = 'memory', threadId: requestThreadId, provider = 'gemini' } = req.body; // Add provider
 
   if (!query) {
     res.status(400).json({
@@ -95,23 +98,64 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
     // Use the provided threadId if available, otherwise generate a new one
     const threadId = requestThreadId || `e2e-thread-${Date.now()}`;
 
-    // Set up a default thread configuration
+    // Determine API Key based on provider
+    let apiKey = '';
+    let model = 'default-model'; // Provide a default or handle missing models
+    switch (provider) {
+      case 'gemini':
+        apiKey = process.env.GEMINI_API_KEY || '';
+        model = 'gemini-1.5-flash-latest'; // Use a common model
+        break;
+      case 'openai':
+        apiKey = process.env.OPENAI_API_KEY || '';
+        model = 'gpt-3.5-turbo'; // Example model
+        break;
+      case 'anthropic':
+        apiKey = process.env.ANTHROPIC_API_KEY || '';
+        model = 'claude-3-haiku-20240307'; // Example model
+        break;
+      case 'openrouter':
+        apiKey = process.env.OPENROUTER_API_KEY || '';
+        model = 'openrouter/auto'; // Example model
+        break;
+      case 'deepseek':
+        apiKey = process.env.DEEPSEEK_API_KEY || '';
+        model = 'deepseek-chat'; // Example model
+        break;
+      default:
+        console.warn(`[E2E App] Unknown provider requested: ${provider}. Using default Gemini config.`);
+        apiKey = process.env.GEMINI_API_KEY || '';
+        model = 'gemini-1.5-flash-latest';
+        // Optionally return an error if an unsupported provider is critical
+        // res.status(400).json({ error: `Unsupported provider: ${provider}` });
+        // return;
+    }
+
+    if (!apiKey) {
+      console.warn(`[E2E App] API Key for provider ${provider} is missing.`);
+      // Optionally return an error if API key is missing
+      // res.status(400).json({ error: `Missing API Key for provider: ${provider}` });
+      // return;
+    }
+
+    // Set up thread configuration dynamically
     const threadConfig: ThreadConfig = {
       reasoning: {
-        // Use the same provider/model as the main instance for consistency in tests
-        provider: 'gemini',
-        model: 'gemini-2.0-flash-lite',
-        parameters: { temperature: 0.7 } // Keep parameters if needed
+        provider: provider, // Use requested provider
+        model: model,       // Use determined model
+        // apiKey is typically configured at the instance level, not per-thread config
+        parameters: { temperature: 0.7 }
       },
       enabledTools: ['calculator'],
       historyLimit: 10,
       systemPrompt: 'You are a helpful assistant.'
     };
 
-    // Only set the default thread config if it's a new thread (no threadId provided in request)
+    // Restore setting thread config for new threads, acknowledging potential persistence issues
+    // with InMemoryStorageAdapter across HTTP requests in this specific test setup.
     if (!requestThreadId) {
       try {
-        // console.log(`Setting default thread config for new thread ${threadId}`); // Removed for linting
+        // console.log(`Setting thread config for new thread ${threadId} with provider ${provider}`);
         await art.stateManager.setThreadConfig(threadId, threadConfig);
       } catch (configError) {
         console.error(`Error setting up new thread: ${configError}`);
@@ -122,10 +166,11 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
         return;
       }
     }
-    // If requestThreadId exists, assume the framework will load existing context/config during art.process
+    // If requestThreadId exists, StateManager *should* load existing config, but might fail here.
 
     // Process the query
     // console.log(`Processing query: "${query}"`); // Removed for linting
+    // Restore original AgentProps without options override
     const agentProps: AgentProps = {
       query,
       threadId
@@ -135,19 +180,32 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
       const startTime = Date.now();
       const finalResponse: AgentFinalResponse = await art.process(agentProps);
       const duration = Date.now() - startTime;
-      // console.log(`Processing complete in ${duration}ms. Status: ${finalResponse.metadata.status}`); // Removed for linting
+      // console.log(`Processing complete in ${duration}ms. Status: ${finalResponse.metadata.status}`);
 
-      // Add a note in the response for testing purposes
-      // @ts-expect-error - Adding custom field for testing
-      finalResponse._testInfo = {
-        requestedStorageType: storageType,
-        // Reflect the actual storage used, mapping to the correct framework type name
-        actualStorageType: 'memory', // Always memory on the server
-        processingTimeMs: duration
+      // Fetch observations for the thread
+      let observations: Observation[] = [];
+      try {
+        observations = await art.observationManager.getObservations(threadId); // Access via observationManager
+        // console.log(`Fetched ${observations.length} observations for thread ${threadId}`);
+      } catch (obsError) {
+        console.error(`Error fetching observations for thread ${threadId}:`, obsError);
+        // Decide if this should be a fatal error or just logged
+      }
+
+      // Add test info and observations to the response
+      const responsePayload = {
+        ...finalResponse,
+        _testInfo: {
+          requestedStorageType: storageType,
+          actualStorageType: 'memory', // Always memory on the server
+          requestedProvider: provider, // Add requested provider
+          processingTimeMs: duration
+        },
+        _observations: observations // Add observations
       };
 
       // Send the final response back to the client
-      res.status(200).json(finalResponse);
+      res.status(200).json(responsePayload);
     } catch (error: any) {
       console.error('--- Error during ART processing ---');
       console.error(error);
