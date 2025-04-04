@@ -26,7 +26,12 @@ export class CalculatorTool implements IToolExecutor {
     //     result: { type: 'number', description: 'The numerical result of the calculation.' }
     //   },
     //   required: ['result']
-    // }
+    // },
+    examples: [
+      { input: { expression: "2 + 2" }, output: { result: 4 }, description: "Simple addition" },
+      { input: { expression: "10 * 5" }, output: { result: 50 }, description: "Simple multiplication" },
+      { input: { expression: "(15 - 3) / 4" }, output: { result: 3 }, description: "Expression with parentheses and division" },
+    ],
   };
 
   async execute(input: any, context: ExecutionContext): Promise<ToolResult> {
