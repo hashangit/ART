@@ -69,3 +69,12 @@
     *   Marked tasks related to `OutputParser` enhancements (dependency addition, parsing logic changes, Zod integration, test updates) as complete.
     *   Added the prompt refinement task (marked as optional initially, now completed).
 21. **Enhanced `CalculatorTool` Schema (`src/tools/CalculatorTool.ts`):** Added `examples` field to the tool schema to provide concrete usage examples, aiming to improve LLM guidance for tool input formatting.
+22. **Refactored `CalculatorTool` (`src/tools/CalculatorTool.ts`):**
+    *   **Problem:** The previous implementation used an unsafe `Function` constructor and overly aggressive sanitization, preventing valid operations like modulo (`%`) and the use of variables.
+    *   **Fix Implemented:**
+        *   Added `mathjs` dependency (`npm install mathjs @types/mathjs`).
+        *   Replaced the `Function` constructor and custom sanitization with `mathjs.evaluate()` for robust and secure expression evaluation.
+        *   Updated the tool's `inputSchema` to include an optional `scope` object for passing variables to the expression.
+        *   Updated the tool's `description` and `examples` to reflect the capabilities of `mathjs` (including functions, modulo, and variables).
+        *   Refined the `ToolSchema` type definition in `src/types/index.ts` (using `JsonSchema`) to provide better type safety for schema properties.
+        *   Updated unit tests (`src/tools/CalculatorTool.test.ts`) to cover the new `mathjs` implementation, including scope usage, various operators/functions, and error handling. Explicitly imported test globals (`describe`, `it`, etc.) from `vitest`.

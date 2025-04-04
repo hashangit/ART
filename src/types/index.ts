@@ -52,14 +52,40 @@ export interface Observation {
 }
 
 /**
+ * Represents a basic JSON Schema definition, focusing on object types commonly used for tool inputs/outputs.
+ * This is a simplified representation and doesn't cover all JSON Schema features.
+ */
+export interface JsonObjectSchema {
+  type: 'object';
+  properties: {
+    [key: string]: {
+      type: string; // e.g., 'string', 'number', 'boolean', 'object', 'array'
+      description?: string;
+      default?: any;
+      items?: JsonObjectSchema | { type: string }; // For array type
+      properties?: JsonObjectSchema['properties']; // For nested object type
+      required?: string[]; // For nested object type
+      additionalProperties?: boolean | { type: string };
+      [key: string]: any; // Allow other JSON schema properties
+    };
+  };
+  required?: string[];
+  additionalProperties?: boolean;
+}
+
+// Allow for other schema types (string, number, etc.) although object is most common for tools
+export type JsonSchema = JsonObjectSchema | { type: 'string' | 'number' | 'boolean' | 'array', [key: string]: any };
+
+
+/**
  * Defines the schema for a tool, including its input parameters.
  * Uses JSON Schema format for inputSchema.
  */
 export interface ToolSchema {
   name: string; // Must be unique within the registry
   description: string;
-  inputSchema: object; // JSON Schema object
-  outputSchema?: object; // Optional JSON Schema for the output
+  inputSchema: JsonSchema; // Use the more specific JSON Schema type
+  outputSchema?: JsonSchema; // Optional JSON Schema for the output
   examples?: Array<{ input: any; output?: any; description?: string }>; // Optional examples
 }
 

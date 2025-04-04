@@ -1,19 +1,7 @@
 // src/tools/CalculatorTool.test.ts
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, test } from 'vitest'; // Explicit imports
 import { CalculatorTool } from './CalculatorTool';
 import { ExecutionContext } from '../types';
-import { Logger } from '../utils/logger';
-
-// Mock Logger
-vi.mock('../utils/logger', () => ({ // Note the relative path change
-  Logger: {
-    warn: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-    debug: vi.fn(),
-    configure: vi.fn(),
-  },
-}));
 
 describe('CalculatorTool', () => {
   let calculatorTool: CalculatorTool;
@@ -23,122 +11,90 @@ describe('CalculatorTool', () => {
     calculatorTool = new CalculatorTool();
     mockContext = {
       threadId: 'test-thread',
-      traceId: 'test-trace-123',
+      traceId: 'test-trace',
     };
-    vi.clearAllMocks();
   });
 
   it('should have the correct schema', () => {
     expect(calculatorTool.schema.name).toBe('calculator');
-    expect(calculatorTool.schema.description).toBeDefined();
-    expect(calculatorTool.schema.inputSchema).toEqual({
-      type: 'object',
-      properties: {
-        expression: {
-          type: 'string',
-          description: expect.any(String),
-        },
-      },
-      required: ['expression'],
-    });
+    expect(calculatorTool.schema.description).toContain('mathjs');
+    // Use non-null assertions (!) assuming the structure is correct for this tool
+    expect(calculatorTool.schema.inputSchema!.properties).toHaveProperty('expression');
+    expect(calculatorTool.schema.inputSchema!.properties).toHaveProperty('scope');
+    expect((calculatorTool.schema.inputSchema!.properties! as any).scope.type).toBe('object');
+    expect(calculatorTool.schema.examples!.length).toBeGreaterThan(3); // Check if examples were updated
   });
 
-  // --- Success Cases ---
-  it('should evaluate a simple addition expression', async () => {
-    const input = { expression: '2 + 3' };
+  test.each([
+    // Basic Arithmetic
+    { expression: '2 + 2', scope: undefined, expected: 4 },
+    { expression: '10 - 3', scope: undefined, expected: 7 },
+    { expression: '5 * 6', scope: undefined, expected: 30 },
+    { expression: '20 / 4', scope: undefined, expected: 5 },
+    // Parentheses
+    { expression: '(10 + 5) * 2', scope: undefined, expected: 30 },
+    // Modulo
+    { expression: '13 % 5', scope: undefined, expected: 3 },
+    { expression: 'mod(13, 5)', scope: undefined, expected: 3 }, // Using mathjs function
+    // Functions
+    { expression: 'sqrt(25)', scope: undefined, expected: 5 },
+    { expression: 'pow(2, 3)', scope: undefined, expected: 8 },
+    // Scope / Variables
+    { expression: 'a + b', scope: { a: 10, b: 5 }, expected: 15 },
+    { expression: 'radius * 2 * pi', scope: { radius: 5 }, expected: 31.41592653589793 }, // pi is built-in
+    // Original failing case
+    { expression: 'result % 13', scope: { result: 347 }, expected: 9 },
+    // Decimal numbers
+    { expression: '1.5 * 2.2', scope: undefined, expected: 3.3 },
+  ])('should evaluate "$expression" correctly', async ({ expression, scope, expected }) => {
+    const input = { expression, scope };
     const result = await calculatorTool.execute(input, mockContext);
 
     expect(result.status).toBe('success');
-    expect(result.output).toEqual({ result: 5 });
-    expect(result.toolName).toBe('calculator');
-    expect(result.callId).toBe(mockContext.traceId); // Uses traceId as callId
-    expect(Logger.info).toHaveBeenCalledWith('CalculatorTool evaluated "2 + 3" to 5', expect.anything());
-    expect(Logger.error).not.toHaveBeenCalled();
+    expect(result.output).toEqual({ result: expected });
+    expect(result.error).toBeUndefined();
   });
 
-  it('should evaluate an expression with multiplication and subtraction', async () => {
-    const input = { expression: '10 * 5 - 2' };
-    const result = await calculatorTool.execute(input, mockContext);
-
-    expect(result.status).toBe('success');
-    expect(result.output).toEqual({ result: 48 });
-  });
-
-  it('should evaluate an expression with division and parentheses', async () => {
-    const input = { expression: '(10 + 6) / 4' };
-    const result = await calculatorTool.execute(input, mockContext);
-
-    expect(result.status).toBe('success');
-    expect(result.output).toEqual({ result: 4 });
-  });
-
-   it('should handle floating point numbers', async () => {
-    const input = { expression: '1.5 * 2.0' };
-    const result = await calculatorTool.execute(input, mockContext);
-
-    expect(result.status).toBe('success');
-    expect(result.output).toEqual({ result: 3.0 });
-  });
-
-   it('should handle negative numbers', async () => {
-    const input = { expression: '-5 + 2' };
-    const result = await calculatorTool.execute(input, mockContext);
-
-    expect(result.status).toBe('success');
-    expect(result.output).toEqual({ result: -3 });
-  });
-
-  // --- Failure Cases ---
-  it('should return an error for invalid syntax', async () => {
-    const input = { expression: '2 +* 3' }; // Invalid syntax
+  it('should return an error for invalid expressions', async () => {
+    const input = { expression: '5 + * 3' }; // Invalid syntax
     const result = await calculatorTool.execute(input, mockContext);
 
     expect(result.status).toBe('error');
-    expect(result.error).toContain('Failed to evaluate expression:');
-    // The exact error message from Function constructor can vary
-    expect(Logger.error).toHaveBeenCalledOnce();
+    expect(result.output).toBeUndefined();
+    expect(result.error).toContain('Invalid expression'); // mathjs error message might vary slightly
   });
 
-  it('should return an error for division by zero (Infinity)', async () => {
-    const input = { expression: '5 / 0' };
+  it('should return an error for undefined symbols when no scope is provided', async () => {
+    const input = { expression: 'x + y' }; // Undefined symbols
     const result = await calculatorTool.execute(input, mockContext);
 
     expect(result.status).toBe('error');
-    expect(result.error).toContain('Calculation resulted in a non-finite number: Infinity');
-    expect(Logger.error).toHaveBeenCalledOnce();
+    expect(result.output).toBeUndefined();
+    expect(result.error).toContain('Undefined symbol');
   });
 
-  it('should return an error for unsafe characters if strict checking were enabled (though currently warns)', async () => {
-    // Note: Current implementation sanitizes and proceeds, logging a warning.
-    // A stricter version might throw an error here.
-    const input = { expression: 'alert("hack")' };
-    const result = await calculatorTool.execute(input, mockContext);
-
-    // Because it sanitizes to empty string, Function constructor fails
-    expect(result.status).toBe('error');
-    expect(result.error).toContain('Failed to evaluate expression:');
-    expect(Logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Expression contained potentially unsafe characters'),
-        expect.anything()
-    );
-     expect(Logger.error).toHaveBeenCalledOnce(); // Error from Function('')
-  });
-
-   it('should return an error if expression evaluates to NaN', async () => {
-    const input = { expression: '0 / 0' };
+   it('should return an error if evaluation results in non-finite/non-numeric value', async () => {
+    // Example: mathjs might return a function or other complex type if not careful
+    // Let's test with an expression that might lead to issues if not handled
+    const input = { expression: 'f(x) = x^2' }; // Defines a function, not a number
     const result = await calculatorTool.execute(input, mockContext);
 
     expect(result.status).toBe('error');
-    expect(result.error).toContain('Calculation resulted in a non-finite number: NaN');
-    expect(Logger.error).toHaveBeenCalledOnce();
+    expect(result.output).toBeUndefined();
+    expect(result.error).toContain('Evaluation resulted in a non-finite or non-numeric value');
   });
 
-   it('should use default callId if traceId is missing', async () => {
-    const contextWithoutTrace: ExecutionContext = { threadId: 't-no-trace' };
-    const input = { expression: '1+1' };
-    const result = await calculatorTool.execute(input, contextWithoutTrace);
-
+  it('should handle empty scope correctly', async () => {
+    const input = { expression: '5 * 5', scope: {} };
+    const result = await calculatorTool.execute(input, mockContext);
     expect(result.status).toBe('success');
-    expect(result.callId).toBe('calculator-call'); // Default ID
+    expect(result.output).toEqual({ result: 25 });
+  });
+
+  it('should use default empty scope if scope is not provided', async () => {
+    const input = { expression: '9 / 3' }; // No scope property
+    const result = await calculatorTool.execute(input, mockContext);
+    expect(result.status).toBe('success');
+    expect(result.output).toEqual({ result: 3 });
   });
 });

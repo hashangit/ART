@@ -525,6 +525,10 @@ graph TD
 *   [ ] **6.2: Documentation**
 *   [ ] **6.X: Tooling Improvements**
     *   [D] **6.X.1:** Enhance `CalculatorTool` schema with usage examples to improve LLM guidance.
+    *   [D] **6.X.2:** Add `mathjs` dependency.
+    *   [D] **6.X.3:** Refactor `CalculatorTool.ts` to use `mathjs.evaluate`, removing unsafe `Function` constructor and sanitization.
+    *   [D] **6.X.4:** Update `CalculatorTool` schema (description, add optional `scope` input, update examples for `mathjs` features).
+    *   [D] **6.X.5:** Update `CalculatorTool.test.ts` to cover `mathjs` usage (including scope, modulo, errors).
     *   [ ] **6.2.1:** Review & complete TSDoc comments.
     *   [ ] **6.2.2:** Write conceptual docs (README, Architecture, Getting Started).
     *   [ ] **6.2.3:** Create usage examples.
