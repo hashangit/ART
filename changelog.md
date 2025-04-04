@@ -132,3 +132,9 @@
         *   **Interactive Mode:** (New) If no arguments are provided, starts an interactive CLI session using `readline/promises`. This mode uses a consistent `threadId` throughout the session, allowing manual testing of conversation history persistence with `InMemoryStorageAdapter`.
     *   Unified ART initialization, default configuration (`InMemoryStorageAdapter`, `GeminiReasoningAdapter`), and detailed observation logging for both modes.
     *   Updated `sample-app/package.json` `start` script to execute compiled code (`node dist/index.js`) for better performance, while `prestart` ensures the code is built.
+8.  **Fixed E2E Persistence Test (`e2e-test-app/src/index.ts`):**
+    *   **Problem:** The E2E persistence test failed because the test app created a new ART instance (and thus a new `InMemoryStorageAdapter`) for every HTTP request, preventing state persistence across requests.
+    *   **Verification:** Confirmed via `sample-app` interactive mode that the framework's `InMemoryStorageAdapter` *does* correctly persist history when a single instance is maintained.
+    *   **Fix Implemented:** Refactored `e2e-test-app/src/index.ts` to initialize the ART instance **once** when the server starts and reuse that singleton instance for all incoming `/process` requests.
+    *   **Result:** All E2E tests now pass, including the persistence test verifying conversational context using the `gemini` provider and `InMemoryStorageAdapter`.
+    *   Updated `E2E-Persistence-Issue-Analysis.md` to reflect that the issue was specific to the test app's implementation, not the framework core.

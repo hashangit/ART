@@ -7,7 +7,8 @@ import {
   CalculatorTool,
   AgentProps,
   AgentFinalResponse,
-  ThreadConfig
+  ThreadConfig,
+  ArtInstance // Import the ArtInstance type
 } from 'art-framework';
 
 // Load environment variables from .env file (if present)
@@ -18,6 +19,37 @@ const port = process.env.PORT || 3001; // Use environment variable or default
 
 // Middleware to parse JSON bodies
 app.use(express.json());
+
+// --- ART Instance Initialization (Run Once) ---
+let artInstancePromise: Promise<ArtInstance | null> | null = null;
+
+async function initializeArt(): Promise<ArtInstance | null> {
+  console.log('[E2E App] Initializing ART Instance...');
+  try {
+    const art = await createArtInstance({
+      storage: {
+        type: 'memory' // Force memory storage on the server
+      },
+      reasoning: {
+        provider: 'gemini',
+        model: 'gemini-2.0-flash-lite',
+        apiKey: process.env.GEMINI_API_KEY || '',
+      },
+      tools: [new CalculatorTool()]
+    });
+    console.log('[E2E App] ART Instance Initialized Successfully.');
+    return art;
+  } catch (error: any) {
+    console.error('[E2E App] --- Error creating ART instance ---');
+    console.error(error);
+    return null; // Return null if initialization fails
+  }
+}
+
+// Initialize ART when the server starts
+artInstancePromise = initializeArt();
+// --- End ART Instance Initialization ---
+
 
 // Add a health check endpoint that Playwright can use to detect when the server is ready
 app.get('/', (req: Request, res: Response): void => {
@@ -50,24 +82,16 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
   // the framework's IndexedDB adapter relies on the 'window' object.
   // fake-indexeddb provides the API but not the browser environment context.
   try {
-    // console.log(`Creating ART instance with storage type: ${storageType} (using memory)`); // Removed for linting
+    // Await the single ART instance
+    const art = await artInstancePromise;
 
-    // Create ART instance - always use memory storage for server-side e2e tests
-    const art = await createArtInstance({
-      // agent: PESAgent, // Removed - Agent type is likely handled by the factory/default
-      storage: {
-        type: 'memory' // Force memory storage on the server
-      },
-      // Add the required reasoning configuration
-      reasoning: {
-        provider: 'gemini', // Use a valid provider type for factory config
-        model: 'gemini-2.0-flash-lite', // Provide a default model for the chosen provider
-        apiKey: process.env.GEMINI_API_KEY || '', // Add required API key from env
-        // Parameters like temperature are passed during process call
-      },
-      tools: [new CalculatorTool()] // Create instance instead of passing the class
-    });
-
+    // Handle case where initialization might have failed
+    if (!art) {
+      res.status(500).json({
+        error: 'ART framework failed to initialize on server start.',
+      });
+      return;
+    }
     // Use the provided threadId if available, otherwise generate a new one
     const threadId = requestThreadId || `e2e-thread-${Date.now()}`;
 
@@ -132,12 +156,14 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
         details: error.message || String(error),
       });
     }
-  } catch (error: any) {
-    console.error('--- Error creating ART instance ---');
-    console.error(error);
+  } catch (initError: any) {
+     // This catch block might be less likely to be hit now,
+     // but kept for safety during request processing itself.
+    console.error('--- Error during request processing setup ---');
+    console.error(initError);
     res.status(500).json({
-      error: 'Failed to initialize ART framework',
-      details: error.message || String(error),
+      error: 'Failed during request processing setup',
+      details: initError.message || String(initError),
     });
   }
 });
