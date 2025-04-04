@@ -4,8 +4,10 @@ import { ToolSchema, ExecutionContext, ToolResult } from '../types';
 import { Logger } from '../utils/logger';
 
 export class CalculatorTool implements IToolExecutor {
+  public static readonly toolName = "calculator"; // Add static name
+
   readonly schema: ToolSchema = {
-    name: 'calculator',
+    name: CalculatorTool.toolName, // Use static name
     description: 'Evaluates a mathematical expression provided as a string. Supports basic arithmetic operations (+, -, *, /) and numbers.',
     inputSchema: {
       type: 'object',

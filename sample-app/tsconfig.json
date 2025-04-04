@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", // Use a recent ECMAScript target
+    "module": "CommonJS", // Align with package.json type
+    "moduleResolution": "Node", // Standard resolution for CommonJS
+    "outDir": "./dist", // Output directory for compiled files
+    "rootDir": "./src", // Specify root directory of source files
+    "strict": true, // Enable all strict type-checking options
+    "esModuleInterop": true, // Enables compatibility with CommonJS modules
+    "skipLibCheck": true, // Skip type checking of declaration files
+    "forceConsistentCasingInFileNames": true, // Disallow inconsistently-cased references
+    "resolveJsonModule": true, // Allow importing JSON files
+    "declaration": true, // Generate corresponding '.d.ts' file
+    "sourceMap": true // Generate corresponding '.map' file
+  },
+  "include": ["src/**/*"], // Include all files in the src directory
+  "exclude": ["node_modules", "dist"] // Exclude node_modules and the output directory
+}
