@@ -451,6 +451,12 @@ graph TD
     *   [D] **3.1.2:** Unit tests for `PromptManager`.
     *   [D] **3.1.3:** Implement `OutputParser` (methods `parsePlanningOutput`, `parseSynthesisOutput`). Handle potential formatting errors. Use regex or structured parsing.
     *   [D] **3.1.4:** Unit tests for `OutputParser`.
+    *   [D] **3.1.4.1:** Add `zod` dependency. (Completed)
+    *   [D] **3.1.4.2:** Enhance `OutputParser.parsePlanningOutput` to find JSON array within potential markdown/text. (Completed - Covers original fence stripping and text issue)
+    *   [D] **3.1.4.3:** Define Zod schema for `ParsedToolCall[]` in `OutputParser`. (Completed)
+    *   [D] **3.1.4.4:** Implement Zod validation for parsed tool calls in `OutputParser.parsePlanningOutput`. (Completed)
+    *   [D] **3.1.4.5:** Update `OutputParser` unit tests for enhanced parsing and Zod validation cases. (Completed)
+    *   [D] **3.1.4.6:** (Optional) Refine planning prompt instruction in `PromptManager` to explicitly forbid extra text in the `Tool Calls:` section.
     *   [D] **3.1.5:** Implement a `ProviderAdapter` (e.g., `OpenAIAdapter`). Handle API calls, auth, `onThought` callback triggering.
     *   [D] **3.1.6:** Unit tests for `OpenAIAdapter` (mocking API calls).
     *   [D] **3.1.7:** Implement `ReasoningEngine` core logic (delegates to adapter, handles `CallOptions`).
@@ -595,3 +601,23 @@ graph TD
 15. **Created `sample-app/.env`:** Added the file with a placeholder for the `GEMINI_API_KEY`.
 16. **Rebuilt Framework:** Ran `npm run build` multiple times in the root directory to incorporate framework changes.
 17. **Successfully Ran Sample App:** Executed `npm start -- "What is 5 * 9?"` in the `sample-app` directory, verifying the end-to-end flow and observation logging.
+18. **Output Parser Enhancements (`src/systems/reasoning/OutputParser.ts`):**
+
+    *   **Initial Problem:** Identified that the parser failed when LLM output included markdown code fences (```json ... ```) around the `Tool Calls:` JSON array.
+    *   **Second Problem:** Identified a subsequent failure when the LLM included introductory text before the JSON array within the `Tool Calls:` section.
+    *   **Fix Implemented:**
+        *   Modified `parsePlanningOutput` to actively search for the first valid JSON array (`[...]`) within the text following `Tool Calls:`.
+        *   The search correctly handles arrays optionally wrapped in markdown fences (```json ... ``` or ``` ... ```).
+        *   Successfully parsed JSON arrays are now validated against a Zod schema (`toolCallsSchema`) derived from the `ParsedToolCall` type to ensure structural correctness (required `callId`, `toolName`, `arguments`).
+        *   Added `zod` as a project dependency.
+    *   **Testing:** Updated unit tests (`src/systems/reasoning/OutputParser.test.ts`) to cover new parsing scenarios (markdown fences, introductory text, Zod validation failures).
+
+19. **Prompt Manager Refinement (`src/systems/reasoning/PromptManager.ts`):**
+
+    *   **Investigation:** Confirmed that the planning prompt already included instructions specifying the correct JSON format for tool calls.
+    *   **Refinement Implemented:** Updated the `defaultPlanningPromptTemplate` to make the instruction for the `Tool Calls:` section more explicit, instructing the LLM to output *only* the JSON array or `[]` to further discourage extraneous text.
+
+20. **Checklist Updates (`ART-PRD-Checklist-plan.md`):**
+
+    *   Marked tasks related to `OutputParser` enhancements (dependency addition, parsing logic changes, Zod integration, test updates) as complete.
+    *   Added the prompt refinement task (marked as optional initially, now completed).

@@ -1,7 +1,18 @@
 // src/systems/reasoning/OutputParser.ts
+import * as z from 'zod'; // Import Zod
 import { OutputParser as IOutputParser } from '../../core/interfaces';
 import { ParsedToolCall } from '../../types';
 import { Logger } from '../../utils/logger'; // Import the Logger class
+
+// Define Zod schema for a single tool call
+const parsedToolCallSchema = z.object({
+  callId: z.string().min(1), // Ensure callId is a non-empty string
+  toolName: z.string().min(1), // Ensure toolName is a non-empty string
+  arguments: z.unknown(), // Arguments must exist but can be any type; specific tools validate further
+});
+
+// Define Zod schema for an array of tool calls
+const toolCallsSchema = z.array(parsedToolCallSchema);
 
 export class OutputParser implements IOutputParser {
   /**
@@ -34,22 +45,55 @@ export class OutputParser implements IOutputParser {
     const toolCallsMatch = output.match(/Tool Calls:\s*([\s\S]*?)$/i);
     const toolCallsString = toolCallsMatch?.[1]?.trim();
 
+    // Initialize toolCalls to indicate no valid calls found yet
+    result.toolCalls = undefined;
+
     if (toolCallsString) {
-      try {
-        // Attempt to parse the JSON array
-        const parsedCalls = JSON.parse(toolCallsString);
-        // Basic validation: check if it's an array
-        if (Array.isArray(parsedCalls)) {
-          // Further validation could be added here (e.g., check structure of each call)
-          result.toolCalls = parsedCalls as ParsedToolCall[];
-        } else {
-           Logger.warn(`OutputParser: Tool Calls section was not a valid JSON array. Content: ${toolCallsString}`); // Use static method
-           result.toolCalls = []; // Default to empty array if parsing fails or isn't an array
+      let jsonArrayString: string | null = null;
+      let parsedJson: any = null;
+
+      // 1. Find JSON Array: Look for ```json[...]``` or ```[...]``` or [...]
+      // Regex explanation:
+      // - ```(?:json)?\s* : Optional markdown fence start (```json or ```)
+      // - (\[[\s\S]*?\])  : Capture group 1: The JSON array content (non-greedy)
+      // - \s*```          : Optional markdown fence end
+      // - |               : OR
+      // - (\[[\s\S]*?\])  : Capture group 2: A standalone JSON array (non-greedy)
+      const jsonRegex = /```(?:json)?\s*(\[[\s\S]*?\])\s*```|(\[[\s\S]*?\])/;
+      const jsonMatch = toolCallsString.match(jsonRegex);
+
+      if (jsonMatch) {
+        // Prioritize fenced match (group 1), fallback to standalone match (group 2)
+        jsonArrayString = jsonMatch[1] ? jsonMatch[1].trim() : jsonMatch[2] ? jsonMatch[2].trim() : null;
+      } else {
+         Logger.debug(`OutputParser: No JSON array found in Tool Calls section. Content: ${toolCallsString}`);
+      }
+
+
+      // 2. Parse JSON (if found)
+      if (jsonArrayString) {
+        try {
+          parsedJson = JSON.parse(jsonArrayString);
+        } catch (error) {
+          Logger.error(`OutputParser: Failed to parse extracted JSON array. Error: ${error}. Extracted Content: ${jsonArrayString}. Original Content: ${toolCallsString}`);
+          // Keep parsedJson as null, will default to empty array later
         }
-      } catch (error) {
-        Logger.error(`OutputParser: Failed to parse Tool Calls JSON. Error: ${error}. Content: ${toolCallsString}`); // Use static method
-        // Decide how to handle parsing errors. Return empty array? Throw?
-        result.toolCalls = []; // Default to empty array on error
+      }
+
+      // 3. Validate with Zod (if parsed)
+      if (parsedJson !== null) {
+        const validationResult = toolCallsSchema.safeParse(parsedJson);
+        if (validationResult.success) {
+          // Explicitly cast validated data to ParsedToolCall[] to resolve TS inference issue
+          result.toolCalls = validationResult.data as ParsedToolCall[];
+        } else {
+          Logger.warn(`OutputParser: Tool Calls JSON structure validation failed. Errors: ${validationResult.error.toString()}. Parsed Content: ${JSON.stringify(parsedJson)}`);
+          result.toolCalls = []; // Default to empty array on validation failure
+        }
+      } else {
+        // JSON parsing failed or no JSON array found
+        // If toolCallsString existed but we couldn't parse/validate, default to empty array
+        result.toolCalls = [];
       }
     } else {
         // If the "Tool Calls:" section exists but is empty or just whitespace after it
