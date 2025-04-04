@@ -99,3 +99,12 @@
         *   Testing with both `InMemoryStorageAdapter` and `IndexedDBStorageAdapter`.
         *   Verification of successful responses for simple queries and tool-requiring queries (using live LLM calls).
     *   Updated `ART-PRD-Checklist-plan.md` to mark tasks 6.1.1, 6.1.2, 6.1.3 as complete.
+25. **E2E Test Fixes & Workspace Cleanup (v0.2.4 Bug Bash):**
+    *   **Fixed E2E Test Failures:**
+        *   Corrected the `createArtInstance` call in `e2e-test-app/src/index.ts` by adding the required `reasoning` configuration (including provider, model, and API key). Removed invalid `parameters` field from this initial config.
+        *   This resolved the `400 Bad Request` errors encountered when running tests with the `indexeddb` storage type.
+    *   **Cleaned Workspace Diagnostics:**
+        *   Removed unused `PESAgent` import from `e2e-test-app/src/index.ts`.
+        *   Removed all `console.log` statements from `e2e/pes-flow.spec.ts`.
+        *   Fixed the TypeScript error in `e2e/pes-flow.spec.ts` by removing the unused parameter object from the `test.fixme` function signature.
+    *   **Updated PRD Checklist:** Added section 6.6 to `ART-PRD-Checklist-plan.md` to track these fixes.

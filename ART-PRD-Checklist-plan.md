@@ -519,6 +519,7 @@ graph TD
 
 *   *Dependency: All previous phases.*
 *   [ ] **6.1: End-to-End (E2E) Testing**
+
     *   [D] **6.1.1:** Setup E2E test environment (e.g., Playwright).
     *   [D] **6.1.2:** E2E test: PES flow w/ InMemoryStorage + mocks. (Implemented with live LLM via e2e-test-app)
     *   [D] **6.1.3:** E2E test: PES flow w/ IndexedDBStorage in browser. (Implemented with live LLM via e2e-test-app)
@@ -549,6 +550,14 @@ graph TD
     *   [ ] **6.5.3:** Build process verified.
     *   [ ] **6.5.4:** Version bumped.
     *   [ ] **6.5.5:** (Optional) Publish to NPM.
+
+*   [ ] **6.6: E2E Test & Workspace Fixes (v0.2.4 Bug Bash)**
+    *   [ ] **6.6.1:** Fix `createArtInstance` call in `e2e-test-app/src/index.ts` by adding the required `reasoning` configuration.
+    *   [ ] **6.6.2:** Remove unused `PESAgent` import in `e2e-test-app/src/index.ts`.
+    *   [ ] **6.6.3:** Remove `console.log` statements from `e2e/pes-flow.spec.ts`.
+    *   [ ] **6.6.4:** Fix TypeScript error in `e2e/pes-flow.spec.ts` by removing the unused `_request` parameter from `test.fixme`.
+    *   [ ] **6.6.5:** Verify E2E tests pass (`npm run test:e2e`).
+    *   [ ] **6.6.6:** Address remaining ESLint/TypeScript warnings/errors from workspace diagnostics (e.g., Markdown linting - lower priority).
 
 **Cross-Cutting Concerns (Ongoing)**
 

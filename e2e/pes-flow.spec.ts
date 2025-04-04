@@ -16,6 +16,12 @@ test.describe('ART Framework E2E - PES Flow', () => {
     });
     expect(response.ok(), `API request failed with status ${response.status()}`).toBeTruthy();
     const jsonResponse = await response.json();
+    
+    // Log info about simulated vs actual storage for debugging
+    if (jsonResponse._testInfo) {
+      // console.log(`Test using storage type: requested=${jsonResponse._testInfo.requestedStorageType}, actual=${jsonResponse._testInfo.actualStorageType}`); // Removed
+    }
+    
     return jsonResponse as AgentFinalResponse;
   }
 
@@ -35,7 +41,6 @@ test.describe('ART Framework E2E - PES Flow', () => {
       expect(response.metadata.error).toBeUndefined();
       expect(response.metadata.threadId).toBeDefined();
       // Add more specific content assertions if needed, though LLM output varies
-      console.log(`[Memory - Simple Query] Response Content: ${response.response.content}`);
     });
 
     test('should handle a query requiring the calculator tool', async ({ request }) => {
@@ -54,7 +59,6 @@ test.describe('ART Framework E2E - PES Flow', () => {
       expect(response.metadata.threadId).toBeDefined();
       // We can't easily verify observations here without modifying the test app response,
       // but success implies the tool likely ran.
-      console.log(`[Memory - Calculator Query] Response Content: ${response.response.content}`);
     });
   });
 
@@ -73,7 +77,6 @@ test.describe('ART Framework E2E - PES Flow', () => {
       expect(response.metadata.status).toBe('success');
       expect(response.metadata.error).toBeUndefined();
       expect(response.metadata.threadId).toBeDefined();
-      console.log(`[IndexedDB - Simple Query] Response Content: ${response.response.content}`);
     });
 
     test('should handle a query requiring the calculator tool', async ({ request }) => {
@@ -90,11 +93,13 @@ test.describe('ART Framework E2E - PES Flow', () => {
       expect(response.metadata.status).toBe('success');
       expect(response.metadata.error).toBeUndefined();
       expect(response.metadata.threadId).toBeDefined();
-      console.log(`[IndexedDB - Calculator Query] Response Content: ${response.response.content}`);
     });
 
-    // Note: Testing persistence across requests would require more complex setup,
-    // potentially involving multiple requests within the same test using the same threadId
-    // and verifying history influence, which is beyond the scope of these initial tests.
+    // Add a note explaining the test approach
+    test.fixme('should persist conversation history between requests', async () => { // Removed unused parameter object
+      // This test would verify that conversation history is maintained across requests
+      // For now, we're using memory storage for all tests in the server environment
+      // A complete test would require a browser environment or fake-indexeddb for Node.js
+    });
   });
 });

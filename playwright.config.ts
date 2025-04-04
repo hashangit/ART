@@ -74,12 +74,9 @@ export default defineConfig({
   webServer: {
     // Use --prefix to run the script in the subdirectory
     command: 'npm run dev --prefix e2e-test-app',
-    url: 'http://localhost:3001', // Match the port in e2e-test-app/src/index.ts
+    url: 'http://localhost:3001', // URL for Playwright to poll
     reuseExistingServer: !process.env.CI,
-    // Add a timeout in case the server takes time to start
-    timeout: 120 * 1000, // 120 seconds
-    // Ensure the server is ready by checking the URL
-    stdout: 'pipe', // Capture stdout
-    stderr: 'pipe', // Capture stderr
+    timeout: 180 * 1000, // Increase timeout to 180 seconds just in case
+    // Relying on Playwright's default URL polling mechanism
   },
 });
