@@ -176,3 +176,6 @@
     *   Modified `e2e-test-app/src/index.ts` to fetch and return the `_observations` array in the `/process` endpoint response.
     *   Added assertions to the Gemini tests in `e2e/adapters.spec.ts` to verify the presence of key observation types (`INTENT`, `PLAN`, `TOOL_CALL`, `SYNTHESIS`). Removed checks for `THOUGHTS` and `TOOL_EXECUTION` as they weren't consistently generated in these flows.
 11.  **Updated E2E Plan:** Marked relevant tasks in `E2E-Testing-Plan.md` as complete or updated their status based on implementation and test results. Acknowledged the known limitation regarding configuration persistence with `InMemoryStorageAdapter` across HTTP requests in the test app environment.
+12. **Fixed Output Parser Trailing Comma Issue (`src/systems/reasoning/OutputParser.ts`):**
+    *   **Problem:** The parser failed to handle JSON arrays with a trailing comma immediately before the closing bracket (e.g., `[ { ... }, ]`), especially when followed by whitespace or newlines.
+    *   **Fix Implemented:** Refined the regex in `parsePlanningOutput` to reliably detect and remove trailing commas (and any preceding whitespace) just before the final closing square bracket (`]`) of the extracted JSON array string, ensuring successful parsing.
