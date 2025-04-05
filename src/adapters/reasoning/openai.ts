@@ -4,10 +4,16 @@ import { FormattedPrompt, CallOptions } from '../../types'; // Import CallOption
 import { Logger } from '../../utils/logger';
 
 // Define expected options for the OpenAI adapter constructor
+/**
+ * Configuration options required for the `OpenAIAdapter`.
+ */
 export interface OpenAIAdapterOptions {
+  /** Your OpenAI API key. Handle securely. */
   apiKey: string;
-  model?: string; // e.g., 'gpt-4', 'gpt-3.5-turbo'
-  apiBaseUrl?: string; // Optional override for base URL (e.g., for proxies)
+  /** The default OpenAI model ID to use (e.g., 'gpt-4o', 'gpt-4o-mini'). Defaults to 'gpt-3.5-turbo' if not provided. */
+  model?: string;
+  /** Optional: Override the base URL for the OpenAI API (e.g., for Azure OpenAI or custom proxies). */
+  apiBaseUrl?: string;
 }
 
 // Define the structure expected by the OpenAI Chat Completions API
@@ -39,15 +45,29 @@ interface OpenAIChatCompletionResponse {
   };
 }
 
+/**
+ * Implements the `ProviderAdapter` interface for interacting with OpenAI's
+ * Chat Completions API (compatible models like GPT-3.5, GPT-4, GPT-4o).
+ *
+ * Handles formatting requests and parsing responses for OpenAI.
+ * Note: This basic version does not implement streaming or the `onThought` callback.
+ *
+ * @implements {ProviderAdapter}
+ */
 export class OpenAIAdapter implements ProviderAdapter {
   readonly providerName = 'openai';
   private apiKey: string;
   private model: string;
   private apiBaseUrl: string;
 
+  /**
+   * Creates an instance of the OpenAIAdapter.
+   * @param options - Configuration options including the API key and optional model/baseURL overrides.
+   * @throws {Error} If the API key is missing.
+   */
   constructor(options: OpenAIAdapterOptions) {
     if (!options.apiKey) {
-      throw new Error('OpenAI API key is required.');
+      throw new Error('OpenAIAdapter requires an apiKey in options.');
     }
     this.apiKey = options.apiKey;
     this.model = options.model || 'gpt-3.5-turbo'; // Default model
@@ -56,17 +76,19 @@ export class OpenAIAdapter implements ProviderAdapter {
   }
 
   /**
-   * Calls the OpenAI Chat Completions API.
-   * Note: This basic implementation assumes the FormattedPrompt is a string
-   *       representing the user's message or a pre-formatted structure.
-   *       It doesn't yet handle complex history formatting or system prompts
-   *       directly from the FormattedPrompt type itself.
-   *       The `onThought` callback is not implemented in this non-streaming version.
-   * @param prompt - For this basic version, treated as the primary user message content.
-   *                 A more robust version would parse a structured prompt object.
-   * @param options - Call options, including threadId, traceId, and LLM parameters.
-   * @returns The content string from the API response.
-   */
+   /**
+    * Sends a request to the OpenAI Chat Completions API.
+    *
+    * **Note:** This is a basic implementation.
+    * - It currently assumes `prompt` is the primary user message content (string). It does not yet parse complex `FormattedPrompt` objects containing history or system roles directly. These would need to be handled by the `PromptManager` creating the input string.
+    * - Streaming and the `onThought` callback are **not implemented** in this version.
+    * - Error handling is basic; specific OpenAI error codes are not parsed in detail.
+    *
+    * @param prompt - The prompt content, treated as the user message in this basic implementation.
+    * @param options - Call options, including `threadId`, `traceId`, and any OpenAI-specific parameters (like `temperature`, `max_tokens`) passed through.
+    * @returns A promise resolving to the content string of the assistant's response.
+    * @throws {Error} If the API request fails (network error, invalid API key, bad request, etc.).
+    */
   async call(prompt: FormattedPrompt, options: CallOptions): Promise<string> {
     // Basic assumption: prompt is the user message string.
     // TODO: Enhance prompt handling to support system prompts and history from FormattedPrompt if it becomes structured.

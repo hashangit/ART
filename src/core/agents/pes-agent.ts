@@ -15,8 +15,8 @@ import {
     AgentProps,
     AgentFinalResponse,
     ConversationMessage,
-    ThreadContext,
-    ToolSchema,
+    //ThreadContext,
+    //ToolSchema,
     ParsedToolCall,
     ToolResult,
     ObservationType,
@@ -28,27 +28,61 @@ import {
 import { generateUUID } from '../../utils/uuid';
 import { ARTError, ErrorCode } from '../../errors'; // Assuming a custom error class exists
 
+/**
+ * Defines the dependencies required by the PESAgent constructor.
+ * These are typically provided by the AgentFactory during instantiation.
+ */
 interface PESAgentDependencies {
+    /** Manages thread configuration and state. */
     stateManager: StateManager;
+    /** Manages conversation history. */
     conversationManager: ConversationManager;
+    /** Registry for available tools. */
     toolRegistry: ToolRegistry;
+    /** Constructs prompts for LLM calls. */
     promptManager: PromptManager;
+    /** Handles interaction with the LLM provider. */
     reasoningEngine: ReasoningEngine;
+    /** Parses LLM responses. */
     outputParser: OutputParser;
+    /** Records agent execution observations. */
     observationManager: ObservationManager;
+    /** Orchestrates tool execution. */
     toolSystem: ToolSystem;
 }
 
 /**
- * Implements the Plan-Execute-Synthesize (PES) agent orchestration logic.
+ * Implements the Plan-Execute-Synthesize (PES) agent orchestration logic as defined
+ * in the ART framework v0.2.4. This agent follows a structured 6-stage process
+ * to handle user queries, interact with LLMs and tools, and generate a final response.
+ * It relies on various injected subsystems (managers, registries, etc.) to perform its tasks.
  */
 export class PESAgent implements IAgentCore {
     private readonly deps: PESAgentDependencies;
 
+    /**
+     * Creates an instance of the PESAgent.
+     * @param dependencies - An object containing instances of all required subsystems (managers, registries, etc.).
+     */
     constructor(dependencies: PESAgentDependencies) {
         this.deps = dependencies;
     }
 
+    /**
+     * Executes the full Plan-Execute-Synthesize cycle for a given user query.
+     *
+     * Stages:
+     * 1. Initiation & Config Loading: Loads thread-specific settings.
+     * 2. Planning Context Assembly: Gathers history and tool schemas.
+     * 3. Planning Call: First LLM call to generate intent, plan, and tool calls.
+     * 4. Tool Execution: Executes planned tool calls via the ToolSystem.
+     * 5. Synthesis Call: Second LLM call using plan and tool results to generate the final response.
+     * 6. Finalization: Saves messages and state, returns the final response.
+     *
+     * @param props - The input properties containing the user query, threadId, and optional context.
+     * @returns A promise resolving to the AgentFinalResponse containing the AI's message and execution metadata.
+     * @throws {ARTError} If a critical error occurs during any stage that prevents completion (e.g., config loading, planning failure without fallback). Partial successes (e.g., tool errors followed by successful synthesis) might result in a 'partial' status in the metadata instead of throwing.
+     */
     async process(props: AgentProps): Promise<AgentFinalResponse> {
         const startTime = Date.now();
         const traceId = props.traceId ?? generateUUID();

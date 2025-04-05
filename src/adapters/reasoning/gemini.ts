@@ -61,7 +61,7 @@ export class GeminiAdapter implements ProviderAdapter {
       throw new Error('Gemini API key is required.');
     }
     this.apiKey = options.apiKey;
-    this.model = options.model || 'gemini-1.5-flash'; // Default model
+    this.model = options.model || 'gemini-2.0-flash-lite'; // Default model
     this.apiVersion = options.apiVersion || 'v1beta';
     this.apiBaseUrl = options.apiBaseUrl || 'https://generativelanguage.googleapis.com';
     Logger.debug(`GeminiAdapter initialized with model: ${this.model}, version: ${this.apiVersion}`);

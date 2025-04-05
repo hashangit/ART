@@ -3,12 +3,19 @@ import { ToolRegistry as IToolRegistry, IToolExecutor } from '../../core/interfa
 import { ToolSchema } from '../../types';
 import { Logger } from '../../utils/logger';
 
+/**
+ * A simple in-memory implementation of the `ToolRegistry` interface.
+ * Stores tool executors in a Map, keyed by the tool's unique name.
+ */
 export class ToolRegistry implements IToolRegistry {
   private executors: Map<string, IToolExecutor> = new Map();
 
   /**
-   * Registers a tool executor. Overwrites if a tool with the same name exists.
-   * @param executor The tool executor instance.
+   * Registers a tool executor instance, making it available for lookup via `getToolExecutor`.
+   * If a tool with the same name (from `executor.schema.name`) already exists, it will be overwritten, and a warning will be logged.
+   * @param executor - The instance of the class implementing `IToolExecutor`. Must have a valid schema with a name.
+   * @returns A promise that resolves when the tool is registered.
+   * @throws {Error} If the provided executor or its schema is invalid.
    */
   async registerTool(executor: IToolExecutor): Promise<void> {
     if (!executor || !executor.schema || !executor.schema.name) {
@@ -24,9 +31,9 @@ export class ToolRegistry implements IToolRegistry {
   }
 
   /**
-   * Retrieves a tool executor by its name.
-   * @param toolName The unique name of the tool.
-   * @returns The executor instance or undefined if not found.
+   * Retrieves a registered tool executor instance by its unique name.
+   * @param toolName - The `name` property defined in the tool's schema.
+   * @returns A promise resolving to the `IToolExecutor` instance, or `undefined` if no tool with that name is registered.
    */
   async getToolExecutor(toolName: string): Promise<IToolExecutor | undefined> {
     const executor = this.executors.get(toolName);
@@ -37,11 +44,11 @@ export class ToolRegistry implements IToolRegistry {
   }
 
   /**
-   * Retrieves the schemas of all registered tools.
-   * Note: The filter parameter is ignored in this basic in-memory implementation.
-   *       A more complex registry might use it (e.g., to check against StateManager).
-   * @param filter Optional criteria (ignored in this implementation).
-   * @returns An array of tool schemas.
+   * Retrieves the schemas of all currently registered tools.
+   * **Note:** This basic implementation ignores the `filter` parameter, specifically the `enabledForThreadId` option.
+   * A more advanced implementation could integrate with the `StateManager` to filter tools based on thread configuration.
+   * @param filter - Optional filter criteria (currently ignored).
+   * @returns A promise resolving to an array containing the `ToolSchema` of all registered tools.
    */
   async getAvailableTools(filter?: { enabledForThreadId?: string }): Promise<ToolSchema[]> {
      if (filter?.enabledForThreadId) {
@@ -54,7 +61,9 @@ export class ToolRegistry implements IToolRegistry {
   }
 
   /**
-   * Clears all registered tools. Useful for testing.
+   * Removes all registered tool executors from the registry.
+   * Primarily useful for resetting state during testing or specific application scenarios.
+   * @returns A promise that resolves when all tools have been cleared.
    */
   async clearAllTools(): Promise<void> {
       this.executors.clear();

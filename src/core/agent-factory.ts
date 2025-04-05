@@ -49,34 +49,62 @@ import { DeepSeekAdapter } from '../adapters/reasoning/deepseek';
 import { UISystem as UISystemImpl } from '../systems/ui/ui-system'; // Correct path
 // Removed direct imports of concrete socket classes - they will be accessed via UISystem instance
 // Removed unused type imports: Observation, ConversationMessage, ObservationType, MessageRole
+import { LogLevel } from '../utils/logger'; // Import LogLevel
 
 
-// Configuration Interfaces
+/**
+ * Configuration for the Storage System adapter.
+ */
 export interface StorageConfig {
+    /** Specifies the type of storage adapter to use. */
     type: 'memory' | 'indexedDB';
-    dbName?: string; // For IndexedDB
-    // other adapter-specific config
-}
-
-export interface ReasoningConfig {
-    provider: 'openai' | 'gemini' | 'anthropic' | 'openrouter' | 'deepseek'; // Add others as implemented
-    apiKey: string; // Sensitive, handle appropriately
-    // provider-specific options (model, baseURL, etc.)
-    model?: string;
-    baseURL?: string;
-}
-
-export interface AgentFactoryConfig {
-    storage: StorageConfig;
-    reasoning: ReasoningConfig;
-    tools?: IToolExecutor[]; // Optional list of tools to register initially
-    agentCore?: new (dependencies: any) => IAgentCore; // Optional: Specify Agent Core implementation (defaults to PESAgent)
-    // Add other configurations (e.g., default prompts, UI options)
+    /** The name of the database to use (required for 'indexedDB'). */
+    dbName?: string;
+    /** Optional: Database version for schema migrations (for 'indexedDB'). Defaults might apply. */
+    version?: number;
+    /** Optional: Advanced configuration for IndexedDB object stores and indexes. Defaults are usually sufficient. */
+    objectStores?: any[]; // Define a more specific type if possible
+    // Add other adapter-specific config options as needed
 }
 
 /**
- * Factory class responsible for creating and configuring agent instances
- * with all their dependencies.
+ * Configuration for the Reasoning System provider adapter.
+ */
+export interface ReasoningConfig {
+    /** The identifier of the LLM provider to use. */
+    provider: 'openai' | 'gemini' | 'anthropic' | 'openrouter' | 'deepseek'; // Add others as implemented
+    /** The API key for the selected provider. Handle securely (e.g., via environment variables). */
+    apiKey: string;
+    /** Optional: The default model ID to use for this provider if not specified elsewhere (e.g., in ThreadConfig). */
+    model?: string;
+    /** Optional: Custom base URL for the provider's API (e.g., for proxies or self-hosted models). */
+    baseURL?: string;
+    /** Optional: Default parameters to pass to the LLM provider on each call (e.g., temperature). */
+    defaultParams?: Record<string, any>;
+    // Add other provider-specific options as needed
+}
+
+/**
+ * Configuration object required by the AgentFactory and createArtInstance function.
+ */
+export interface AgentFactoryConfig {
+    /** Configuration for the storage adapter. */
+    storage: StorageConfig;
+    /** Configuration for the reasoning provider adapter. */
+    reasoning: ReasoningConfig;
+    /** Optional array of tool executor instances to register at initialization. */
+    tools?: IToolExecutor[];
+    /** Optional: Specify a different Agent Core implementation class (defaults to PESAgent). */
+    agentCore?: new (dependencies: any) => IAgentCore;
+    /** Optional: Configuration for the logger. */
+    logger?: { level?: LogLevel }; // Assuming LogLevel enum exists
+    // TODO: Add other potential global configurations (e.g., default ThreadConfig, UI system options)
+}
+
+/**
+ * Handles the instantiation and wiring of all core ART framework components based on provided configuration.
+ * This class performs the dependency injection needed to create a functional `ArtInstance`.
+ * It's typically used internally by the `createArtInstance` function.
  */
 export class AgentFactory {
     private config: AgentFactoryConfig;
@@ -96,16 +124,24 @@ export class AgentFactory {
     private toolSystem: ToolSystem | null = null;
 
 
+    /**
+     * Creates a new AgentFactory instance.
+     * @param config - The configuration specifying which adapters and components to use.
+     */
     constructor(config: AgentFactoryConfig) {
         this.config = config;
         // Basic validation
-        if (!config.storage) throw new Error("Storage configuration is required.");
-        if (!config.reasoning) throw new Error("Reasoning configuration is required.");
+        if (!config.storage) throw new Error("AgentFactoryConfig requires 'storage' configuration.");
+        if (!config.reasoning) throw new Error("AgentFactoryConfig requires 'reasoning' configuration.");
     }
 
     /**
-     * Initializes shared components like storage and UI system.
-     * Should be called once before creating agents.
+     * Asynchronously initializes all core components based on the configuration.
+     * This includes setting up the storage adapter, repositories, managers, tool registry,
+     * reasoning engine, and UI system.
+     * This method MUST be called before `createAgent()`.
+     * @returns A promise that resolves when initialization is complete.
+     * @throws {Error} If configuration is invalid or initialization fails for a component.
      */
     async initialize(): Promise<void> {
         // --- Initialize Storage ---
@@ -182,12 +218,11 @@ export class AgentFactory {
     }
 
     /**
-     * Creates a new agent instance (currently PESAgent) with injected dependencies.
-     * Requires initialize() to have been called first.
-     * @returns An IAgentCore instance.
-     * @returns An IAgentCore instance.
-     * @returns An IAgentCore instance.
-     * @throws Error if initialize() was not called or failed.
+     * Creates an instance of the configured Agent Core (e.g., `PESAgent`) and injects
+     * all necessary initialized dependencies (managers, systems, etc.).
+     * Requires `initialize()` to have been successfully called beforehand.
+     * @returns An instance implementing the `IAgentCore` interface.
+     * @throws {Error} If `initialize()` was not called or if essential components failed to initialize.
      */
     createAgent(): IAgentCore {
         // Check for all required components after initialization
@@ -216,24 +251,39 @@ export class AgentFactory {
         return agent;
     }
 
-    // --- Optional: Getters for accessing initialized components if needed externally ---
+    // --- Getters for initialized components (primarily for createArtInstance) ---
+    /** Gets the initialized Storage Adapter instance. */
     getStorageAdapter(): StorageAdapter | null { return this.storageAdapter; }
+    /** Gets the initialized UI System instance. */
     getUISystem(): UISystem | null { return this.uiSystem; }
+    /** Gets the initialized Tool Registry instance. */
     getToolRegistry(): ToolRegistry | null { return this.toolRegistry; }
+    /** Gets the initialized State Manager instance. */
     getStateManager(): StateManager | null { return this.stateManager; }
+    /** Gets the initialized Conversation Manager instance. */
     getConversationManager(): ConversationManager | null { return this.conversationManager; }
+    /** Gets the initialized Observation Manager instance. */
     getObservationManager(): ObservationManager | null { return this.observationManager; }
-    // ... add others as needed
+    // Add getters for other components like reasoningEngine, toolSystem if needed
 }
 
 // --- Convenience Factory Function ---
 import { ArtInstance } from './interfaces'; // Import the new interface
 
 /**
- * Creates and initializes an ART instance with the specified configuration.
- * This is the recommended way to get started with the ART framework.
- * @param config The configuration for the ART instance.
- * @returns A promise resolving to the initialized ArtInstance.
+ * High-level factory function to create and initialize a complete ART framework instance.
+ * This simplifies the setup process by handling the instantiation and wiring of all
+ * necessary components based on the provided configuration.
+ * @param config - The configuration object specifying storage, reasoning, tools, etc.
+ * @returns A promise that resolves to a ready-to-use `ArtInstance` object, providing access to the core `process` method and essential managers/systems.
+ * @throws {Error} If initialization fails (e.g., invalid config, storage connection error).
+ * @example
+ * const art = await createArtInstance({
+ *   storage: { type: 'indexedDB', dbName: 'myAgentDb' },
+ *   reasoning: { provider: 'openai', apiKey: '...' },
+ *   tools: [new CalculatorTool()]
+ * });
+ * const response = await art.process({ query: "Calculate 5*5", threadId: "thread1" });
  */
 export async function createArtInstance(config: AgentFactoryConfig): Promise<ArtInstance> {
     const factory = new AgentFactory(config);

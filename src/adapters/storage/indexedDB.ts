@@ -6,17 +6,28 @@ const DEFAULT_DB_NAME = 'ART_Framework_DB';
 const DEFAULT_DB_VERSION = 1; // Increment this when object stores change
 
 /**
- * Configuration options for the IndexedDBStorageAdapter.
+ * Configuration options for initializing the `IndexedDBStorageAdapter`.
  */
 export interface IndexedDBConfig {
+  /** The name of the IndexedDB database to use. Defaults to 'ART_Framework_DB'. */
   dbName?: string;
+  /** The version of the database schema. Increment this when changing `objectStores` or indexes to trigger an upgrade. Defaults to 1. */
   dbVersion?: number;
-  objectStores: string[]; // List of required collection names (object stores)
+  /** An array of strings specifying the names of the object stores (collections) required by the application. Core stores like 'conversations', 'observations', 'state' are usually added automatically. */
+  objectStores: string[];
 }
 
 /**
- * An implementation of the StorageAdapter interface using IndexedDB
- * for persistent storage in the browser.
+ * An implementation of the `StorageAdapter` interface that uses the browser's
+ * IndexedDB API for persistent, client-side storage.
+ *
+ * This adapter is suitable for web applications where conversation history,
+ * agent state, and observations need to persist across sessions.
+ *
+ * **Important:** The `init()` method *must* be called and awaited before performing
+ * any other database operations (get, set, delete, query).
+ *
+ * @implements {StorageAdapter}
  */
 export class IndexedDBStorageAdapter implements StorageAdapter {
   private db: IDBDatabase | null = null;
@@ -25,21 +36,29 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
   private requiredObjectStores: Set<string>;
   private initPromise: Promise<void> | null = null;
 
+  /**
+   * Creates an instance of IndexedDBStorageAdapter.
+   * Note: The database connection is not opened until `init()` is called.
+   * @param config - Configuration options including database name, version, and required object stores.
+   */
   constructor(config: IndexedDBConfig) {
     this.dbName = config.dbName || DEFAULT_DB_NAME;
     this.dbVersion = config.dbVersion || DEFAULT_DB_VERSION;
-    // Ensure core stores are always present if needed by repositories
+    // Ensure core stores used by default repositories are included
     this.requiredObjectStores = new Set([
-        'conversations', // Example core store
-        'observations',  // Example core store
-        'state',         // Example core store
-        ...config.objectStores // Add user-defined stores
+        'conversations', // Used by ConversationRepository
+        'observations',  // Used by ObservationRepository
+        'state',         // Used by StateRepository
+        ...(config.objectStores || []) // Add any user-defined stores
     ]);
   }
 
   /**
-   * Initializes the IndexedDB database connection and ensures object stores exist.
-   * This method should be called before any other operations.
+   * Opens the IndexedDB database connection and ensures the required object stores
+   * are created or updated based on the configured `dbVersion`.
+   * This method MUST be called and awaited successfully before using other adapter methods.
+   * It handles the `onupgradeneeded` event to create stores.
+   * @returns A promise that resolves when the database is successfully opened and ready, or rejects on error.
    */
   async init(): Promise<void> {
     // Prevent multiple initializations
@@ -129,9 +148,18 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
   }
 
   // --- Helper Method to get a transaction ---
+  /**
+   * Helper method to create and return an IndexedDB transaction.
+   * Ensures the database is initialized and the requested store(s) exist.
+   * @param storeName - The name of the object store or an array of store names for the transaction.
+   * @param mode - The transaction mode ('readonly' or 'readwrite').
+   * @returns The initiated IDBTransaction.
+   * @throws {Error} If the database is not initialized or if a requested store does not exist.
+   */
   private getTransaction(storeName: string | string[], mode: IDBTransactionMode): IDBTransaction {
       if (!this.db) {
-          throw new Error("IndexedDBStorageAdapter: Database not initialized. Call init() first.");
+          // It's crucial init() was awaited, but add runtime check.
+          throw new Error("IndexedDBStorageAdapter: Database not initialized. Ensure init() was called and awaited.");
       }
       // Check if the requested store exists
       const storesToCheck = Array.isArray(storeName) ? storeName : [storeName];
@@ -146,8 +174,16 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
 
   // --- CRUD Methods ---
 
+  /**
+   * Retrieves a single item by its ID from the specified object store (collection).
+   * @template T - The expected type of the retrieved item.
+   * @param collection - The name of the object store.
+   * @param id - The ID (key) of the item to retrieve.
+   * @returns A promise resolving to a copy of the item if found, or `null` otherwise.
+   * @throws {Error} If the database is not initialized, the store doesn't exist, or a database error occurs.
+   */
   async get<T>(collection: string, id: string): Promise<T | null> {
-    await this.init(); // Ensure DB is ready
+    await this.init(); // Ensure DB is ready (init is idempotent)
     return new Promise((resolve, reject) => {
         try {
             const transaction = this.getTransaction(collection, 'readonly');
@@ -171,6 +207,18 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
   }
 
   // Removed the 'extends { id: string }' constraint to match the interface
+  /**
+   * Saves (creates or updates) an item in the specified object store (collection).
+   * Assumes the object store uses 'id' as its keyPath. The `id` parameter provided
+   * should match the `id` property within the `data` object.
+   * Uses `structuredClone` to store a deep copy.
+   * @template T - The type of the data being saved. Must have an 'id' property.
+   * @param collection - The name of the object store.
+   * @param id - The unique ID of the item (should match `data.id`).
+   * @param data - The data object to save. Must contain an `id` property matching the `id` parameter.
+   * @returns A promise that resolves when the data is successfully saved.
+   * @throws {Error} If the database is not initialized, the store doesn't exist, data is missing the 'id' property, or a database error occurs.
+   */
   async set<T>(collection: string, id: string, data: T): Promise<void> {
     // Runtime check: Ensure data has the 'id' property matching the keyPath
     // We cast to 'any' here because T doesn't guarantee 'id' exists at compile time anymore.
@@ -220,6 +268,13 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
     });
   }
 
+  /**
+   * Deletes an item from the specified object store (collection) by its ID.
+   * @param collection - The name of the object store.
+   * @param id - The ID (key) of the item to delete.
+   * @returns A promise that resolves when the deletion is successful.
+   * @throws {Error} If the database is not initialized, the store doesn't exist, or a database error occurs.
+   */
   async delete(collection: string, id: string): Promise<void> {
     await this.init(); // Ensure DB is ready
      return new Promise((resolve, reject) => {
@@ -247,10 +302,21 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
     });
   }
 
+  /**
+   * Queries items within a collection based on provided filter options.
+   * **Note:** This implementation uses `getAll()` and performs filtering, sorting,
+   * and limiting **client-side**. For large datasets, performance may be suboptimal.
+   * A more advanced version would leverage IndexedDB indexes and cursors for
+   * efficient querying directly within the database.
+   * Supports basic exact-match filtering and single-key sorting.
+   * @template T - The expected type of the items in the collection.
+   * @param collection - The name of the object store to query.
+   * @param filterOptions - Options for filtering, sorting, skipping, and limiting results.
+   * @returns A promise resolving to an array of deep copies of the matching items.
+   * @throws {Error} If the database is not initialized, the store doesn't exist, or a database error occurs.
+   */
   async query<T>(collection: string, filterOptions: FilterOptions): Promise<T[]> {
-     await this.init();
-     // Basic implementation using getAll and client-side filtering/sorting/limiting
-     // More advanced implementation would use IndexedDB cursors and indexes.
+     await this.init(); // Ensure DB is ready
      return new Promise((resolve, reject) => {
          try {
              const transaction = this.getTransaction(collection, 'readonly');
@@ -310,8 +376,14 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
      });
   }
 
+  /**
+   * Removes all items from a specific object store (collection).
+   * @param collection - The name of the object store to clear.
+   * @returns A promise that resolves when the collection is successfully cleared.
+   * @throws {Error} If the database is not initialized, the store doesn't exist, or a database error occurs.
+   */
   async clearCollection(collection: string): Promise<void> {
-    await this.init();
+    await this.init(); // Ensure DB is ready
      return new Promise((resolve, reject) => {
         try {
             const transaction = this.getTransaction(collection, 'readwrite');
@@ -337,8 +409,14 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
     });
   }
 
+  /**
+   * Removes all data from all object stores managed by this adapter instance within the database.
+   * Use with caution as this is destructive.
+   * @returns A promise that resolves when all specified object stores have been cleared.
+   * @throws {Error} If the database is not initialized or a transaction error occurs.
+   */
   async clearAll(): Promise<void> {
-    await this.init();
+    await this.init(); // Ensure DB is ready
     if (!this.db) {
         throw new Error("Database not initialized.");
     }

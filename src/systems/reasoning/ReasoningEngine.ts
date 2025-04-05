@@ -6,13 +6,22 @@ import {
 import { FormattedPrompt, CallOptions } from '../../types';
 import { Logger } from '../../utils/logger';
 
+/**
+ * Default implementation of the `ReasoningEngine` interface.
+ * This class acts as a simple wrapper around a specific `ProviderAdapter`,
+ * delegating the actual LLM call to the configured adapter.
+ *
+ * @implements {IReasoningEngine}
+ */
 export class ReasoningEngine implements IReasoningEngine {
   private adapter: ProviderAdapter;
 
   /**
-   * Creates an instance of ReasoningEngine.
-   * @param adapter - The configured ProviderAdapter to use for LLM calls.
-   */
+   /**
+    * Creates an instance of the ReasoningEngine.
+    * @param adapter - The specific `ProviderAdapter` instance (e.g., `OpenAIAdapter`, `AnthropicAdapter`) that this engine will use to make LLM calls.
+    * @throws {Error} If no valid adapter is provided.
+    */
   constructor(adapter: ProviderAdapter) {
     if (!adapter) {
       throw new Error('ReasoningEngine requires a valid ProviderAdapter.');
@@ -22,11 +31,14 @@ export class ReasoningEngine implements IReasoningEngine {
   }
 
   /**
-   * Delegates the LLM call to the configured ProviderAdapter.
-   * @param prompt - The formatted prompt.
-   * @param options - Call options.
-   * @returns The raw string response from the LLM adapter.
-   */
+   /**
+    * Executes an LLM call by delegating to the configured `ProviderAdapter`.
+    * It passes the prompt and options directly to the adapter's `call` method.
+    * @param prompt - The prompt to send to the LLM, potentially formatted specifically for the provider by the `PromptManager`.
+    * @param options - Options controlling the LLM call, including mandatory `threadId`, tracing IDs, model parameters, and callbacks like `onThought`.
+    * @returns A promise resolving to the raw string response from the LLM adapter.
+    * @throws {ARTError | Error} Re-throws any error encountered by the underlying `ProviderAdapter` during the LLM call (e.g., API errors, network issues). The Agent Core is responsible for handling these errors.
+    */
   async call(prompt: FormattedPrompt, options: CallOptions): Promise<string> {
     Logger.debug(`ReasoningEngine delegating call to adapter: ${this.adapter.providerName}`, { threadId: options.threadId, traceId: options.traceId });
     try {

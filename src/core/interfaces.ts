@@ -24,6 +24,13 @@ import {
  * Interface for the central agent orchestrator.
  */
 export interface IAgentCore {
+  /**
+   * Processes a user query through the configured agent reasoning pattern (e.g., PES).
+   * Orchestrates interactions between various ART subsystems.
+   * @param props - The input properties for the agent execution, including the query, thread ID, and injected dependencies.
+   * @returns A promise that resolves with the final agent response and execution metadata.
+   * @throws {ARTError} If a critical error occurs during orchestration that prevents completion.
+   */
   process(props: AgentProps): Promise<AgentFinalResponse>;
 }
 
@@ -32,10 +39,12 @@ export interface IAgentCore {
  */
 export interface ReasoningEngine {
   /**
-   * Calls the underlying LLM provider.
-   * @param prompt The formatted prompt for the provider.
-   * @param options Call-specific options, including threadId and callbacks.
-   * @returns The raw string response from the LLM.
+   * Executes a call to the configured Large Language Model (LLM).
+   * This method is typically implemented by a specific `ProviderAdapter`.
+   * @param prompt - The prompt to send to the LLM, potentially formatted specifically for the provider.
+   * @param options - Options controlling the LLM call, including mandatory `threadId`, tracing IDs, model parameters (like temperature), and callbacks like `onThought`.
+   * @returns A promise resolving to the raw string response from the LLM.
+   * @throws {ARTError} If the LLM call fails due to API errors, network issues, etc. (typically code `LLM_PROVIDER_ERROR`).
    */
   call(prompt: FormattedPrompt, options: CallOptions): Promise<string>;
 }
@@ -45,13 +54,14 @@ export interface ReasoningEngine {
  */
 export interface PromptManager {
   /**
-   * Creates the prompt for the planning phase.
-   * @param query User query.
-   * @param history Conversation history.
-   * @param systemPrompt System prompt string.
-   * @param availableTools Schemas of available tools.
-   * @param threadContext Current thread context.
-   * @returns Formatted prompt suitable for the ReasoningEngine.
+   * Constructs the prompt specifically for the planning phase of an agent's execution cycle (e.g., in PES).
+   * This prompt typically instructs the LLM to understand the query, form a plan, and identify necessary tool calls.
+   * @param query - The user's original query.
+   * @param history - Recent conversation history relevant to the current context.
+   * @param systemPrompt - The base system instructions for the agent in this thread.
+   * @param availableTools - An array of schemas for tools that are enabled and available for use in this thread.
+   * @param threadContext - The full context (config and state) for the current thread.
+   * @returns A promise resolving to the formatted prompt (string or provider-specific object) ready for the `ReasoningEngine`.
    */
   createPlanningPrompt(
     query: string,
@@ -62,15 +72,16 @@ export interface PromptManager {
   ): Promise<FormattedPrompt>;
 
   /**
-   * Creates the prompt for the synthesis phase.
-   * @param query User query.
-   * @param intent Parsed intent from planning.
-   * @param plan Parsed plan from planning.
-   * @param toolResults Results from tool execution.
-   * @param history Conversation history.
-   * @param systemPrompt System prompt string.
-   * @param threadContext Current thread context.
-   * @returns Formatted prompt suitable for the ReasoningEngine.
+   * Constructs the prompt specifically for the synthesis phase of an agent's execution cycle (e.g., in PES).
+   * This prompt typically provides the LLM with the original query, the plan, tool results, and history, asking it to generate the final user-facing response.
+   * @param query - The user's original query.
+   * @param intent - The intent extracted during the planning phase.
+   * @param plan - The plan generated during the planning phase.
+   * @param toolResults - An array of results obtained from executing the tools specified in the plan.
+   * @param history - Recent conversation history.
+   * @param systemPrompt - The base system instructions for the agent.
+   * @param threadContext - The full context (config and state) for the current thread.
+   * @returns A promise resolving to the formatted prompt (string or provider-specific object) ready for the `ReasoningEngine`.
    */
   createSynthesisPrompt(
     query: string,
@@ -88,9 +99,11 @@ export interface PromptManager {
  */
 export interface OutputParser {
   /**
-   * Parses the output of the planning LLM call.
-   * @param output Raw LLM output string.
-   * @returns Structured planning data (intent, plan, tool calls).
+   * Parses the raw string output from the planning LLM call to extract structured information.
+   * Implementations should be robust to variations in LLM output formatting.
+   * @param output - The raw string response from the planning LLM call.
+   * @returns A promise resolving to an object containing the extracted intent, plan description, and an array of parsed tool calls.
+   * @throws {ARTError} If the output cannot be parsed into the expected structure (typically code `OUTPUT_PARSING_FAILED`).
    */
   parsePlanningOutput(output: string): Promise<{
     intent?: string;
@@ -99,11 +112,13 @@ export interface OutputParser {
   }>;
 
   /**
-   * Parses the output of the synthesis LLM call.
-   * @param output Raw LLM output string.
-   * @returns The final synthesized response content.
+   * Parses the raw string output from the synthesis LLM call to extract the final, user-facing response content.
+   * This might involve removing extraneous tags or formatting.
+   * @param output - The raw string response from the synthesis LLM call.
+   * @returns A promise resolving to the clean, final response string.
+   * @throws {ARTError} If the final response cannot be extracted (typically code `OUTPUT_PARSING_FAILED`).
    */
-  parseSynthesisOutput(output: string): Promise<string>; // Returns final response content
+  parseSynthesisOutput(output: string): Promise<string>;
 }
 
 /**
@@ -113,7 +128,8 @@ export interface OutputParser {
 export interface ProviderAdapter extends ReasoningEngine {
   // Provider-specific methods or properties might be added here if needed.
   // The 'call' method implementation will be provider-specific.
-  readonly providerName: string; // e.g., 'openai', 'anthropic'
+  /** The unique identifier name for this provider (e.g., 'openai', 'anthropic'). */
+  readonly providerName: string;
 }
 
 /**
@@ -137,22 +153,23 @@ export interface IToolExecutor {
  */
 export interface ToolRegistry {
   /**
-   * Registers a tool executor.
-   * @param executor The tool executor instance.
+   * Registers a tool executor instance, making it available for use.
+   * @param executor - The instance of the class implementing `IToolExecutor`.
+   * @throws {Error} If a tool with the same name is already registered.
    */
   registerTool(executor: IToolExecutor): Promise<void>;
 
   /**
-   * Retrieves a tool executor by its name.
-   * @param toolName The unique name of the tool.
-   * @returns The executor instance or undefined if not found.
+   * Retrieves a registered tool executor instance by its unique name.
+   * @param toolName - The `name` property defined in the tool's schema.
+   * @returns A promise resolving to the executor instance, or `undefined` if no tool with that name is registered.
    */
   getToolExecutor(toolName: string): Promise<IToolExecutor | undefined>;
 
   /**
-   * Retrieves the schemas of all registered tools, potentially filtered.
-   * @param filter Optional criteria (e.g., only enabled tools for a thread).
-   * @returns An array of tool schemas.
+   * Retrieves the schemas of available tools. Can be filtered, e.g., to get only tools enabled for a specific thread.
+   * @param filter - Optional filter criteria. If `enabledForThreadId` is provided, it should consult the `StateManager` to return only schemas for tools enabled in that thread's configuration.
+   * @returns A promise resolving to an array of `ToolSchema` objects.
    */
   getAvailableTools(filter?: { enabledForThreadId?: string }): Promise<ToolSchema[]>;
 }
@@ -162,11 +179,12 @@ export interface ToolRegistry {
  */
 export interface ToolSystem {
   /**
-   * Executes a list of parsed tool calls.
-   * @param toolCalls Array of tool calls requested by the LLM.
-   * @param threadId The current thread ID for context and permissions.
-   * @param traceId Optional trace ID.
-   * @returns A promise resolving to an array of tool results.
+   * Orchestrates the execution of a sequence of tool calls determined during the planning phase.
+   * This involves verifying permissions, validating inputs, calling the tool executor, and recording observations.
+   * @param toolCalls - An array of `ParsedToolCall` objects generated by the `OutputParser`.
+   * @param threadId - The ID of the current thread, used for context and checking tool permissions via `StateManager`.
+   * @param traceId - Optional trace ID for correlating observations.
+   * @returns A promise resolving to an array of `ToolResult` objects, one for each attempted tool call (including errors).
    */
   executeTools(
     toolCalls: ParsedToolCall[],
@@ -180,42 +198,50 @@ export interface ToolSystem {
  */
 export interface StateManager {
   /**
-   * Loads the full context (config + state) for a given thread.
-   * @param threadId The ID of the thread.
-   * @param userId Optional user ID for access control.
-   * @returns The thread context.
+   * Loads the complete context (`ThreadConfig` and `AgentState`) for a specific thread.
+   * This is typically called at the beginning of an agent execution cycle.
+   * @param threadId - The unique identifier for the thread.
+   * @param userId - Optional user identifier, potentially used for retrieving user-specific state or config overrides.
+   * @returns A promise resolving to the `ThreadContext` object containing the loaded configuration and state.
+   * @throws {ARTError} If the context for the thread cannot be loaded (e.g., code `THREAD_NOT_FOUND`).
    */
   loadThreadContext(threadId: string, userId?: string): Promise<ThreadContext>;
 
   /**
-   * Checks if a specific tool is enabled for the given thread based on its config.
-   * @param threadId The ID of the thread.
-   * @param toolName The name of the tool.
-   * @returns True if the tool is enabled, false otherwise.
+   * Verifies if a specific tool is permitted for use within a given thread.
+   * Checks against the `enabledTools` array in the thread's loaded `ThreadConfig`.
+   * @param threadId - The ID of the thread.
+   * @param toolName - The name of the tool to check.
+   * @returns A promise resolving to `true` if the tool is enabled for the thread, `false` otherwise.
    */
   isToolEnabled(threadId: string, toolName: string): Promise<boolean>;
 
   /**
-   * Retrieves a specific configuration value for the thread.
-   * @param threadId The ID of the thread.
-   * @param key The configuration key (potentially nested, e.g., 'reasoning.model').
-   * @returns The configuration value or undefined.
+   * Retrieves a specific value from the thread's configuration (`ThreadConfig`).
+   * Supports accessing nested properties using dot notation (e.g., 'reasoning.model').
+   * @template T - The expected type of the configuration value.
+   * @param threadId - The ID of the thread.
+   * @param key - The key (potentially nested) of the configuration value to retrieve.
+   * @returns A promise resolving to the configuration value, or `undefined` if the key doesn't exist or the thread config isn't loaded.
    */
   getThreadConfigValue<T>(threadId: string, key: string): Promise<T | undefined>;
 
   /**
-   * Saves the thread's state if it has been modified during execution.
-   * Implementations should track changes to avoid unnecessary writes.
-   * @param threadId The ID of the thread.
+   * Persists the `AgentState` for the thread, but only if it has been marked as modified during the current execution cycle.
+   * This prevents unnecessary writes to the storage layer.
+   * @param threadId - The ID of the thread whose state should potentially be saved.
+   * @returns A promise that resolves when the save operation is complete (or skipped).
    */
   saveStateIfModified(threadId: string): Promise<void>;
 
   /**
-   * Sets or updates the configuration for a specific thread.
-   * @param threadId The ID of the thread.
-   * @param config The complete configuration object to set.
+   * Sets or completely replaces the configuration (`ThreadConfig`) for a specific thread.
+   * Use with caution, as this overwrites the existing configuration. Consider methods for partial updates if needed.
+   * @param threadId - The ID of the thread whose configuration is being set.
+   * @param config - The complete `ThreadConfig` object to save.
+   * @returns A promise that resolves when the configuration is saved.
    */
-  setThreadConfig(threadId: string, config: ThreadConfig): Promise<void>; // Add this method
+  setThreadConfig(threadId: string, config: ThreadConfig): Promise<void>;
 
   // Potentially add methods to update config/state if needed during runtime,
   // though v0.2.4 focuses on loading existing config.
@@ -227,17 +253,19 @@ export interface StateManager {
  */
 export interface ConversationManager {
   /**
-   * Adds one or more messages to a thread's history.
-   * @param threadId The ID of the thread.
-   * @param messages An array of messages to add.
+   * Appends one or more `ConversationMessage` objects to the history of a specific thread.
+   * Typically called at the end of an execution cycle to save the user query and the final AI response.
+   * @param threadId - The ID of the thread to add messages to.
+   * @param messages - An array containing the `ConversationMessage` objects to add.
+   * @returns A promise that resolves when the messages have been successfully added to storage.
    */
   addMessages(threadId: string, messages: ConversationMessage[]): Promise<void>;
 
   /**
-   * Retrieves messages from a thread's history.
-   * @param threadId The ID of the thread.
-   * @param options Filtering and pagination options.
-   * @returns An array of conversation messages.
+   * Retrieves messages from a specific thread's history, usually in reverse chronological order.
+   * @param threadId - The ID of the thread whose history is needed.
+   * @param options - Optional parameters to control retrieval, such as `limit` (max number of messages) or `beforeTimestamp` (for pagination). See `MessageOptions` type.
+   * @returns A promise resolving to an array of `ConversationMessage` objects, ordered according to the implementation (typically newest first if not specified otherwise).
    */
   getMessages(threadId: string, options?: MessageOptions): Promise<ConversationMessage[]>;
 
@@ -250,17 +278,19 @@ export interface ConversationManager {
  */
 export interface ObservationManager {
   /**
-   * Records a new observation. Automatically assigns ID, timestamp, and potentially title.
-   * Notifies the ObservationSocket.
-   * @param observationData Data for the observation (excluding id, timestamp, title).
+   * Creates, persists, and broadcasts a new observation record.
+   * This is the primary method used by other systems to log significant events.
+   * It automatically generates a unique ID, timestamp, and potentially a title.
+   * @param observationData - An object containing the core data for the observation (`threadId`, `type`, `content`, `metadata`, etc.), excluding fields generated by the manager (`id`, `timestamp`, `title`).
+   * @returns A promise that resolves when the observation has been recorded and notified.
    */
   record(observationData: Omit<Observation, 'id' | 'timestamp' | 'title'>): Promise<void>;
 
   /**
-   * Retrieves observations for a specific thread, with optional filtering.
-   * @param threadId The ID of the thread.
-   * @param filter Optional filtering criteria.
-   * @returns An array of observations.
+   * Retrieves historical observations stored for a specific thread.
+   * @param threadId - The ID of the thread whose observations are to be retrieved.
+   * @param filter - Optional criteria to filter the observations, e.g., by `ObservationType`. See `ObservationFilter`.
+   * @returns A promise resolving to an array of `Observation` objects matching the criteria.
    */
   getObservations(threadId: string, filter?: ObservationFilter): Promise<Observation[]>;
 }
@@ -323,9 +353,11 @@ import { ConversationSocket as ConversationSocketImpl } from '../systems/ui/conv
  * Interface for the system providing access to UI communication sockets.
  */
 export interface UISystem {
-  getObservationSocket(): ObservationSocketImpl; // Use concrete class type
-  getConversationSocket(): ConversationSocketImpl; // Use concrete class type
-  // Potentially add getStateSocket(): StateSocket; in the future
+  /** Returns the singleton instance of the ObservationSocket. */
+  getObservationSocket(): ObservationSocketImpl;
+  /** Returns the singleton instance of the ConversationSocket. */
+  getConversationSocket(): ConversationSocketImpl;
+  // TODO: Potentially add getStateSocket(): StateSocket; in the future
 }
 
 /**
@@ -401,14 +433,23 @@ export interface IStateRepository {
 }
 
 /**
- * Represents the initialized ART instance returned by the factory function.
+ * Represents the fully initialized and configured ART Framework client instance.
+ * This object is the main entry point for interacting with the framework after setup.
+ * It provides access to the core processing method and key subsystems.
  */
 export interface ArtInstance {
-    process: IAgentCore['process']; // The main agent processing method
-    uiSystem: UISystem; // Access to UI sockets
-    stateManager: StateManager; // Access to State Manager
-    conversationManager: ConversationManager; // Access to Conversation Manager
-    toolRegistry: ToolRegistry; // Access to Tool Registry
-    observationManager: ObservationManager; // Access to Observation Manager
-    // Add other components if direct access is commonly needed
+    /** The main method to process a user query using the configured Agent Core. */
+    readonly process: IAgentCore['process'];
+    /** Accessor for the UI System, used to get sockets for subscriptions. */
+    readonly uiSystem: UISystem;
+    /** Accessor for the State Manager, used for managing thread configuration and state. */
+    readonly stateManager: StateManager;
+    /** Accessor for the Conversation Manager, used for managing message history. */
+    readonly conversationManager: ConversationManager;
+    /** Accessor for the Tool Registry, used for managing available tools. */
+    readonly toolRegistry: ToolRegistry;
+    /** Accessor for the Observation Manager, used for recording and retrieving observations. */
+    readonly observationManager: ObservationManager;
+    // Note: Direct access to other internal components like ReasoningEngine or StorageAdapter
+    // is typically discouraged; interaction should primarily happen via the managers and process method.
 }

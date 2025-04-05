@@ -17,6 +17,13 @@ function simpleTemplate(template: string, data: Record<string, any>): string {
   });
 }
 
+/**
+ * Default implementation of the `PromptManager` interface.
+ * Responsible for constructing prompts for the planning and synthesis phases
+ * using basic string templating.
+ *
+ * @implements {PromptManagerInterface}
+ */
 export class PromptManager implements PromptManagerInterface {
   // Default prompts - these should likely be configurable via ThreadConfig
   private defaultSystemPrompt =
@@ -60,13 +67,23 @@ Tool Execution Results:
 Based on the user query, the plan, and the results of any tool executions, synthesize a final response to the user.
 If the tools failed or provided unexpected results, explain the issue and try to answer based on available information or ask for clarification.`;
 
-  async createPlanningPrompt( // Make async
+  /**
+   * Creates the prompt for the planning phase using a default template.
+   * It incorporates the system prompt, conversation history, user query, and available tool schemas.
+   * @param query - The user's original query.
+   * @param history - Recent conversation history.
+   * @param systemPrompt - The system prompt string (uses default if undefined).
+   * @param availableTools - Schemas of tools available for use.
+   * @param _threadContext - The current thread context (currently unused in this basic implementation but available for future enhancements like template selection).
+   * @returns A promise resolving to the formatted planning prompt string.
+   */
+  async createPlanningPrompt(
     query: string,
     history: ConversationMessage[],
-    systemPrompt: string | undefined, // Correct order and type
-    availableTools: ToolSchema[],     // Correct order
-    _threadContext: ThreadContext     // Add threadContext (prefixed with _ for unused)
-  ): Promise<FormattedPrompt> {       // Return Promise
+    systemPrompt: string | undefined,
+    availableTools: ToolSchema[],
+    _threadContext: ThreadContext // Keep param even if unused for interface compliance
+  ): Promise<FormattedPrompt> {
     const historyString = history
       .map(
         (msg) =>
@@ -98,15 +115,27 @@ If the tools failed or provided unexpected results, explain the issue and try to
     return Promise.resolve(simpleTemplate(this.defaultPlanningPromptTemplate, promptData));
   }
 
-  async createSynthesisPrompt( // Make async
+  /**
+   * Creates the prompt for the synthesis phase using a default template.
+   * It incorporates the system prompt, history, original query, planning results (intent, plan), and tool execution results.
+   * @param query - The user's original query.
+   * @param intent - The intent extracted during planning.
+   * @param plan - The plan generated during planning.
+   * @param toolResults - Results from executed tools.
+   * @param history - Recent conversation history.
+   * @param systemPrompt - The system prompt string (uses default if undefined).
+   * @param _threadContext - The current thread context (currently unused but available).
+   * @returns A promise resolving to the formatted synthesis prompt string.
+   */
+  async createSynthesisPrompt(
     query: string,
-    intent: string | undefined,       // Correct order and type
-    plan: string | undefined,         // Correct order and type
-    toolResults: ToolResult[],        // Correct order
-    history: ConversationMessage[],   // Correct order
-    systemPrompt: string | undefined, // Correct type
-    _threadContext: ThreadContext     // Add threadContext (prefixed with _ for unused)
-  ): Promise<FormattedPrompt> {       // Return Promise
+    intent: string | undefined,
+    plan: string | undefined,
+    toolResults: ToolResult[],
+    history: ConversationMessage[],
+    systemPrompt: string | undefined,
+    _threadContext: ThreadContext // Keep param even if unused
+  ): Promise<FormattedPrompt> {
     const historyString = history
       .map(
         (msg) =>
