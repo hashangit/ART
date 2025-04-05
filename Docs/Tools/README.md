@@ -25,7 +25,7 @@ The ART Tool System is designed to be robust, flexible, and secure. Its primary 
 ART aims to be a highly versatile framework. While the primary method for adding tools currently involves implementing the native `IToolExecutor` interface directly within the framework, the architectural vision includes broader compatibility:
 
 *   **Native Tools:** Implemented directly using `IToolExecutor`. (Current focus)
-*   **MCP Tools:** Planned support for tools exposed via the Machine-readable Capability Protocol (MCP).
+*   **MCP Tools:** Planned support for tools exposed via the Model Context Protocol (MCP).
 *   **LangChain Tools:** Planned adapter layer to allow seamless use of existing LangChain tools.
 *   **WASM Tools:** Planned support for executing tools within a secure WebAssembly environment.
 
