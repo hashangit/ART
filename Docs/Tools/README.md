@@ -52,14 +52,19 @@ graph LR
     LCTool --> LCAdapter
     WASMTool --> WASMEnv
 
-    classDef adapterStyle fill:#fdf2f8,stroke:#ec4899,stroke-width:2px,stroke-dasharray:5 5
-    classDef externalStyle fill:#f3f4f6,stroke:#6b7280,stroke-width:1px
-    
-    class MCPAdapter,LCAdapter,WASMEnv adapterStyle
-    class MCPTool,LCTool,WASMTool externalStyle
-```
+    style MCPAdapter fill:#fdf2f8,stroke:#ec4899,stroke-width:2px,stroke-dasharray: 5 5
+    style LCAdapter fill:#fdf2f8,stroke:#ec4899,stroke-width:2px,stroke-dasharray: 5 5
+    style WASMEnv fill:#fdf2f8,stroke:#ec4899,stroke-width:2px,stroke-dasharray: 5 5
+    style MCPTool fill:#f3f4f6,stroke:#6b7280,stroke-width:1px
+    style LCTool fill:#f3f4f6,stroke:#6b7280,stroke-width:1px
+    style WASMTool fill:#f3f4f6,stroke:#6b7280,stroke-width:1px
 
-**Note:** Dashed lines represent future compatibility layers.
+    linkStyle 2,3,4,10,11,12 stroke:#8b5cf6,stroke-width:1px;
+    linkStyle 5,6,7 stroke:#ec4899,stroke-width:1px,stroke-dasharray: 5 5;
+    linkStyle 8,9,13,14,15,16 stroke:#6b7280,stroke-width:1px;
+
+    note right of ToolRegistry Future Compatibility Layers (Dashed Lines)
+```
 
 ## Documentation Guides
 
