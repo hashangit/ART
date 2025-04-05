@@ -5,7 +5,7 @@
 
 ## 1. Intent & Goals
 
-*   **Intent:** Integrate support for the Model Context Protocol (MCP) into the Agent Reasoning & Tooling (ART) framework. The primary focus is enabling ART agents running entirely client-side (in the browser) to utilize external tools provided by MCP servers compiled to WebAssembly (WASM) and executed within Web Workers.
+*   **Intent:** Integrate support for the Model Context Protocol (MCP) into the Agent Runtime (ART) framework. The primary focus is enabling ART agents running entirely client-side (in the browser) to utilize external tools provided by MCP servers compiled to WebAssembly (WASM) and executed within Web Workers.
 *   **Goals:**
     *   Allow ART agents to discover and execute tools defined by MCP servers.
     *   Prioritize seamless integration with existing ART subsystems (`ToolSystem`, `ToolRegistry`, `StateManager`, `StorageSystem`, `ObservationSystem`, `UISystem`).
