@@ -177,8 +177,8 @@ export class AgentFactory {
         this.outputParser = new OutputParserImpl(); // Basic implementation for now
 
         // --- Initialize Tool System ---
-        // ToolSystem constructor expects only registry and stateManager currently
-        this.toolSystem = new ToolSystemImpl(this.toolRegistry!, this.stateManager!);
+        // Inject ToolRegistry, StateManager, and ObservationManager into ToolSystem
+        this.toolSystem = new ToolSystemImpl(this.toolRegistry!, this.stateManager!, this.observationManager!); // Added observationManager
     }
 
     /**

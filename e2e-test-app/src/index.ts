@@ -1,6 +1,8 @@
 import 'fake-indexeddb/auto'; // Import fake-indexeddb FIRST to patch global indexedDB
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
+import http from 'http'; // Import http module
+import WebSocket, { WebSocketServer } from 'ws'; // Import ws module
 import {
   createArtInstance,
   // PESAgent, // Removed - Unused import
@@ -9,7 +11,12 @@ import {
   AgentFinalResponse,
   ThreadConfig,
   ArtInstance, // Import the ArtInstance type
-  Observation // Import the Observation type
+  Observation, // Import the Observation type
+  ConversationMessage, // Import ConversationMessage type
+  ObservationType, // Import ObservationType enum
+  MessageRole, // Import MessageRole enum
+  ObservationSocket, // Import ObservationSocket class type
+  ConversationSocket // Import ConversationSocket class type
   // Remove unused ThreadContext import
 } from 'art-framework';
 
@@ -18,6 +25,7 @@ dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001; // Use environment variable or default
+// const wsPort = parseInt(process.env.WS_PORT || '3002', 10); // WebSocket attached to HTTP server, separate port not needed.
 
 // Middleware to parse JSON bodies
 app.use(express.json());
@@ -52,6 +60,119 @@ async function initializeArt(): Promise<ArtInstance | null> {
 // Initialize ART when the server starts
 artInstancePromise = initializeArt();
 // --- End ART Instance Initialization ---
+
+// --- WebSocket Server Setup ---
+const server = http.createServer(app); // Create HTTP server from Express app
+const wss = new WebSocketServer({ server }); // Attach WebSocket server
+
+// Store client subscriptions { wsClient: [{ type: 'observation'|'conversation', threadId: string, filter?: any, id: string }] }
+const clientSubscriptions = new Map<WebSocket, Array<{ id: string, type: 'observation' | 'conversation', threadId: string, filter?: any }>>();
+
+// Function to broadcast data to relevant clients
+function broadcastToSubscribers(type: 'observation' | 'conversation', threadId: string, data: Observation | ConversationMessage) {
+  // console.log(`[WS Server] Broadcasting ${type} for thread ${threadId}`);
+  clientSubscriptions.forEach((subscriptions, ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      subscriptions.forEach(sub => {
+        if (sub.type === type && sub.threadId === threadId) {
+          // Basic filter check (can be expanded)
+          let shouldSend = true;
+          if (sub.filter) {
+            if (type === 'observation' && sub.filter !== (data as Observation).type) {
+              shouldSend = false;
+            }
+            if (type === 'conversation' && sub.filter !== (data as ConversationMessage).role) {
+              shouldSend = false;
+            }
+            // Add more complex filter logic if needed (e.g., array filters)
+          }
+
+          if (shouldSend) {
+            try {
+              ws.send(JSON.stringify({ type: 'event', payload: data, subscriptionId: sub.id }));
+            } catch (err) {
+              console.error(`[WS Server] Error sending to client: ${err}`);
+            }
+          }
+        }
+      });
+    }
+  });
+}
+
+// Bridge ART sockets to WebSocket clients after ART initializes
+artInstancePromise?.then(art => {
+  if (art) {
+    console.log('[WS Server] ART Initialized. Bridging UI Sockets...');
+    const obsSocket = art.uiSystem.getObservationSocket();
+    const convSocket = art.uiSystem.getConversationSocket();
+
+    // Subscribe to internal ART Observation Socket
+    obsSocket.subscribe((observation) => {
+      broadcastToSubscribers('observation', observation.threadId, observation);
+    });
+
+    // Subscribe to internal ART Conversation Socket
+    convSocket.subscribe((message) => {
+      broadcastToSubscribers('conversation', message.threadId, message);
+    });
+    console.log('[WS Server] UI Sockets Bridged.');
+  } else {
+    console.error('[WS Server] Cannot bridge UI Sockets: ART instance is null.');
+  }
+}).catch(err => {
+  console.error('[WS Server] Error during ART initialization promise:', err);
+});
+
+wss.on('connection', (ws) => {
+  console.log('[WS Server] Client connected');
+  clientSubscriptions.set(ws, []); // Initialize subscriptions for new client
+
+  ws.on('message', (message) => {
+    try {
+      const parsedMessage = JSON.parse(message.toString());
+      console.log('[WS Server] Received:', parsedMessage);
+
+      const currentSubs = clientSubscriptions.get(ws) || [];
+
+      if (parsedMessage.type === 'subscribe' && parsedMessage.payload) {
+        const { threadId, socketType, filter } = parsedMessage.payload;
+        if (threadId && (socketType === 'observation' || socketType === 'conversation')) {
+          const subId = `sub-${Date.now()}-${Math.random().toString(16).substring(2)}`;
+          const newSub = { id: subId, type: socketType, threadId, filter };
+          clientSubscriptions.set(ws, [...currentSubs, newSub]);
+          console.log(`[WS Server] Client subscribed: ${JSON.stringify(newSub)}`);
+          // Confirm subscription back to client
+          ws.send(JSON.stringify({ type: 'subscribed', payload: { subscriptionId: subId, ...parsedMessage.payload } }));
+        } else {
+          ws.send(JSON.stringify({ type: 'error', message: 'Invalid subscribe payload' }));
+        }
+      } else if (parsedMessage.type === 'unsubscribe' && parsedMessage.payload?.subscriptionId) {
+        const subIdToRemove = parsedMessage.payload.subscriptionId;
+        const updatedSubs = currentSubs.filter(sub => sub.id !== subIdToRemove);
+        clientSubscriptions.set(ws, updatedSubs);
+        console.log(`[WS Server] Client unsubscribed: ${subIdToRemove}`);
+        ws.send(JSON.stringify({ type: 'unsubscribed', payload: { subscriptionId: subIdToRemove } }));
+      } else {
+        ws.send(JSON.stringify({ type: 'error', message: 'Unknown message type or invalid payload' }));
+      }
+    } catch (error) {
+      console.error('[WS Server] Failed to process message:', error);
+      ws.send(JSON.stringify({ type: 'error', message: 'Failed to parse message' }));
+    }
+  });
+
+  ws.on('close', () => {
+    console.log('[WS Server] Client disconnected');
+    clientSubscriptions.delete(ws); // Clean up subscriptions on disconnect
+  });
+
+  ws.on('error', (error) => {
+    console.error('[WS Server] WebSocket error:', error);
+    clientSubscriptions.delete(ws); // Clean up on error too
+  });
+});
+// --- End WebSocket Server Setup ---
 
 
 // Add a health check endpoint that Playwright can use to detect when the server is ready
@@ -151,22 +272,39 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
       systemPrompt: 'You are a helpful assistant.'
     };
 
-    // Restore setting thread config for new threads, acknowledging potential persistence issues
-    // with InMemoryStorageAdapter across HTTP requests in this specific test setup.
-    if (!requestThreadId) {
+    // Ensure thread configuration exists, setting it if necessary.
+    // This is crucial for InMemoryStorageAdapter which doesn't persist across requests here.
+    try {
+      let contextExists = false;
       try {
-        // console.log(`Setting thread config for new thread ${threadId} with provider ${provider}`);
-        await art.stateManager.setThreadConfig(threadId, threadConfig);
-      } catch (configError) {
-        console.error(`Error setting up new thread: ${configError}`);
+          // Attempt to load context first
+          const existingContext = await art.stateManager.loadThreadContext(threadId);
+          // Check if config actually exists within the loaded context
+          if (existingContext?.config) {
+              contextExists = true;
+              // console.log(`[E2E App] Context found for thread ${threadId}`);
+          }
+      } catch (loadError) {
+          // Ignore error if context simply not found, log others
+          if (!(loadError instanceof Error && loadError.message.includes('not found'))) {
+              console.warn(`[E2E App] Error loading context for thread ${threadId}:`, loadError);
+          }
+      }
+
+      // If context/config doesn't exist, set it
+      if (!contextExists) {
+          // console.log(`[E2E App] Setting config for thread ${threadId} (Provider: ${provider})`);
+          await art.stateManager.setThreadConfig(threadId, threadConfig);
+      }
+
+    } catch (configError) {
+        console.error(`[E2E App] Error setting up thread ${threadId}: ${configError}`);
         res.status(500).json({
-          error: 'Failed to configure new thread',
-          details: configError instanceof Error ? configError.message : String(configError)
+            error: 'Failed to configure thread',
+            details: configError instanceof Error ? configError.message : String(configError)
         });
         return;
-      }
     }
-    // If requestThreadId exists, StateManager *should* load existing config, but might fail here.
 
     // Process the query
     // console.log(`Processing query: "${query}"`); // Removed for linting
@@ -226,8 +364,8 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// Start server
-app.listen(port, () => {
-  // console.log(`E2E Test App server running at http://localhost:${port}`); // Removed for linting
+// Start the combined HTTP and WebSocket server
+server.listen(port, () => {
+  console.log(`[E2E App] HTTP & WebSocket Server running at http://localhost:${port}`);
 });
 

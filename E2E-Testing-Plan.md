@@ -110,34 +110,34 @@
         *   [✓] SYNTHESIS (Verified in Gemini tests)
         *   [ ] ERROR (To be verified in error handling tests)
 
-4.  **Add Error Handling Tests:**
-    *   [ ] Create test cases for error conditions:
-        *   [ ] Invalid tool name
-        *   [ ] Invalid tool arguments
-        *   [ ] Tool execution errors
-        *   [ ] LLM API errors
-        *   [ ] Output parsing errors
-    *   [ ] Assert that metadata.status is 'error' and verify error messages.
+4.  [✓] Add Error Handling Tests:
+    *   [✓] Create test cases for error conditions:
+        *   [✓] Invalid tool name
+        *   [✓] Invalid tool arguments
+        *   [✓] Tool execution errors
+        *   [✓] LLM API errors (Tested via missing key scenario)
+        *   [ ] Output parsing errors (Marked as TODO in test file - difficult to trigger)
+    *   [✓] Assert that metadata.status is 'error' and verify error messages.
 
-5.  **Add Tool Edge Case Tests:**
-    *   [ ] Test CalculatorTool with:
-        *   [ ] Scope variables
-        *   [ ] Complex numbers
-        *   [ ] Blocked functions (testing allowlist)
-        *   [ ] Error messages from mathjs
+5.  [✓] Add Tool Edge Case Tests:
+    *   [✓] Test CalculatorTool with:
+        *   [✓] Scope variables
+        *   [✓] Complex numbers
+        *   [✓] Blocked functions (testing allowlist)
+        *   [✓] Error messages from mathjs
 
-6.  **Add Context System Tests:**
-    *   [ ] Verify different threadIds remain isolated.
-    *   [ ] Test configuring threads with different enabledTools.
-    *   [ ] Verify agent respects thread-specific configurations.
+6.  [✓] Add Context System Tests:
+    *   [✓] Verify different threadIds remain isolated.
+    *   [ ] Test configuring threads with different enabledTools. (Marked as TODO - requires test app changes)
+    *   [✓] Verify agent respects thread-specific configurations. (Tested default enabledTools)
 
-7.  **Add UI Socket Tests:**
-    *   [ ] Test ObservationSocket subscription and event reception.
-    *   [ ] Test ConversationSocket subscription and event reception.
+7.  [✓] Add UI Socket Tests:
+    *   [✓] Test ObservationSocket subscription and event reception.
+    *   [✓] Test ConversationSocket subscription and event reception.
 
-8.  **Documentation Updates:**
+8.  [ ] Documentation Updates:
     *   [ ] Update PRD checklist with detailed test coverage.
-    *   [ ] Update this plan document after completing each major section.
+    *   [✓] Update this plan document after completing each major section.
     *   [ ] Add detailed examples of test assertions for each test type.
 
 **Prerequisites (Expanded):**
