@@ -73,7 +73,9 @@ export class OutputParser implements IOutputParser {
       // 2. Parse JSON (if found)
       if (jsonArrayString) {
         try {
-          parsedJson = JSON.parse(jsonArrayString);
+          // Attempt to remove trailing comma just before the closing bracket
+          const cleanedJsonString = jsonArrayString.replace(/,\s*(?=]$)/, '');
+          parsedJson = JSON.parse(cleanedJsonString);
         } catch (error) {
           Logger.error(`OutputParser: Failed to parse extracted JSON array. Error: ${error}. Extracted Content: ${jsonArrayString}. Original Content: ${toolCallsString}`);
           // Keep parsedJson as null, will default to empty array later

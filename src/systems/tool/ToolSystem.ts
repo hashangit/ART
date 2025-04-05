@@ -1,6 +1,6 @@
 // src/systems/tool/ToolSystem.ts
-import { ToolSystem as IToolSystem, ToolRegistry, StateManager, IToolExecutor } from '../../core/interfaces';
-import { ParsedToolCall, ToolResult, ExecutionContext } from '../../types';
+import { ToolSystem as IToolSystem, ToolRegistry, StateManager, IToolExecutor, ObservationManager } from '../../core/interfaces'; // Added ObservationManager
+import { ParsedToolCall, ToolResult, ExecutionContext, ObservationType } from '../../types'; // Added ObservationType
 import { validateJsonSchema } from '../../utils/validation';
 import { Logger } from '../../utils/logger';
 // import { v4 as uuidv4 } from 'uuid'; // Removed unused import
@@ -8,20 +8,20 @@ import { Logger } from '../../utils/logger';
 export class ToolSystem implements IToolSystem {
   private toolRegistry: ToolRegistry;
   private stateManager: StateManager;
-  // private observationManager: ObservationManager; // Add when implementing observations
+  private observationManager: ObservationManager; // Add when implementing observations
 
   constructor(
     toolRegistry: ToolRegistry,
     stateManager: StateManager,
-    // observationManager: ObservationManager // Add when implementing observations
+    observationManager: ObservationManager // Add when implementing observations
   ) {
     if (!toolRegistry) throw new Error('ToolSystem requires a ToolRegistry.');
     if (!stateManager) throw new Error('ToolSystem requires a StateManager.');
-    // if (!observationManager) throw new Error('ToolSystem requires an ObservationManager.');
+    if (!observationManager) throw new Error('ToolSystem requires an ObservationManager.');
 
     this.toolRegistry = toolRegistry;
     this.stateManager = stateManager;
-    // this.observationManager = observationManager;
+    this.observationManager = observationManager;
     Logger.info('ToolSystem initialized.');
   }
 
@@ -90,10 +90,21 @@ export class ToolSystem implements IToolSystem {
         };
       }
 
-      // TODO: Record TOOL_EXECUTION observation using this.observationManager.record(...)
-      // This should happen regardless of success or failure, using the 'result' object.
+      // Record TOOL_EXECUTION observation
+      if (result) { // Ensure result is not null before recording
+        this.observationManager.record({
+          threadId: threadId,
+          traceId: traceId,
+          type: ObservationType.TOOL_EXECUTION,
+          content: result, // The ToolResult object itself
+          metadata: { timestamp: Date.now(), callId: call.callId } // Include callId for correlation
+        }).catch(err => Logger.error(`Failed to record TOOL_EXECUTION observation for callId ${call.callId}:`, err));
 
-      results.push(result);
+        results.push(result);
+      } else {
+        // This case should ideally not happen if the try/catch always assigns to result
+        Logger.error(`ToolSystem finished processing call ${call.callId} but result object was null.`);
+      }
     }
 
     return results;

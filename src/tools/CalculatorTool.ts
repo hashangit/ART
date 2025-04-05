@@ -40,8 +40,8 @@ export class CalculatorTool implements IToolExecutor {
 
   readonly schema: ToolSchema = {
     name: CalculatorTool.toolName,
-    description: `Evaluates mathematical expressions using a sandboxed mathjs environment.
-Supports standard operators (+, -, *, /, %, ^), variables via 'scope', complex numbers, and a specific list of allowed functions:
+    description: `Evaluates mathematical expressions using a sandboxed mathjs environment. IMPORTANT LIMITATIONS: Each expression is evaluated independently; there is no memory of previous results (e.g., no 'ans' variable). Only a specific list of functions is supported.
+Supports standard operators (+, -, *, /, %, ^), variables via 'scope', complex numbers, and the following allowed functions:
 sqrt, cbrt, abs, pow, exp, log, log10, log2, sin, cos, tan, asin, acos, atan, atan2, round, floor, ceil, mod.`,
     inputSchema: {
       type: 'object',
@@ -74,6 +74,9 @@ sqrt, cbrt, abs, pow, exp, log, log10, log2, sin, cos, tan, asin, acos, atan, at
     ],
   };
 
+  // TODO: Enhance CalculatorTool:
+  // 1. Implement state management to allow referencing previous results within a single execution sequence (e.g., using 'ans' or similar).
+  // 2. Expand the library of allowed functions (e.g., add 'digits', factorial '!', statistical functions, etc.). Consider security implications.
   async execute(input: any, context: ExecutionContext): Promise<ToolResult> {
     const expression = input.expression as string;
     // Combine user scope with allowed functions. User scope takes precedence if names clash.

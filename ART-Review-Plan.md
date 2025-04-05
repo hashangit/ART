@@ -1,4 +1,6 @@
-# ART Framework Review - Revised Plan
+# ART Framework Functionality Review Plan
+
+# Objectives
 
 1.  **Deep Dive into Concepts:** Meticulously re-examine conceptual documents (`ART-Concept` files, `ART-PRD-Checklist-plan.md`, execution flow, PRD) focusing on specific functional requirements, data structures, and component interactions.
 2.  **In-Depth Code Review & Comparison:** Use `read_file` to analyze implementation details of key files (`pes-agent.ts`, `StateManager.ts`, `ConversationManager.ts`, `ToolSystem.ts`, `ReasoningEngine.ts`, `OutputParser.ts`, `PromptManager.ts`, etc.) and compare against conceptual requirements (method logic, data structures, interactions, error handling).
