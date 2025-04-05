@@ -466,7 +466,7 @@ graph TD
     *   [D] **3.2.1:** Implement `ToolRegistry` (register, getExecutor, getAvailableTools).
     *   [D] **3.2.2:** Unit tests for `ToolRegistry`.
     *   [D] **3.2.3:** Implement JSON Schema validation utility for tool inputs.
-    *   [D] **3.2.4:** Implement `ToolSystem.executeTools` method. Include loop logic: check enabled (`StateManager`), get executor (`ToolRegistry`), validate args, execute `IToolExecutor`, handle errors/timeouts, format `ToolResult`.
+    *   [D] **3.2.4:** Implement `ToolSystem.executeTools` method. Include loop logic: check enabled (`StateManager`), get executor (`ToolRegistry`), validate args, execute `IToolExecutor`, handle errors/timeouts, format `ToolResult`, record `TOOL_EXECUTION` observation (`ObservationManager`).
     *   [D] **3.2.5:** Unit tests for `ToolSystem` (mocking executor, registry, stateManager).
     *   [D] **3.2.6:** Create a simple example `IToolExecutor` (e.g., `CalculatorTool`).
     *   [D] **3.2.7:** Unit tests for `CalculatorTool`.
@@ -500,7 +500,7 @@ graph TD
     *   [D] **4.2.6:** Implement robust error handling throughout the flow, generating `ERROR` observations.
     *   [D] **4.2.7:** Write integration tests for `PESAgent` (mocking external dependencies like LLM API, complex tools).
 *   [ ] **4.3: Agent Factory**
-    *   [D] **4.3.1:** Implement `AgentFactory` to instantiate `PESAgent` and inject dependencies (configured StorageAdapter, ReasoningAdapter, Tools, etc.).
+    *   [D] **4.3.1:** Implement `AgentFactory` to instantiate `PESAgent` and inject dependencies (configured StorageAdapter, ReasoningAdapter, Tools, etc.). Ensure `ObservationManager` is injected into `ToolSystem`.
     *   [D] **4.3.2:** Unit tests for `AgentFactory`.
 
 **Phase 5: UI Integration (Est. Complexity: Medium)**
