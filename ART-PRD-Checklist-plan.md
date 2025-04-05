@@ -523,21 +523,44 @@ graph TD
     *   [D] **6.1.1:** Setup E2E test environment (e.g., Playwright).
     *   [D] **6.1.2:** E2E test: PES flow w/ InMemoryStorage + mocks. (Implemented with live LLM via e2e-test-app)
     *   [D] **6.1.3:** E2E test: PES flow w/ IndexedDBStorage in browser. (Implemented with live LLM via e2e-test-app)
-*   [ ] **6.2: Documentation**
-*   [ ] **6.X: Tooling Improvements**
-    *   [D] **6.X.1:** Enhance `CalculatorTool` schema with usage examples to improve LLM guidance.
-    *   [D] **6.X.2:** Add `mathjs` dependency.
-    *   [D] **6.X.3:** Refactor `CalculatorTool.ts` to use `mathjs.evaluate`, removing unsafe `Function` constructor and sanitization.
-    *   [D] **6.X.4:** Update `CalculatorTool` schema (description, add optional `scope` input, update examples for `mathjs` features).
-    *   [D] **6.X.5:** Update `CalculatorTool.test.ts` to cover `mathjs` usage (including scope, modulo, errors).
-    *   [ ] **6.2.1:** Review & complete TSDoc comments.
-    *   [ ] **6.X.6:** Implement function allowlist in `CalculatorTool` for security and predictability.
-    *   [ ] **6.X.7:** Add complex number support to `CalculatorTool` (result validation and output formatting).
-    *   [ ] **6.X.8:** Enhance error reporting in `CalculatorTool` to use specific `mathjs` error messages.
-    *   [ ] **6.X.9:** Update `CalculatorTool` schema description and examples for allowlist and complex numbers.
-    *   [ ] **6.2.2:** Write conceptual docs (README, Architecture, Getting Started).
-    *   [ ] **6.2.3:** Create usage examples.
-    *   [ ] **6.2.4:** Generate API documentation.
+*   [ ] **6.2: Documentation** *(All files to be placed in `Docs/` subfolders, e.g., `Docs/Core/`, `Docs/Guides/`, `Docs/Examples/`, `Docs/API/`, `Docs/Contributing/`. Ensure cross-linking between related documents.)*
+    *   [ ] **6.2.1: Core Conceptual Documentation** *(Target: `Docs/Core/`)*
+        *   [ ] 6.2.1.1: Update/Write main `README.md` (Project overview, installation, quick start, link to detailed docs).
+        *   [ ] 6.2.1.2: Write Architecture Overview document (Explain the 7 subsystems, core principles, high-level data flow, main Mermaid diagram).
+        *   [ ] 6.2.1.3: Write Core Concepts document (Explain key ideas like Threads, Observations, PES flow details, Adapters, Sockets, Configuration).
+    *   [ ] **6.2.2: Getting Started Guide** *(Target: `Docs/Guides/`)*
+        *   [ ] 6.2.2.1: Write detailed Installation Guide (Prerequisites, steps). *(Link from README)*
+        *   [ ] 6.2.2.2: Create a comprehensive Basic Usage Tutorial (Instantiating `ArtClient`, configuring storage/reasoning, running a simple query, basic tool usage, subscribing to sockets). *(Link from README, link to System Guides)*
+    *   [ ] **6.2.3: System-Specific Guides** *(Target: `Docs/Guides/Systems/`, link from Core Concepts/Basic Usage)*
+        *   [ ] 6.2.3.1: Write Agent Core Guide (Deep dive into PES stages, configuration options, error handling).
+        *   [ ] 6.2.3.2: Write Reasoning System Guide (Using different Provider Adapters, prompt customization, output parsing details, streaming thoughts).
+        *   [ ] 6.2.3.3: Create main Tool System Guide (`Docs/Guides/Systems/ToolSystem.md`). *(Link to existing `Docs/Tools/*` files which should remain in `Docs/Tools/`)*
+            *   [ ] (Verify `Docs/Tools/README.md` serves as a good entry point/summary for the Tool System Guide to link to)
+            *   [ ] (Verify `Docs/Tools/Creating_Native_Tools.md` is complete and accurate)
+            *   [ ] (Verify `Docs/Tools/Tool_Lifecycle_and_Integration.md` is complete and accurate)
+            *   [ ] (Verify `Docs/Tools/Security_and_Best_Practices.md` is complete and accurate)
+            *   [ ] (Verify `Docs/Tools/Future_Directions.md` reflects current plans)
+        *   [ ] 6.2.3.4: Write Context System Guide (Managing state, conversation history, thread configuration, context providers).
+        *   [ ] 6.2.3.5: Write Observation System Guide (Observation types explained, recording observations, querying/filtering observations, subscribing via sockets).
+        *   [ ] 6.2.3.6: Write UI System Guide (Using `ObservationSocket` and `ConversationSocket`, filtering, integration patterns for frontends).
+        *   [ ] 6.2.3.7: Write Storage System Guide (Using `InMemoryStorageAdapter` and `IndexedDBStorageAdapter`, implementing custom adapters, repository patterns).
+    *   [ ] **6.2.4: Examples & Tutorials** *(Target: `Docs/Examples/`, link from relevant guides)*
+        *   [ ] 6.2.4.1: Create/Refine a standalone basic PES flow example (`Docs/Examples/basic-pes-flow.md`).
+        *   [ ] 6.2.4.2: Create/Refine a standalone tool usage example (`Docs/Examples/tool-usage.md`).
+        *   [ ] 6.2.4.3: Create a standalone UI Socket integration example (`Docs/Examples/ui-sockets.md`).
+        *   [ ] 6.2.4.4: Create standalone Storage Adapter usage examples (`Docs/Examples/storage-adapters.md`).
+        *   [ ] 6.2.4.5: Create standalone Reasoning Provider usage examples (`Docs/Examples/reasoning-providers.md`).
+    *   [ ] **6.2.5: API Reference Documentation** *(Target: Generated output, e.g., `Docs/API/` or hosted site)*
+        *   [ ] 6.2.5.1: Setup TSDoc generation process (e.g., using TypeDoc integrated with build scripts). *(Link from README/Guides)*
+        *   [ ] 6.2.5.2: Review and ensure comprehensive TSDoc comments across all public APIs (interfaces, classes, methods, types).
+        *   [ ] 6.2.5.3: Generate and configure hosting for the API documentation (e.g., GitHub Pages, Read the Docs).
+    *   [ ] **6.2.6: Contribution Guide (Optional - If Applicable)** *(Target: `Docs/Contributing/`)*
+        *   [ ] 6.2.6.1: Write development environment setup guide (`Docs/Contributing/Setup.md`).
+        *   [ ] 6.2.6.2: Document coding standards (`Docs/Contributing/Standards.md`).
+        *   [ ] 6.2.6.3: Explain testing procedures (`Docs/Contributing/Testing.md`).
+        *   [ ] 6.2.6.4: Outline contribution workflow (`Docs/Contributing/Workflow.md`).
+    *   [ ] **6.2.7: Changelog Maintenance** *(Target: Root `changelog.md`)*
+        *   [ ] 6.2.7.1: Ensure `changelog.md` is finalized and accurately reflects all changes for the v1.0 release.
 *   [ ] **6.3: Build & Packaging**
     *   [D] **6.3.1:** Configure production build (minify, tree-shake).
     *   [D] **6.3.2:** Configure `package.json` for NPM.
@@ -550,7 +573,6 @@ graph TD
     *   [ ] **6.5.3:** Build process verified.
     *   [ ] **6.5.4:** Version bumped.
     *   [ ] **6.5.5:** (Optional) Publish to NPM.
-
 *   [ ] **6.6: E2E Test & Workspace Fixes (v0.2.4 Bug Bash)**
     *   [ ] **6.6.1:** Fix `createArtInstance` call in `e2e-test-app/src/index.ts` by adding the required `reasoning` configuration.
     *   [ ] **6.6.2:** Remove unused `PESAgent` import in `e2e-test-app/src/index.ts`.
@@ -558,6 +580,17 @@ graph TD
     *   [ ] **6.6.4:** Fix TypeScript error in `e2e/pes-flow.spec.ts` by removing the unused `_request` parameter from `test.fixme`.
     *   [ ] **6.6.5:** Verify E2E tests pass (`npm run test:e2e`).
     *   [ ] **6.6.6:** Address remaining ESLint/TypeScript warnings/errors from workspace diagnostics (e.g., Markdown linting - lower priority).
+*   [ ] **6.7: Tooling Improvements**
+    *   [D] **6.7.1:** Enhance `CalculatorTool` schema with usage examples to improve LLM guidance.
+    *   [D] **6.7.2:** Add `mathjs` dependency.
+    *   [D] **6.7.3:** Refactor `CalculatorTool.ts` to use `mathjs.evaluate`, removing unsafe `Function` constructor and sanitization.
+    *   [D] **6.7.4:** Update `CalculatorTool` schema (description, add optional `scope` input, update examples for `mathjs` features).
+    *   [D] **6.7.5:** Update `CalculatorTool.test.ts` to cover `mathjs` usage (including scope, modulo, errors).
+    *   [ ] **6.7.6:** Review & complete TSDoc comments.
+    *   [ ] **6.7.7:** Implement function allowlist in `CalculatorTool` for security and predictability.
+    *   [ ] **6.7.8:** Add complex number support to `CalculatorTool` (result validation and output formatting).
+    *   [ ] **6.7.9:** Enhance error reporting in `CalculatorTool` to use specific `mathjs` error messages.
+    *   [ ] **6.7.10:** Update `CalculatorTool` schema description and examples for allowlist and complex numbers.
 
 **Cross-Cutting Concerns (Ongoing)**
 
