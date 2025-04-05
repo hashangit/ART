@@ -179,3 +179,8 @@
 12. **Fixed Output Parser Trailing Comma Issue (`src/systems/reasoning/OutputParser.ts`):**
     *   **Problem:** The parser failed to handle JSON arrays with a trailing comma immediately before the closing bracket (e.g., `[ { ... }, ]`), especially when followed by whitespace or newlines.
     *   **Fix Implemented:** Refined the regex in `parsePlanningOutput` to reliably detect and remove trailing commas (and any preceding whitespace) just before the final closing square bracket (`]`) of the extracted JSON array string, ensuring successful parsing.
+13. **Improved Calculator Tool Documentation (`src/tools/CalculatorTool.ts`):**
+    *   Updated the schema description to explicitly mention limitations regarding state management (no `ans` variable) and the specific set of allowed functions.
+    *   Added a `// TODO:` comment detailing future enhancements needed: state management for sequential calculations and expansion of the function library.
+14. **Added TODO for Enhanced Adapter Error Handling (`src/systems/reasoning/ReasoningEngine.ts`):**
+    *   Added a detailed `// TODO:` comment in the `catch` block of the `call` method. This outlines the need to implement more nuanced error handling, potentially differentiating error types and reporting recoverable errors (like network issues) as `OBSERVATION` messages instead of causing fatal planning failures.

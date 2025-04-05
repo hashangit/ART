@@ -35,7 +35,20 @@ export class ReasoningEngine implements IReasoningEngine {
       return result;
     } catch (error: any) {
       Logger.error(`ReasoningEngine encountered an error during adapter call: ${error.message}`, { error, threadId: options.threadId, traceId: options.traceId });
-      // Re-throw the error to be handled by the Agent Core
+
+      // TODO: Implement more nuanced error handling for adapter calls.
+      // Currently, *any* error from the adapter.call (including network issues,
+      // API errors, rate limits, etc.) is re-thrown, causing the Agent Core
+      // (e.g., PESAgent) to potentially treat it as a fatal planning failure for the turn.
+      // Consider:
+      // 1. Differentiating error types (e.g., transient network vs. invalid API key vs. content filtering).
+      // 2. For potentially recoverable errors (like temporary network glitches or maybe rate limits),
+      //    instead of re-throwing, formulate an 'OBSERVATION' message detailing the error.
+      //    This would allow the LLM/Agent to be aware of the issue and potentially retry or adjust its plan
+      //    in the next turn, rather than halting the current turn with a generic "Planning phase failed".
+      // 3. Define which errors should still be considered fatal and re-thrown.
+
+      // Re-throw the error to be handled by the Agent Core (current behavior)
       throw error;
     }
   }
