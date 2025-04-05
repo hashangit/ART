@@ -6,7 +6,7 @@ This document provides a brief overview of these planned future directions.
 
 ## Planned Tool Integration Methods
 
-*   **MCP (Machine-readable Capability Protocol) Support:**
+*   **MCP (Model Context Protocol) Support:**
     *   **Goal:** Allow ART agents to utilize tools exposed by external servers adhering to the MCP standard.
     *   **Vision:** Simplified integration where the `ToolRegistry` potentially handles discovery and setup, allowing developers to use MCP tools with minimal boilerplate.
 *   **LangChain Tool Adapters:**
