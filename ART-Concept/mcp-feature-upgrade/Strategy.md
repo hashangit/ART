@@ -84,8 +84,8 @@ graph LR
         CredentialsRepository -- Uses --> StorageAdapter[(Storage Adapter)]
     end
 
-    BrowserTransport -- Communicates via postMessage --> WASMWorker[Web Worker (WASM MCP Server)]
-    StdioTransport -- Communicates via stdio --> StdioProcess[(Local MCP Server Process)]
+    BrowserTransport -- Communicates via postMessage --> WASMWorker["Web Worker (WASM MCP Server)"]
+    StdioTransport -- Communicates via stdio --> StdioProcess["Local MCP Server Process"]
 
     classDef newComponent fill:#cffafe,stroke:#06b6d4,stroke-width:2px
     class McpTransportManager,McpToolDef,BrowserTransport,StdioTransport,CredentialsRepository newComponent
