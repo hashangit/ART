@@ -113,10 +113,7 @@ mean, median, std, variance, max, min, factorial, gamma, combinations, permutati
     ],
   };
 
-  // TODO: Enhance CalculatorTool:
-  // 1. Implement state management to allow referencing previous results within a single execution sequence (e.g., using 'ans' or similar).
-  // 2. Expand the library of allowed functions (e.g., add 'digits', factorial '!', statistical functions, etc.). Consider security implications.
-  /**
+   /**
    * Executes the calculator tool by evaluating the provided mathematical expression.
    * It uses a restricted scope including only allowed mathjs functions and any variables
    * passed in the `input.scope`. Handles basic number and complex number results.
