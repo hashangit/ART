@@ -4,11 +4,18 @@ import { FormattedPrompt, CallOptions } from '../../types';
 import { Logger } from '../../utils/logger';
 
 // Define expected options for the Gemini adapter constructor
+/**
+ * Configuration options required for the `GeminiAdapter`.
+ */
 export interface GeminiAdapterOptions {
+  /** Your Google AI API key (e.g., from Google AI Studio). Handle securely. */
   apiKey: string;
-  model?: string; // e.g., 'gemini-1.5-flash', 'gemini-pro'
-  apiBaseUrl?: string; // Optional override for base URL
-  apiVersion?: string; // e.g., 'v1beta'
+  /** The default Gemini model ID to use (e.g., 'gemini-1.5-flash-latest', 'gemini-pro'). Defaults to 'gemini-1.5-flash-latest' if not provided. */
+  model?: string;
+  /** Optional: Override the base URL for the Google Generative AI API. */
+  apiBaseUrl?: string;
+  /** Optional: Specify the API version to use (e.g., 'v1beta'). Defaults to 'v1beta'. */
+  apiVersion?: string;
 }
 
 // Define the structure expected by the Gemini API (generateContent)
@@ -49,6 +56,15 @@ interface GeminiGenerateContentResponse {
   };
 }
 
+/**
+ * Implements the `ProviderAdapter` interface for interacting with Google's
+ * Generative AI API (Gemini models).
+ *
+ * Handles formatting requests for the `generateContent` endpoint and parsing responses.
+ * Note: This basic version does not implement streaming or the `onThought` callback.
+ *
+ * @implements {ProviderAdapter}
+ */
 export class GeminiAdapter implements ProviderAdapter {
   readonly providerName = 'gemini';
   private apiKey: string;
@@ -56,9 +72,14 @@ export class GeminiAdapter implements ProviderAdapter {
   private apiBaseUrl: string;
   private apiVersion: string;
 
+  /**
+   * Creates an instance of the GeminiAdapter.
+   * @param options - Configuration options including the API key and optional model/baseURL/apiVersion overrides.
+   * @throws {Error} If the API key is missing.
+   */
   constructor(options: GeminiAdapterOptions) {
     if (!options.apiKey) {
-      throw new Error('Gemini API key is required.');
+      throw new Error('GeminiAdapter requires an apiKey in options.');
     }
     this.apiKey = options.apiKey;
     this.model = options.model || 'gemini-2.0-flash-lite'; // Default model
@@ -68,14 +89,19 @@ export class GeminiAdapter implements ProviderAdapter {
   }
 
   /**
-   * Calls the Google Generative AI API (Gemini).
-   * Note: Assumes prompt is a string for basic user input.
-   *       Does not yet handle complex history or system prompts.
-   *       `onThought` is not implemented (requires streaming API).
-   * @param prompt - Treated as the user message content.
-   * @param options - Call options including LLM parameters.
-   * @returns The content string from the API response.
-   */
+   /**
+    * Sends a request to the Google Generative AI API (`generateContent` endpoint).
+    *
+    * **Note:** This is a basic implementation.
+    * - It currently assumes `prompt` is the primary user message content (string) and places it in the `contents` array. It does not yet parse complex `FormattedPrompt` objects containing history or specific roles. These would need to be handled by the `PromptManager`.
+    * - Streaming and the `onThought` callback are **not implemented** in this version.
+    * - Error handling is basic; specific Gemini error reasons (e.g., safety blocks) are not parsed in detail but are logged.
+    *
+    * @param prompt - The prompt content, treated as the user message in this basic implementation.
+    * @param options - Call options, including `threadId`, `traceId`, and any Gemini-specific generation parameters (like `temperature`, `maxOutputTokens`, `topP`, `topK`) passed through.
+    * @returns A promise resolving to the combined text content from the first candidate's response parts.
+    * @throws {Error} If the API request fails (network error, invalid API key, bad request, blocked content, etc.).
+    */
   async call(prompt: FormattedPrompt, options: CallOptions): Promise<string> {
     if (typeof prompt !== 'string') {
       Logger.warn('GeminiAdapter received non-string prompt. Treating as string.');

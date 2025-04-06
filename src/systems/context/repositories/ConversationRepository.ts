@@ -5,23 +5,37 @@ import { ConversationMessage, MessageOptions } from '../../../types';
 type StoredConversationMessage = ConversationMessage & { id: string };
 
 /**
- * Repository for managing ConversationMessages using a StorageAdapter.
+ * Implements the `IConversationRepository` interface, providing methods to
+ * manage `ConversationMessage` objects using an underlying `StorageAdapter`.
+ * Handles adding and retrieving conversation history for specific threads.
+ *
+ * @implements {IConversationRepository}
  */
 export class ConversationRepository implements IConversationRepository {
   private adapter: StorageAdapter;
   private readonly collectionName = 'conversations'; // Define the collection name
 
+  /**
+   * Creates an instance of ConversationRepository.
+   * @param storageAdapter - The configured `StorageAdapter` instance that will be used for persistence.
+   */
   constructor(storageAdapter: StorageAdapter) {
+    if (!storageAdapter) {
+      throw new Error("ConversationRepository requires a valid StorageAdapter instance.");
+    }
     this.adapter = storageAdapter;
-    // Ensure the adapter is initialized (though init might be called elsewhere)
-    // It's generally better to ensure init is called at the application setup level.
-    // this.adapter.init?.();
+    // Note: Initialization of the adapter (adapter.init()) should be handled
+    // at the application setup level (e.g., within AgentFactory or createArtInstance)
+    // before the repository is used.
   }
 
   /**
-   * Adds multiple messages to the storage for a specific thread.
-   * @param threadId The ID of the thread (used for potential indexing/querying, though not strictly needed if messages have it).
-   * @param messages An array of ConversationMessage objects to add.
+   * Adds one or more `ConversationMessage` objects to the storage for a specific thread.
+   * It uses the `messageId` as the primary key for storage, assuming the adapter's collection uses 'id' as keyPath.
+   * @param threadId - The ID of the thread these messages belong to. Used for potential filtering/querying and validation.
+   * @param messages - An array of `ConversationMessage` objects to add. Each message should have a unique `messageId`.
+   * @returns A promise that resolves when all messages have been attempted to be saved.
+   * @throws {Error} Propagates errors from the storage adapter's `set` method.
    */
   async addMessages(threadId: string, messages: ConversationMessage[]): Promise<void> {
     if (!messages || messages.length === 0) {
@@ -46,11 +60,14 @@ export class ConversationRepository implements IConversationRepository {
   }
 
   /**
-   * Retrieves messages for a specific thread, with optional filtering and limiting.
-   * Note: Timestamp filtering and sorting are currently handled client-side after retrieval.
-   * @param threadId The ID of the thread to retrieve messages for.
-   * @param options Optional parameters like limit and timestamp filters.
-   * @returns A promise resolving to an array of ConversationMessages.
+   * Retrieves messages for a specific thread from the storage adapter.
+   * This implementation fetches all messages for the thread and then applies
+   * sorting, filtering (by timestamp), and limiting client-side.
+   * For performance with very large histories, adapter-level querying/indexing would be preferable.
+   * @param threadId - The ID of the thread whose messages are to be retrieved.
+   * @param options - Optional `MessageOptions` to control retrieval (limit, timestamp filters).
+   * @returns A promise resolving to an array of `ConversationMessage` objects, sorted chronologically (ascending timestamp).
+   * @throws {Error} Propagates errors from the storage adapter's `query` method.
    */
   async getMessages(threadId: string, options?: MessageOptions): Promise<ConversationMessage[]> {
     // Query the adapter for all messages matching the threadId

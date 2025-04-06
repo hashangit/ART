@@ -4,12 +4,20 @@ import { FormattedPrompt, CallOptions } from '../../types';
 import { Logger } from '../../utils/logger';
 
 // Define expected options for the OpenRouter adapter constructor
+/**
+ * Configuration options required for the `OpenRouterAdapter`.
+ */
 export interface OpenRouterAdapterOptions {
+  /** Your OpenRouter API key. Handle securely. */
   apiKey: string;
-  model: string; // Required: OpenRouter model identifier (e.g., 'google/gemini-pro', 'anthropic/claude-3-haiku')
-  apiBaseUrl?: string; // Optional override
-  siteUrl?: string; // Optional: Recommended header 'HTTP-Referer'
-  appName?: string; // Optional: Recommended header 'X-Title'
+  /** The required OpenRouter model identifier string (e.g., 'google/gemini-pro', 'anthropic/claude-3-haiku', 'openai/gpt-4o'). This specifies which underlying model OpenRouter should use. */
+  model: string;
+  /** Optional: Override the base URL for the OpenRouter API. Defaults to 'https://openrouter.ai/api/v1'. */
+  apiBaseUrl?: string;
+  /** Optional: Your application's site URL, sent as the 'HTTP-Referer' header (recommended by OpenRouter). */
+  siteUrl?: string;
+  /** Optional: Your application's name, sent as the 'X-Title' header (recommended by OpenRouter). */
+  appName?: string;
 }
 
 // Re-use OpenAI-compatible structures (assuming OpenRouter adheres closely)
@@ -45,6 +53,15 @@ interface OpenAIChatCompletionResponse {
   };
 }
 
+/**
+ * Implements the `ProviderAdapter` interface for interacting with the OpenRouter API,
+ * which provides access to various LLMs through an OpenAI-compatible interface.
+ *
+ * Handles formatting requests and parsing responses for OpenRouter's chat completions endpoint.
+ * Note: This basic version does not implement streaming or the `onThought` callback.
+ *
+ * @implements {ProviderAdapter}
+ */
 export class OpenRouterAdapter implements ProviderAdapter {
   readonly providerName = 'openrouter';
   private apiKey: string;
@@ -53,13 +70,17 @@ export class OpenRouterAdapter implements ProviderAdapter {
   private siteUrl?: string;
   private appName?: string;
 
+  /**
+   * Creates an instance of the OpenRouterAdapter.
+   * @param options - Configuration options including the API key, the specific OpenRouter model identifier, and optional headers/baseURL.
+   * @throws {Error} If the API key or model identifier is missing.
+   */
   constructor(options: OpenRouterAdapterOptions) {
     if (!options.apiKey) {
-      throw new Error('OpenRouter API key is required.');
+      throw new Error('OpenRouterAdapter requires an apiKey in options.');
     }
-     if (!options.model) {
-      // Model is required for OpenRouter as it specifies the underlying provider/model
-      throw new Error('OpenRouter model identifier is required (e.g., google/gemini-pro).');
+    if (!options.model) {
+      throw new Error('OpenRouterAdapter requires a model identifier in options (e.g., \'google/gemini-pro\').');
     }
     this.apiKey = options.apiKey;
     this.model = options.model;
@@ -70,14 +91,20 @@ export class OpenRouterAdapter implements ProviderAdapter {
   }
 
   /**
-   * Calls the OpenRouter Chat Completions API (OpenAI compatible).
-   * Note: Assumes prompt is a string for basic user input.
-   *       Does not yet handle complex history or system prompts robustly.
-   *       `onThought` is not implemented (requires streaming API).
-   * @param prompt - Treated as the user message content.
-   * @param options - Call options including LLM parameters.
-   * @returns The content string from the API response.
-   */
+   /**
+    * Sends a request to the OpenRouter Chat Completions API endpoint.
+    * Uses an OpenAI-compatible payload structure.
+    *
+    * **Note:** This is a basic implementation.
+    * - It currently assumes `prompt` is the primary user message content (string). It does not yet parse complex `FormattedPrompt` objects containing history or system roles directly. These would need to be handled by the `PromptManager`.
+    * - Streaming and the `onThought` callback are **not implemented** in this version.
+    * - Includes recommended OpenRouter headers (`HTTP-Referer`, `X-Title`) if configured.
+    *
+    * @param prompt - The prompt content, treated as the user message in this basic implementation.
+    * @param options - Call options, including `threadId`, `traceId`, and any OpenAI-compatible generation parameters (like `temperature`, `max_tokens`, `stop`).
+    * @returns A promise resolving to the content string of the assistant's response.
+    * @throws {Error} If the API request fails (network error, invalid API key, bad request, etc.).
+    */
   async call(prompt: FormattedPrompt, options: CallOptions): Promise<string> {
     if (typeof prompt !== 'string') {
       Logger.warn('OpenRouterAdapter received non-string prompt. Treating as string.');

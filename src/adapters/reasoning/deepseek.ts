@@ -4,10 +4,16 @@ import { FormattedPrompt, CallOptions } from '../../types';
 import { Logger } from '../../utils/logger';
 
 // Define expected options for the DeepSeek adapter constructor
+/**
+ * Configuration options required for the `DeepSeekAdapter`.
+ */
 export interface DeepSeekAdapterOptions {
+  /** Your DeepSeek API key. Handle securely. */
   apiKey: string;
-  model?: string; // e.g., 'deepseek-chat', 'deepseek-coder'
-  apiBaseUrl?: string; // Optional override
+  /** The default DeepSeek model ID to use (e.g., 'deepseek-chat', 'deepseek-coder'). Defaults to 'deepseek-chat' if not provided. */
+  model?: string;
+  /** Optional: Override the base URL for the DeepSeek API. Defaults to 'https://api.deepseek.com/v1'. */
+  apiBaseUrl?: string;
 }
 
 // Re-use OpenAI-compatible structures
@@ -41,15 +47,29 @@ interface OpenAIChatCompletionResponse {
   };
 }
 
+/**
+ * Implements the `ProviderAdapter` interface for interacting with the DeepSeek API,
+ * which uses an OpenAI-compatible Chat Completions endpoint.
+ *
+ * Handles formatting requests and parsing responses for DeepSeek models.
+ * Note: This basic version does not implement streaming or the `onThought` callback.
+ *
+ * @implements {ProviderAdapter}
+ */
 export class DeepSeekAdapter implements ProviderAdapter {
   readonly providerName = 'deepseek';
   private apiKey: string;
   private model: string;
   private apiBaseUrl: string;
 
+  /**
+   * Creates an instance of the DeepSeekAdapter.
+   * @param options - Configuration options including the API key and optional model/baseURL overrides.
+   * @throws {Error} If the API key is missing.
+   */
   constructor(options: DeepSeekAdapterOptions) {
     if (!options.apiKey) {
-      throw new Error('DeepSeek API key is required.');
+      throw new Error('DeepSeekAdapter requires an apiKey in options.');
     }
     this.apiKey = options.apiKey;
     this.model = options.model || 'deepseek-chat'; // Default model
@@ -58,14 +78,19 @@ export class DeepSeekAdapter implements ProviderAdapter {
   }
 
   /**
-   * Calls the DeepSeek Chat Completions API (OpenAI compatible).
-   * Note: Assumes prompt is a string for basic user input.
-   *       Does not yet handle complex history or system prompts robustly.
-   *       `onThought` is not implemented (requires streaming API).
-   * @param prompt - Treated as the user message content.
-   * @param options - Call options including LLM parameters.
-   * @returns The content string from the API response.
-   */
+   /**
+    * Sends a request to the DeepSeek Chat Completions API endpoint.
+    * Uses an OpenAI-compatible payload structure.
+    *
+    * **Note:** This is a basic implementation.
+    * - It currently assumes `prompt` is the primary user message content (string). It does not yet parse complex `FormattedPrompt` objects containing history or system roles directly. These would need to be handled by the `PromptManager`.
+    * - Streaming and the `onThought` callback are **not implemented** in this version.
+    *
+    * @param prompt - The prompt content, treated as the user message in this basic implementation.
+    * @param options - Call options, including `threadId`, `traceId`, and any OpenAI-compatible generation parameters (like `temperature`, `max_tokens`, `stop`).
+    * @returns A promise resolving to the content string of the assistant's response.
+    * @throws {Error} If the API request fails (network error, invalid API key, bad request, etc.).
+    */
   async call(prompt: FormattedPrompt, options: CallOptions): Promise<string> {
     if (typeof prompt !== 'string') {
       Logger.warn('DeepSeekAdapter received non-string prompt. Treating as string.');

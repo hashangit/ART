@@ -4,11 +4,18 @@ import { FormattedPrompt, CallOptions } from '../../types';
 import { Logger } from '../../utils/logger';
 
 // Define expected options for the Anthropic adapter constructor
+/**
+ * Configuration options required for the `AnthropicAdapter`.
+ */
 export interface AnthropicAdapterOptions {
+  /** Your Anthropic API key. Handle securely. */
   apiKey: string;
-  model?: string; // e.g., 'claude-3-opus-20240229', 'claude-3-sonnet-20240229'
-  apiVersion?: string; // e.g., '2023-06-01'
-  apiBaseUrl?: string; // Optional override
+  /** The default Anthropic model ID to use (e.g., 'claude-3-opus-20240229', 'claude-3-5-sonnet-20240620'). Defaults to 'claude-3-haiku-20240307' if not provided. */
+  model?: string;
+  /** Optional: The Anthropic API version to target (e.g., '2023-06-01'). Defaults to '2023-06-01'. */
+  apiVersion?: string;
+  /** Optional: Override the base URL for the Anthropic API. */
+  apiBaseUrl?: string;
 }
 
 // Define the structure expected by the Anthropic Messages API
@@ -40,6 +47,15 @@ interface AnthropicMessagesResponse {
   };
 }
 
+/**
+ * Implements the `ProviderAdapter` interface for interacting with Anthropic's
+ * Messages API (Claude models).
+ *
+ * Handles formatting requests and parsing responses for Anthropic.
+ * Note: This basic version does not implement streaming or the `onThought` callback.
+ *
+ * @implements {ProviderAdapter}
+ */
 export class AnthropicAdapter implements ProviderAdapter {
   readonly providerName = 'anthropic';
   private apiKey: string;
@@ -50,9 +66,14 @@ export class AnthropicAdapter implements ProviderAdapter {
   // Default max tokens if not provided in options, as Anthropic requires it
   private defaultMaxTokens = 1024;
 
+  /**
+   * Creates an instance of the AnthropicAdapter.
+   * @param options - Configuration options including the API key and optional model/apiVersion/baseURL overrides.
+   * @throws {Error} If the API key is missing.
+   */
   constructor(options: AnthropicAdapterOptions) {
     if (!options.apiKey) {
-      throw new Error('Anthropic API key is required.');
+      throw new Error('AnthropicAdapter requires an apiKey in options.');
     }
     this.apiKey = options.apiKey;
     // Common default model, user should override if needed
@@ -63,14 +84,20 @@ export class AnthropicAdapter implements ProviderAdapter {
   }
 
   /**
-   * Calls the Anthropic Messages API.
-   * Note: Assumes prompt is a string for basic user input.
-   *       Does not yet handle complex history or system prompts robustly.
-   *       `onThought` is not implemented (requires streaming API).
-   * @param prompt - Treated as the user message content.
-   * @param options - Call options including LLM parameters. Requires max_tokens/maxOutputTokens.
-   * @returns The content string from the API response.
-   */
+   /**
+    * Sends a request to the Anthropic Messages API.
+    *
+    * **Note:** This is a basic implementation.
+    * - It currently assumes `prompt` is the primary user message content (string) and places it in the `messages` array. It does not yet parse complex `FormattedPrompt` objects containing history or specific roles. These would need to be handled by the `PromptManager`.
+    * - It supports passing a `system` prompt via `options.system` or `options.system_prompt`.
+    * - Streaming and the `onThought` callback are **not implemented** in this version.
+    * - Requires `max_tokens` (or alias) in the options, as it's mandatory for the Anthropic API.
+    *
+    * @param prompt - The prompt content, treated as the user message in this basic implementation.
+    * @param options - Call options, including `threadId`, `traceId`, `system` prompt, and any Anthropic-specific generation parameters (like `temperature`, `max_tokens`, `top_p`, `top_k`).
+    * @returns A promise resolving to the text content from the assistant's response.
+    * @throws {Error} If the API request fails (network error, invalid API key, bad request, etc.) or if `max_tokens` is missing.
+    */
   async call(prompt: FormattedPrompt, options: CallOptions): Promise<string> {
     if (typeof prompt !== 'string') {
       Logger.warn('AnthropicAdapter received non-string prompt. Treating as string.');
