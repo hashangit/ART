@@ -6,7 +6,7 @@
 
 # Interface: ReasoningEngine
 
-Defined in: [core/interfaces.ts:40](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/core/interfaces.ts#L40)
+Defined in: [core/interfaces.ts:40](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L40)
 
 Interface for the component responsible for interacting with LLMs.
 
@@ -20,7 +20,7 @@ Interface for the component responsible for interacting with LLMs.
 
 > **call**(`prompt`, `options`): `Promise`\<`string`\>
 
-Defined in: [core/interfaces.ts:49](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/core/interfaces.ts#L49)
+Defined in: [core/interfaces.ts:49](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L49)
 
 Executes a call to the configured Large Language Model (LLM).
 This method is typically implemented by a specific `ProviderAdapter`.

@@ -6,7 +6,7 @@
 
 # Class: OpenAIAdapter
 
-Defined in: [adapters/reasoning/openai.ts:57](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/openai.ts#L57)
+Defined in: [adapters/reasoning/openai.ts:57](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/openai.ts#L57)
 
 Implements the `ProviderAdapter` interface for interacting with OpenAI's
 Chat Completions API (compatible models like GPT-3.5, GPT-4, GPT-4o).
@@ -26,7 +26,7 @@ Note: This basic version does not implement streaming or the `onThought` callbac
 
 > **new OpenAIAdapter**(`options`): `OpenAIAdapter`
 
-Defined in: [adapters/reasoning/openai.ts:68](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/openai.ts#L68)
+Defined in: [adapters/reasoning/openai.ts:68](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/openai.ts#L68)
 
 Creates an instance of the OpenAIAdapter.
 
@@ -52,7 +52,7 @@ If the API key is missing.
 
 > `readonly` **providerName**: `"openai"` = `'openai'`
 
-Defined in: [adapters/reasoning/openai.ts:58](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/openai.ts#L58)
+Defined in: [adapters/reasoning/openai.ts:58](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/openai.ts#L58)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -66,7 +66,7 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 > **call**(`prompt`, `options`): `Promise`\<`string`\>
 
-Defined in: [adapters/reasoning/openai.ts:92](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/openai.ts#L92)
+Defined in: [adapters/reasoning/openai.ts:92](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/openai.ts#L92)
 
 /**
  * Sends a request to the OpenAI Chat Completions API.

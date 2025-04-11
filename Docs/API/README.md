@@ -8,6 +8,7 @@
 
 - [LogLevel](enumerations/LogLevel.md)
 - [MessageRole](enumerations/MessageRole.md)
+- [ModelCapability](enumerations/ModelCapability.md)
 - [ObservationType](enumerations/ObservationType.md)
 
 ## Classes

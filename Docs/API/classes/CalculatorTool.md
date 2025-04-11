@@ -6,7 +6,7 @@
 
 # Class: CalculatorTool
 
-Defined in: [tools/CalculatorTool.ts:62](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/tools/CalculatorTool.ts#L62)
+Defined in: [tools/CalculatorTool.ts:62](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/tools/CalculatorTool.ts#L62)
 
 An ART Framework tool that safely evaluates mathematical expressions using the mathjs library.
 It supports basic arithmetic, variables via a scope, complex numbers, and a predefined list of safe functions.
@@ -33,7 +33,7 @@ It supports basic arithmetic, variables via a scope, complex numbers, and a pred
 
 > `readonly` **schema**: [`ToolSchema`](../interfaces/ToolSchema.md)
 
-Defined in: [tools/CalculatorTool.ts:74](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/tools/CalculatorTool.ts#L74)
+Defined in: [tools/CalculatorTool.ts:74](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/tools/CalculatorTool.ts#L74)
 
 The schema definition for the CalculatorTool, conforming to the `ToolSchema` interface.
 It defines the tool's name, description, input parameters (expression and optional scope),
@@ -49,7 +49,7 @@ and provides examples for the LLM.
 
 > `readonly` `static` **toolName**: `"calculator"` = `"calculator"`
 
-Defined in: [tools/CalculatorTool.ts:64](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/tools/CalculatorTool.ts#L64)
+Defined in: [tools/CalculatorTool.ts:64](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/tools/CalculatorTool.ts#L64)
 
 The unique name identifier for this tool.
 
@@ -59,7 +59,7 @@ The unique name identifier for this tool.
 
 > **execute**(`input`, `context`): `Promise`\<[`ToolResult`](../interfaces/ToolResult.md)\>
 
-Defined in: [tools/CalculatorTool.ts:130](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/tools/CalculatorTool.ts#L130)
+Defined in: [tools/CalculatorTool.ts:127](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/tools/CalculatorTool.ts#L127)
 
 Executes the calculator tool by evaluating the provided mathematical expression.
 It uses a restricted scope including only allowed mathjs functions and any variables

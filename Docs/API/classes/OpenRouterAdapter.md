@@ -6,7 +6,7 @@
 
 # Class: OpenRouterAdapter
 
-Defined in: [adapters/reasoning/openrouter.ts:65](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/openrouter.ts#L65)
+Defined in: [adapters/reasoning/openrouter.ts:65](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/openrouter.ts#L65)
 
 Implements the `ProviderAdapter` interface for interacting with the OpenRouter API,
 which provides access to various LLMs through an OpenAI-compatible interface.
@@ -26,7 +26,7 @@ Note: This basic version does not implement streaming or the `onThought` callbac
 
 > **new OpenRouterAdapter**(`options`): `OpenRouterAdapter`
 
-Defined in: [adapters/reasoning/openrouter.ts:78](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/openrouter.ts#L78)
+Defined in: [adapters/reasoning/openrouter.ts:78](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/openrouter.ts#L78)
 
 Creates an instance of the OpenRouterAdapter.
 
@@ -52,7 +52,7 @@ If the API key or model identifier is missing.
 
 > `readonly` **providerName**: `"openrouter"` = `'openrouter'`
 
-Defined in: [adapters/reasoning/openrouter.ts:66](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/openrouter.ts#L66)
+Defined in: [adapters/reasoning/openrouter.ts:66](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/openrouter.ts#L66)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -66,7 +66,7 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 > **call**(`prompt`, `options`): `Promise`\<`string`\>
 
-Defined in: [adapters/reasoning/openrouter.ts:108](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/openrouter.ts#L108)
+Defined in: [adapters/reasoning/openrouter.ts:108](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/openrouter.ts#L108)
 
 /**
  * Sends a request to the OpenRouter Chat Completions API endpoint.

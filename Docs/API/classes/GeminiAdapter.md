@@ -6,7 +6,7 @@
 
 # Class: GeminiAdapter
 
-Defined in: [adapters/reasoning/gemini.ts:68](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/gemini.ts#L68)
+Defined in: [adapters/reasoning/gemini.ts:68](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/gemini.ts#L68)
 
 Implements the `ProviderAdapter` interface for interacting with Google's
 Generative AI API (Gemini models).
@@ -26,7 +26,7 @@ Note: This basic version does not implement streaming or the `onThought` callbac
 
 > **new GeminiAdapter**(`options`): `GeminiAdapter`
 
-Defined in: [adapters/reasoning/gemini.ts:80](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/gemini.ts#L80)
+Defined in: [adapters/reasoning/gemini.ts:80](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/gemini.ts#L80)
 
 Creates an instance of the GeminiAdapter.
 
@@ -52,7 +52,7 @@ If the API key is missing.
 
 > `readonly` **providerName**: `"gemini"` = `'gemini'`
 
-Defined in: [adapters/reasoning/gemini.ts:69](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/gemini.ts#L69)
+Defined in: [adapters/reasoning/gemini.ts:69](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/gemini.ts#L69)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -66,7 +66,7 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 > **call**(`prompt`, `options`): `Promise`\<`string`\>
 
-Defined in: [adapters/reasoning/gemini.ts:105](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/gemini.ts#L105)
+Defined in: [adapters/reasoning/gemini.ts:105](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/gemini.ts#L105)
 
 /**
  * Sends a request to the Google Generative AI API (`generateContent` endpoint).

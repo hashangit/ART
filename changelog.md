@@ -1,5 +1,14 @@
 ## Changelog
 
+### April 11, 2025: Model Capability Specification in PESAgent
+
+1.  **Added `ModelCapability` Enum (`src/types/index.ts`):** Defined and exported a new enum `ModelCapability` (including `TEXT`, `VISION`, `REASONING`, etc.) to represent different LLM capabilities.
+2.  **Updated `PESAgent` for Capability Definition (`src/core/agents/pes-agent.ts`):**
+    *   Modified the agent to import `ModelCapability`.
+    *   Updated the Planning stage (Stage 3) to explicitly set `requiredCapabilities: [ModelCapability.REASONING]` in the `CallOptions` passed to the `ReasoningEngine`.
+    *   Updated the Synthesis stage (Stage 5) to explicitly set `requiredCapabilities: [ModelCapability.TEXT]` in the `CallOptions` passed to the `ReasoningEngine`.
+    *   Updated TSDoc comments within the `PESAgent` class and `process` method to reflect the new capability specification logic.
+
 ### April 4, 2025: Sample CLI App Setup & Framework Fixes
 
 1.  **Reviewed Initial State:** Examined `sample-app/README.md` plan and initial `sample-app/src/index.ts`.

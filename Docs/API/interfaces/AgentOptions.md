@@ -6,7 +6,7 @@
 
 # Interface: AgentOptions
 
-Defined in: [types/index.ts:212](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L212)
+Defined in: [types/index.ts:232](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L232)
 
 Options to override agent behavior at runtime.
 
@@ -16,7 +16,7 @@ Options to override agent behavior at runtime.
 
 > `optional` **forceTools**: `string`[]
 
-Defined in: [types/index.ts:216](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L216)
+Defined in: [types/index.ts:236](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L236)
 
 Force the use of specific tools, potentially overriding the thread's `enabledTools` for this call (use with caution).
 
@@ -26,7 +26,7 @@ Force the use of specific tools, potentially overriding the thread's `enabledToo
 
 > `optional` **llmParams**: `Record`\<`string`, `any`\>
 
-Defined in: [types/index.ts:214](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L214)
+Defined in: [types/index.ts:234](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L234)
 
 Override specific LLM parameters (e.g., temperature, max_tokens) for this call only.
 
@@ -36,7 +36,7 @@ Override specific LLM parameters (e.g., temperature, max_tokens) for this call o
 
 > `optional` **overrideModel**: `object`
 
-Defined in: [types/index.ts:218](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L218)
+Defined in: [types/index.ts:238](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L238)
 
 Specify a particular reasoning model to use for this call, overriding the thread's default.
 

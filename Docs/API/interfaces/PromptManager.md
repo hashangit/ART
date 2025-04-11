@@ -6,7 +6,7 @@
 
 # Interface: PromptManager
 
-Defined in: [core/interfaces.ts:55](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/core/interfaces.ts#L55)
+Defined in: [core/interfaces.ts:55](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L55)
 
 Interface for managing and constructing prompts for the LLM.
 
@@ -16,7 +16,7 @@ Interface for managing and constructing prompts for the LLM.
 
 > **createPlanningPrompt**(`query`, `history`, `systemPrompt`, `availableTools`, `threadContext`): `Promise`\<[`FormattedPrompt`](../type-aliases/FormattedPrompt.md)\>
 
-Defined in: [core/interfaces.ts:66](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/core/interfaces.ts#L66)
+Defined in: [core/interfaces.ts:66](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L66)
 
 Constructs the prompt specifically for the planning phase of an agent's execution cycle (e.g., in PES).
 This prompt typically instructs the LLM to understand the query, form a plan, and identify necessary tool calls.
@@ -65,7 +65,7 @@ A promise resolving to the formatted prompt (string or provider-specific object)
 
 > **createSynthesisPrompt**(`query`, `intent`, `plan`, `toolResults`, `history`, `systemPrompt`, `threadContext`): `Promise`\<[`FormattedPrompt`](../type-aliases/FormattedPrompt.md)\>
 
-Defined in: [core/interfaces.ts:86](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/core/interfaces.ts#L86)
+Defined in: [core/interfaces.ts:86](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L86)
 
 Constructs the prompt specifically for the synthesis phase of an agent's execution cycle (e.g., in PES).
 This prompt typically provides the LLM with the original query, the plan, tool results, and history, asking it to generate the final user-facing response.

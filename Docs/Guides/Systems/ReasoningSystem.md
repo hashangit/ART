@@ -86,22 +86,27 @@ interface ReasoningEngine {
   ): Promise<string>; // Returns raw LLM response string
 }
 
+// Note: ModelCapability enum would be imported in actual code
+// import { ModelCapability } from 'art-framework';
+
 interface CallOptions {
   threadId: string; // Mandatory for context/config lookup
   traceId?: string;
   userId?: string;
   sessionId?: string;
+  // Optional: Specify the capabilities required from the LLM for this specific call
+  requiredCapabilities?: ModelCapability[];
   // Callback for streaming intermediate thoughts
-  onThought?: (thought: string) => void; 
+  onThought?: (thought: string) => void;
   // Provider-specific parameters (model, temperature, max_tokens, etc.)
   // These are often sourced from the ThreadConfig via StateManager
-  [key: string]: any; 
+  [key: string]: any;
 }
 ```
 
 The `call` method:
 *   Retrieves the appropriate `ProviderAdapter` based on the `threadId`'s configuration (via `StateManager`).
-*   Passes the `FormattedPrompt` and `CallOptions` to the adapter.
+*   Passes the `FormattedPrompt` and `CallOptions` to the adapter. The `CallOptions` may include `requiredCapabilities` specified by the Agent Core (e.g., `PESAgent`) to guide model selection if the underlying system supports it.
 *   Handles the `onThought` callback, triggering it when the LLM streams intermediate reasoning steps (often enclosed in `<thoughts>` tags in the raw response).
 *   Returns the final, complete, raw string response from the LLM.
 

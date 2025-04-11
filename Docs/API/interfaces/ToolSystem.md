@@ -6,7 +6,7 @@
 
 # Interface: ToolSystem
 
-Defined in: [core/interfaces.ts:180](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/core/interfaces.ts#L180)
+Defined in: [core/interfaces.ts:180](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L180)
 
 Interface for the system responsible for orchestrating tool execution.
 
@@ -16,7 +16,7 @@ Interface for the system responsible for orchestrating tool execution.
 
 > **executeTools**(`toolCalls`, `threadId`, `traceId`?): `Promise`\<[`ToolResult`](ToolResult.md)[]\>
 
-Defined in: [core/interfaces.ts:189](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/core/interfaces.ts#L189)
+Defined in: [core/interfaces.ts:189](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L189)
 
 Orchestrates the execution of a sequence of tool calls determined during the planning phase.
 This involves verifying permissions, validating inputs, calling the tool executor, and recording observations.

@@ -49,6 +49,26 @@ export enum ObservationType {
   STATE_UPDATE = 'STATE_UPDATE',
 }
 
+// --- NEW ENUM DEFINITION ---
+/**
+ * Represents the different capabilities a model might possess.
+ * Used for model selection and validation.
+ */
+export enum ModelCapability {
+  TEXT = 'text',         // Basic text generation/understanding
+  VISION = 'vision',       // Ability to process and understand images
+  STREAMING = 'streaming',   // Supports streaming responses chunk by chunk
+  TOOL_USE = 'tool_use',    // Capable of using tools/function calling
+  RAG = 'rag',           // Built-in or optimized for Retrieval-Augmented Generation
+  CODE = 'code',         // Specialized in understanding or generating code
+  REASONING = 'reasoning'  // Advanced reasoning, planning, complex instruction following
+}
+// --- END NEW ENUM DEFINITION ---
+
+
+/**
+}
+
 /**
  * Represents a recorded event during the agent's execution.
  */

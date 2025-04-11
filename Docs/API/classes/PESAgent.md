@@ -6,12 +6,13 @@
 
 # Class: PESAgent
 
-Defined in: [core/agents/pes-agent.ts:60](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/core/agents/pes-agent.ts#L60)
+Defined in: [core/agents/pes-agent.ts:62](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/agents/pes-agent.ts#L62)
 
-Implements the Plan-Execute-Synthesize (PES) agent orchestration logic as defined
-in the ART framework v0.2.4. This agent follows a structured 6-stage process
-to handle user queries, interact with LLMs and tools, and generate a final response.
+Implements the Plan-Execute-Synthesize (PES) agent orchestration logic.
+This agent follows a structured 6-stage process to handle user queries,
+interact with LLMs and tools, and generate a final response.
 It relies on various injected subsystems (managers, registries, etc.) to perform its tasks.
+**Crucially, it determines the specific LLM capabilities required for its Planning and Synthesis stages.**
 
 ## Implements
 
@@ -23,7 +24,7 @@ It relies on various injected subsystems (managers, registries, etc.) to perform
 
 > **new PESAgent**(`dependencies`): `PESAgent`
 
-Defined in: [core/agents/pes-agent.ts:67](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/core/agents/pes-agent.ts#L67)
+Defined in: [core/agents/pes-agent.ts:69](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/agents/pes-agent.ts#L69)
 
 Creates an instance of the PESAgent.
 
@@ -45,16 +46,16 @@ An object containing instances of all required subsystems (managers, registries,
 
 > **process**(`props`): `Promise`\<[`AgentFinalResponse`](../interfaces/AgentFinalResponse.md)\>
 
-Defined in: [core/agents/pes-agent.ts:86](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/core/agents/pes-agent.ts#L86)
+Defined in: [core/agents/pes-agent.ts:88](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/agents/pes-agent.ts#L88)
 
 Executes the full Plan-Execute-Synthesize cycle for a given user query.
 
 Stages:
 1. Initiation & Config Loading: Loads thread-specific settings.
 2. Planning Context Assembly: Gathers history and tool schemas.
-3. Planning Call: First LLM call to generate intent, plan, and tool calls.
+3. Planning Call: First LLM call to generate intent, plan, and tool calls. **Determines the required capabilities (e.g., `REASONING`) for planning and includes them in the options passed to the `ReasoningEngine`.**
 4. Tool Execution: Executes planned tool calls via the ToolSystem.
-5. Synthesis Call: Second LLM call using plan and tool results to generate the final response.
+5. Synthesis Call: Second LLM call using plan and tool results to generate the final response. **Determines the required capabilities (e.g., `TEXT`, potentially `VISION` if applicable based on tool results) for synthesis and includes them in the options passed to the `ReasoningEngine`.**
 6. Finalization: Saves messages and state, returns the final response.
 
 #### Parameters

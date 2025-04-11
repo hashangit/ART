@@ -6,7 +6,7 @@
 
 # Interface: FilterOptions
 
-Defined in: [types/index.ts:298](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L298)
+Defined in: [types/index.ts:318](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L318)
 
 Options for filtering data retrieved from storage.
 Structure depends heavily on the underlying adapter's capabilities.
@@ -17,7 +17,7 @@ Structure depends heavily on the underlying adapter's capabilities.
 
 > `optional` **filter**: `Record`\<`string`, `any`\>
 
-Defined in: [types/index.ts:300](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L300)
+Defined in: [types/index.ts:320](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L320)
 
 An object defining filter criteria (e.g., `{ threadId: 'abc', type: 'TOOL_EXECUTION' }`). Structure may depend on adapter capabilities.
 
@@ -27,7 +27,7 @@ An object defining filter criteria (e.g., `{ threadId: 'abc', type: 'TOOL_EXECUT
 
 > `optional` **limit**: `number`
 
-Defined in: [types/index.ts:304](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L304)
+Defined in: [types/index.ts:324](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L324)
 
 The maximum number of records to return.
 
@@ -37,7 +37,7 @@ The maximum number of records to return.
 
 > `optional` **skip**: `number`
 
-Defined in: [types/index.ts:306](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L306)
+Defined in: [types/index.ts:326](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L326)
 
 The number of records to skip (for pagination).
 
@@ -47,6 +47,6 @@ The number of records to skip (for pagination).
 
 > `optional` **sort**: `Record`\<`string`, `"asc"` \| `"desc"`\>
 
-Defined in: [types/index.ts:302](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L302)
+Defined in: [types/index.ts:322](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L322)
 
 An object defining sorting criteria (e.g., `{ timestamp: 'desc' }`).
