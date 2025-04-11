@@ -6,7 +6,7 @@
 
 # Interface: ExecutionContext
 
-Defined in: [types/index.ts:259](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L259)
+Defined in: [types/index.ts:279](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L279)
 
 Context provided to a tool during its execution.
 
@@ -16,7 +16,7 @@ Context provided to a tool during its execution.
 
 > **threadId**: `string`
 
-Defined in: [types/index.ts:261](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L261)
+Defined in: [types/index.ts:281](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L281)
 
 The ID of the thread in which the tool is being executed.
 
@@ -26,7 +26,7 @@ The ID of the thread in which the tool is being executed.
 
 > `optional` **traceId**: `string`
 
-Defined in: [types/index.ts:263](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L263)
+Defined in: [types/index.ts:283](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L283)
 
 The trace ID for this execution cycle, if available.
 
@@ -36,6 +36,6 @@ The trace ID for this execution cycle, if available.
 
 > `optional` **userId**: `string`
 
-Defined in: [types/index.ts:265](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L265)
+Defined in: [types/index.ts:285](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L285)
 
 The user ID associated with the execution, if available.

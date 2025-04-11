@@ -8,7 +8,7 @@
 
 > **FormattedPrompt** = `string` \| `object` \| `object`[]
 
-Defined in: [types/index.ts:292](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L292)
+Defined in: [types/index.ts:312](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L312)
 
 Represents the prompt data formatted for a specific LLM provider.
 Can be a simple string or a complex object (e.g., for OpenAI Chat Completion API).

@@ -6,7 +6,7 @@
 
 # Interface: ProviderAdapter
 
-Defined in: [core/interfaces.ts:128](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/core/interfaces.ts#L128)
+Defined in: [core/interfaces.ts:128](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L128)
 
 Base interface for LLM Provider Adapters, extending the core ReasoningEngine.
 Implementations will handle provider-specific API calls, authentication, etc.
@@ -21,7 +21,7 @@ Implementations will handle provider-specific API calls, authentication, etc.
 
 > `readonly` **providerName**: `string`
 
-Defined in: [core/interfaces.ts:132](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/core/interfaces.ts#L132)
+Defined in: [core/interfaces.ts:132](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L132)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -31,7 +31,7 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 > **call**(`prompt`, `options`): `Promise`\<`string`\>
 
-Defined in: [core/interfaces.ts:49](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/core/interfaces.ts#L49)
+Defined in: [core/interfaces.ts:49](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L49)
 
 Executes a call to the configured Large Language Model (LLM).
 This method is typically implemented by a specific `ProviderAdapter`.

@@ -6,7 +6,7 @@
 
 # Interface: ThreadContext
 
-Defined in: [types/index.ts:182](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L182)
+Defined in: [types/index.ts:202](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L202)
 
 Encapsulates the configuration and state for a specific thread.
 
@@ -16,7 +16,7 @@ Encapsulates the configuration and state for a specific thread.
 
 > **config**: [`ThreadConfig`](ThreadConfig.md)
 
-Defined in: [types/index.ts:184](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L184)
+Defined in: [types/index.ts:204](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L204)
 
 The configuration settings (`ThreadConfig`) currently active for the thread.
 
@@ -26,6 +26,6 @@ The configuration settings (`ThreadConfig`) currently active for the thread.
 
 > **state**: `null` \| [`AgentState`](AgentState.md)
 
-Defined in: [types/index.ts:186](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L186)
+Defined in: [types/index.ts:206](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L206)
 
 The persistent state (`AgentState`) associated with the thread, or `null` if no state exists.

@@ -6,7 +6,7 @@
 
 # Interface: CallOptions
 
-Defined in: [types/index.ts:273](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L273)
+Defined in: [types/index.ts:293](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L293)
 
 Options for configuring an LLM call.
 
@@ -22,7 +22,7 @@ Additional key-value pairs representing provider-specific parameters (e.g., `tem
 
 > `optional` **onThought**: (`thought`) => `void`
 
-Defined in: [types/index.ts:283](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L283)
+Defined in: [types/index.ts:303](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L303)
 
 An optional callback function invoked when the LLM streams intermediate 'thoughts' or reasoning steps.
 
@@ -42,7 +42,7 @@ An optional callback function invoked when the LLM streams intermediate 'thought
 
 > `optional` **sessionId**: `string`
 
-Defined in: [types/index.ts:281](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L281)
+Defined in: [types/index.ts:301](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L301)
 
 Optional session ID.
 
@@ -52,7 +52,7 @@ Optional session ID.
 
 > **threadId**: `string`
 
-Defined in: [types/index.ts:275](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L275)
+Defined in: [types/index.ts:295](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L295)
 
 The mandatory thread ID, used by the ReasoningEngine to fetch thread-specific configuration (e.g., model, params) via StateManager.
 
@@ -62,7 +62,7 @@ The mandatory thread ID, used by the ReasoningEngine to fetch thread-specific co
 
 > `optional` **traceId**: `string`
 
-Defined in: [types/index.ts:277](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L277)
+Defined in: [types/index.ts:297](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L297)
 
 Optional trace ID for correlation.
 
@@ -72,6 +72,6 @@ Optional trace ID for correlation.
 
 > `optional` **userId**: `string`
 
-Defined in: [types/index.ts:279](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/types/index.ts#L279)
+Defined in: [types/index.ts:299](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L299)
 
 Optional user ID.

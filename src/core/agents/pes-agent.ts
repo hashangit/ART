@@ -23,6 +23,7 @@ import {
     ExecutionMetadata,
     MessageRole,
     CallOptions,
+    ModelCapability, // <-- Added import
     // Omit removed, using built-in implicitly
 } from '../../types';
 import { generateUUID } from '../../utils/uuid';
@@ -52,10 +53,11 @@ interface PESAgentDependencies {
 }
 
 /**
- * Implements the Plan-Execute-Synthesize (PES) agent orchestration logic as defined
- * in the ART framework v0.2.4. This agent follows a structured 6-stage process
- * to handle user queries, interact with LLMs and tools, and generate a final response.
+ * Implements the Plan-Execute-Synthesize (PES) agent orchestration logic.
+ * This agent follows a structured 6-stage process to handle user queries,
+ * interact with LLMs and tools, and generate a final response.
  * It relies on various injected subsystems (managers, registries, etc.) to perform its tasks.
+ * **Crucially, it determines the specific LLM capabilities required for its Planning and Synthesis stages.**
  */
 export class PESAgent implements IAgentCore {
     private readonly deps: PESAgentDependencies;
@@ -74,9 +76,9 @@ export class PESAgent implements IAgentCore {
      * Stages:
      * 1. Initiation & Config Loading: Loads thread-specific settings.
      * 2. Planning Context Assembly: Gathers history and tool schemas.
-     * 3. Planning Call: First LLM call to generate intent, plan, and tool calls.
+     * 3. Planning Call: First LLM call to generate intent, plan, and tool calls. **Determines the required capabilities (e.g., `REASONING`) for planning and includes them in the options passed to the `ReasoningEngine`.**
      * 4. Tool Execution: Executes planned tool calls via the ToolSystem.
-     * 5. Synthesis Call: Second LLM call using plan and tool results to generate the final response.
+     * 5. Synthesis Call: Second LLM call using plan and tool results to generate the final response. **Determines the required capabilities (e.g., `TEXT`, potentially `VISION` if applicable based on tool results) for synthesis and includes them in the options passed to the `ReasoningEngine`.**
      * 6. Finalization: Saves messages and state, returns the final response.
      *
      * @param props - The input properties containing the user query, threadId, and optional context.
@@ -118,6 +120,7 @@ export class PESAgent implements IAgentCore {
                 threadId: props.threadId,
                 traceId: traceId,
                 userId: props.userId,
+                requiredCapabilities: [ModelCapability.REASONING], // <-- Added capabilities
                 onThought: (thought: string) => {
                     this.deps.observationManager.record({
                         threadId: props.threadId, traceId, type: ObservationType.THOUGHTS, content: { phase: 'planning', thought }, metadata: { timestamp: Date.now() }
@@ -198,6 +201,8 @@ export class PESAgent implements IAgentCore {
                 threadId: props.threadId,
                 traceId: traceId,
                 userId: props.userId,
+                // TODO: Conditionally add VISION capability if toolResults contain image data
+                requiredCapabilities: [ModelCapability.TEXT], // <-- Added capabilities
                  onThought: (thought: string) => {
                     this.deps.observationManager.record({
                         threadId: props.threadId, traceId, type: ObservationType.THOUGHTS, content: { phase: 'synthesis', thought }, metadata: { timestamp: Date.now() }

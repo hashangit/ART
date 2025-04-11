@@ -6,7 +6,7 @@
 
 # Class: DeepSeekAdapter
 
-Defined in: [adapters/reasoning/deepseek.ts:59](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/deepseek.ts#L59)
+Defined in: [adapters/reasoning/deepseek.ts:59](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/deepseek.ts#L59)
 
 Implements the `ProviderAdapter` interface for interacting with the DeepSeek API,
 which uses an OpenAI-compatible Chat Completions endpoint.
@@ -26,7 +26,7 @@ Note: This basic version does not implement streaming or the `onThought` callbac
 
 > **new DeepSeekAdapter**(`options`): `DeepSeekAdapter`
 
-Defined in: [adapters/reasoning/deepseek.ts:70](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/deepseek.ts#L70)
+Defined in: [adapters/reasoning/deepseek.ts:70](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/deepseek.ts#L70)
 
 Creates an instance of the DeepSeekAdapter.
 
@@ -52,7 +52,7 @@ If the API key is missing.
 
 > `readonly` **providerName**: `"deepseek"` = `'deepseek'`
 
-Defined in: [adapters/reasoning/deepseek.ts:60](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/deepseek.ts#L60)
+Defined in: [adapters/reasoning/deepseek.ts:60](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/deepseek.ts#L60)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -66,7 +66,7 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 > **call**(`prompt`, `options`): `Promise`\<`string`\>
 
-Defined in: [adapters/reasoning/deepseek.ts:94](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/deepseek.ts#L94)
+Defined in: [adapters/reasoning/deepseek.ts:94](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/deepseek.ts#L94)
 
 /**
  * Sends a request to the DeepSeek Chat Completions API endpoint.

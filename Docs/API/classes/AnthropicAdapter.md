@@ -6,7 +6,7 @@
 
 # Class: AnthropicAdapter
 
-Defined in: [adapters/reasoning/anthropic.ts:59](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/anthropic.ts#L59)
+Defined in: [adapters/reasoning/anthropic.ts:59](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/anthropic.ts#L59)
 
 Implements the `ProviderAdapter` interface for interacting with Anthropic's
 Messages API (Claude models).
@@ -26,7 +26,7 @@ Note: This basic version does not implement streaming or the `onThought` callbac
 
 > **new AnthropicAdapter**(`options`): `AnthropicAdapter`
 
-Defined in: [adapters/reasoning/anthropic.ts:74](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/anthropic.ts#L74)
+Defined in: [adapters/reasoning/anthropic.ts:74](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/anthropic.ts#L74)
 
 Creates an instance of the AnthropicAdapter.
 
@@ -52,7 +52,7 @@ If the API key is missing.
 
 > `readonly` **providerName**: `"anthropic"` = `'anthropic'`
 
-Defined in: [adapters/reasoning/anthropic.ts:60](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/anthropic.ts#L60)
+Defined in: [adapters/reasoning/anthropic.ts:60](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/anthropic.ts#L60)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -66,7 +66,7 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 > **call**(`prompt`, `options`): `Promise`\<`string`\>
 
-Defined in: [adapters/reasoning/anthropic.ts:101](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/adapters/reasoning/anthropic.ts#L101)
+Defined in: [adapters/reasoning/anthropic.ts:101](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/anthropic.ts#L101)
 
 /**
  * Sends a request to the Anthropic Messages API.

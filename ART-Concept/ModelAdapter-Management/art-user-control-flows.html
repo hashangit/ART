@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ART Framework: User Control Scenarios</title>
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-light: #EEF2FF;
+            --primary-dark: #3730A3;
+            --secondary: #6366F1;
+            --blue: #3B82F6;
+            --blue-light: #EFF6FF;
+            --green: #10B981;
+            --green-light: #ECFDF5;
+            --purple: #8B5CF6;
+            --purple-light: #F5F3FF;
+            --teal: #14B8A6;
+            --teal-light: #F0FDFA;
+            --yellow: #F59E0B;
+            --yellow-light: #FFFBEB;
+            --orange: #F97316;
+            --orange-light: #FFF7ED;
+            --pink: #EC4899;
+            --pink-light: #FDF2F8;
+            --red: #EF4444;
+            --red-light: #FEE2E2;
+            
+            --bg-white: #ffffff;
+            --bg-light: #f9fafb;
+            --text-primary: #1F2937;
+            --text-secondary: #4B5563;
+            --text-tertiary: #6B7280;
+            --border-light: #E5E7EB;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1, h2, h3 {
+            color: var(--primary-dark);
+            margin-bottom: 1rem;
+        }
+        
+        h1 {
+            font-size: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        h2 {
+            font-size: 1.5rem;
+            border-bottom: 2px solid var(--primary-light);
+            padding-bottom: 0.5rem;
+            margin-top: 2rem;
+        }
+        
+        h3 {
+            font-size: 1.25rem;
+            color: var(--primary);
+            margin-top: 1.5rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+        }
+        
+        .scenario {
+            background-color: var(--bg-white);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .scenario-title {
+            font-size: 1.3rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .scenario-description {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+        
+        .interaction {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .user-section {
+            flex: 1;
+            background-color: var(--blue-light);
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid var(--blue);
+        }
+        
+        .system-section {
+            flex: 1;
+            background-color: var(--green-light);
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid var(--green);
+        }
+        
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+        
+        .code-block {
+            background-color: #1E293B;
+            color: #E2E8F0;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        
+        .ui-mockup {
+            background-color: var(--bg-white);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-light);
+        }
+        
+        .dialog {
+            max-width: 500px;
+            margin: 1rem auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border-light);
+            overflow: hidden;
+        }
+        
+        .dialog-header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem;
+            font-weight: bold;
+        }
+        
+        .dialog-body {
+            padding: 1.5rem;
+            background-color: var(--bg-white);
+        }
+        
+        .dialog-footer {
+            padding: 1rem;
+            background-color: var(--bg-light);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+        
+        .button {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        .primary-button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+        }
+        
+        .secondary-button {
+            background-color: var(--bg-white);
+            color: var(--text-primary);
+            border: 1px solid var(--border-light);
+        }
+        
+        .radio-option {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .radio-option input {
+            margin-right: 0.5rem;
+        }
+        
+        .setting-card {
+            background-color: var(--bg-white);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-light);
+        }
+        
+        .setting-header {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+        
+        .setting-section {
+            margin-bottom: 1rem;
+        }
+        
+        .setting-label {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            display: block;
+        }
+        
+        .setting-description {
+            font-size: 0.9rem;
+            color: var(--text-tertiary);
+            margin-bottom: 0.5rem;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-light);
+            margin-bottom: 0.5rem;
+        }
+        
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .capability-tag {
+            background-color: var(--purple-light);
+            color: var(--purple);
+            border: 1px solid var(--purple);
+        }
+
+        .flow-diagram {
+            background-color: var(--bg-white);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-light);
+            overflow-x: auto;
+        }
+        
+        .component-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .flow-row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .component {
+            padding: 0.75rem 1.25rem;
+            border-radius: 6px;
+            font-weight: 500;
+            text-align: center;
+            min-width: 120px;
+            font-size: 0.9rem;
+        }
+        
+        .model-router {
+            background-color: var(--teal-light);
+            color: var(--teal);
+            border: 1px solid var(--teal);
+        }
+        
+        .model-registry {
+            background-color: var(--purple-light);
+            color: var(--purple);
+            border: 1px solid var(--purple);
+        }
+        
+        .model-socket {
+            background-color: var(--pink-light);
+            color: var(--pink);
+            border: 1px solid var(--pink);
+        }
+        
+        .provider-adapter {
+            background-color: var(--orange-light);
+            color: var(--orange);
+            border: 1px solid var(--orange);
+        }
+        
+        .ui-component {
+            background-color: var(--blue-light);
+            color: var(--blue);
+            border: 1px solid var(--blue);
+        }
+        
+        .arrow {
+            flex-grow: 1;
+            height: 2px;
+            background-color: var(--border-light);
+            position: relative;
+        }
+        
+        .arrow::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: -4px;
+            width: 0;
+            height: 0;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            border-left: 8px solid var(--border-light);
+        }
+        
+        .action {
+            font-size: 0.8rem;
+            color: var(--text-tertiary);
+            position: absolute;
+            top: -20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .interaction {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ART Framework: User Control Scenarios</h1>
+
+        <!-- Scenario 1: Global Model Preferences -->
+        <div class="scenario">
+            <h2 class="scenario-title">Scenario 1: Setting Global Model Preferences</h2>
+            <p class="scenario-description">
+                This scenario demonstrates how users can set global preferences for models across all capabilities.
+                These settings serve as defaults unless overridden at the thread level.
+            </p>
+
+            <div class="interaction">
+                <div class="user-section">
+                    <div class="section-title">User Interface</div>
+                    <div class="ui-mockup">
+                        <div class="setting-card">
+                            <div class="setting-header">Global AI Model Preferences</div>
+                            
+                            <div class="setting-section">
+                                <label class="setting-label">Default Provider</label>
+                                <select>
+                                    <option>OpenAI</option>
+                                    <option selected>Anthropic</option>
+                                    <option>Google (Gemini)</option>
+                                    <option>DeepSeek</option>
+                                </select>
+                                <p class="setting-description">The primary provider to use when no specific model is requested.</p>
+                            </div>
+                            
+                            <div class="setting-section">
+                                <div class="setting-label">Capability-Specific Models</div>
+                                
+                                <div style="margin-bottom: 1rem;">
+                                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                                        <span class="tag capability-tag">Reasoning</span>
+                                        <select style="flex-grow: 1;">
+                                            <option>OpenAI / GPT-4o</option>
+                                            <option selected>Anthropic / Claude 3.7 Sonnet</option>
+                                            <option>Google / Gemini 2.5 Pro</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                                        <span class="tag capability-tag">Code</span>
+                                        <select style="flex-grow: 1;">
+                                            <option selected>OpenAI / GPT-4o</option>
+                                            <option>Anthropic / Claude 3.5 Sonnet</option>
+                                            <option>DeepSeek / DeepSeek Coder v2</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                                        <span class="tag capability-tag">Vision</span>
+                                        <select style="flex-grow: 1;">
+                                            <option>OpenAI / GPT-4o</option>
+                                            <option>Anthropic / Claude 3.5 Sonnet</option>
+                                            <option selected>Google / Gemini 2.0 Flash</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="setting-section">
+                                <label class="setting-label">Fallback Settings</label>
+                                <div class="radio-option">
+                                    <input type="checkbox" id="allowFallback" checked>
+                                    <label for="allowFallback">Allow cross-provider fallbacks</label>
+                                </div>
+                                <p class="setting-description">When enabled, the system can try alternative providers if the primary choice fails.</p>
+                            </div>
+                            
+                            <button class="button primary-button">Save Global Preferences</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="system-section">
+                    <div class="section-title">System Implementation</div>
+                    <div class="code-block">// Setting global model preferences
+const globalPreferences = {
+  modelPreferences: {
+    defaultProvider: 'anthropic',
+    preferredModels: {
+      [ModelCapability.REASONING]: { 
+        provider: 'anthropic', 
+        modelId: 'claude-3-7-sonnet-20250219' 
+      },
+      [ModelCapability.CODE]: { 
+        provider: 'openai', 
+        modelId: 'gpt-4o' 
+      },
+      [ModelCapability.VISION]: {
+        provider: 'gemini',
+        modelId: 'gemini-2.0-flash'
+      }
+    },
+    allowCrossProviderFallback: true
+  }
+};
+
+// Configure ART instance with these global preferences
+const art = createART({
+  modelPreferences: globalPreferences.modelPreferences,
+  // Other configuration options
+});</div>
+
+                    <div class="flow-diagram">
+                        <div class="component-flow">
+                            <div class="flow-row">
+                                <div class="component ui-component">Settings UI</div>
+                                <div class="arrow"><span class="action">save preferences</span></div>
+                                <div class="component model-registry">ModelRegistry</div>
+                            </div>
+                            
+                            <div class="flow-row">
+                                <div class="component model-registry">ModelRegistry</div>
+                                <div class="arrow"><span class="action">store default preferences</span></div>
+                                <div class="component">ConfigurationService</div>
+                            </div>
+                            
+                            <div class="flow-row">
+                                <div class="component model-router">ModelRouter</div>
+                                <div class="arrow"><span class="action">consult for defaults</span></div>
+                                <div class="component">ConfigurationService</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scenario 2: Thread-Specific Model Preferences -->
+        <div class="scenario">
+            <h2 class="scenario-title">Scenario 2: Thread-Specific Model Preferences</h2>
+            <p class="scenario-description">
+                This scenario shows how users can override the global preferences for a specific conversation thread.
+                This gives flexibility to optimize each thread for its specific use case.
+            </p>
+
+            <div class="interaction">
+                <div class="user-section">
+                    <div class="section-title">User Interface</div>
+                    <div class="ui-mockup">
+                        <div class="setting-card">
+                            <div class="setting-header">Thread Settings: Research Assistant</div>
+                            
+                            <div class="setting-section">
+                                <label class="setting-label">Thread Default Provider</label>
+                                <select>
+                                    <option>Use Global Setting (Anthropic)</option>
+                                    <option selected>OpenAI</option>
+                                    <option>Google (Gemini)</option>
+                                    <option>DeepSeek</option>
+                                </select>
+                            </div>
+                            
+                            <div class="setting-section">
+                                <div class="setting-label">Thread-Specific Model Preferences</div>
+                                <div class="radio-option">
+                                    <input type="checkbox" id="override-global" checked>
+                                    <label for="override-global">Override global capability preferences</label>
+                                </div>
+                                
+                                <div style="margin-top: 0.5rem;">
+                                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                                        <span class="tag capability-tag">Reasoning</span>
+                                        <select style="flex-grow: 1;">
+                                            <option selected>OpenAI / GPT-4.5 Orion</option>
+                                            <option>Anthropic / Claude 3.7 Sonnet</option>
+                                            <option>Google / Gemini 2.5 Pro</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                                        <span class="tag capability-tag">Code</span>
+                                        <select style="flex-grow: 1;">
+                                            <option>Use Global Setting (OpenAI / GPT-4o)</option>
+                                            <option selected>DeepSeek / DeepSeek Coder v2</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="setting-section">
+                                <div class="setting-label">Cost Controls</div>
+                                <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem;">
+                                    <div style="flex: 1;">
+                                        <label class="setting-label">Max cost per call ($)</label>
+                                        <input type="number" value="0.05" step="0.01" min="0">
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <label class="setting-label">Thread cost warning ($)</label>
+                                        <input type="number" value="2.00" step="0.5" min="0">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button class="button primary-button">Save Thread Settings</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="system-section">
+                    <div class="section-title">System Implementation</div>
+                    <div class="code-block">// Updating thread-specific configuration
+await art.stateManager.updateThreadConfig('research-assistant-thread', {
+  reasoning: {
+    modelPreferences: {
+      defaultProvider: 'openai', // Override global default
+      preferredModels: {
+        [ModelCapability.REASONING]: { 
+          provider: 'openai', 
+          modelId: 'gpt-4.5-orion' // Thread-specific choice
+        },
+        [ModelCapability.CODE]: { 
+          provider: 'deepseek', 
+          modelId: 'deepseek-coder-v2' // Different from global
+        }
+        // VISION not specified, will fall back to global preference
+      },
+    },
+    costPreferences: {
+      maxCostPerCall: 0.05,
+      warnCostThreshold: 2.00
+    }
+  }
+});</div>
+
+                    <div class="flow-diagram">
+                        <div class="component-flow">
+                            <div class="flow-row">
+                                <div class="component ui-component">Thread Settings UI</div>
+                                <div class="arrow"><span class="action">update thread config</span></div>
+                                <div class="component">StateManager</div>
+                            </div>
+                            
+                            <div class="flow-row">
+                                <div class="component">StateManager</div>
+                                <div class="arrow"><span class="action">save thread config</span></div>
+                                <div class="component">StateRepository</div>
+                            </div>
+                            
+                            <div class="flow-row">
+                                <div class="component model-router">ModelRouter</div>
+                                <div class="arrow"><span class="action">get thread preferences</span></div>
+                                <div class="component">StateManager</div>
+                            </div>
+                            
+                            <div class="flow-row">
+                                <div class="component">StateManager</div>
+                                <div class="arrow"><span class="action">provide thread config</span></div>
+                                <div class="component model-router">ModelRouter</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scenario 3: Runtime Model Capability Mismatch -->
+        <div class="scenario">
+            <h2 class="scenario-title">Scenario 3: Runtime Model Capability Mismatch</h2>
+            <p class="scenario-description">
+                This scenario illustrates what happens when a user selects a model that doesn't support the required capability.
+                The system detects this mismatch and can either fall back automatically or ask the user for input.
+            </p>
+
+            <div class="interaction">
+                <div class="user-section">
+                    <div class="section-title">User Interface</div>
+                    <div class="ui-mockup">
+                        <!-- Chat interface with model dropdown -->
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem;">Current Model:</label>
+                            <select>
+                                <option>Auto-select based on query</option>
+                                <option selected>OpenAI / GPT-3.5 Turbo</option>
+                                <option>Anthropic / Claude 3.5 Sonnet</option>
+                                <option>Google / Gemini 2.0 Flash</option>
+                            </select>
+                        </div>
+                        
+                        <!-- User message with image -->
+                        <div style="margin: 1rem 0; text-align: right;">
+                            <div style="display: inline-block; background-color: var(--primary-light); padding: 0.75rem; border-radius: 8px; max-width: 80%; text-align: left;">
+                                What can you tell me about this chart of housing prices? [IMAGE ATTACHED]
+                            </div>
+                        </div>
+                        
+                        <!-- Model capability mismatch dialog -->
+                        <div class="dialog">
+                            <div class="dialog-header">
+                                Model Capability Mismatch
+                            </div>
+                            <div class="dialog-body">
+                                <p><strong>GPT-3.5 Turbo doesn't support vision capabilities</strong> required for analyzing images.</p>
+                                
+                                <p>Please select an alternative model with vision support:</p>
+                                
+                                <div class="radio-option">
+                                    <input type="radio" id="model1" name="model" checked>
+                                    <label for="model1">OpenAI / GPT-4o</label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="model2" name="model">
+                                    <label for="model2">Anthropic / Claude 3.5 Sonnet</label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="model3" name="model">
+                                    <label for="model3">Google / Gemini 2.0 Flash</label>
+                                </div>
+                                
+                                <div style="margin-top: 1rem;">
+                                    <div class="radio-option">
+                                        <input type="checkbox" id="remember" checked>
+                                        <label for="remember">Remember this choice for vision tasks in this thread</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dialog-footer">
+                                <button class="button secondary-button">Cancel</button>
+                                <button class="button primary-button">Continue</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="system-section">
+                    <div class="section-title">System Implementation</div>
+                    <div class="code-block">// User has selected 'gpt-3.5-turbo' but sent an image
+// The system detects this runtime mismatch
+
+const userSelectedProvider = 'openai';
+const userSelectedModel = 'gpt-3.5-turbo';
+const requiredCaps = [ModelCapability.VISION]; // From QueryAnalyzer
+
+// Validate model's capability
+const validationResult = await art.reasoningEngine.validateModelForCapabilities(
+  userSelectedProvider,
+  userSelectedModel,
+  requiredCaps
+);
+
+if (!validationResult.valid) {
+  // Query ModelRegistry for alternatives
+  const alternatives = await art.modelRegistry.suggestAlternatives(
+    requiredCaps
+  );
+  
+  // Show UI dialog with alternatives (user story)
+  const selectedAlternative = await showModelSelectionDialog(
+    `${validationResult.requestedModel} doesn't support vision capabilities`,
+    alternatives
+  );
+  
+  if (selectedAlternative) {
+    // Process with the user's chosen alternative
+    await art.process({
+      query: "What can you tell me about this chart? [Image]",
+      threadId: 'thread-123',
+      options: {
+        preferredProvider: selectedAlternative.provider,
+        preferredModel: selectedAlternative.modelId,
+      }
+    });
+    
+    // Optionally save preference if user checked "remember"
+    if (selectedAlternative.remember) {
+      await art.stateManager.updateThreadConfig('thread-123', {
+        reasoning: {
+          modelPreferences: {
+            preferredModels: {
+              [ModelCapability.VISION]: {
+                provider: selectedAlternative.provider,
+                modelId: selectedAlternative.modelId
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+}</div>
+
+                    <div class="flow-diagram">
+                        <div class="component-flow">
+                            <div class="flow-row">
+                                <div class="component model-router">ModelRouter</div>
+                                <div class="arrow"><span class="action">validate capability</span></div>
+                                <div class="component model-registry">ModelRegistry</div>
+                            </div>
+                            
+                            <div class="flow-row">
+                                <div class="component model-registry">ModelRegistry</div>
+                                <div class="arrow"><span class="action">capability mismatch</span></div>
+                                <div class="component model-router">ModelRouter</div>
+                            </div>
+                            
+                            <div class="flow-row">
+                                <div class="component model-router">ModelRouter</div>
+                                <div class="arrow"><span class="action">emit event</span></div>
+                                <div class="component model-socket">ModelSocket</div>
+                            </div>
+                            
+                            <div class="flow-row">
+                                <div class="component model-socket">ModelSocket</div>
+                                <div class="arrow"><span class="action">notify</span></div>
+                                <div class="component ui-component">Dialog Component</div>
+                            </div>
+                            
+                            <div class="flow-row">
+                                <div class="component ui-component">Dialog Component</div>
+                                <div class="arrow"><span class="action">user selects</span></div>
+                                <div class="component model-router">ModelRouter</div>
+                            </div>
+                            
+                            <div class="flow-row">
+                                <div class="component model-router">ModelRouter</div>
+                                <div class="arrow"><span class="action">route to capable model</span></div>
+                                <div class="component provider-adapter">OpenAI Adapter (GPT-4o)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scenario 4: Fallback Selection During Error -->
+        <div class="scenario">
+            <h2 class="scenario-title">Scenario 4: Runtime Fallback on Error</h2>
+            <p class="scenario-description">
+                This scenario shows how the system handles errors from a provider (like rate limits) and allows users
+                to choose fallback options at runtime rather than experiencing a complete failure.
+            </p>
+
+            <div class="interaction">
+                <div class="user-section">
+                    <div class="section-title">User Interface</div>
+                    <div class="ui-mockup">
+                        <!-- Chat query -->
+                        <div style="margin: 1rem 0; text-align: right;">
+                            <div style="display: inline-block; background-color: var(--primary-light); padding: 0.75rem; border-radius: 8px; max-width: 80%; text-align: left;">
+                                Write a detailed essay about sustainable urban development approaches in emerging economies.
+                            </div>
+                        </div>
+                        
+                        <!-- Status indicator showing model selection -->
+                        <div style="background-color: var(--blue-light); padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0; font-size: 0.9rem; border: 1px solid var(--blue);">
+                            <strong>🔍 Model Selected:</strong> Anthropic / Claude 3.7 Sonnet (based on REASONING capability)
+                        </div>
+                        
+                        <!-- Error notification -->
+                        <div style="background-color: var(--red-light); padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0; font-size: 0.9rem; border: 1px solid var(--red);">
+                            <strong>⚠️ API Error:</strong> Anthropic API rate limit exceeded (Status: 429)
+                        </div>
+                        
+                        <!-- Fallback dialog -->
+                        <div class="dialog">
+                            <div class="dialog-header">
+                                Model Error: Choose Fallback Option
+                            </div>
+                            <div class="dialog-body">
+                                <p>The selected model <strong>Anthropic / Claude 3.7 Sonnet</strong> encountered an error:</p>
+                                <p style="color: var(--red);">Rate limit exceeded. Please try again in a few minutes.</p>
+                                
+                                <p style="margin-top: 1rem;"><strong>How would you like to proceed?</strong></p>
+                                
+                                <div class="radio-option">
+                                    <input type="radio" id="fallback1" name="fallback" checked>
+                                    <label for="fallback1">Use OpenAI / GPT-4o as fallback</label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="fallback2" name="fallback">
+                                    <label for="fallback2">Use Google / Gemini 2.5 Pro as fallback</label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="fallback3" name="fallback">
+                                    <label for="fallback3">Retry with original model in 30 seconds</label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="fallback4" name="fallback">
+                                    <label for="fallback4">Cancel this request</label>
+                                </div>
+                                
+                                <div style="margin-top: 1rem;">
+                                    <div class="radio-option">
+                                        <input type="checkbox" id="rememberFallback">
+                                        <label for="rememberFallback">Use selected option as default fallback for this provider</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="dialog-footer">
+                                <button class="button primary-button">Continue</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="system-section">
+                    <div class="section-title">System Implementation</div>
+                    <div class="code-block">// Initial call fails with provider error
+try {
+  const result = await art.process({
+    query: "Write a detailed essay about sustainable urban development...",
+    threadId: 'urban-research-thread',
+    options: {
+      preferredProvider: 'anthropic',
+      preferredModel: 'claude-3-7-sonnet-20250219'
+    }
+  });
+} catch (error) {
+  // Error is caught by the ModelRouter
+  if (error.type === 'PROVIDER_ERROR' && error.providerErrorCode === 429) {
+    // Rate limit error, system decides how to handle
+
+    // If automatic fallback is disabled, or user has configured
+    // runtime fallback selection:
+    const fallbackOptions = await art.modelRegistry.suggestFallbackModels(
+      'anthropic', 
+      'claude-3-7-sonnet-20250219',
+      [ModelCapability.REASONING]
+    );
+    
+    // Show fallback selection dialog
+    const fallbackChoice = await showFallbackDialog(
+      error.message,
+      fallbackOptions,
+      { allowRetry: true, allowCancel: true }
+    );
+    
+    if (fallbackChoice) {
+      if (fallbackChoice.action === 'USE_FALLBACK') {
+        // Process with the selected fallback
+        await art.process({
+          query: "Write a detailed essay about sustainable urban development...",
+          threadId: 'urban-research-thread',
+          options: {
+            preferredProvider: fallbackChoice.provider,
+            preferredModel: fallbackChoice.modelId
+          }
+        });
+        
+        // Optionally save fallback preference
+        if (fallbackChoice.rememberFallback) {
+          await art.stateManager.updateGlobalFallbackPreference(
+            'anthropic', fallbackChoice.provider, fallbackChoice.modelId
+          );
+        }
+      } 
+      else if (fallbackChoice.action === 'RETRY') {
+        // Wait and retry with same model
+        setTimeout(() => {
+          art.process({
+            query: "Write a detailed essay about sustainable urban development...",
+            threadId: 'urban-research-thread',
+            options: {
+              preferredProvider: 'anthropic',
+              preferredModel: 'claude-3-7-sonnet-20250219'
+            }
+          });
+        }, 30000); // 30 second delay
+      }
+      // Else: request was cancelled
+    }
+  }
+}</div>
+
+                    <div class="flow-diagram">
+                        <div class="component-flow">
+                            <div class="flow-row">
+                                <div class="component model-router">ModelRouter</div>
+                                <div class="arrow"><span class="action">route to provider</span></div>
+                                <div class="component provider-adapter">Anthropic Adapter</div>
+                            </div>
+                            
+                            <div class="flow-row">
+                                <div class="component provider-adapter">Anthropic Adapter</div>
+                                <div class="arrow"><span class="action">429 rate limit error</span></div>
+                                <div class="component model-router">ModelRouter</div>
+                            </div>
+                            
+                            <div class="flow-row">
+                                <div class="component model-router">ModelRouter</div>
+                                <div class="arrow"><span class="action">check fallback settings</span></div>
+                                <div class="component">StateManager</div>
+                            </div>
+                            
+                            <div class="flow-row">
+                                <div class="component model-router">ModelRouter</div>
+                                <div class="arrow"><span class="action">emit error event</span></div>
+                                <div class="component model-socket">ModelSocket</div>
+                            </div>
+                            
+                            <div class="flow-row">
+                                <div class="component model-socket">ModelSocket</div>
+                                <div class="arrow"><span class="action">notify UI</span></div>
+                                <div class="component ui-component">Fallback Dialog</div>
+                            </div>
+                            
+                            <div class="flow-row">
+                                <div class="component ui-component">Fallback Dialog</div>
+                                <div class="arrow"><span class="action">user selects GPT-4o</span></div>
+                                <div class="component model-router">ModelRouter</div>
+                            </div>
+                            
+                            <div class="flow-row">
+                                <div class="component model-router">ModelRouter</div>
+                                <div class="arrow"><span class="action">retry with fallback</span></div>
+                                <div class="component provider-adapter">OpenAI Adapter</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Component Relationships -->
+        <div class="scenario">
+            <h2 class="scenario-title">Key Component Relationships</h2>
+            <p class="scenario-description">
+                Visualizing how ModelRegistry, ModelRouter, ModelSocket, and provider adapters work together to provide a robust, flexible model management system.
+            </p>
+
+            <div style="background-color: var(--bg-white); border-radius: 12px; padding: 2rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <h3>ModelRegistry</h3>
+                <ul style="margin-bottom: 1.5rem;">
+                    <li><strong>Role:</strong> Central catalog of all available models and their capabilities</li>
+                    <li><strong>Key Functions:</strong> Model validation, capability matching, fallback suggestions</li>
+                    <li><strong>Interactions:</strong> Used by ModelRouter to find suitable models for capabilities</li>
+                </ul>
+                
+                <h3>ModelRouter</h3>
+                <ul style="margin-bottom: 1.5rem;">
+                    <li><strong>Role:</strong> Intelligent router selecting between providers/models based on requirements</li>
+                    <li><strong>Key Functions:</strong> Selection logic, fallback handling, error categorization</li>
+                    <li><strong>Interactions:</strong> Works with ModelRegistry, StateManager (preferences), ProviderFactory (adapters)</li>
+                </ul>
+                
+                <h3>ModelSocket</h3>
+                <ul style="margin-bottom: 1.5rem;">
+                    <li><strong>Role:</strong> Communication channel for model-related events to the UI layer</li>
+                    <li><strong>Key Functions:</strong> Event notification, filtering (by type, threadId)</li>
+                    <li><strong>Interactions:</strong> Receives events from ModelRouter and ProviderAdapters</li>
+                </ul>
+                
+                <h3>Provider Adapters</h3>
+                <ul>
+                    <li><strong>Role:</strong> Provider-specific implementation of API interactions</li>
+                    <li><strong>Key Functions:</strong> API calls, error normalization, token counting</li>
+                    <li><strong>Interactions:</strong> Created by ProviderFactory, used by ModelRouter, report to CostTrackingService</li>
+                </ul>
+                
+                <div style="margin-top: 2rem; text-align: center; padding: 1rem; background-color: var(--primary-light); border-radius: 8px; border: 1px solid var(--primary);">
+                    <p><strong>Together, these components create a robust system that:</strong></p>
+                    <ul style="text-align: left; margin-top: 0.5rem; list-style-type: none;">
+                        <li>✓ Allows fine-grained user control over model selection at multiple levels</li>
+                        <li>✓ Automatically detects and handles capability mismatches</li>
+                        <li>✓ Provides fallback options when errors occur</li>
+                        <li>✓ Gives transparency into model selection decisions</li>
+                        <li>✓ Normalizes provider-specific errors into a consistent format</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

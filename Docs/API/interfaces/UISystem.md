@@ -6,7 +6,7 @@
 
 # Interface: UISystem
 
-Defined in: [core/interfaces.ts:355](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/core/interfaces.ts#L355)
+Defined in: [core/interfaces.ts:355](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L355)
 
 Interface for the system providing access to UI communication sockets.
 
@@ -16,7 +16,7 @@ Interface for the system providing access to UI communication sockets.
 
 > **getConversationSocket**(): `ConversationSocket`
 
-Defined in: [core/interfaces.ts:359](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/core/interfaces.ts#L359)
+Defined in: [core/interfaces.ts:359](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L359)
 
 Returns the singleton instance of the ConversationSocket.
 
@@ -30,7 +30,7 @@ Returns the singleton instance of the ConversationSocket.
 
 > **getObservationSocket**(): `ObservationSocket`
 
-Defined in: [core/interfaces.ts:357](https://github.com/hashangit/ART/blob/f4539b852e546bb06f1cc8c56173d3ccfb0ad7fa/src/core/interfaces.ts#L357)
+Defined in: [core/interfaces.ts:357](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L357)
 
 Returns the singleton instance of the ObservationSocket.
 
