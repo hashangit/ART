@@ -70,8 +70,8 @@ The `PESAgent.process` method executes the following stages sequentially. Refer 
 
 3.  **Planning Call (1st LLM Call):**
     *   Uses `PromptManager` to construct the planning prompt (including query, history, system prompt, enabled tool schemas).
-    *   Uses `ReasoningEngine` (configured via `StateManager`) to call the LLM.
-    *   Streams intermediate thoughts (`THOUGHTS` observations) via the `onThought` callback to `ObservationManager`.
+    *   Uses `ReasoningEngine` (configured via `StateManager`) to call the LLM, passing `CallOptions` that include the determined `requiredCapabilities` (e.g., `REASONING`).
+    *   Streams intermediate thoughts (`THOUGHTS` observations) via the `onThought` callback in `CallOptions` to `ObservationManager`.
     *   Uses `OutputParser` to extract structured `intent`, `plan`, and `toolCalls` from the LLM response.
     *   Uses `ObservationManager` to record `INTENT` and `PLAN` observations (or `ERROR` if parsing fails).
     *   Observations are persisted via `ObservationRepository` and notified to the UI via `ObservationSocket`.
@@ -90,8 +90,8 @@ The `PESAgent.process` method executes the following stages sequentially. Refer 
 
 5.  **Synthesis Call (2nd LLM Call):**
     *   Uses `PromptManager` to construct the synthesis prompt (using original query, intent, plan, the collected `toolResults`, history, and system prompt).
-    *   Uses `ReasoningEngine` to call the LLM again.
-    *   Streams intermediate thoughts (`THOUGHTS` observations) to `ObservationManager`.
+    *   Uses `ReasoningEngine` to call the LLM again, passing `CallOptions` that include the determined `requiredCapabilities` (e.g., `TEXT`).
+    *   Streams intermediate thoughts (`THOUGHTS` observations) via the `onThought` callback in `CallOptions` to `ObservationManager`.
     *   Uses `OutputParser` to extract the final user-facing response content.
     *   Uses `ObservationManager` to record synthesis `THOUGHTS` (or `ERROR` if parsing fails).
     *   Persists observations and notifies the UI.
