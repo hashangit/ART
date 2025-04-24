@@ -55,42 +55,52 @@ The investigation confirmed the initial hypothesis. Adapters focus on their spec
 
 ```mermaid
 flowchart LR
-    subgraph Your Application Code
+    %% Define the subgraphs with IDs for styling
+    subgraph app[Your Application Code]
         direction LR
-        AppUI["Application UI (e.g., React Component)"]
-        AppLogic["UI Update Logic"]
+        AppUI[Application UI]
+        AppLogic[UI Update Logic]
     end
 
-    subgraph ART Framework Core (Node 2)
+    subgraph core[ART Framework Core]
         direction TB
-        AgentCore["Agent Core (e.g., PESAgent)"] -- Records --> ObsManager["ObservationManager (Logbook)"]
-        ObsManager -- Pushes --> UISys["UISystem"]
-        UISys -- Provides --> Sockets["Sockets (ObservationSocket, etc.)"]
+        AgentCore[Agent Core]
+        ObsManager[ObservationManager]
+        UISys[UISystem]
+        Sockets[Sockets]
+        
+        AgentCore -->|Records| ObsManager
+        ObsManager -->|Pushes| UISys
+        UISys -->|Provides| Sockets
     end
 
-    subgraph ART Framework Adapters (Node 3)
-         direction TB
-         ProviderAdapter["Provider Adapter (e.g., OpenAI)"]
-         StorageAdapter["Storage Adapter (e.g., IndexedDB)"]
-         Tool["Tool Executor (e.g., Calculator)"]
+    subgraph adapters[ART Framework Adapters]
+        direction TB
+        ProviderAdapter[Provider Adapter]
+        StorageAdapter[Storage Adapter]
+        Tool[Tool Executor]
     end
 
-    AgentCore --> ProviderAdapter -- Calls --> ExternalLLM["External LLM API"]
-    AgentCore --> StorageAdapter -- Reads/Writes --> BrowserStorage["Browser Storage"]
-    AgentCore --> Tool -- Executes --> ToolLogic["Tool Logic"]
+    %% Main connections between components
+    AgentCore --> ProviderAdapter -->|Calls| ExternalLLM[External LLM API]
+    AgentCore --> StorageAdapter -->|Reads/Writes| BrowserStorage[Browser Storage]
+    AgentCore --> Tool -->|Executes| ToolLogic[Tool Logic]
 
-    AppLogic -- Subscribes --> Sockets
-    Sockets -- Broadcasts Event --> AppLogic
-    AppLogic -- Updates --> AppUI
+    %% UI connections
+    AppLogic -->|Subscribes| Sockets
+    Sockets -->|Broadcasts Event| AppLogic
+    AppLogic -->|Updates| AppUI
 
-    %% Optional Adapter Logging (Not standard in reviewed adapters)
-    ProviderAdapter -.->|Logs Call (Optional)| ObsManager
-    Tool -.->|Logs Execution (Optional)| ObsManager
+    %% Optional logging connections (dashed arrows)
+    ProviderAdapter -.->|Logs Call| ObsManager
+    Tool -.->|Logs Execution| ObsManager
 
+    %% Styling for subgraphs
+    style app fill:#e6f7ff,stroke:#0050b3
+    style core fill:#f6ffed,stroke:#52c41a
+    style adapters fill:#fffbe6,stroke:#faad14
+```
 
-    style Your Application Code fill:#e6f7ff,stroke:#0050b3
-    style ART Framework Core (Node 2) fill:#f6ffed,stroke:#52c41a
-    style ART Framework Adapters (Node 3) fill:#fffbe6,stroke:#faad14
 ## 4. Follow-up Question: Advanced Streaming Requirements
 
 The user then inquired about more advanced capabilities currently lacking:
