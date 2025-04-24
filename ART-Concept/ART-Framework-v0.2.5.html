@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- CHANGE: Title reflects v0.2.5 -->
+    <title>ART: Agent Orchestration Framework v0.2.5</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- Styles remain largely the same as v0.2.4 --- */
+        :root {
+            --primary: #4F46E5; --primary-light: #EEF2FF; --primary-dark: #3730A3;
+            --secondary: #6366F1;
+            --success: #10B981; --success-light: #ECFDF5;
+            --warning: #F59E0B; --warning-light: #FFFBEB;
+            --danger: #EF4444; --danger-light: #FEF2F2;
+            --purple: #8B5CF6; --purple-light: #F5F3FF;
+            --teal: #14B8A6; --teal-light: #F0FDFA;
+            --blue: #3B82F6; --blue-light: #EFF6FF;
+            --orange: #F97316; --orange-light: #FFF7ED;
+            --pink: #EC4899; --pink-light: #FDF2F8;
+
+            --text-primary: #1F2937; --text-secondary: #4B5563; --text-tertiary: #6B7280;
+            --text-light: #9CA3AF;
+
+            --bg-white: #FFFFFF; --bg-light: #F9FAFB; --bg-lighter: #F3F4F6;
+
+            --border-light: #E5E7EB; --border-medium: #D1D5DB;
+
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+            --radius-sm: 0.25rem; --radius-md: 0.375rem; --radius-lg: 0.5rem;
+            --radius-xl: 0.75rem; --radius-2xl: 1rem;
+
+            --spacing-1: 0.25rem; --spacing-2: 0.5rem; --spacing-3: 0.75rem;
+            --spacing-4: 1rem; --spacing-5: 1.25rem; --spacing-6: 1.5rem;
+            --spacing-8: 2rem; --spacing-10: 2.5rem; --spacing-12: 3rem;
+            --spacing-16: 4rem; --spacing-20: 5rem;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-lighter); color: var(--text-primary);
+            line-height: 1.6; padding: var(--spacing-6); font-size: 15px;
+        }
+        h1, h2, h3, h4 { color: var(--text-primary); line-height: 1.3; font-weight: 600; }
+        h1 { font-size: 1.875rem; margin-bottom: var(--spacing-8); text-align: center; color: var(--primary-dark); }
+        h2 { font-size: 1.5rem; margin-top: var(--spacing-10); margin-bottom: var(--spacing-6); padding-bottom: var(--spacing-4); border-bottom: 2px solid var(--border-light); }
+        h3 { font-size: 1.25rem; margin-top: var(--spacing-8); margin-bottom: var(--spacing-4); color: var(--text-secondary); }
+        p { margin-bottom: var(--spacing-4); color: var(--text-secondary); }
+        ul { margin-bottom: var(--spacing-4); } /* Add default margin to lists */
+        .container { max-width: 1200px; margin: 0 auto; background-color: var(--bg-white); border-radius: var(--radius-2xl); box-shadow: var(--shadow-lg); padding: var(--spacing-10); position: relative; overflow: hidden; }
+        .container::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px; background: linear-gradient(to right, var(--primary), var(--secondary)); }
+        .intro { padding: var(--spacing-6); background-color: var(--primary-light); border-radius: var(--radius-lg); margin-bottom: var(--spacing-10); position: relative; overflow: hidden; }
+        .intro::after { content: ''; position: absolute; top: 0; right: 0; width: 150px; height: 150px; background-color: rgba(79, 70, 229, 0.1); border-radius: 50%; transform: translate(30%, -30%); }
+        .intro h3 { font-weight: 600; color: var(--primary-dark); margin-top: 0; }
+        .component { margin-bottom: var(--spacing-16); border-radius: var(--radius-lg); background-color: var(--bg-white); padding: var(--spacing-8); box-shadow: var(--shadow-md); position: relative; }
+        .component::after { content: ''; position: absolute; bottom: -10px; left: 5%; right: 5%; height: 10px; background-color: var(--bg-white); border-radius: 0 0 var(--radius-lg) var(--radius-lg); box-shadow: var(--shadow-sm); z-index: -1; }
+        .component-header { display: flex; align-items: center; margin-bottom: var(--spacing-6); }
+        .component-icon { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; margin-right: var(--spacing-5); flex-shrink: 0; box-shadow: var(--shadow-md); }
+        .component-title { font-size: 1.5rem; font-weight: 700; margin-bottom: var(--spacing-1); }
+        .component-subtitle { color: var(--text-tertiary); font-size: 1rem; }
+        .subcomponents { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--spacing-5); margin-top: var(--spacing-8); }
+        .subcomponent { background-color: var(--bg-light); border-radius: var(--radius-lg); padding: var(--spacing-6); box-shadow: var(--shadow-sm); transition: all 0.3s ease; border: 1px solid var(--border-light); position: relative; overflow: hidden; }
+        .subcomponent:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--border-medium); }
+        .subcomponent-title { font-weight: 600; margin-bottom: var(--spacing-3); font-size: 1.05rem; color: var(--text-primary); display: flex; align-items: center; }
+        .subcomponent-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: var(--spacing-3); font-size: 14px; flex-shrink: 0; font-weight: 700; }
+        .subcomponent-description { font-size: 0.95rem; color: var(--text-secondary); margin-bottom: var(--spacing-4); }
+        .features { margin-top: var(--spacing-4); padding-top: var(--spacing-4); border-top: 1px solid var(--border-light); }
+        .feature { font-size: 0.9rem; margin-bottom: var(--spacing-2); display: flex; align-items: baseline; color: var(--text-tertiary); }
+        .feature::before { content: "•"; margin-right: var(--spacing-2); color: var(--primary); font-weight: 700; }
+        .info-box, .warning-box, .success-box, .danger-box { padding: var(--spacing-6); margin: var(--spacing-8) 0; border-radius: var(--radius-lg); position: relative; box-shadow: var(--shadow-sm); }
+        .info-box { background-color: var(--blue-light); border-left: 4px solid var(--blue); }
+        .warning-box { background-color: var(--warning-light); border-left: 4px solid var(--warning); }
+        .success-box { background-color: var(--success-light); border-left: 4px solid var(--success); }
+        .danger-box { background-color: var(--danger-light); border-left: 4px solid var(--danger); }
+        .box-title { font-weight: 600; margin-bottom: var(--spacing-2); font-size: 1.05rem; }
+        .info-box .box-title { color: var(--blue); } .warning-box .box-title { color: var(--warning); }
+        .success-box .box-title { color: var(--success); } .danger-box .box-title { color: var(--danger); }
+        .code-box { background-color: #1E293B; color: #E2E8F0; padding: var(--spacing-6); margin: var(--spacing-8) 0; border-radius: var(--radius-lg); overflow-x: auto; font-family: 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 0.9rem; line-height: 1.5; position: relative; box-shadow: var(--shadow-md); }
+        .code-box::before { content: 'Code Example'; position: absolute; top: 0; right: var(--spacing-4); background-color: rgba(99, 102, 241, 0.4); padding: 0 var(--spacing-3); font-size: 0.75rem; color: white; border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+        .agent-core { background: linear-gradient(135deg, var(--blue), var(--blue-light)); color: var(--blue); }
+        .reasoning-system { background: linear-gradient(135deg, var(--success), var(--success-light)); color: var(--success); }
+        .tool-system { background: linear-gradient(135deg, var(--purple), var(--purple-light)); color: var(--purple); }
+        .context-system { background: linear-gradient(135deg, var(--warning), var(--warning-light)); color: var(--warning); }
+        .observation-system { background: linear-gradient(135deg, var(--teal), var(--teal-light)); color: var(--teal); }
+        .ui-system { background: linear-gradient(135deg, var(--pink), var(--pink-light)); color: var(--pink); }
+        .storage-system { background: linear-gradient(135deg, var(--orange), var(--orange-light)); color: var(--orange); }
+        .button { display: inline-block; padding: var(--spacing-3) var(--spacing-6); background-color: var(--primary); color: white; border: none; border-radius: var(--radius-md); font-weight: 600; text-decoration: none; cursor: pointer; transition: background-color 0.2s ease; box-shadow: var(--shadow-sm); }
+        .button:hover { background-color: var(--primary-dark); box-shadow: var(--shadow-md); }
+        .architecture-diagram { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(4, auto); gap: var(--spacing-4); margin: var(--spacing-10) 0; }
+        .arch-component { padding: var(--spacing-4); border-radius: var(--radius-lg); background-color: var(--bg-white); box-shadow: var(--shadow-md); display: flex; flex-direction: column; text-align: center; position: relative; overflow: hidden; min-height: 120px; justify-content: center; }
+        .arch-component h4 { font-size: 1rem; margin-bottom: var(--spacing-2); }
+        .arch-component p { font-size: 0.85rem; color: var(--text-tertiary); }
+        .arch-component-agent-core { grid-column: 2; grid-row: 1; border-top: 4px solid var(--blue); }
+        .arch-component-reasoning { grid-column: 1; grid-row: 2; border-top: 4px solid var(--success); }
+        .arch-component-tool { grid-column: 3; grid-row: 2; border-top: 4px solid var(--purple); }
+        .arch-component-observation { grid-column: 1; grid-row: 3; border-top: 4px solid var(--teal); }
+        .arch-component-context { grid-column: 3; grid-row: 3; border-top: 4px solid var(--warning); }
+        .arch-component-ui { grid-column: 2; grid-row: 3; border-top: 4px solid var(--pink); }
+        .arch-component-storage { grid-column: 2; grid-row: 4; border-top: 4px solid var(--orange); }
+        .version-tag { position: absolute; top: 20px; right: 20px; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem; box-shadow: var(--shadow-md); }
+        .update-badge { display: inline-block; background-color: var(--success-light); color: var(--success); padding: 0.25rem 0.5rem; border-radius: var(--radius-md); font-size: 0.75rem; font-weight: 600; margin-left: var(--spacing-2); border: 1px solid var(--success); }
+        @media (max-width: 768px) {
+            body { padding: var(--spacing-4); } .container { padding: var(--spacing-5); }
+            .subcomponents { grid-template-columns: 1fr; }
+            .architecture-diagram { grid-template-columns: 1fr; grid-template-rows: auto; }
+            .arch-component { grid-column: 1 !important; grid-row: auto !important; }
+            .version-tag { position: static; display: inline-block; margin-bottom: var(--spacing-4); }
+        }
+        .agent-core-component { border-top: 5px solid var(--blue); } .tool-system-component { border-top: 5px solid var(--purple); }
+        .reasoning-system-component { border-top: 5px solid var(--success); } .observation-system-component { border-top: 5px solid var(--teal); }
+        .context-system-component { border-top: 5px solid var(--warning); } .ui-system-component { border-top: 5px solid var(--pink); }
+        .storage-system-component { border-top: 5px solid var(--orange); }
+        .tag { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; margin-right: 0.5rem; margin-bottom: 0.5rem; }
+        .tag-blue { background-color: var(--blue-light); color: var(--blue); } .tag-purple { background-color: var(--purple-light); color: var(--purple); }
+        .tag-green { background-color: var(--success-light); color: var(--success); } .tag-orange { background-color: var(--warning-light); color: var(--warning); }
+        .tag-teal { background-color: var(--teal-light); color: var(--teal); } .tag-pink { background-color: var(--pink-light); color: var(--pink); }
+        .logo { display: flex; align-items: center; justify-content: center; margin-bottom: var(--spacing-8); }
+        .logo-text { font-size: 3rem; font-weight: 700; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-right: var(--spacing-4); }
+        .logo-separator { width: 2px; height: 60px; background: linear-gradient(to bottom, var(--primary-light), var(--primary), var(--primary-light)); margin: 0 var(--spacing-4); }
+        .logo-tagline { font-size: 1.5rem; color: var(--text-secondary); font-weight: 400; }
+
+        /* Specific style for new/updated badges */
+        .new-badge {
+            display: inline-block;
+            background-color: var(--purple-light);
+            color: var(--purple);
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--radius-md);
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: var(--spacing-2);
+            border: 1px solid var(--purple);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- CHANGE: Update version tag -->
+        <div class="version-tag">v0.2.5</div>
+
+        <div class="logo">
+            <div class="logo-text">ART</div>
+            <div class="logo-separator"></div>
+            <div class="logo-tagline">Agent Orchestration Framework</div>
+        </div>
+
+        <div class="intro">
+            <h3>Building Intelligent Agent Systems</h3>
+            <!-- CHANGE: Slightly update intro text -->
+            <p>ART is a powerful, standalone framework for building LLM-powered intelligent agents capable of complex reasoning, planning, and tool usage. Focusing on modularity, extensibility, and a browser-first approach, ART v0.2.5 introduces enhanced multi-provider model management, allowing sophisticated agent systems to leverage diverse local and remote LLMs.</p>
+            <div style="margin-top: 1rem;">
+                <span class="tag tag-blue">Modular</span>
+                <span class="tag tag-purple">Extensible</span>
+                <!-- NEW -->
+                <span class="tag tag-green">Multi-Provider</span>
+                <span class="tag tag-orange">Flexible</span>
+                <span class="tag tag-teal">Browser-First</span>
+                 <!-- NEW -->
+                <span class="tag tag-pink">Configurable</span>
+            </div>
+        </div>
+
+        <!-- CHANGE: New v0.2.5 Highlights Box -->
+        <div class="success-box">
+            <div class="box-title">v0.2.5 Update Highlights: Enhanced Model Management</div>
+            <p>This version introduces a major upgrade to the Reasoning System, enabling flexible and robust multi-provider LLM usage:</p>
+            <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                <li>**Multi-Provider Architecture:** Core refactoring to support configuring and managing multiple provider instances (OpenAI, Anthropic, Gemini, Ollama, etc.) concurrently via `ProviderInstanceManager`.</li>
+                <li>**Dynamic Routing:** `ReasoningEngine` now dynamically routes requests to the appropriate provider instance based on thread configuration (`instanceId` in `ThreadConfig`).</li>
+                <li>**Model Registry & Router Foundations:** Introduced `ModelRegistry` (for cataloging models/capabilities) and `ModelRouter` (for intelligent selection based on capabilities/preferences/cost) - foundational implementations.</li>
+                <li>**Comprehensive Ollama Support:** New `OllamaAdapter` supporting core calls, streaming (`onChunk`), image input, tool usage hints, model listing (`listModels`), pulling (`pullModel`), deletion (`deleteModel`), and request cancellation (`AbortSignal`).</li>
+                <li>**Enhanced Configuration:** Updated `ThreadConfig` allows specifying `instanceId`, `modelPreferences` (incl. fallback chains), and `costPreferences`.</li>
+                <li>**Cost Tracking:** Foundational `CostTrackingService` for monitoring estimated token/cost usage per thread.</li>
+                <li>**Interface Extensions:** Updated `ProviderAdapter` and `CallOptions` interfaces to support new features (list/pull/delete/abort, images, tools, streaming chunks, cancellation).</li>
+                <li>**Enhanced Observability:** New `ModelSocket` in UI System and detailed observations for model management events (routing, fallback, cost, pull progress).</li>
+                <li>**Gemini Adapter Improvements:** Enhanced to better handle thinking vs. response tokens and support structured JSON output requests.</li>
+                <li>**(Optional) API Key Management:** Added optional `EncryptedSecretsRepository` for client-side API key storage.</li>
+            </ul>
+        </div>
+
+        <!-- Architecture Overview -->
+        <h2>Architecture Overview</h2>
+        <!-- CHANGE: Update description to mention new components -->
+        <p>The ART framework is organized into several subsystems. Version 0.2.5 significantly enhances the **Reasoning System** with components like `ProviderInstanceManager`, `ModelRegistry`, `ModelRouter`, and `CostTrackingService` to manage interactions with multiple LLM providers dynamically. Other subsystems like Context, Observation, Storage, and UI have been updated to integrate with these new capabilities.</p>
+
+        <div class="architecture-diagram">
+             <!-- Diagram structure remains the same, descriptions below updated -->
+            <div class="arch-component arch-component-agent-core">
+                <h4>Agent Core</h4>
+                <p>Orchestrates reasoning patterns (e.g., PES)</p>
+            </div>
+            <div class="arch-component arch-component-reasoning">
+                <h4>Reasoning System</h4>
+                <!-- CHANGE: Updated description -->
+                <p>Multi-provider LLM interaction, routing, registry, cost tracking</p>
+            </div>
+            <div class="arch-component arch-component-tool">
+                <h4>Tool System</h4>
+                <p>Tool definition & execution</p>
+            </div>
+            <div class="arch-component arch-component-observation">
+                <h4>Observation System</h4>
+                <!-- CHANGE: Updated description -->
+                <p>Transparency & tracking (incl. model events)</p>
+            </div>
+            <div class="arch-component arch-component-context">
+                <h4>Context System</h4>
+                 <!-- CHANGE: Updated description -->
+                <p>State, history & thread configuration (incl. model/cost prefs)</p>
+            </div>
+            <div class="arch-component arch-component-ui">
+                <h4>UI System</h4>
+                 <!-- CHANGE: Updated description -->
+                <p>Typed interface sockets (incl. ModelSocket)</p>
+            </div>
+            <div class="arch-component arch-component-storage">
+                <h4>Storage System</h4>
+                 <!-- CHANGE: Updated description -->
+                <p>Unified persistence (incl. registry, state, secrets)</p>
+            </div>
+        </div>
+
+        <!-- Agent Core Section -->
+        <div class="component agent-core-component">
+            <div class="component-header">
+                <div class="component-icon agent-core">AC</div>
+                <div>
+                    <div class="component-title">Agent Core</div>
+                    <div class="component-subtitle">Orchestrates the agent's reasoning and execution flow</div>
+                </div>
+            </div>
+            <!-- CHANGE: Minor text update to reflect capability passing -->
+            <p>The Agent Core (e.g., PESAgent) manages the execution flow, delegating tasks to subsystems. It now passes required capability hints to the Reasoning System to aid dynamic model routing.</p>
+            <div class="success-box">
+                <div class="box-title">Focus on Orchestration</div>
+                 <p>Remains focused on logic flow, calling subsystems via interfaces. Passes capability requirements to the Reasoning Engine.</p>
+                 <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li>Initiates planning, execution, synthesis phases (for PES).</li>
+                    <li>Delegates prompt creation to Prompt Manager.</li>
+                    <!-- Updated -->
+                    <li>Delegates LLM calls (with capabilities) to Reasoning System.</li>
+                    <li>Delegates parsing to Output Parser.</li>
+                    <li>Delegates tool execution to Tool System.</li>
+                    <li>Delegates state/history updates to Context/Storage Systems.</li>
+                </ul>
+            </div>
+            <!-- Code box for Agent Core shows passing requiredCapabilities -->
+             <div class="code-box">
+// Conceptual Agent Core (PES Pattern - showing capability passing)
+async function processPES(props: AgentProps): Promise<AgentFinalResponse> {
+  // ... setup ...
+  const { reasoningEngine, /* other dependencies */ } = getDependenciesFromProps(props); // Assume helper
+
+  // 3. Planning Call
+  // ... create planningPrompt ...
+  const planningLLMResponse = await reasoningEngine.call(planningPrompt, {
+    threadId: props.threadId,
+    traceId: props.traceId,
+    requestId: `plan-${props.traceId || generateUUID()}`, // Example requestId
+    // --- v0.2.5 Change: Specify required capabilities ---
+    requiredCapabilities: [ModelCapability.REASONING, ModelCapability.TOOL_USE],
+    // --- End Change ---
+    onThought: (thought) => { /* ... record observation ... */ },
+    onChunk: (chunk) => { /* ... handle planning stream if applicable ... */ },
+    abortSignal: props.options?.abortSignal // Pass signal if provided
+  });
+
+  // ... parsing ...
+
+  // 4. Tool Execution
+  // ... execute tools ...
+
+  // 5. Synthesis Call
+  // ... create synthesisPrompt ...
+  const finalResponseContent = await reasoningEngine.call(synthesisPrompt, {
+    threadId: props.threadId,
+    traceId: props.traceId,
+    requestId: `synth-${props.traceId || generateUUID()}`, // Example requestId
+     // --- v0.2.5 Change: Specify required capabilities ---
+    requiredCapabilities: [ModelCapability.TEXT], // Synthesis typically needs text generation
+     // --- End Change ---
+    onThought: (thought) => { /* ... record observation ... */ },
+    onChunk: (chunk) => { /* ... stream final response to UI via callback/socket ... */ },
+    abortSignal: props.options?.abortSignal // Pass signal if provided
+  });
+
+  // ... finalization (return accumulated response if streamed) ...
+}
+            </div>
+            <!-- Subcomponents remain conceptually similar -->
+             <div class="subcomponents">
+                <div class="subcomponent">
+                     <div class="subcomponent-title"><div class="subcomponent-icon agent-core">1</div>AgentCore Interface</div>
+                     <div class="subcomponent-description">Defines `process` method.</div>
+                     <div class="features"><div class="feature">Standard signature</div></div>
+                 </div>
+                 <div class="subcomponent">
+                     <div class="subcomponent-title"><div class="subcomponent-icon agent-core">2</div>PES Agent</div>
+                     <div class="subcomponent-description">Implements Plan-Execute-Synthesize pattern.</div>
+                     <div class="features"><div class="feature">Passes capabilities to Reasoning Engine</div></div>
+                 </div>
+                 <div class="subcomponent">
+                     <div class="subcomponent-title"><div class="subcomponent-icon agent-core">3</div>Alternative Patterns</div>
+                     <div class="subcomponent-description">Support for other patterns (ReAct, etc.).</div>
+                 </div>
+                 <div class="subcomponent">
+                     <div class="subcomponent-title"><div class="subcomponent-icon agent-core">4</div>Agent Factory</div>
+                     <!-- Updated -->
+                     <div class="subcomponent-description">Constructs agents, injects dependencies (incl. new reasoning components).</div>
+                 </div>
+            </div>
+        </div>
+
+        <!-- Tool System Section -->
+         <div class="component tool-system-component">
+             <div class="component-header">
+                 <div class="component-icon tool-system">TS</div>
+                 <div><div class="component-title">Tool System</div><div class="component-subtitle">Enables interaction with external capabilities</div></div>
+             </div>
+              <!-- Updated -->
+             <p>The Tool System provides a robust way to define, discover, and execute tools. Tool schemas can now be passed via `CallOptions` to LLMs that support tool usage prompts.</p>
+              <div class="success-box">
+                <div class="box-title">Robust Tool Handling</div>
+                <p>Comprehensive flow: verification, validation, secure execution, observation.</p>
+            </div>
+             <div class="code-box">
+// Tool Executor Interface (Conceptual - Unchanged)
+interface IToolExecutor { schema: ToolSchema; execute(input: any, context: ExecutionContext): Promise<ToolResult>; }
+interface ExecutionContext { /* ... */ }
+interface ToolResult { /* ... */ }
+// Tool System executeTools (Conceptual - Unchanged internal logic)
+async executeTools(toolCalls: ParsedToolCall[], threadId: string, traceId?: string): Promise<ToolResult[]> { /* ... */ }
+            </div>
+              <div class="subcomponents">
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon tool-system">1</div>Tool Schema</div><div class="subcomponent-description">Defines tools using JSON Schema.</div></div>
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon tool-system">2</div>Tool Executor</div><div class="subcomponent-description">Implements tool logic.</div></div>
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon tool-system">3</div>Tool Registry</div><div class="subcomponent-description">Manages tool registration/discovery.</div></div>
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon tool-system">4</div>Built-in Tools</div><div class="subcomponent-description">Optional common tools.</div></div>
+            </div>
+        </div>
+
+        <!-- Reasoning System Section -->
+        <!-- CHANGE: Major updates to this section -->
+        <div class="component reasoning-system-component">
+            <div class="component-header">
+                <div class="component-icon reasoning-system">RS</div>
+                <div>
+                    <div class="component-title">Reasoning System <span class="update-badge new-badge">v0.2.5</span></div>
+                    <div class="component-subtitle">Manages multi-provider LLM interaction, routing, registry & cost</div>
+                </div>
+            </div>
+
+            <p>The Reasoning System is significantly enhanced in v0.2.5. It now manages multiple concurrent provider instances, intelligently routes requests based on capabilities and preferences, maintains a central model registry, tracks costs, and provides robust interaction capabilities including streaming, image input, tool usage, and cancellation.</p>
+
+            <div class="success-box">
+                <div class="box-title">Multi-Provider Orchestration <span class="update-badge new-badge">New in v0.2.5</span></div>
+                <p>Handles the complexity of using diverse local and remote LLMs seamlessly:</p>
+                <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li><strong>Provider Instance Manager:</strong> Manages lifecycle of configured provider adapters.</li>
+                    <li><strong>Model Registry:</strong> Central catalog of model info (capabilities, cost, context).</li>
+                    <li><strong>Model Router:</strong> Selects best instance/model based on capabilities, preferences, cost.</li>
+                    <li><strong>Cost Tracking Service:</strong> Monitors usage and enforces budgets.</li>
+                    <li><strong>Reasoning Engine:</strong> Orchestrates routing and calls to the selected adapter.</li>
+                    <li><strong>Provider Adapters:</strong> Handle provider specifics, now support advanced features (list/pull/delete models, streaming chunks, aborts).</li>
+                </ul>
+            </div>
+
+            <div class="code-box">
+// --- v0.2.5 Interfaces (Conceptual) ---
+
+// Config for one provider instance
+interface ProviderInstanceConfig {
+  id: string; provider: string; isLocal: boolean; apiKey?: string; model?: string; /* ... */
+}
+
+// Updated Thread Config (Reasoning Part)
+interface ThreadReasoningConfig {
+  instanceId: string; model?: string; parameters?: object;
+  modelPreferences?: ModelPreferences; costPreferences?: CostPreferences;
+  autoDetectCapabilities?: boolean;
+}
+interface ModelPreferences { /* defaultInstanceId?, preferredModels?, fallbackInstances? */ }
+interface CostPreferences { /* maxCostPerCall?, warnCostThreshold?, ... */ }
+
+// Updated Call Options
+interface EnhancedCallOptions extends CallOptions { // Extends base v0.2.4 CallOptions
+  requiredCapabilities?: ModelCapability[];
+  requestId?: string; images?: ImageInput[]; tools?: ToolSchema[];
+  onChunk?: (chunk: StreamChunk) => void; // For content stream
+  abortSignal?: AbortSignal; responseSchema?: JsonSchema;
+  // onThought still exists
+}
+interface ImageInput { type: 'base64' | 'url' | 'buffer'; data: string | Uint8Array; /* ... */ }
+interface StreamChunk { content: string; isFinal: boolean; /* ... */ }
+
+// Extended Provider Adapter Interface
+interface ProviderAdapter extends ReasoningEngine {
+  readonly providerName: string;
+  listModels?(): Promise<ProviderModelInfo[]>;
+  pullModel?(modelName: string, options?: PullModelOptions): Promise<void>;
+  deleteModel?(modelName: string): Promise<void>;
+  abortRequest?(requestId: string): Promise<void>;
+}
+interface ProviderModelInfo { name: string; details: any; }
+interface PullModelOptions { onProgress?: (progress: PullProgress) => void; }
+interface PullProgress { status: string; /* ... */ }
+
+// Reasoning Engine using new components (Simplified)
+class ReasoningEngineImpl implements ReasoningEngine {
+  constructor(
+    private providerManager: ProviderInstanceManager,
+    private stateManager: StateManager,
+    private modelRouter: ModelRouter,
+    // ... other deps
+  ) {}
+  async call(prompt: FormattedPrompt, options: EnhancedCallOptions): Promise<string> {
+    // 1. Load thread context (incl. reasoning config) via StateManager
+    // 2. Determine requiredCapabilities (from options or QueryAnalyzer)
+    // 3. Select instanceId & modelId via ModelRouter (using capabilities, prefs, cost)
+    // 4. Get adapter instance via ProviderInstanceManager
+    // 5. Check cost budget (optional pre-check) via CostTrackingService
+    // 6. Merge all options (call, thread, instance defaults)
+    // 7. Call adapter.call(prompt, finalOptions)
+    // 8. Record usage via CostTrackingService
+    // 9. Handle errors / fallback via ModelRouter
+    // ...
+  }
+}
+            </div>
+
+            <div class="subcomponents">
+                 <div class="subcomponent">
+                    <div class="subcomponent-title"><div class="subcomponent-icon reasoning-system">1</div>Reasoning Engine</div>
+                    <div class="subcomponent-description">Orchestrates calls using Router, Manager, Cost Service.</div>
+                    <div class="features"><div class="feature">Dynamic dispatch</div></div>
+                </div>
+                 <div class="subcomponent">
+                    <div class="subcomponent-title"><div class="subcomponent-icon reasoning-system">2</div>Provider Instance Manager <span class="new-badge">New</span></div>
+                    <div class="subcomponent-description">Manages active provider adapter instances.</div>
+                    <div class="features"><div class="feature">Handles multiple providers</div><div class="feature">Enforces local provider rules</div></div>
+                </div>
+                 <div class="subcomponent">
+                    <div class="subcomponent-title"><div class="subcomponent-icon reasoning-system">3</div>Model Registry <span class="new-badge">New</span></div>
+                    <div class="subcomponent-description">Central catalog of model information.</div>
+                     <div class="features"><div class="feature">Stores capabilities, cost, etc.</div><div class="feature">Persists via Storage</div></div>
+                </div>
+                 <div class="subcomponent">
+                    <div class="subcomponent-title"><div class="subcomponent-icon reasoning-system">4</div>Model Router <span class="new-badge">New</span></div>
+                    <div class="subcomponent-description">Selects best instance/model per request.</div>
+                     <div class="features"><div class="feature">Uses capabilities, prefs, cost</div><div class="feature">Handles fallbacks</div></div>
+                </div>
+                 <div class="subcomponent">
+                    <div class="subcomponent-title"><div class="subcomponent-icon reasoning-system">5</div>Cost Tracking Service <span class="new-badge">New</span></div>
+                    <div class="subcomponent-description">Monitors token/cost usage.</div>
+                     <div class="features"><div class="feature">Tracks per thread/instance</div><div class="feature">Emits warnings</div></div>
+                </div>
+                 <div class="subcomponent">
+                    <div class="subcomponent-title"><div class="subcomponent-icon reasoning-system">6</div>Provider Adapters</div>
+                    <div class="subcomponent-description">Provider implementations (incl. Ollama).</div>
+                    <!-- Updated -->
+                    <div class="features"><div class="feature">Extended interface (list/pull/delete/abort)</div><div class="feature">Supports streaming, images, tools</div></div>
+                </div>
+                 <div class="subcomponent">
+                    <div class="subcomponent-title"><div class="subcomponent-icon reasoning-system">7</div>Prompt Manager</div>
+                     <!-- Updated -->
+                    <div class="subcomponent-description">Constructs prompts (adapts to provider).</div>
+                    <div class="features"><div class="feature">Needs provider context</div></div>
+                </div>
+                 <div class="subcomponent">
+                    <div class="subcomponent-title"><div class="subcomponent-icon reasoning-system">8</div>Output Parser</div>
+                    <div class="subcomponent-description">Extracts structured data/text.</div>
+                    <div class="features"><div class="feature">Handles planning/synthesis</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Storage System Section -->
+        <div class="component storage-system-component">
+             <div class="component-header">
+                <div class="component-icon storage-system">SS</div>
+                <div>
+                    <div class="component-title">Storage System <span class="update-badge new-badge">v0.2.5</span></div>
+                    <div class="component-subtitle">Unified persistence layer (history, state, registry, secrets)</div>
+                </div>
+            </div>
+            <p>The Storage System provides consistent persistence via adapters. In v0.2.5, it adds support for persisting the `ModelRegistry` and optionally encrypted API keys via `EncryptedSecretsRepository`.</p>
+             <div class="success-box">
+                <div class="box-title">Centralized & Reliable Persistence</div>
+                <p>Ensures data integrity for history, state, observations, model registry, and optional secrets.</p>
+            </div>
+              <div class="code-box">
+// Storage Adapter Interface (Conceptual - Unchanged)
+interface StorageAdapter { /* get, set, delete, query, init? */ }
+
+// Repositories using the adapter
+class ConversationRepository { /* ... */ }
+class ObservationRepository { /* ... */ }
+class StateRepository { /* ... */ }
+// --- v0.2.5 New Repositories ---
+class ModelRegistryRepository { /* getModel, saveModel, queryModels */ }
+// Optional:
+interface EncryptedSecretsRepository { /* saveApiKey, getApiKey, ... */ }
+class EncryptedSecretsRepositoryImpl implements EncryptedSecretsRepository { /* Uses StorageAdapter + SubtleCrypto */ }
+            </div>
+             <div class="subcomponents">
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon storage-system">1</div>Storage Interface & Adapters</div><div class="subcomponent-description">Core contract & backends.</div></div>
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon storage-system">2</div>Observation Repository</div><div class="subcomponent-description">Manages observation persistence.</div></div>
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon storage-system">3</div>Conversation Repository</div><div class="subcomponent-description">Manages message persistence.</div></div>
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon storage-system">4</div>State Repository</div><div class="subcomponent-description">Manages thread config/state.</div></div>
+                 <!-- New -->
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon storage-system">5</div>Model Registry Repository <span class="new-badge">New</span></div><div class="subcomponent-description">Manages persistence of model catalog.</div><div class="features"><div class="feature">Stores `ModelInfo`</div></div></div>
+                 <!-- Optional New -->
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon storage-system">6</div>Encrypted Secrets Repository <span class="new-badge">Optional</span></div><div class="subcomponent-description">Manages client-side API key storage.</div><div class="features"><div class="feature">Uses `SubtleCrypto`</div></div></div>
+            </div>
+        </div>
+
+        <!-- Observation System Section -->
+         <div class="component observation-system-component">
+             <div class="component-header">
+                 <div class="component-icon observation-system">OS</div>
+                 <div>
+                    <div class="component-title">Observation System <span class="update-badge new-badge">v0.2.5</span></div>
+                    <div class="component-subtitle">Provides transparency into agent & model operations</div>
+                 </div>
+             </div>
+            <p>The Observation System captures key events. In v0.2.5, it's enhanced to record detailed events from the Model Management system (routing, fallbacks, cost warnings, model pull/delete actions).</p>
+             <div class="success-box">
+                 <div class="box-title">Detailed & Typed Observations</div>
+                 <p>Produces structured observations for traceability, including new model management events:</p>
+                <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li>INTENT, PLAN, THOUGHTS, TOOL_EXECUTION, ERROR (Existing)</li>
+                    <!-- New -->
+                    <li>**MODEL_ROUTE_DECISION:** Records which instance/model was selected.</li>
+                    <li>**MODEL_FALLBACK_ATTEMPT/SUCCESS/FAILED:** Tracks fallback events.</li>
+                    <li>**COST_WARNING/LIMIT_REACHED:** Records budget events.</li>
+                    <li>**MODEL_PULL_START/PROGRESS/END:** Tracks model download status.</li>
+                    <li>**MODEL_DELETE_ATTEMPT/RESULT:** Tracks model deletion status.</li>
+                    <li>**API_KEY_ACCESS:** (Optional) Records access to encrypted secrets repo.</li>
+                 </ul>
+             </div>
+              <div class="code-box">
+// Observation Structure (Conceptual - Unchanged)
+enum ObservationType { /* ..., MODEL_ROUTE_DECISION, COST_WARNING, ... */ }
+interface Observation { id: string; threadId: string; /* ... */ }
+interface ObservationManager { record(...); getObservations(...); }
+            </div>
+              <div class="subcomponents">
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon observation-system">1</div>Observation Creator/Manager</div><div class="subcomponent-description">Creates, saves, broadcasts observations.</div></div>
+                 <!-- Updated -->
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon observation-system">2</div>Observation Types</div><div class="subcomponent-description">Categories incl. model management.</div></div>
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon observation-system">3</div>Observation Structure</div><div class="subcomponent-description">Standard format.</div></div>
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon observation-system">4</div>UI Notification Integration</div><div class="subcomponent-description">Connects via sockets.</div></div>
+             </div>
+        </div>
+
+        <!-- Context System Section -->
+         <div class="component context-system-component">
+              <div class="component-header">
+                 <div class="component-icon context-system">CS</div>
+                 <div>
+                    <div class="component-title">Context System <span class="update-badge new-badge">v0.2.5</span></div>
+                    <div class="component-subtitle">Manages state, history, and thread configuration</div>
+                 </div>
+             </div>
+            <p>The Context System manages interaction state. In v0.2.5, the `StateManager` handles the updated `ThreadConfig`, including the target `instanceId`, `modelPreferences` (with fallback chains), and `costPreferences`, providing this crucial context to the `ModelRouter`.</p>
+             <div class="success-box">
+                 <div class="box-title">Centralized Thread Management</div>
+                 <!-- Updated -->
+                 <p>StateManager provides thread-specific configuration including provider instance selection, model/cost preferences.</p>
+            </div>
+             <div class="code-box">
+// --- v0.2.5 Thread Configuration ---
+interface ProviderInstanceConfig { /* ... */ }
+interface ModelPreferences { /* defaultInstanceId?, preferredModels?, fallbackInstances?, ... */ }
+interface CostPreferences { /* maxCostPerCall?, warnCostThreshold?, ... */ }
+
+interface ThreadReasoningConfig {
+  instanceId: string; // ID of the ProviderInstanceConfig
+  model?: string; // Optional model override
+  parameters?: Record<string, any>; // Optional param overrides
+  modelPreferences?: ModelPreferences;
+  costPreferences?: CostPreferences;
+  autoDetectCapabilities?: boolean;
+}
+
+interface ThreadConfig {
+  reasoning: ThreadReasoningConfig; // Updated structure
+  enabledTools: string[]; historyLimit: number; systemPrompt?: string; /* ... */
+}
+
+// StateManager Interface (Conceptual - handles new config)
+interface StateManager {
+  loadThreadContext(threadId: string, userId?: string): Promise<ThreadContext>;
+  isToolEnabled(threadId: string, toolName: string): Promise<boolean>;
+  getThreadConfigValue<T>(threadId: string, key: string): Promise<T | undefined>;
+  saveStateIfModified(threadId: string): Promise<void>;
+  setThreadConfig(threadId: string, config: ThreadConfig): Promise<void>;
+  // --- New Method Example ---
+  updateThreadReasoningPreferences(threadId: string, prefs: { modelPrefs?: ModelPreferences, costPrefs?: CostPreferences }): Promise<void>;
+}
+            </div>
+              <div class="subcomponents">
+                 <!-- Updated -->
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon context-system">1</div>State Manager</div><div class="subcomponent-description">Manages thread config (instanceId, prefs) & state.</div></div>
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon context-system">2</div>Conversation Manager</div><div class="subcomponent-description">Manages message history per thread.</div></div>
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon context-system">3</div>Context Provider</div><div class="subcomponent-description">Gathers dynamic context (Future).</div></div>
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon context-system">4</div>Context Retrieval Strategies</div><div class="subcomponent-description">Methods for RAG (Future).</div></div>
+             </div>
+        </div>
+
+        <!-- UI System Section -->
+        <div class="component ui-system-component">
+             <div class="component-header">
+                 <div class="component-icon ui-system">UI</div>
+                 <div>
+                    <div class="component-title">UI System <span class="update-badge new-badge">v0.2.5</span></div>
+                    <div class="component-subtitle">Typed sockets for UI integration & model events</div>
+                 </div>
+             </div>
+            <p>The UI System provides typed sockets for decoupling. Version 0.2.5 introduces a dedicated `ModelSocket` to broadcast detailed events related to provider/model selection, errors, fallbacks, cost warnings, and model management actions (like pull progress).</p>
+             <div class="success-box">
+                <div class="box-title">Flexible & Informed UI Integration</div>
+                <p>Enables reactive UIs with fine-grained subscriptions:</p>
+                <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li>ObservationSocket: General agent activity.</li>
+                    <li>ConversationSocket: User/AI messages.</li>
+                    <!-- New -->
+                    <li>**ModelSocket:** Specific events for model selection, status, cost, management actions.</li>
+                 </ul>
+            </div>
+             <div class="code-box">
+// Generic Typed Socket Interface (Unchanged)
+interface TypedSocket<DataType, FilterType = any> { /* subscribe, notify, getHistory? */ }
+
+// Specific Socket Types
+interface ObservationSocket extends TypedSocket<Observation, ObservationType | ObservationType[]> {}
+interface ConversationSocket extends TypedSocket<ConversationMessage, MessageRole | MessageRole[]> {}
+
+// --- v0.2.5 New Socket ---
+enum ModelEventType { MODEL_SELECTED, COST_WARNING, MODEL_PULL_PROGRESS, /* ... */ }
+interface ModelEvent { type: ModelEventType; threadId: string; content: any; /* ... */ }
+interface ModelSocket extends TypedSocket<ModelEvent, ModelEventType | ModelEventType[]> {}
+
+// UI System Interface
+interface UISystem {
+  getObservationSocket(): ObservationSocket;
+  getConversationSocket(): ConversationSocket;
+  getModelSocket(): ModelSocket; // New getter
+}
+
+// Example Usage (Conceptual - Model Events)
+function useArtModelEvents(threadId: string) { /* ... (similar to previous) ... */ }
+            </div>
+             <div class="subcomponents">
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon ui-system">1</div>Typed Socket Interface</div><div class="subcomponent-description">Core pub/sub contract.</div></div>
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon ui-system">2</div>ObservationSocket</div><div class="subcomponent-description">For agent activity.</div></div>
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon ui-system">3</div>ConversationSocket</div><div class="subcomponent-description">For user/AI messages.</div></div>
+                 <!-- New -->
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon ui-system">4</div>ModelSocket <span class="new-badge">New</span></div><div class="subcomponent-description">For model management events.</div></div>
+                 <div class="subcomponent"><div class="subcomponent-title"><div class="subcomponent-icon ui-system">5</div>UI Integration Helpers</div><div class="subcomponent-description">Utilities for frameworks.</div></div>
+            </div>
+        </div>
+
+        <!-- Execution Flow Section -->
+         <div class="component">
+            <h2>End-to-End Execution Flow</h2>
+            <!-- Updated text -->
+            <p>While the core PES stages remain, the Reasoning System interactions within stages 3 (Planning) and 5 (Synthesis) are now more sophisticated, involving the Model Router and Provider Instance Manager to select and invoke the appropriate LLM instance based on thread configuration and capabilities.</p>
+            <!-- Link can remain, but acknowledge it's conceptual based on v0.2.4 -->
+            <a href="./ART-Execution-Flow-v0.2.5.html" class="button" style="margin-top: 1rem;">View Detailed PES Execution Flow (Conceptual v0.2.5)</a>
+        </div>
+
+        <!-- Architecture Improvements Section -->
+         <div class="component">
+            <h2>Architecture Improvements Summary (v0.2.5)</h2>
+            <p>Version 0.2.5 introduces significant enhancements primarily within the Reasoning System to enable flexible, robust, and observable multi-provider LLM usage.</p>
+            <div class="subcomponents">
+                <div class="subcomponent">
+                    <div class="subcomponent-title"><div class="subcomponent-icon" style="background: linear-gradient(135deg, var(--success), var(--success-light)); color: var(--success);">1</div>Multi-Provider Support</div>
+                    <div class="subcomponent-description">Core architecture refactored to manage and use multiple LLM provider instances concurrently.</div>
+                    <div class="features"><div class="feature">`ProviderInstanceManager`</div><div class="feature">`ProviderInstanceConfig[]`</div></div>
+                </div>
+                 <div class="subcomponent">
+                    <div class="subcomponent-title"><div class="subcomponent-icon" style="background: linear-gradient(135deg, var(--success), var(--success-light)); color: var(--success);">2</div>Dynamic Routing & Registry</div>
+                    <div class="subcomponent-description">Foundational `ModelRouter` and `ModelRegistry` for intelligent model selection.</div>
+                     <div class="features"><div class="feature">Selects on capabilities/prefs</div><div class="feature">Handles fallback chains</div><div class="feature">Registry catalogs models</div></div>
+                </div>
+                 <div class="subcomponent">
+                    <div class="subcomponent-title"><div class="subcomponent-icon" style="background: linear-gradient(135deg, var(--success), var(--success-light)); color: var(--success);">3</div>Enhanced Configuration</div>
+                    <div class="subcomponent-description">`ThreadConfig` updated for instance selection, model/cost preferences.</div>
+                    <div class="features"><div class="feature">`reasoning.instanceId`</div><div class="feature">`modelPreferences`</div><div class="feature">`costPreferences`</div></div>
+                </div>
+                 <div class="subcomponent">
+                    <div class="subcomponent-title"><div class="subcomponent-icon" style="background: linear-gradient(135deg, var(--success), var(--success-light)); color: var(--success);">4</div>Comprehensive Ollama Adapter</div>
+                    <div class="subcomponent-description">Full-featured adapter for Ollama local LLMs.</div>
+                    <div class="features"><div class="feature">Streaming, images, tools, abort</div><div class="feature">list/pull/delete models</div></div>
+                </div>
+                 <div class="subcomponent">
+                    <div class="subcomponent-title"><div class="subcomponent-icon" style="background: linear-gradient(135deg, var(--success), var(--success-light)); color: var(--success);">5</div>Improved Observability</div>
+                    <div class="subcomponent-description">Dedicated `ModelSocket` and detailed model management observations.</div>
+                    <div class="features"><div class="feature">Events for routing, cost, status</div><div class="feature">Enhanced debugging</div></div>
+                </div>
+                 <div class="subcomponent">
+                    <div class="subcomponent-title"><div class="subcomponent-icon" style="background: linear-gradient(135deg, var(--success), var(--success-light)); color: var(--success);">6</div>Cost Tracking Foundation</div>
+                    <div class="subcomponent-description">Basic service for monitoring usage against budgets.</div>
+                    <div class="features"><div class="feature">Tracks estimated usage</div><div class="feature">Emits cost warnings</div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="component">
+            <h2>Getting Started with ART v0.2.5</h2>
+            <p>ART v0.2.5 allows configuring multiple LLM providers. The framework then routes requests based on thread settings.</p>
+            <div class="code-box">
+// Initialize ART framework components (Conceptual v0.2.5)
+import {
+  createArtInstance, PESAgent, IndexedDBStorageAdapter,
+  // Type Imports...
+  ModelCapability, ProviderInstanceConfig, ThreadConfig, ModelEventType
+} from 'art-framework'; // Adjust import paths
+
+async function setupAgent() {
+
+  // --- v0.2.5: Define multiple provider instances ---
+  const providerConfigs: ProviderInstanceConfig[] = [
+    { id: 'openai-gpt4o', provider: 'openai', isLocal: false, apiKey: process.env.OPENAI_API_KEY, model: 'gpt-4o' },
+    { id: 'anthropic-haiku', provider: 'anthropic', isLocal: false, apiKey: process.env.ANTHROPIC_API_KEY, model: 'claude-3-haiku-20240307' },
+    // Note: isLocal can be auto-detected for 'ollama' by ProviderInstanceManager
+    { id: 'ollama-llama3', provider: 'ollama', isLocal: true, model: 'llama3', baseUrl: 'http://127.0.0.1:11434' }
+  ];
+
+  const art = await createArtInstance({
+    // --- v0.2.5: Pass provider instance configs ---
+    providers: providerConfigs,
+    storage: { type: 'indexedDB', dbName: 'art-agent-db-v025' },
+    tools: [/* new CalculatorTool(), ... */],
+  });
+
+  const threadId_general = 'thread-general-abc';
+  const threadId_coding = 'thread-coding-xyz';
+
+  // --- v0.2.5: Set thread-specific reasoning instance ---
+  await art.stateManager.setThreadConfig(threadId_general, {
+    // Existing fields...
+    enabledTools: ['calculator'], historyLimit: 20,
+    reasoning: {
+      instanceId: 'anthropic-haiku', // Use Anthropic for general chat
+      // Add model/cost preferences if needed
+      costPreferences: { warnCostThreshold: 1.00 }
+    },
+  });
+
+   await art.stateManager.setThreadConfig(threadId_coding, {
+     // Existing fields...
+     enabledTools: ['calculator'], historyLimit: 20,
+    reasoning: {
+      instanceId: 'ollama-llama3', // Use local Ollama for coding
+       modelPreferences: { // Prefer OpenAI for non-code reasoning in this thread
+           preferredModels: {
+               [ModelCapability.REASONING]: { instanceId: 'openai-gpt4o' }
+           }
+       }
+    },
+  });
+
+
+  // --- v0.2.5: UI Integration Example (ModelSocket) ---
+  const modelSocket = art.uiSystem.getModelSocket();
+  modelSocket.subscribe((event) => {
+      console.log(`[Model Event - ${event.threadId}] Type: ${event.type}`, event.content);
+      // Update UI based on event type (e.g., show pull progress, cost warning)
+      if(event.type === ModelEventType.MODEL_PULL_PROGRESS) {
+          // updateProgressUI(event.content.status, event.content.completed, event.content.total);
+      } else if (event.type === ModelEventType.COST_WARNING_THRESHOLD_REACHED) {
+          // showCostWarning(`Thread ${event.threadId} cost: $${event.content?.cost?.toFixed(2)}`);
+      }
+  });
+
+  // Example: Triggering Ollama Pull (Application Layer)
+  // await art.providerInstanceManager.getProvider('ollama-llama3')?.pullModel?.('mistral:latest', {
+  //    onProgress: (p) => console.log(`Pulling mistral: ${p.status} ${p.completed || ''}/${p.total || ''}`)
+  // });
+
+  // Process queries - ART routes automatically based on thread config
+  const response1 = await art.process({
+    query: "What's a good recipe for banana bread?",
+    threadId: threadId_general, // Will use 'anthropic-haiku'
+  });
+  console.log('General Response:', response1.response.content);
+
+  const response2 = await art.process({
+    query: "Write a python function for fibonacci sequence",
+    threadId: threadId_coding, // Will likely use 'ollama-llama3'
+  });
+   console.log('Coding Response:', response2.response.content);
+}
+
+setupAgent();
+            </div>
+
+            <div class="info-box">
+                <div class="box-title">Multi-Provider Flexibility</div>
+                <p>ART v0.2.5's architecture allows mixing local (like Ollama) and remote providers, dynamically routing requests per thread based on configuration and required capabilities (via ModelRouter), offering significant flexibility and control.</p>
+            </div>
+             <div class="warning-box">
+                <div class="box-title">Security Considerations</div>
+                <p>Continue to prioritize security: validate tool inputs, use timeouts, manage API keys securely (consider external vaults or the optional encrypted repository), and be mindful of local provider security implications.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

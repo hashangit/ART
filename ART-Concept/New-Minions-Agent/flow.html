@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minions Protocol Visualization</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light blue-gray background */
+            overflow-x: hidden;
+        }
+        .box {
+            border: 2px solid #cbd5e1; /* Cool gray border */
+            border-radius: 0.75rem; /* Rounded corners */
+            padding: 1rem;
+            background-color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: all 0.3s ease-in-out;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        .box.active {
+            border-color: #3b82f6; /* Blue border when active */
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+        .arrow {
+            position: absolute;
+            background-color: #60a5fa; /* Lighter blue */
+            height: 3px;
+            transform-origin: left center;
+            transition: all 0.5s ease-in-out;
+            z-index: 10;
+            border-radius: 2px;
+        }
+        .arrow::after {
+            content: '';
+            position: absolute;
+            right: -1px;
+            top: -4px;
+            width: 0;
+            height: 0;
+            border-top: 6px solid transparent;
+            border-bottom: 6px solid transparent;
+            border-left: 10px solid #60a5fa; /* Lighter blue */
+        }
+        .job-chunk {
+            width: 80px;
+            height: 50px;
+            font-size: 0.75rem;
+            margin: 0.25rem;
+            background-color: #e0f2fe; /* Light sky blue */
+            border: 1px solid #7dd3fc; /* Sky blue border */
+            opacity: 0;
+            transition: opacity 0.5s ease, background-color 0.3s ease, border-color 0.3s ease;
+            position: relative; /* Needed for absolute positioning of status */
+        }
+        .job-chunk.processing {
+             border-color: #fbbf24; /* Amber border */
+             background-color: #fef3c7; /* Light amber */
+        }
+         .job-chunk.filtered {
+             background-color: #fee2e2; /* Light red */
+             border-color: #fca5a5; /* Red border */
+             opacity: 0.5 !important; /* Make filtered items semi-transparent */
+         }
+        .job-chunk.done {
+             background-color: #dcfce7; /* Light green */
+             border-color: #86efac; /* Green border */
+        }
+        .job-status {
+            position: absolute;
+            bottom: 2px;
+            left: 2px;
+            right: 2px;
+            font-size: 0.6rem;
+            font-weight: 500;
+            color: #555;
+        }
+        .info-text {
+            margin-top: 1rem;
+            font-style: italic;
+            color: #4b5563; /* Gray */
+            min-height: 40px;
+            text-align: center;
+        }
+        .icon {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 0.5rem;
+        }
+        /* Simple pulse animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .pulsing {
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <h1 class="text-2xl md:text-3xl font-bold text-center mb-6 text-gray-800">Minions Protocol Visualization</h1>
+
+    <div class="flex justify-center mb-6">
+        <button id="startButton" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow transition duration-300">
+            Start Simulation
+        </button>
+         <button id="resetButton" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg shadow transition duration-300 ml-4 hidden">
+            Reset
+        </button>
+    </div>
+
+    <div class="relative grid grid-cols-1 md:grid-cols-3 gap-8 items-start min-h-[500px]">
+        <div class="flex flex-col items-center space-y-8">
+            <div id="queryBox" class="box w-full max-w-xs">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+                </svg>
+                <span>User Query</span>
+                <p class="text-xs text-gray-500 mt-1">e.g., "Calculate FY15 D&A margin for AMD"</p>
+            </div>
+            <div id="remoteLmBox" class="box w-full max-w-xs">
+                 <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                   <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+                 </svg>
+                <span>Remote LM (Cloud)</span>
+                 <p class="text-xs text-gray-500 mt-1">e.g., GPT-4</p>
+                 <p id="remoteLmStatus" class="text-xs font-medium mt-2 text-blue-600"></p>
+            </div>
+             <div id="finalAnswerBox" class="box w-full max-w-xs opacity-0">
+                 <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                 </svg>
+                <span>Final Answer</span>
+                <p id="finalAnswerContent" class="text-sm font-semibold mt-1"></p>
+            </div>
+        </div>
+
+        <div class="flex flex-col items-center space-y-4 mt-8 md:mt-0">
+             <div id="infoTextBox" class="info-text w-full px-4">
+                Click "Start Simulation" to begin.
+            </div>
+            <div id="documentBox" class="box w-full max-w-xs">
+                 <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                   <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                 </svg>
+                <span>Full Document (Local)</span>
+                <p class="text-xs text-gray-500 mt-1">e.g., 10-K Report</p>
+            </div>
+            <div id="codeBox" class="box w-40 h-20 opacity-0">
+                 <svg class="icon w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                   <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5" />
+                 </svg>
+                <span class="text-xs">Job Function Code</span>
+            </div>
+        </div>
+
+        <div class="flex flex-col items-center space-y-8">
+            <div id="localLmBox" class="box w-full max-w-xs">
+                 <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.97 2.122L7.63 21.75M9 17.25S9 17.25 9 17.25m0-3c0 .174.015.347.042.518M9 14.25c0 .174.015.347.042.518m0 0c.206.966.756 1.848 1.464 2.554M12 14.25c-1.32 0-2.5.6-3.277 1.58M12 14.25S12 14.25 12 14.25m6-8.25C15.75 6 12 6 12 6m6 0v3.75m0-3.75S18 6 18 6m-6 8.25v.75a2.25 2.25 0 0 1-2.25 2.25H5.25a2.25 2.25 0 0 1-2.25-2.25V6.75a2.25 2.25 0 0 1 2.25-2.25h3.75m8.25 0H16.5a2.25 2.25 0 0 0-2.25 2.25v7.5a2.25 2.25 0 0 0 2.25 2.25h2.25a2.25 2.25 0 0 0 2.25-2.25V15m-3-12-3 3m0 0 3 3m-3-3H3" />
+                 </svg>
+                <span>Local LM (Device)</span>
+                <p class="text-xs text-gray-500 mt-1">e.g., Llama-3-8B</p>
+                <p id="localLmStatus" class="text-xs font-medium mt-2 text-blue-600"></p>
+            </div>
+            <div id="jobChunksContainer" class="w-full max-w-md flex flex-wrap justify-center mt-4 p-2 border border-dashed border-gray-300 rounded-lg min-h-[150px] bg-gray-50">
+                </div>
+             <div id="filteredResultsBox" class="box w-40 h-20 opacity-0">
+                 <svg class="icon w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.572a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
+                 </svg>
+                <span class="text-xs">Filtered Results</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="arrowContainer" class="absolute top-0 left-0 w-full h-full pointer-events-none"></div>
+
+    <script>
+        // --- DOM Elements ---
+        const queryBox = document.getElementById('queryBox');
+        const remoteLmBox = document.getElementById('remoteLmBox');
+        const localLmBox = document.getElementById('localLmBox');
+        const documentBox = document.getElementById('documentBox');
+        const codeBox = document.getElementById('codeBox');
+        const jobChunksContainer = document.getElementById('jobChunksContainer');
+        const filteredResultsBox = document.getElementById('filteredResultsBox');
+        const finalAnswerBox = document.getElementById('finalAnswerBox');
+        const finalAnswerContent = document.getElementById('finalAnswerContent');
+        const infoTextBox = document.getElementById('infoTextBox');
+        const startButton = document.getElementById('startButton');
+        const resetButton = document.getElementById('resetButton');
+        const arrowContainer = document.getElementById('arrowContainer');
+        const remoteLmStatus = document.getElementById('remoteLmStatus');
+        const localLmStatus = document.getElementById('localLmStatus');
+
+        // --- State ---
+        let simulationRunning = false;
+        let currentStep = 0;
+        let animationTimeout;
+        let round = 1;
+        const MAX_ROUNDS = 2; // Simulate max 2 rounds before forcing answer
+
+        // --- Helper Functions ---
+        function sleep(ms) {
+            return new Promise(resolve => animationTimeout = setTimeout(resolve, ms));
+        }
+
+        function clearTimeouts() {
+             clearTimeout(animationTimeout);
+        }
+
+        function getCenter(element) {
+            const rect = element.getBoundingClientRect();
+            return {
+                x: rect.left + rect.width / 2 + window.scrollX,
+                y: rect.top + rect.height / 2 + window.scrollY
+            };
+        }
+
+        function createArrow(fromElement, toElement, id) {
+            const start = getCenter(fromElement);
+            const end = getCenter(toElement);
+
+            const angle = Math.atan2(end.y - start.y, end.x - start.x);
+            const length = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
+
+            // Adjust length to not overlap elements significantly
+            const adjustedLength = length - (fromElement.offsetHeight / 2) - (toElement.offsetHeight / 2) - 10; // 10px buffer
+
+             // Adjust start point based on angle to start from edge
+            const startX = start.x + (fromElement.offsetWidth / 2) * Math.cos(angle);
+            const startY = start.y + (fromElement.offsetHeight / 2) * Math.sin(angle);
+
+
+            const arrow = document.createElement('div');
+            arrow.id = id;
+            arrow.classList.add('arrow');
+            arrow.style.left = `${startX}px`;
+            arrow.style.top = `${startY}px`;
+            arrow.style.width = `${adjustedLength}px`;
+            arrow.style.transform = `rotate(${angle}rad)`;
+            arrow.style.opacity = '0'; // Start hidden
+            arrowContainer.appendChild(arrow);
+
+            // Fade in animation
+            requestAnimationFrame(() => {
+                arrow.style.transition = 'opacity 0.5s ease-in-out';
+                arrow.style.opacity = '1';
+            });
+
+            return arrow;
+        }
+
+        function removeArrow(id) {
+            const arrow = document.getElementById(id);
+            if (arrow) {
+                arrow.style.opacity = '0';
+                 setTimeout(() => arrow.remove(), 500); // Remove after fade out
+            }
+        }
+
+         function updateInfo(text) {
+            infoTextBox.textContent = text;
+        }
+
+        function setActive(element, statusText = '') {
+            document.querySelectorAll('.box.active').forEach(el => el.classList.remove('active', 'pulsing'));
+            element.classList.add('active', 'pulsing');
+            if (element === remoteLmBox && remoteLmStatus) remoteLmStatus.textContent = statusText;
+            if (element === localLmBox && localLmStatus) localLmStatus.textContent = statusText;
+        }
+
+        function clearStatus() {
+             if (remoteLmStatus) remoteLmStatus.textContent = '';
+             if (localLmStatus) localLmStatus.textContent = '';
+             document.querySelectorAll('.box.active').forEach(el => el.classList.remove('active', 'pulsing'));
+        }
+
+        function createJobChunks(count = 8) {
+            jobChunksContainer.innerHTML = ''; // Clear previous chunks
+            for (let i = 0; i < count; i++) {
+                const chunk = document.createElement('div');
+                chunk.id = `chunk-${i}`;
+                chunk.classList.add('box', 'job-chunk');
+                chunk.innerHTML = `Job ${i+1}<span class="job-status"></span>`;
+                jobChunksContainer.appendChild(chunk);
+                 // Staggered fade-in
+                 setTimeout(() => chunk.style.opacity = '1', i * 50);
+            }
+        }
+
+        function resetSimulation() {
+             simulationRunning = false;
+             currentStep = 0;
+             round = 1;
+             clearTimeouts();
+             arrowContainer.innerHTML = '';
+             jobChunksContainer.innerHTML = '';
+             codeBox.style.opacity = '0';
+             filteredResultsBox.style.opacity = '0';
+             finalAnswerBox.style.opacity = '0';
+             finalAnswerContent.textContent = '';
+             updateInfo('Click "Start Simulation" to begin.');
+             clearStatus();
+             queryBox.classList.remove('active', 'pulsing');
+             startButton.classList.remove('hidden');
+             resetButton.classList.add('hidden');
+        }
+
+
+        // --- Simulation Steps ---
+        async function runSimulation() {
+            if (simulationRunning) return;
+            simulationRunning = true;
+            startButton.classList.add('hidden');
+            resetButton.classList.remove('hidden');
+            currentStep = 0;
+            round = 1;
+
+            try {
+                // Step 1: Query to Remote LM
+                currentStep = 1;
+                updateInfo(`Round ${round}: User sends query to Remote LM.`);
+                setActive(queryBox);
+                await sleep(500);
+                createArrow(queryBox, remoteLmBox, 'arrow-q-remote');
+                await sleep(1000);
+                setActive(remoteLmBox, 'Receiving Query...');
+                removeArrow('arrow-q-remote');
+                await sleep(1000);
+
+                // --- Start Loop ---
+                while(round <= MAX_ROUNDS) {
+                    updateInfo(`Round ${round}: Remote LM prepares job instructions.`);
+                    setActive(remoteLmBox, 'Generating Job Code...');
+                    await sleep(1500);
+
+                    // Step 2: Remote LM generates code -> Local LM
+                    updateInfo(`Round ${round}: Job code sent to Local LM.`);
+                    codeBox.style.opacity = '1';
+                    createArrow(remoteLmBox, codeBox, 'arrow-remote-code');
+                    await sleep(1000);
+                    removeArrow('arrow-remote-code');
+                    createArrow(codeBox, localLmBox, 'arrow-code-local');
+                    await sleep(1000);
+                    setActive(localLmBox, 'Receiving Job Code...');
+                    removeArrow('arrow-code-local');
+                    codeBox.style.opacity = '0'; // Code is 'consumed'
+                    await sleep(1000);
+
+                    // Step 3: Local LM executes code on Document -> Generates Jobs
+                    updateInfo(`Round ${round}: Local LM executes code, accesses document, creates jobs.`);
+                    setActive(localLmBox, 'Executing Code & Creating Jobs...');
+                    createArrow(documentBox, localLmBox, 'arrow-doc-local'); // Show doc access
+                    await sleep(1500);
+                    removeArrow('arrow-doc-local');
+                    createJobChunks(round === 1 ? 8 : 6); // Fewer jobs in round 2 maybe
+                    await sleep(1000);
+
+                    // Step 4: Local LM processes jobs in parallel
+                    updateInfo(`Round ${round}: Local LM processes jobs on document chunks in parallel.`);
+                    setActive(localLmBox, 'Processing Chunks...');
+                    const chunks = jobChunksContainer.querySelectorAll('.job-chunk');
+                    chunks.forEach((chunk, i) => {
+                         setTimeout(() => {
+                             chunk.classList.add('processing');
+                             chunk.querySelector('.job-status').textContent = 'Processing';
+                         }, i * 100); // Stagger start
+                    });
+                    await sleep(2000); // Simulate processing time
+
+                    // Step 5: Filtering
+                    updateInfo(`Round ${round}: Local LM filters results (abstains on irrelevant chunks).`);
+                     setActive(localLmBox, 'Filtering Results...');
+                     let filteredCount = 0;
+                     chunks.forEach((chunk, i) => {
+                         setTimeout(() => {
+                             chunk.classList.remove('processing');
+                             const isFiltered = Math.random() > 0.5; // Randomly filter some
+                             if (isFiltered && filteredCount < chunks.length / 2) {
+                                 chunk.classList.add('filtered');
+                                 chunk.querySelector('.job-status').textContent = 'Abstained';
+                                 filteredCount++;
+                             } else {
+                                 chunk.classList.add('done');
+                                  chunk.querySelector('.job-status').textContent = 'Relevant';
+                             }
+                         }, i * 100); // Stagger filtering indication
+                     });
+                    await sleep(1500);
+
+                    // Step 6: Filtered results to Remote LM
+                    updateInfo(`Round ${round}: Sending filtered results back to Remote LM.`);
+                    filteredResultsBox.style.opacity = '1';
+                    createArrow(jobChunksContainer, filteredResultsBox, 'arrow-chunks-filtered');
+                    await sleep(1000);
+                    removeArrow('arrow-chunks-filtered');
+                    createArrow(filteredResultsBox, remoteLmBox, 'arrow-filtered-remote');
+                    await sleep(1000);
+                    setActive(remoteLmBox, 'Receiving Filtered Results...');
+                    removeArrow('arrow-filtered-remote');
+                    filteredResultsBox.style.opacity = '0'; // Results 'consumed'
+                     jobChunksContainer.innerHTML = ''; // Clear chunks for next round or end
+                    await sleep(1500);
+
+                    // Step 7: Remote LM Aggregates & Decides
+                    setActive(remoteLmBox, 'Aggregating & Deciding...');
+                    await sleep(1500);
+
+                    const needsMoreInfo = round < MAX_ROUNDS && Math.random() > 0.3; // Decide if loop continues (less likely in last round)
+
+                    if (needsMoreInfo) {
+                        updateInfo(`Round ${round}: Remote LM determines more information is needed. Starting next round.`);
+                         setActive(remoteLmBox, 'Requesting More Info...');
+                        round++;
+                        await sleep(1500);
+                    } else {
+                        updateInfo(`Round ${round}: Remote LM has sufficient information. Generating final answer.`);
+                        setActive(remoteLmBox, 'Generating Final Answer...');
+                        await sleep(1500);
+                        finalAnswerContent.textContent = `D&A Margin: ${ (Math.random() * 10 + 5).toFixed(1) }% (Simulated)`; // Example answer
+                        finalAnswerBox.style.opacity = '1';
+                        createArrow(remoteLmBox, finalAnswerBox, 'arrow-remote-final');
+                        await sleep(1000);
+                        setActive(finalAnswerBox);
+                        removeArrow('arrow-remote-final');
+                        updateInfo(`Simulation Complete after ${round} round(s).`);
+                        simulationRunning = false;
+                        break; // Exit loop
+                    }
+                } // End While Loop
+
+                if (round > MAX_ROUNDS && simulationRunning) {
+                     // If loop finished due to MAX_ROUNDS without answer
+                     updateInfo(`Max rounds (${MAX_ROUNDS}) reached. Forcing final answer generation.`);
+                     setActive(remoteLmBox, 'Generating Final Answer (Max Rounds)...');
+                     await sleep(1500);
+                     finalAnswerContent.textContent = `D&A Margin: ${ (Math.random() * 10 + 5).toFixed(1) }% (Simulated - Max Rounds)`;
+                     finalAnswerBox.style.opacity = '1';
+                     createArrow(remoteLmBox, finalAnswerBox, 'arrow-remote-final');
+                     await sleep(1000);
+                     setActive(finalAnswerBox);
+                     removeArrow('arrow-remote-final');
+                     updateInfo(`Simulation Complete after ${MAX_ROUNDS} round(s).`);
+                     simulationRunning = false;
+                }
+
+
+            } catch (error) {
+                console.error("Simulation error:", error);
+                updateInfo("An error occurred during the simulation.");
+                simulationRunning = false;
+            } finally {
+                // Ensure reset button is available even if error occurs
+                 resetButton.classList.remove('hidden');
+                 if (!finalAnswerBox.style.opacity || finalAnswerBox.style.opacity === '0') {
+                     // If simulation ends early or errors out before answer
+                      startButton.classList.remove('hidden');
+                 }
+            }
+        }
+
+
+        // --- Event Listeners ---
+        startButton.addEventListener('click', runSimulation);
+        resetButton.addEventListener('click', resetSimulation);
+
+    </script>
+
+</body>
+</html>
