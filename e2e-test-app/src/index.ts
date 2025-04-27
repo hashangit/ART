@@ -21,7 +21,16 @@ import {
 } from 'art-framework';
 
 // Load environment variables from .env file (if present)
-dotenv.config();
+import path from 'path'; // Import path module
+import { fileURLToPath } from 'url'; // Import url module
+
+// Determine the directory of the current module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Construct the absolute path to the .env.local file in the project root
+const envPath = path.resolve(__dirname, '..', '..', '.env.local');
+dotenv.config({ path: envPath });
 
 const app = express();
 const port = process.env.PORT || 3001; // Use environment variable or default
@@ -36,6 +45,11 @@ let artInstancePromise: Promise<ArtInstance | null> | null = null;
 async function initializeArt(): Promise<ArtInstance | null> {
   console.log('[E2E App] Initializing ART Instance...');
   try {
+    // *** Add logging to check API key before creating instance ***
+    const apiKeyFromEnv = process.env.GEMINI_API_KEY;
+    console.log(`[E2E App] GEMINI_API_KEY from env: ${apiKeyFromEnv ? 'Loaded (' + apiKeyFromEnv.substring(0, 4) + '...)' : 'MISSING or undefined'}`);
+    // *** End logging ***
+
     const art = await createArtInstance({
       storage: {
         type: 'memory' // Force memory storage on the server

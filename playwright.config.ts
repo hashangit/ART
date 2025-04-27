@@ -85,7 +85,7 @@ export default defineConfig({
     // Use --prefix to run the script in the subdirectory
     command: 'npm run dev --prefix e2e-test-app',
     url: 'http://localhost:3001', // URL for Playwright to poll
-    reuseExistingServer: false, // Force restart for debugging
+    reuseExistingServer: true, // Allow reusing the manually started server
     timeout: 180 * 1000, // Increase timeout to 180 seconds just in case
     // Pass the API key from the main process environment to the webServer process
     env: {

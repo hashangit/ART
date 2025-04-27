@@ -59,6 +59,7 @@
     "ws": "^8.18.1"
   },
   "dependencies": {
+    "@google/genai": "^0.10.0",
     "@types/mathjs": "^9.4.1",
     "ajv": "^8.17.1",
     "mathjs": "^14.4.0",

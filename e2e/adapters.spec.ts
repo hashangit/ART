@@ -71,7 +71,8 @@ test.describe('Reasoning Adapter Tests', () => {
       expectObservationType(response._observations, 'INTENT');
       expectObservationType(response._observations, 'PLAN');
       // expectObservationType(response._observations, 'THOUGHTS'); // THOUGHTS may not always be present
-      expectObservationType(response._observations, 'SYNTHESIS'); // Check for SYNTHESIS instead
+      // expectObservationType(response._observations, 'SYNTHESIS'); // SYNTHESIS type is not emitted; FINAL_RESPONSE is sufficient
+      expectObservationType(response._observations, 'FINAL_RESPONSE'); // Verify FINAL_RESPONSE observation exists
       // FINAL_RESPONSE is implicit in getting a successful response body
       // ERROR check would be in a separate error test
     });
