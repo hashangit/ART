@@ -41,6 +41,55 @@ flowchart LR
     *   **What it does:** Makes the actual calls to the AI model's API (like OpenAI), runs the code for any tools the agent decides to use (which might involve calling other web services or using browser features), and saves/loads data from the chosen storage (like the browser's IndexedDB).
     *   **Key ART parts involved:** Adapters (`ProviderAdapter` for LLMs, `StorageAdapter` for memory/storage), Tool Implementations (`IToolExecutor`).
 
+## 2.1. Core Concept: Real-time Streaming Architecture
+
+To provide a more responsive and interactive user experience, ART incorporates a real-time streaming architecture for handling LLM responses. Instead of waiting for the entire response, the UI can receive and display tokens as soon as the LLM generates them.
+
+**Key Components:**
+
+*   **`ReasoningEngine.call` returning `AsyncIterable<StreamEvent>`:**
+    *   **Non-Developer Explanation:** Instead of the agent's "brain" waiting for the LLM's complete answer, it now gets a "conveyor belt" (`AsyncIterable`). Pieces of the answer (`StreamEvent` objects) arrive on the belt one by one as the LLM thinks and writes.
+    *   **Developer Notes:** The core `ReasoningEngine` interface's `call` method now returns a `Promise` resolving to an `AsyncIterable`. This iterable yields `StreamEvent` objects, allowing the consuming code (typically the `AgentCore`) to process tokens, metadata, errors, and end signals asynchronously as they arrive from the `ProviderAdapter`.
+
+*   **`StreamEvent` Interface:**
+    *   **Non-Developer Explanation:** Each item on the conveyor belt has a label (`StreamEvent`) saying what it is: a piece of text (`TOKEN`), statistics (`METADATA`), an error (`ERROR`), or the end signal (`END`). Text tokens also have a sub-label (`tokenType`) indicating if it's part of the LLM's internal "thinking" process or the final "response".
+    *   **Developer Notes:** This interface (detailed in Section 3.1) standardizes the data flowing from the LLM stream. The `type` field is crucial for routing, and the `tokenType` field enables differentiating intermediate reasoning steps from the final output meant for the user. Adapters are responsible for correctly populating these fields based on provider-specific stream formats and the `callContext` option.
+
+*   **`LLMStreamSocket` (`UISystem`):**
+    *   **Non-Developer Explanation:** ART uses an announcement system (sockets) for different parts to communicate, especially with the UI. A new, dedicated channel (`LLMStreamSocket`) was added specifically for broadcasting the live stream events (tokens, metadata, errors, end signals) from the LLM conveyor belt to any UI components listening.
+    *   **Developer Notes:** Accessed via `artInstance.uiSystem.getLLMStreamSocket()`. The `AgentCore` consumes the `AsyncIterable` from the `ReasoningEngine` and pushes each `StreamEvent` to this socket. UI components subscribe to this socket to receive real-time updates, decoupling the UI from the stream source and providing a consistent subscription pattern (`socket.subscribe(...)`).
+
+**Flow Overview:**
+
+1.  **UI/App:** Calls `artInstance.process(props)`.
+2.  **Agent Core (`PESAgent`, etc.):** Calls `reasoningEngine.call(prompt, { stream: true, callContext: '...' })`.
+3.  **Reasoning Engine (Adapter - e.g., `OpenAIAdapter`):** Makes a streaming request to the LLM provider API.
+4.  **Adapter:** Receives stream chunks, parses them, determines `tokenType`, and `yield`s `StreamEvent` objects via the `AsyncIterable`.
+5.  **Agent Core:** Consumes the `AsyncIterable` using `for await...of`.
+6.  **Agent Core:** For each `StreamEvent`:
+    *   Pushes the event to `uiSystem.getLLMStreamSocket().notify(event)`.
+    *   If it's a final response `TOKEN`, appends it to an internal buffer.
+    *   If it's `METADATA`, `ERROR`, or `END`, records it via `ObservationManager`.
+    *   Aggregates `METADATA`.
+7.  **UI:** Receives `StreamEvent`s via its `LLMStreamSocket` subscription and updates the display in real-time.
+8.  **Agent Core (After Stream Ends):** Constructs the final `ConversationMessage` from the buffer, saves it via `ConversationManager`, and returns the `AgentFinalResponse` containing the final message and aggregated `ExecutionMetadata` (including `llmMetadata`).
+9.  **UI:** (Optional but recommended) Receives the final `ConversationMessage` via `ConversationSocket` subscription and replaces the temporary streamed message with the final, persisted one to ensure consistency.
+
+**Thinking vs. Response Tokens (`tokenType`):**
+
+*   The `StreamEvent.tokenType` field allows distinguishing between tokens generated during intermediate reasoning steps (e.g., `AGENT_THOUGHT_LLM_RESPONSE`) and tokens forming the final user-facing answer (e.g., `FINAL_SYNTHESIS_LLM_RESPONSE`).
+*   Adapters determine the `LLM_THINKING` vs `LLM_RESPONSE` part based on provider-specific markers (if available).
+*   The Agent Core provides the `AGENT_THOUGHT` vs `FINAL_SYNTHESIS` context via `CallOptions.callContext`.
+*   The UI can use `tokenType` to visually differentiate these tokens (e.g., showing thinking steps faded or in a separate area).
+
+**Metadata Delivery (`LLMMetadata`):**
+
+*   Detailed LLM statistics (token counts, timing) are packaged into `LLMMetadata` objects.
+*   Adapters yield these as `METADATA` `StreamEvent`s (either during the stream if the provider supports it, or after the stream ends based on the final response/usage info).
+*   These events are broadcast via `LLMStreamSocket` for potential real-time display.
+*   They are also logged as discrete observations (`LLM_STREAM_METADATA`) via `ObservationManager`.
+*   Finally, the metadata from all relevant LLM calls within an execution cycle is aggregated and included in the `AgentFinalResponse.metadata.llmMetadata` field.
+
 ## 3. Scenario 1: Building a Feature-Rich React Chatbot (Simple Usage)
 
 Let's build a chatbot component for a React website using only ART's built-in features. We'll aim to showcase several core ART capabilities.
@@ -116,7 +165,7 @@ import {
         *   `stateManager: StateManager`: Access methods like `loadThreadContext`, `setThreadConfig`, `getAgentState`, `setAgentState`, `isToolEnabled`.
         *   `toolRegistry: ToolRegistry`: Access methods like `registerTool`, `getToolExecutor`, `getAvailableTools`.
         *   `observationManager: ObservationManager`: Access methods like `record`, `getObservations`.
-        *   `uiSystem: UISystem`: Access methods like `getObservationSocket`, `getConversationSocket` to get subscription interfaces.
+        *   `uiSystem: UISystem`: Access methods like `getObservationSocket`, `getConversationSocket`, and `getLLMStreamSocket` (for streaming) to get subscription interfaces.
 
 *   **`AgentProps`**
     Describes the information you need to give the agent each time you want it to respond (your message and which chat it belongs to).
@@ -128,7 +177,8 @@ import {
     Describes the information the agent gives back after processing your request (its reply and some tracking info).
     *   **Developer Notes:** Interface for the output object from `ArtInstance.process()`.
         *   Core Properties: `responseText: string`, `responseId: string`, `threadId: string`, `traceId: string`.
-        *   Optional/Contextual: `llmResponse?: any` (raw output from the final LLM call), `toolResults?: ToolResult[]` (results if tools were used), `plan?: string`, `intent?: string`, `metadata?: Record<string, any>`.
+        *   Optional/Contextual: `llmResponse?: any` (raw output from the final LLM call), `toolResults?: ToolResult[]` (results if tools were used), `plan?: string`, `intent?: string`.
+        *   `metadata: ExecutionMetadata`: Contains detailed metadata about the execution cycle, including aggregated LLM statistics (`llmMetadata`).
 
 *   **`ConversationMessage`**
     How each chat bubble's information (who sent it, what it says, when) is organized.
@@ -144,7 +194,15 @@ import {
 
 *   **`ObservationType`**
     Labels for the different types of internal notifications (like "Started thinking", "Asking the AI", "Finished using a tool").
-    *   **Developer Notes:** TypeScript enum listing event types (e.g., `PROCESS_START`, `LLM_REQUEST`, `LLM_RESPONSE`, `TOOL_START`, `TOOL_END`, `PLANNING_OUTPUT`, `SYNTHESIS_OUTPUT`, `PROCESS_END`, `REACT_STEP`, `thought`, `action`, `observation`). Used to categorize `Observation` events and filter subscriptions on the `ObservationSocket`.
+    *   **Developer Notes:** TypeScript enum listing event types (e.g., `PROCESS_START`, `LLM_REQUEST`, `LLM_RESPONSE`, `TOOL_START`, `TOOL_END`, `PLANNING_OUTPUT`, `SYNTHESIS_OUTPUT`, `PROCESS_END`, `REACT_STEP`, `thought`, `action`, `observation`). Includes new types for discrete streaming events: `LLM_STREAM_START`, `LLM_STREAM_METADATA`, `LLM_STREAM_END`, `LLM_STREAM_ERROR`. Used to categorize `Observation` events and filter subscriptions on the `ObservationSocket`.
+
+*   **`StreamEvent` (New for Streaming)**
+    Represents a single piece of information arriving from the LLM's real-time stream (like a word, statistics, or an end signal).
+    *   **Developer Notes:** Interface defining the structure of events yielded by the `ReasoningEngine.call` async iterable. Properties: `type` ('TOKEN', 'METADATA', 'ERROR', 'END'), `data` (content), `tokenType` (classification like 'LLM_THINKING', 'FINAL_SYNTHESIS_LLM_RESPONSE'), `threadId`, `traceId`, `sessionId`. Consumed by the Agent Core and pushed to the `LLMStreamSocket`.
+
+*   **`LLMMetadata` (New for Streaming)**
+    A structured way to hold detailed statistics about an LLM call (token counts, timing, etc.).
+    *   **Developer Notes:** Interface defining the structure for LLM statistics. Properties: `inputTokens?`, `outputTokens?`, `thinkingTokens?`, `timeToFirstTokenMs?`, `totalGenerationTimeMs?`, `stopReason?`, `providerRawUsage?`, `traceId?`. Delivered via `StreamEvent` (type 'METADATA') and aggregated into `ExecutionMetadata.llmMetadata`.
 
 *   **`PESAgent`**
     The specific "thinking style" the agent will use by default (Plan -> Use Tools -> Answer).
@@ -156,7 +214,7 @@ import {
 
 *   **`OpenAIAdapter` / `GeminiAdapter` / `AnthropicAdapter`**
     The specific translator the agent uses to talk to a particular AI brain (like OpenAI's GPT, Google's Gemini, or Anthropic's Claude).
-    *   **Developer Notes:** Concrete classes implementing `ProviderAdapter` (extends `ReasoningEngine`). Selected via `config.reasoning.provider`. Constructor takes an options object (e.g., `{ apiKey: string, model?: string, baseURL?: string, defaultParams?: object }`) derived from `config.reasoning`. Implements the `call(prompt, options)` method to handle provider-specific API requests, authentication, and response handling. Used by the core `ReasoningEngine` component.
+    *   **Developer Notes:** Concrete classes implementing `ProviderAdapter` (extends `ReasoningEngine`). Selected via `config.reasoning.provider`. Constructor takes an options object (e.g., `{ apiKey: string, model?: string, baseURL?: string, defaultParams?: object }`) derived from `config.reasoning`. Implements the `call(prompt, options)` method, which now returns `Promise<AsyncIterable<StreamEvent>>` to support streaming. Adapters must check `options.stream` and `options.callContext` to handle streaming requests correctly, yielding `StreamEvent` objects. Used by the core `ReasoningEngine` component.
 
 *   **`CalculatorTool`**
     A specific skill the agent can use, like a pocket calculator.
@@ -599,20 +657,20 @@ Sometimes, you might want to connect ART to an LLM provider that isn't supported
 import {
   // The base interface for LLM provider adapters
   ProviderAdapter,
-  // The core interface for making LLM calls (ProviderAdapter extends this)
+  // The core interface for making LLM calls (ProviderAdapter extends this) - Now returns AsyncIterable<StreamEvent>
   ReasoningEngine,
   // Type for formatted prompts (might be string or provider-specific object)
   FormattedPrompt,
-  // Type for options passed to the LLM call (model params, callbacks, etc.)
+  // Type for options passed to the LLM call (model params, streaming flags, context, etc.)
   CallOptions,
   // Type for conversation messages, needed for formatting prompts
   ConversationMessage,
   // Enum for message roles
   MessageRole,
-  // Type for observations, needed for logging
-  ObservationType,
-  // Interface for ObservationManager, needed for logging
-  ObservationManager // Assuming this gets injected or is accessible
+  // Types for streaming output
+  StreamEvent,
+  LLMMetadata
+  // ObservationManager/Type are typically not used directly within adapters
 } from 'art-framework';
 
 // --- Potentially types from Anthropic SDK if used, or define manually ---
@@ -640,29 +698,29 @@ interface AnthropicResponse {
 
 *   **`ProviderAdapter`**
     The blueprint for creating a translator between ART's general way of thinking about AI models and the specific way a particular AI provider's API works (like Anthropic).
-    *   **Developer Notes:** The interface your custom LLM adapter class must implement. It extends `ReasoningEngine`, meaning it must primarily implement the `call` method. It also requires a `readonly providerName: string` property to identify the adapter (e.g., 'anthropic').
-
-*   **`ReasoningEngine`**
+    *   **Developer Notes:** The interface your custom LLM adapter class must implement. It extends `ReasoningEngine`, meaning it must primarily implement the `call` method (which now returns `Promise<AsyncIterable<StreamEvent>>`). It also requires a `readonly providerName: string` property to identify the adapter (e.g., 'anthropic').
+    
+    *   **`ReasoningEngine`**
     Defines the basic capability of making a call to an AI model with a prompt. `ProviderAdapter` builds upon this.
-    *   **Developer Notes:** The base interface defining the core `async call(prompt: FormattedPrompt, options: CallOptions): Promise<string>` method signature. Your `ProviderAdapter` implementation provides the concrete logic for this method.
+    *   **Developer Notes:** The base interface defining the core `async call(prompt: FormattedPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>>` method signature (updated for streaming). Your `ProviderAdapter` implementation provides the concrete logic for this method, typically returning an async generator function.
 
 *   **`FormattedPrompt`**
     Represents the instructions prepared for the AI model, which might be a simple string or a more complex structure depending on the AI provider.
     *   **Developer Notes:** A type alias. Your adapter needs to know how to handle the format provided by the `PromptManager` (which should ideally format it suitably, e.g., as `ConversationMessage[]`) and convert it to the specific format the target API requires (e.g., `AnthropicMessage[]`).
 
 *   **`CallOptions`**
-    Additional settings and information passed along when making the AI call, like which specific model version to use (e.g., 'claude-3-opus-20240229'), creativity settings (temperature), max response length (`maxTokens`), or stop sequences.
-    *   **Developer Notes:** Interface for the options object passed to `ReasoningEngine.call`. Includes properties like `threadId`, `traceId`, `model` (optional override), `temperature`, `maxTokens`, `stopSequences`, `systemPrompt` (important for Anthropic), `onThought` (callback), etc. Your adapter's `call` method must map these relevant options to the parameters supported by the Anthropic API.
+    Additional settings and information passed along when making the AI call, like which specific model version to use (e.g., 'claude-3-opus-20240229'), creativity settings (temperature), max response length (`maxTokens`), stop sequences, and importantly, whether to stream the response (`stream: true`) and the context of the call (`callContext`).
+    *   **Developer Notes:** Interface for the options object passed to `ReasoningEngine.call`. Includes properties like `threadId`, `traceId`, `sessionId`, `model` (optional override), `temperature`, `maxTokens`, `stopSequences`, `systemPrompt` (important for Anthropic), and crucially `stream?: boolean` and `callContext?: string`. Your adapter's `call` method must check `stream` and map relevant options to the provider API.
 
 *   **`ConversationMessage`, `MessageRole`**
     Needed to correctly interpret the `FormattedPrompt` if it's an array of messages and map the roles (`USER`, `ASSISTANT`) to the provider's expected roles (`user`, `assistant`).
     *   **Developer Notes:** Used within the adapter's `call` method during the prompt formatting step before sending the request to the Anthropic API. System messages might need special handling (passed via the `system` parameter in Anthropic's API).
 
-*   **`ObservationType`, `ObservationManager`**
-    Used for logging the request and response interactions with the LLM provider, aiding debugging and observability.
-    *   **Developer Notes:** Although `ObservationManager` isn't explicitly part of the `ProviderAdapter` interface, a well-behaved adapter should ideally log `LLM_REQUEST` and `LLM_RESPONSE` observations. This implies the `ObservationManager` instance needs to be accessible, likely via dependency injection in the adapter's constructor (requiring potential modification to `AgentFactory` or manual instantiation).
+*   **`StreamEvent`, `LLMMetadata`**
+    These are the types your adapter's `call` method will yield via its `AsyncIterable` return value when streaming is enabled.
+    *   **Developer Notes:** Your adapter needs to construct `StreamEvent` objects with the correct `type`, `data`, `tokenType`, and IDs. For `METADATA` events, the `data` should conform to the `LLMMetadata` interface.
 
-**5.2. Implementing `AnthropicAdapter`**
+**5.2. Implementing `AnthropicAdapter` (with Streaming)**
 
 ```typescript
 // src/adapters/AnthropicAdapter.ts
@@ -701,15 +759,14 @@ interface AnthropicAdapterOptions {
 export class AnthropicAdapter implements ProviderAdapter {
   readonly providerName = 'anthropic';
   private options: AnthropicAdapterOptions;
-  private observationManager?: ObservationManager; // Optional, for logging
+  // ObservationManager is typically not injected into adapters
 
-  // Modified constructor to accept ObservationManager
-  constructor(options: AnthropicAdapterOptions, observationManager?: ObservationManager) {
+  constructor(options: AnthropicAdapterOptions) {
     if (!options.apiKey) {
       throw new Error(`Anthropic adapter requires an apiKey.`);
     }
     this.options = options;
-    this.observationManager = observationManager;
+    // No ObservationManager injection needed here
     this.options.defaultMaxTokens = options.defaultMaxTokens ?? 1024; // Set a reasonable default
     this.options.defaultTemperature = options.defaultTemperature ?? 0.7;
   }
@@ -767,18 +824,17 @@ export class AnthropicAdapter implements ProviderAdapter {
     return { messages: anthropicMessages, system: systemPrompt };
   }
 
-  async call(prompt: FormattedPrompt, options: CallOptions): Promise<string> {
-    const traceId = options.traceId ?? `anthropic-trace-${Date.now()}`;
-    const threadId = options.threadId;
+  async call(prompt: FormattedPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
+    const { threadId, traceId = `anthropic-trace-${Date.now()}`, sessionId, stream, callContext } = options;
 
-    this.observationManager?.record({ type: ObservationType.LLM_REQUEST, threadId, traceId, content: { provider: this.providerName, prompt } });
+    // AgentCore handles LLM_REQUEST observation before calling this method.
 
     const { messages, system } = this.formatMessages(prompt);
-    const modelToUse = options.model || this.options.model || 'claude-3-sonnet-20240229'; // Default if none provided
+    const modelToUse = options.model || this.options.model || 'claude-3-5-sonnet-20240620'; // Use latest Sonnet
     const maxTokens = options.maxTokens ?? this.options.defaultMaxTokens!;
     const temperature = options.temperature ?? this.options.defaultTemperature!;
 
-    const requestBody: AnthropicRequestBody = {
+    const requestBody: any = { // Use 'any' for flexibility with stream param
       model: modelToUse,
       messages: messages,
       max_tokens: maxTokens,
@@ -791,41 +847,128 @@ export class AnthropicAdapter implements ProviderAdapter {
     if (options.stopSequences) {
       requestBody.stop_sequences = options.stopSequences;
     }
-
-    const apiUrl = 'https://api.anthropic.com/v1/messages'; // Standard Anthropic API endpoint
-
-    try {
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.options.apiKey,
-          'anthropic-version': '2023-06-01', // Required header
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`Anthropic API Error (${response.status}): ${errorBody}`);
-      }
-
-      const responseData: AnthropicResponse = await response.json();
-
-      // Extract text from the response content block(s)
-      const responseText = responseData.content
-        .filter(block => block.type === 'text')
-        .map(block => block.text)
-        .join('');
-
-      this.observationManager?.record({ type: ObservationType.LLM_RESPONSE, threadId, traceId, content: { provider: this.providerName, response: responseText, raw: responseData } });
-      return responseText;
-
-    } catch (error) {
-      console.error(`${this.providerName} adapter error:`, error);
-      this.observationManager?.record({ type: ObservationType.LLM_RESPONSE, threadId, traceId, content: { provider: this.providerName, error: error instanceof Error ? error.message : String(error) } });
-      throw new Error(`Failed to call ${this.providerName}: ${error instanceof Error ? error.message : String(error)}`);
+    if (stream) {
+        requestBody.stream = true; // Add stream parameter if requested
     }
+
+    const apiUrl = 'https://api.anthropic.com/v1/messages';
+
+    // Use an async generator function to handle yielding events
+    const generator = async function*(): AsyncIterable<StreamEvent> {
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': this.options.apiKey,
+                    'anthropic-version': '2023-06-01',
+                    'anthropic-beta': 'messages-2023-12-15', // May be needed for some features/models
+                },
+                body: JSON.stringify(requestBody),
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.text();
+                console.error(`Anthropic API Error (${response.status}): ${errorBody}`);
+                yield { type: 'ERROR', data: new Error(`Anthropic API Error (${response.status}): ${errorBody}`), threadId, traceId, sessionId };
+                return; // Stop generation on error
+            }
+
+            // --- Handle Streaming Response ---
+            if (stream && response.body) {
+                const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+                let buffer = '';
+                let currentMessageType: string | null = null;
+                let messageStopReason: string | null = null;
+                let usageData: any = null;
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    buffer += value;
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || ''; // Keep incomplete line
+
+                    for (const line of lines) {
+                        if (line.startsWith('event: ')) {
+                            currentMessageType = line.substring(7).trim();
+                        } else if (line.startsWith('data: ')) {
+                            const dataContent = line.substring(6).trim();
+                            try {
+                                const jsonData = JSON.parse(dataContent);
+
+                                if (jsonData.type === 'content_block_delta' && jsonData.delta?.type === 'text_delta') {
+                                    const textDelta = jsonData.delta.text;
+                                    // Determine tokenType based on callContext (Anthropic doesn't mark thinking tokens in stream)
+                                    const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'FINAL_SYNTHESIS_LLM_RESPONSE';
+                                    yield { type: 'TOKEN', data: textDelta, threadId, traceId, sessionId, tokenType };
+                                } else if (jsonData.type === 'message_start') {
+                                    usageData = jsonData.message?.usage; // Capture initial usage if available
+                                } else if (jsonData.type === 'message_delta') {
+                                    usageData = { ...(usageData ?? {}), ...jsonData.usage }; // Update usage
+                                    messageStopReason = jsonData.delta?.stop_reason ?? messageStopReason;
+                                } else if (jsonData.type === 'message_stop') {
+                                    // Stream finished signal from Anthropic
+                                    break; // Exit inner loop
+                                }
+                                // Handle other event types like content_block_start/stop if needed
+
+                            } catch (parseError) {
+                                console.warn(`Failed to parse Anthropic stream chunk: ${dataContent}`, parseError);
+                                // yield { type: 'ERROR', data: new Error(`Stream parse error: ${parseError.message}`), threadId, traceId, sessionId };
+                            }
+                        }
+                    }
+                }
+                // Yield final metadata after stream
+                if (usageData || messageStopReason) {
+                    const metadata: LLMMetadata = {
+                        inputTokens: usageData?.input_tokens,
+                        outputTokens: usageData?.output_tokens,
+                        stopReason: messageStopReason,
+                        providerRawUsage: usageData,
+                        traceId: traceId,
+                    };
+                    yield { type: 'METADATA', data: metadata, threadId, traceId, sessionId };
+                }
+
+            // --- Handle Non-Streaming Response ---
+            } else {
+                const responseData = await response.json();
+                const responseText = responseData.content
+                    ?.filter((block: any) => block.type === 'text')
+                    ?.map((block: any) => block.text)
+                    ?.join('') ?? '';
+
+                // Yield TOKEN
+                yield { type: 'TOKEN', data: responseText, threadId, traceId, sessionId, tokenType: 'LLM_RESPONSE' };
+                // Yield METADATA
+                const usage = responseData.usage;
+                if (usage) {
+                    const metadata: LLMMetadata = {
+                        inputTokens: usage.input_tokens,
+                        outputTokens: usage.output_tokens,
+                        stopReason: responseData.stop_reason,
+                        providerRawUsage: usage,
+                        traceId: traceId,
+                    };
+                    yield { type: 'METADATA', data: metadata, threadId, traceId, sessionId };
+                }
+            }
+
+            // Yield END signal
+            yield { type: 'END', data: null, threadId, traceId, sessionId };
+
+        } catch (error: any) {
+            console.error(`${this.providerName} adapter error in generator:`, error);
+            yield { type: 'ERROR', data: error instanceof Error ? error : new Error(String(error)), threadId, traceId, sessionId };
+            // Ensure END is yielded even after an error during generation/processing
+            yield { type: 'END', data: null, threadId, traceId, sessionId };
+        }
+    }.bind(this); // Bind the generator function to the class instance to access `this.options`
+
+    return generator(); // Return the async generator
   }
 }
 ```

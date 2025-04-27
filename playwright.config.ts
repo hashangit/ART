@@ -1,4 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url'; // Import fileURLToPath
+
+// Get the directory name in an ES module context
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from .env file in the project root
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -75,8 +85,12 @@ export default defineConfig({
     // Use --prefix to run the script in the subdirectory
     command: 'npm run dev --prefix e2e-test-app',
     url: 'http://localhost:3001', // URL for Playwright to poll
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false, // Force restart for debugging
     timeout: 180 * 1000, // Increase timeout to 180 seconds just in case
+    // Pass the API key from the main process environment to the webServer process
+    env: {
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY || ''
+    }
     // Relying on Playwright's default URL polling mechanism
   },
 });

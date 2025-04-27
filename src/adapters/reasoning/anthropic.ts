@@ -1,6 +1,6 @@
 // src/adapters/reasoning/anthropic.ts
 import { ProviderAdapter } from '../../core/interfaces';
-import { FormattedPrompt, CallOptions } from '../../types';
+import { FormattedPrompt, CallOptions, StreamEvent, LLMMetadata } from '../../types'; // Added StreamEvent, LLMMetadata
 import { Logger } from '../../utils/logger';
 
 // Define expected options for the Anthropic adapter constructor
@@ -52,7 +52,7 @@ interface AnthropicMessagesResponse {
  * Messages API (Claude models).
  *
  * Handles formatting requests and parsing responses for Anthropic.
- * Note: This basic version does not implement streaming or the `onThought` callback.
+ * Note: Streaming is **not yet implemented** for this adapter. Calls requesting streaming will yield an error.
  *
  * @implements {ProviderAdapter}
  */
@@ -90,93 +90,116 @@ export class AnthropicAdapter implements ProviderAdapter {
     * **Note:** This is a basic implementation.
     * - It currently assumes `prompt` is the primary user message content (string) and places it in the `messages` array. It does not yet parse complex `FormattedPrompt` objects containing history or specific roles. These would need to be handled by the `PromptManager`.
     * - It supports passing a `system` prompt via `options.system` or `options.system_prompt`.
-    * - Streaming and the `onThought` callback are **not implemented** in this version.
     * - Requires `max_tokens` (or alias) in the options, as it's mandatory for the Anthropic API.
     *
-    * @param prompt - The prompt content, treated as the user message in this basic implementation.
-    * @param options - Call options, including `threadId`, `traceId`, `system` prompt, and any Anthropic-specific generation parameters (like `temperature`, `max_tokens`, `top_p`, `top_k`).
-    * @returns A promise resolving to the text content from the assistant's response.
-    * @throws {Error} If the API request fails (network error, invalid API key, bad request, etc.) or if `max_tokens` is missing.
+    * @param prompt - The prompt content.
+    * @param options - Call options, including `threadId`, `traceId`, `stream`, `system` prompt, and any Anthropic-specific generation parameters.
+    * @returns A promise resolving to an AsyncIterable of StreamEvent objects. If streaming is requested, it currently yields an error event.
+    * @throws {Error} If a non-streaming API request fails or if `max_tokens` is missing.
     */
-  async call(prompt: FormattedPrompt, options: CallOptions): Promise<string> {
-    if (typeof prompt !== 'string') {
-      Logger.warn('AnthropicAdapter received non-string prompt. Treating as string.');
-      prompt = String(prompt);
-    }
+   async call(prompt: FormattedPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
+     const { threadId, traceId = `anthropic-trace-${Date.now()}`, sessionId, stream } = options;
+   
+     // --- Placeholder for Streaming ---
+     if (stream) {
+         Logger.warn(`AnthropicAdapter: Streaming requested but not implemented. Returning error stream.`, { threadId, traceId });
+         const errorGenerator = async function*(): AsyncIterable<StreamEvent> {
+             const err = new Error("Streaming is not yet implemented for the AnthropicAdapter.");
+             yield { type: 'ERROR', data: err, threadId: threadId ?? '', traceId: traceId ?? '', sessionId };
+             yield { type: 'END', data: null, threadId: threadId ?? '', traceId: traceId ?? '', sessionId };
+         };
+         return errorGenerator();
+     }
+   
+     // --- Non-Streaming Logic (Original logic adapted slightly) ---
+     if (typeof prompt !== 'string') {
+       Logger.warn('AnthropicAdapter received non-string prompt. Treating as string.');
+       prompt = String(prompt);
+     }
+   
+     const apiUrl = `${this.apiBaseUrl}/messages`;
+     const maxTokens = options.max_tokens || options.maxOutputTokens || options.max_tokens_to_sample || this.defaultMaxTokens;
+   
+     const payload: AnthropicMessagesPayload = {
+       model: this.model,
+       messages: [
+         // TODO: Add system prompt/history handling by mapping to Anthropic's messages structure
+         { role: 'user', content: prompt }, // Simple user prompt
+       ],
+       system: options.system_prompt || options.system, // Allow system prompt via options
+       max_tokens: maxTokens, // Use mapped or default value
+       temperature: options.temperature,
+       top_p: options.top_p || options.topP,
+       top_k: options.top_k || options.topK,
+       stop_sequences: options.stop || options.stop_sequences || options.stopSequences,
+     };
+   
+     Object.keys(payload).forEach(key => {
+         const K = key as keyof AnthropicMessagesPayload;
+         if (K !== 'max_tokens' && payload[K] === undefined) {
+             delete payload[K];
+         }
+     });
+   
+     Logger.debug(`Calling Anthropic API (non-streaming): ${apiUrl} with model ${this.model}`, { threadId, traceId });
+     // Capture required instance properties to avoid aliasing `this`
+     const apiKey = this.apiKey;
+     const apiVersion = this.apiVersion;
 
-    const apiUrl = `${this.apiBaseUrl}/messages`;
-    const maxTokens = options.max_tokens || options.maxOutputTokens || options.max_tokens_to_sample || this.defaultMaxTokens;
-
-    const payload: AnthropicMessagesPayload = {
-      model: this.model,
-      messages: [
-        // TODO: Add system prompt/history handling by mapping to Anthropic's messages structure
-        { role: 'user', content: prompt }, // Simple user prompt
-      ],
-      system: options.system_prompt || options.system, // Allow system prompt via options
-      max_tokens: maxTokens, // Use mapped or default value
-      // Map relevant parameters from CallOptions
-      temperature: options.temperature,
-      top_p: options.top_p || options.topP,
-      top_k: options.top_k || options.topK,
-      stop_sequences: options.stop || options.stop_sequences || options.stopSequences,
-    };
-
-    // Remove undefined parameters from payload (excluding max_tokens which is required)
-    Object.keys(payload).forEach(key => {
-        const K = key as keyof AnthropicMessagesPayload;
-        if (K !== 'max_tokens' && payload[K] === undefined) {
-            delete payload[K];
-        }
-    });
-
-    Logger.debug(`Calling Anthropic API: ${apiUrl} with model ${this.model}`, { threadId: options.threadId, traceId: options.traceId });
-
-    try {
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.apiKey,
-          'anthropic-version': this.apiVersion,
-          // 'anthropic-beta': 'messages-2023-12-15', // Might be needed for certain features
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        Logger.error(`Anthropic API request failed with status ${response.status}: ${errorBody}`, { threadId: options.threadId, traceId: options.traceId });
-        // Attempt to parse error body for better message
-        let errorMessage = errorBody;
-        try {
-            const parsedError = JSON.parse(errorBody);
-            if (parsedError?.error?.message) {
-                errorMessage = parsedError.error.message;
-            }
-        } catch (e) { /* Ignore parsing error */ }
-        throw new Error(`Anthropic API request failed: ${response.status} ${response.statusText} - ${errorMessage}`);
-      }
-
-      const data = await response.json() as AnthropicMessagesResponse;
-
-      // Extract text content - assumes simple text response for now
-      const responseText = data.content?.find(c => c.type === 'text')?.text;
-
-      if (responseText === undefined || responseText === null) {
-        Logger.error('Invalid response structure from Anthropic API: No text content found', { responseData: data, threadId: options.threadId, traceId: options.traceId });
-        throw new Error('Invalid response structure from Anthropic API: No text content found.');
-      }
-
-      // TODO: Implement onThought callback if streaming is added later.
-
-      const responseContent = responseText.trim();
-      Logger.debug(`Anthropic API call successful. Response length: ${responseContent.length}`, { threadId: options.threadId, traceId: options.traceId });
-      return responseContent;
-
-    } catch (error: any) {
-      Logger.error(`Error during Anthropic API call: ${error.message}`, { error, threadId: options.threadId, traceId: options.traceId });
-      throw error;
-    }
-  }
+     // Use an async generator function without aliasing `this`
+     const generator = async function*(): AsyncIterable<StreamEvent> {
+         try {
+             const response = await fetch(apiUrl, {
+                 method: 'POST',
+                 headers: {
+                     'Content-Type': 'application/json',
+                     'x-api-key': apiKey,
+                     'anthropic-version': apiVersion,
+                 },
+                 body: JSON.stringify(payload),
+             });
+   
+             if (!response.ok) {
+                 const errorBody = await response.text();
+                 let errorMessage = errorBody;
+                 try {
+                     const parsedError = JSON.parse(errorBody);
+                     if (parsedError?.error?.message) errorMessage = parsedError.error.message;
+                 } catch (e) { /* Ignore */ }
+                 throw new Error(`Anthropic API request failed: ${response.status} ${response.statusText} - ${errorMessage}`);
+             }
+   
+             const data = await response.json() as AnthropicMessagesResponse;
+             const responseText = data.content?.find(c => c.type === 'text')?.text;
+   
+             if (responseText === undefined || responseText === null) {
+                 throw new Error('Invalid response structure from Anthropic API: No text content found.');
+             }
+   
+             const responseContent = responseText.trim();
+             Logger.debug(`Anthropic API call successful. Response length: ${responseContent.length}`, { threadId, traceId });
+   
+             // Yield TOKEN
+             yield { type: 'TOKEN', data: responseContent, threadId, traceId, sessionId, tokenType: 'LLM_RESPONSE' };
+             // Yield METADATA
+             const metadata: LLMMetadata = {
+                 inputTokens: data.usage?.input_tokens,
+                 outputTokens: data.usage?.output_tokens,
+                 stopReason: data.stop_reason ?? undefined, // Convert null to undefined
+                 providerRawUsage: data.usage,
+                 traceId: traceId,
+             };
+             yield { type: 'METADATA', data: metadata, threadId, traceId, sessionId };
+             // Yield END
+             yield { type: 'END', data: null, threadId, traceId, sessionId };
+   
+         } catch (error: any) {
+             Logger.error(`Error during Anthropic API call: ${error.message}`, { error, threadId, traceId });
+             yield { type: 'ERROR', data: error instanceof Error ? error : new Error(String(error)), threadId, traceId, sessionId };
+             yield { type: 'END', data: null, threadId, traceId, sessionId }; // Ensure END is yielded on error
+         }
+     };
+   
+     return generator();
+   }
 }

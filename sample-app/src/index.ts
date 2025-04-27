@@ -4,41 +4,52 @@ import {
   CalculatorTool,
   AgentProps,
   AgentFinalResponse,
-  ThreadConfig,
+  ThreadConfig, // Keep one ThreadConfig import
   ArtInstance, // Import ArtInstance type
-  generateUUID // Import a UUID generator
+  generateUUID, // Import a UUID generator
+  StreamEvent, // <-- Import StreamEvent
+  Observation // <-- Import Observation type
+  // LLMMetadata, // Removed unused import
+  // ExecutionMetadata // Removed unused import
 } from 'art-framework';
 import dotenv from 'dotenv';
-import * as readline from 'node:readline/promises';
-import { stdin as input, stdout as output } from 'node:process';
+// import * as readline from 'node:readline/promises'; // Removed readline
+// import { stdin as input, stdout as output } from 'node:process'; // Removed process
+import yargs from 'yargs'; // Correct yargs import path
+import { hideBin } from 'yargs/helpers'; // Correct yargs import path
 
 // Load environment variables from .env file
 dotenv.config();
 
-// --- Global ART Instance ---
-let art: ArtInstance;
+// --- Global ART Instance (Removed - Scoped within startApp now) ---
+// let art: ArtInstance;
 
-// --- Default Thread Configuration (shared by both modes) ---
-const defaultThreadConfig: ThreadConfig = {
-  reasoning: {
-    provider: 'gemini',
-    model: 'gemini-2.0-flash-lite', // Use a consistent, recent model
-  },
-  enabledTools: [CalculatorTool.toolName],
-  historyLimit: 20, // Allow for more history turns
-  systemPrompt: "You are a helpful assistant. Use the calculator tool for any math calculations.",
-};
+// --- ART Initialization Function (Modified) ---
+async function initializeART(provider: 'openai' | 'gemini'): Promise<ArtInstance> {
+  console.log(`ART Sample App - Initializing ART Instance for provider: ${provider}...`);
 
-// --- ART Initialization Function ---
-async function initializeART(): Promise<ArtInstance> {
-  console.log('ART Sample App - Initializing ART Instance...');
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  if (!geminiApiKey) {
-    console.error('Error: GEMINI_API_KEY not found in environment variables.');
-    console.error('Please create a .env file in the sample-app directory with your key:');
-    console.error('GEMINI_API_KEY=YOUR_API_KEY_HERE');
-    process.exit(1);
+  let apiKey: string | undefined;
+  let reasoningConfig: any;
+
+  if (provider === 'gemini') {
+    apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error('Error: GEMINI_API_KEY not found in environment variables.');
+      process.exit(1);
+    }
+    reasoningConfig = { provider: 'gemini', apiKey: apiKey };
+  } else if (provider === 'openai') {
+    apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      console.error('Error: OPENAI_API_KEY not found in environment variables.');
+      process.exit(1);
+    }
+    reasoningConfig = { provider: 'openai', apiKey: apiKey };
+  } else {
+     console.error(`Unsupported provider: ${provider}`);
+     process.exit(1);
   }
+
 
   try {
     const instance = await createArtInstance({
@@ -46,16 +57,13 @@ async function initializeART(): Promise<ArtInstance> {
       storage: {
         type: 'memory' // Using InMemoryStorageAdapter
       },
-      reasoning: {
-        provider: 'gemini', // Using GeminiReasoningAdapter
-        apiKey: geminiApiKey,
-      },
+      reasoning: reasoningConfig,
       tools: [new CalculatorTool()],
     });
-    console.log('ART Instance Initialized Successfully.');
+    console.log(`ART Instance Initialized Successfully for ${provider}.`);
     return instance;
   } catch (error) {
-    console.error('\n--- Failed to initialize ART Instance ---');
+    console.error(`\n--- Failed to initialize ART Instance for ${provider} ---`);
     console.error(error);
     process.exit(1); // Exit if initialization fails
   }
@@ -78,35 +86,145 @@ function logObservation(observation: any, threadId: string) {
     }
 }
 
-// --- Function to Display Final Response (used by both modes) ---
-function displayFinalResponse(finalResponse: AgentFinalResponse, duration: number) {
+// --- Function to Display Final Response (Enhanced) ---
+function displayFinalResponse(finalResponse: AgentFinalResponse, duration: number, streaming: boolean) {
     console.log('\n--- Final Agent Response ---');
-    console.log(finalResponse.response.content);
+    // If not streaming, print the final content. If streaming, it was printed incrementally.
+    if (!streaming) {
+        console.log(finalResponse.response.content);
+    } else {
+        console.log("(Content streamed above)");
+    }
     console.log('---------------------------');
     console.log(`Total Processing Time: ${duration}ms`);
     console.log(`Final Status: ${finalResponse.metadata.status}`);
+    // Display aggregated LLM metadata
+    if (finalResponse.metadata.llmMetadata) {
+        console.log('Aggregated LLM Metadata:');
+        console.log(`- Input Tokens: ${finalResponse.metadata.llmMetadata.inputTokens ?? 'N/A'}`);
+        console.log(`- Output Tokens: ${finalResponse.metadata.llmMetadata.outputTokens ?? 'N/A'}`);
+        console.log(`- Thinking Tokens: ${finalResponse.metadata.llmMetadata.thinkingTokens ?? 'N/A'}`);
+        console.log(`- Time to First Token: ${finalResponse.metadata.llmMetadata.timeToFirstTokenMs ?? 'N/A'}ms`);
+        console.log(`- Total Generation Time: ${finalResponse.metadata.llmMetadata.totalGenerationTimeMs ?? 'N/A'}ms`);
+        console.log(`- Stop Reason: ${finalResponse.metadata.llmMetadata.stopReason ?? 'N/A'}`);
+    }
     if (finalResponse.metadata.error) {
       console.error(`Error during processing: ${finalResponse.metadata.error}`);
-       // Highlight potential persistence issue
-       if (finalResponse.metadata.status === 'error') {
-           console.error(">>> POTENTIAL PERSISTENCE ISSUE DETECTED: 'error' status on subsequent request. <<<");
-       }
     }
      console.log('---------------------------');
 }
 
+// --- Enhanced Stream Event Handler ---
+function handleStreamEvent(event: StreamEvent, threadId: string) {
+    // Ensure event is for the correct thread (optional, good practice if handling multiple threads)
+    if (event.threadId !== threadId) return;
 
-// --- Mode 1: Process Single Query from Arguments ---
-async function processSingleQuery(artInstance: ArtInstance, query: string) {
-  console.log(`Processing single query: "${query}"`);
-  const threadId = 'cli-single-query-thread'; // Static thread ID for single queries
+    switch (event.type) {
+        case 'TOKEN': { // Wrap case block
+            // Print token directly, indicating type
+            const typeLabel = event.tokenType ? `[${event.tokenType}]` : '[TOKEN]';
+            process.stdout.write(`${typeLabel} ${event.data}`); // Show type before token
+            break;
+        }
+        case 'METADATA':
+            // Log metadata clearly
+            console.log(`\n\n--- [STREAM METADATA | ${threadId} | ${event.traceId}] ---`);
+            console.log(`Input Tokens: ${event.data.inputTokens ?? 'N/A'}`);
+            console.log(`Output Tokens: ${event.data.outputTokens ?? 'N/A'}`);
+            console.log(`Thinking Tokens: ${event.data.thinkingTokens ?? 'N/A'}`);
+            console.log(`Time to First Token: ${event.data.timeToFirstTokenMs ?? 'N/A'}ms`);
+            console.log(`Total Generation Time: ${event.data.totalGenerationTimeMs ?? 'N/A'}ms`);
+            console.log(`Stop Reason: ${event.data.stopReason ?? 'N/A'}`);
+            console.log(`Raw Usage: ${JSON.stringify(event.data.providerRawUsage) ?? 'N/A'}`);
+            console.log('-------------------------------------------\n');
+            break;
+        case 'ERROR':
+            // Log error clearly
+            console.error(`\n\n--- [STREAM ERROR | ${threadId} | ${event.traceId}] ---`);
+            console.error(event.data?.message || JSON.stringify(event.data));
+            if (event.data?.stack) console.error(event.data.stack);
+            console.error('-------------------------------------------\n');
+            break;
+        case 'END':
+            // Indicate stream end clearly
+            process.stdout.write(`\n--- [STREAM END | ${threadId} | ${event.traceId}] ---\n`);
+            break;
+    }
+}
+
+
+// --- Removed old processSingleQuery and runInteractiveMode functions ---
+
+// --- Main Execution Logic (Using yargs) ---
+async function startApp() {
+
+  const argv = await yargs(hideBin(process.argv))
+    .option('provider', {
+      alias: 'p',
+      type: 'string',
+      description: 'LLM provider to use',
+      choices: ['openai', 'gemini'],
+      default: 'gemini',
+    })
+    .option('stream', {
+      alias: 's',
+      type: 'boolean',
+      description: 'Enable streaming response',
+      default: false,
+    })
+    .option('query', {
+      alias: 'q',
+      type: 'string',
+      description: 'The query to process',
+      demandOption: true, // Make query mandatory
+    })
+    .option('thread', {
+        alias: 't',
+        type: 'string',
+        description: 'Optional thread ID to continue a conversation',
+    })
+    .help()
+    .alias('help', 'h')
+    .parseAsync(); // Use parseAsync
+
+  // Type assertion for argv
+  const args = argv as {
+      provider: 'openai' | 'gemini';
+      stream: boolean;
+      query: string;
+      thread?: string;
+      [key: string]: unknown; // Allow other properties from yargs
+  };
+
+
+  const { provider, stream, query } = args;
+  const threadId = args.thread || `cli-thread-${generateUUID()}`; // Use provided or generate new
+
+  console.log(`Using Provider: ${provider}`);
+  console.log(`Streaming Enabled: ${stream}`);
+  console.log(`Thread ID: ${threadId}`);
+  console.log(`Query: "${query}"`);
+
+  // Initialize ART with selected provider
+  const art = await initializeART(provider);
+
+  // --- Default Thread Configuration (Dynamic Provider) ---
+  const threadConfig: ThreadConfig = {
+    reasoning: {
+      provider: provider, // Use selected provider
+      model: provider === 'openai' ? 'gpt-4o' : 'gemini-1.5-flash-latest', // Example model selection
+    },
+    enabledTools: [CalculatorTool.toolName],
+    historyLimit: 20,
+    systemPrompt: "You are a helpful assistant. Use the calculator tool for any math calculations.",
+  };
 
   // Set config for this thread
   try {
-    await artInstance.stateManager.setThreadConfig(threadId, defaultThreadConfig);
-    console.log(`Default configuration set for thread: ${threadId}`);
+    await art.stateManager.setThreadConfig(threadId, threadConfig);
+    console.log(`Configuration set for thread: ${threadId}`);
   } catch (configError) {
-     console.error(`Error setting default thread config: ${configError}`);
+     console.error(`Error setting thread config: ${configError}`);
      process.exit(1);
   }
 
@@ -116,115 +234,50 @@ async function processSingleQuery(artInstance: ArtInstance, query: string) {
   };
 
   // Subscribe to Observations
-  const observationSocket = artInstance.uiSystem.getObservationSocket();
-  const unsubscribe = observationSocket.subscribe(
-    (observation) => logObservation(observation, threadId),
-    undefined,
+  const observationSocket = art.uiSystem.getObservationSocket();
+  const unsubObservation = observationSocket.subscribe(
+    (observation: Observation) => logObservation(observation, threadId), // Use imported Observation type
+    undefined, // No type filter
     { threadId: threadId }
   );
 
-  console.log('Subscribed to observations. Processing query...');
+  // Subscribe to LLM Stream Events if streaming enabled
+  let unsubLlmStream: (() => void) | null = null;
+  if (stream) {
+      const llmStreamSocket = art.uiSystem.getLLMStreamSocket();
+      unsubLlmStream = llmStreamSocket.subscribe(
+          (event: StreamEvent) => handleStreamEvent(event, threadId), // Added type
+          undefined, // No type filter
+          { threadId: threadId }
+      );
+      console.log('Subscribed to LLM stream events.');
+  }
+
+  console.log('Processing query...');
   const startTime = Date.now();
   try {
-    const finalResponse: AgentFinalResponse = await artInstance.process(agentProps);
+    const finalResponse: AgentFinalResponse = await art.process(agentProps);
     const duration = Date.now() - startTime;
-    unsubscribe();
-    displayFinalResponse(finalResponse, duration);
+
+    // Unsubscribe
+    unsubObservation();
+    if (unsubLlmStream) unsubLlmStream();
+
+    displayFinalResponse(finalResponse, duration, stream);
+
   } catch (error) {
-    unsubscribe();
-    console.error('\n--- An unexpected error occurred during single query processing ---');
+    // Unsubscribe even on error
+    unsubObservation();
+    if (unsubLlmStream) unsubLlmStream();
+
+    console.error('\n--- An unexpected error occurred during processing ---');
     console.error(error);
     process.exit(1);
   }
 }
 
-// --- Mode 2: Run Interactive CLI Session ---
-async function runInteractiveMode(artInstance: ArtInstance) {
-  const rl = readline.createInterface({ input, output });
-  const threadId = `interactive-${generateUUID()}`; // Unique thread for the session
-
-  console.log(`\nStarting interactive session.`);
-  console.log(`Using Thread ID: ${threadId}`);
-  console.log(`Type 'exit' or 'quit' to end the session.`);
-
-  // Set default config for the session thread
-  try {
-    await artInstance.stateManager.setThreadConfig(threadId, defaultThreadConfig);
-    console.log(`Default configuration set for thread: ${threadId}`);
-  } catch (configError) {
-     console.error(`Error setting default thread config: ${configError}`);
-     rl.close();
-     process.exit(1);
-  }
-
-  // Subscribe to Observations for the session
-  const observationSocket = artInstance.uiSystem.getObservationSocket();
-  const unsubscribe = observationSocket.subscribe(
-    (observation) => logObservation(observation, threadId),
-    undefined,
-    { threadId: threadId }
-  );
-
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const query = await rl.question('\nYou: ');
-
-    if (query.toLowerCase() === 'exit' || query.toLowerCase() === 'quit') {
-      break; // Exit the loop
-    }
-
-    if (!query.trim()) {
-      continue; // Skip empty input
-    }
-
-    const agentProps: AgentProps = {
-      query: query,
-      threadId: threadId, // Use the same threadId for all turns
-    };
-
-    try {
-      console.log('Assistant thinking...'); // Indicate processing
-      const startTime = Date.now();
-      const finalResponse: AgentFinalResponse = await artInstance.process(agentProps);
-      const duration = Date.now() - startTime;
-      // Display slightly differently for interactive mode
-      console.log(`\nAssistant: ${finalResponse.response.content}`);
-      console.log(`(Status: ${finalResponse.metadata.status}, Time: ${duration}ms)`);
-       if (finalResponse.metadata.error) {
-         console.error(`Assistant Error: ${finalResponse.metadata.error}`);
-         if (finalResponse.metadata.status === 'error') {
-             console.error(">>> POTENTIAL PERSISTENCE ISSUE DETECTED: 'error' status on subsequent request. <<<");
-         }
-       }
-
-    } catch (error) {
-      console.error('\n--- Unexpected error during interactive processing ---');
-      console.error(error);
-      // Continue loop unless it's a fatal error
-    }
-  }
-
-  // Cleanup
-  unsubscribe();
-  rl.close();
-  console.log('\nInteractive session ended. Conversation history (in memory) is lost.');
-}
-
-// --- Main Execution Logic ---
-async function startApp() {
-  art = await initializeART(); // Initialize ART globally
-
-  const args = process.argv.slice(2); // Get command line arguments
-
-  if (args.length > 0) {
-    // Arguments provided: Run single query mode
-    const query = args.join(' ');
-    await processSingleQuery(art, query);
-  } else {
-    // No arguments: Run interactive mode
-    await runInteractiveMode(art);
-  }
-}
-
 // Run the application
-startApp();
+startApp().catch(err => {
+  console.error("Application failed to start or run:", err);
+  process.exit(1);
+});

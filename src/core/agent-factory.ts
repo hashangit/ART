@@ -242,6 +242,7 @@ export class AgentFactory {
             outputParser: this.outputParser,
             observationManager: this.observationManager,
             toolSystem: this.toolSystem,
+            uiSystem: this.uiSystem!, // Include the UI System (non-null assertion)
             // Note: providerAdapter is used by reasoningEngine, not directly by agent core usually
         };
 

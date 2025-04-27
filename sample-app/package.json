@@ -16,9 +16,11 @@
   "type": "commonjs",
   "dependencies": {
     "@types/express": "^5.0.1",
+    "@types/yargs": "^17.0.33",
     "art-framework": "file:../",
     "dotenv": "^16.4.7",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",

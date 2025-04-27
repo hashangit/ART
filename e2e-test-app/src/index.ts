@@ -13,10 +13,10 @@ import {
   ArtInstance, // Import the ArtInstance type
   Observation, // Import the Observation type
   ConversationMessage, // Import ConversationMessage type
-  ObservationType, // Import ObservationType enum
-  MessageRole, // Import MessageRole enum
-  ObservationSocket, // Import ObservationSocket class type
-  ConversationSocket // Import ConversationSocket class type
+  // ObservationType, // Import ObservationType enum
+  // MessageRole, // Import MessageRole enum
+  // ObservationSocket, // Import ObservationSocket class type
+  // ConversationSocket // Import ConversationSocket class type
   // Remove unused ThreadContext import
 } from 'art-framework';
 
@@ -183,8 +183,14 @@ app.get('/', (req: Request, res: Response): void => {
 // Endpoint to process queries
 app.post('/process', async (req: Request, res: Response): Promise<void> => {
   // console.log('Received request on /process'); // Removed for linting
-  // Extract query, storageType, and optional threadId from request body
-  const { query, storageType = 'memory', threadId: requestThreadId, provider = 'gemini' } = req.body; // Add provider
+  // Extract query, storageType, optional threadId, provider, and streaming request flag
+  const {
+    query,
+    storageType = 'memory',
+    threadId: requestThreadId,
+    provider = 'gemini',
+    requestStreamEvents = false // Default to false if not provided
+  } = req.body;
 
   if (!query) {
     res.status(400).json({
@@ -308,17 +314,32 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
 
     // Process the query
     // console.log(`Processing query: "${query}"`); // Removed for linting
-    // Restore original AgentProps without options override
+    // Construct AgentProps, including the stream option if requested
     const agentProps: AgentProps = {
       query,
-      threadId
+      threadId,
+      options: {
+        stream: requestStreamEvents // Pass the streaming flag here
+      }
     };
 
     try {
+      // *** Add logging before art.process ***
+      console.log(`[E2E App] Calling art.process for thread ${threadId} with provider ${provider}, model ${model}`);
+      console.log(`[E2E App] Agent Props:`, agentProps);
+      // Re-load config to confirm what art.process will likely use
+      const currentContext = await art.stateManager.loadThreadContext(threadId).catch(() => null);
+      console.log(`[E2E App] Current Thread Config before process:`, currentContext?.config);
+      // *** End logging ***
+
       const startTime = Date.now();
       const finalResponse: AgentFinalResponse = await art.process(agentProps);
       const duration = Date.now() - startTime;
-      // console.log(`Processing complete in ${duration}ms. Status: ${finalResponse.metadata.status}`);
+
+      // *** Add logging after art.process ***
+      console.log(`[E2E App] art.process completed in ${duration}ms. Status: ${finalResponse.metadata.status}`);
+      console.log(`[E2E App] Final Response object:`, finalResponse); // Log the entire response object
+      // *** End logging ***
 
       // Fetch observations for the thread
       let observations: Observation[] = [];
