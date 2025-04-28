@@ -57,6 +57,10 @@ export class TypedSocket<DataType, FilterType = any> {
     options?: { targetThreadId?: string; targetSessionId?: string }, // targetSessionId might be useful later
     filterCheck?: (data: DataType, filter?: FilterType) => boolean
   ): void {
+    // ADD THIS LOG: Identify the socket instance being notified
+    const socketType = this.constructor.name; // Get class name (e.g., 'LLMStreamSocket', 'ObservationSocket')
+    Logger.debug(`[${socketType}] notify() called. Data type: ${typeof data}, Sub count: ${this.subscriptions.size}, Options: ${JSON.stringify(options)}`);
+
     Logger.debug(`Notifying ${this.subscriptions.size} subscribers. Data: ${JSON.stringify(data).substring(0, 100)}..., Options: ${JSON.stringify(options)}`); // Use static Logger
     this.subscriptions.forEach((sub) => {
       try {
@@ -71,6 +75,7 @@ export class TypedSocket<DataType, FilterType = any> {
         }
 
         // If checks pass, invoke the callback
+        Logger.debug(`Checks passed for sub ${sub.id}. Invoking callback.`); // Add log before callback
         sub.callback(data);
       } catch (error) {
         Logger.error(`Error executing subscription callback ${sub.id}:`, error); // Use static Logger

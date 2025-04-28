@@ -101,7 +101,7 @@ If the tools failed or provided unexpected results, explain the issue and try to
                 }\n  Input Schema: ${JSON.stringify(tool.inputSchema)}`,
             )
             .join('\n')
-        : 'No tools available.';
+        : 'Inform the user that no tools are enabled for this request. '; // Adjusted message
 
     const promptData = {
       systemPrompt: systemPrompt || this.defaultSystemPrompt,

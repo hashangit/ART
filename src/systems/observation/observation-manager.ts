@@ -2,6 +2,7 @@ import { ObservationManager as ObservationManagerInterface, IObservationReposito
 import { ObservationSocket } from '../ui/observation-socket'; // Import the class implementation
 import { Observation, ObservationFilter } from '../../types'; // Kept ObservationType and Omit removed
 import { generateUUID } from '../../utils/uuid'; // Assuming UUID utility exists as per Phase 0.9
+import { Logger } from '../../utils/logger'; // Import Logger
 
 /**
  * Manages the lifecycle of agent observations: creation, persistence, retrieval, and notification.
@@ -41,7 +42,9 @@ export class ObservationManager implements ObservationManagerInterface { // Impl
         try {
             await this.observationRepository.addObservation(observation); // Assuming addObservation exists on IObservationRepository
             // Use the generic notify method from TypedSocket interface
+            Logger.debug(`[ObservationManager] Notifying ObservationSocket for obsId: ${observation.id}, type: ${observation.type}`); // Log before notify
             this.observationSocket.notify(observation, { targetThreadId: observation.threadId });
+            Logger.debug(`[ObservationManager] ObservationSocket notified for obsId: ${observation.id}`); // Log after notify
         } catch (error) {
             console.error("Error recording observation:", error);
             // Decide on error handling strategy - rethrow, log, or generate an ERROR observation?

@@ -9,6 +9,7 @@ import {
     OutputParser,
     ObservationManager,
     ToolSystem,
+    UISystem // Added UISystem import
     // Assuming repository interfaces might be needed indirectly or for type safety, though not directly used
 } from '../interfaces';
 import {
@@ -24,10 +25,13 @@ import {
     MessageRole,
     CallOptions,
     ModelCapability, // <-- Added import
+    // StreamEvent, // <-- Removed unused import
+    LLMMetadata // <-- Added import
     // Omit removed, using built-in implicitly
 } from '../../types';
 import { generateUUID } from '../../utils/uuid';
-import { ARTError, ErrorCode } from '../../errors'; // Assuming a custom error class exists
+import { ARTError, ErrorCode } from '../../errors';
+import { Logger } from '../../utils/logger'; // Added Logger import
 
 /**
  * Defines the dependencies required by the PESAgent constructor.
@@ -50,6 +54,8 @@ interface PESAgentDependencies {
     observationManager: ObservationManager;
     /** Orchestrates tool execution. */
     toolSystem: ToolSystem;
+    /** Provides access to UI communication sockets. */
+    uiSystem: UISystem; // Added UISystem dependency
 }
 
 /**
@@ -76,9 +82,9 @@ export class PESAgent implements IAgentCore {
      * Stages:
      * 1. Initiation & Config Loading: Loads thread-specific settings.
      * 2. Planning Context Assembly: Gathers history and tool schemas.
-     * 3. Planning Call: First LLM call to generate intent, plan, and tool calls. **Determines the required capabilities (e.g., `REASONING`) for planning and includes them in the options passed to the `ReasoningEngine`.**
+     * 3. Planning Call: First LLM call (potentially streaming) to generate intent, plan, and tool calls.
      * 4. Tool Execution: Executes planned tool calls via the ToolSystem.
-     * 5. Synthesis Call: Second LLM call using plan and tool results to generate the final response. **Determines the required capabilities (e.g., `TEXT`, potentially `VISION` if applicable based on tool results) for synthesis and includes them in the options passed to the `ReasoningEngine`.**
+     * 5. Synthesis Call: Second LLM call (potentially streaming) using plan and tool results to generate the final response.
      * 6. Finalization: Saves messages and state, returns the final response.
      *
      * @param props - The input properties containing the user query, threadId, and optional context.
@@ -91,27 +97,27 @@ export class PESAgent implements IAgentCore {
         let status: ExecutionMetadata['status'] = 'success';
         let errorMessage: string | undefined;
         let llmCalls = 0;
-        let toolCallsCount = 0; // Renamed to avoid conflict with ParsedToolCall[]
+        let toolCallsCount = 0;
         let finalAiMessage: ConversationMessage | undefined;
+        let aggregatedLlmMetadata: LLMMetadata | undefined = undefined; // Initialize aggregated metadata
 
         try {
             // --- Stage 1: Initiation & Config ---
-            console.log(`[${traceId}] Stage 1: Initiation & Config`);
+            Logger.debug(`[${traceId}] Stage 1: Initiation & Config`);
             const threadContext = await this.deps.stateManager.loadThreadContext(props.threadId, props.userId);
             if (!threadContext) {
                 throw new ARTError(`Thread context not found for threadId: ${props.threadId}`, ErrorCode.THREAD_NOT_FOUND);
             }
-            const systemPrompt = threadContext.config.systemPrompt; // Use thread-specific or default
+            const systemPrompt = threadContext.config.systemPrompt;
 
             // --- Stage 2: Planning Context ---
-            console.log(`[${traceId}] Stage 2: Planning Context`);
+            Logger.debug(`[${traceId}] Stage 2: Planning Context`);
             const historyOptions = { limit: threadContext.config.historyLimit };
             const history = await this.deps.conversationManager.getMessages(props.threadId, historyOptions);
-            // const enabledToolNames = threadContext.config.enabledTools; // Removed unused variable
-            const availableTools = await this.deps.toolRegistry.getAvailableTools({ enabledForThreadId: props.threadId }); // Assuming registry can filter
+            const availableTools = await this.deps.toolRegistry.getAvailableTools({ enabledForThreadId: props.threadId });
 
             // --- Stage 3: Planning Call ---
-            console.log(`[${traceId}] Stage 3: Planning Call`);
+            Logger.debug(`[${traceId}] Stage 3: Planning Call`);
             const planningPrompt = await this.deps.promptManager.createPlanningPrompt(
                 props.query, history, systemPrompt, availableTools, threadContext
             );
@@ -120,24 +126,74 @@ export class PESAgent implements IAgentCore {
                 threadId: props.threadId,
                 traceId: traceId,
                 userId: props.userId,
-                requiredCapabilities: [ModelCapability.REASONING], // <-- Added capabilities
-                onThought: (thought: string) => {
-                    this.deps.observationManager.record({
-                        threadId: props.threadId, traceId, type: ObservationType.THOUGHTS, content: { phase: 'planning', thought }, metadata: { timestamp: Date.now() }
-                    }).catch(err => console.error(`[${traceId}] Failed to record planning thought observation:`, err));
-                },
-                // Pass LLM parameters from config, potentially overridden by props.options
+                sessionId: props.sessionId, // Pass sessionId
+                stream: true, // Request streaming
+                callContext: 'AGENT_THOUGHT', // Set context for planning
+                requiredCapabilities: [ModelCapability.REASONING],
                 ...(threadContext.config.reasoning.parameters ?? {}),
                 ...(props.options?.llmParams ?? {}),
             };
 
-            let planningOutputText: string;
+            let planningOutputText: string = ''; // Initialize buffer for planning output
             let parsedPlanningOutput: { intent?: string; plan?: string; toolCalls?: ParsedToolCall[] } = {};
+            let planningStreamError: Error | null = null;
+
             try {
+                // Record PLAN observation before making the call
+                await this.deps.observationManager.record({
+                    threadId: props.threadId, traceId: traceId, type: ObservationType.PLAN, content: { message: "Preparing for planning LLM call." }, metadata: { timestamp: Date.now() }
+                }).catch(err => Logger.error(`[${traceId}] Failed to record PLAN observation:`, err));
+
                 llmCalls++;
-                planningOutputText = await this.deps.reasoningEngine.call(planningPrompt, planningOptions);
+                const planningStream = await this.deps.reasoningEngine.call(planningPrompt, planningOptions);
+
+                // Record stream start
+                await this.deps.observationManager.record({
+                    threadId: props.threadId, traceId, type: ObservationType.LLM_STREAM_START, content: { phase: 'planning' }, metadata: { timestamp: Date.now() }
+                }).catch(err => Logger.error(`[${traceId}] Failed to record LLM_STREAM_START observation:`, err));
+
+                // Consume the stream
+                for await (const event of planningStream) {
+                    // Call the base notify method directly
+                    this.deps.uiSystem.getLLMStreamSocket().notify(event, { targetThreadId: event.threadId, targetSessionId: event.sessionId });
+
+                    switch (event.type) {
+                        case 'TOKEN':
+                            planningOutputText += event.data; // Append all tokens for planning output
+                            break;
+                        case 'METADATA':
+                            await this.deps.observationManager.record({
+                                threadId: props.threadId, traceId, type: ObservationType.LLM_STREAM_METADATA, content: event.data, metadata: { phase: 'planning', timestamp: Date.now() }
+                            }).catch(err => Logger.error(`[${traceId}] Failed to record LLM_STREAM_METADATA observation:`, err));
+                            // Aggregate planning metadata if needed (e.g., for overall cost)
+                            aggregatedLlmMetadata = { ...(aggregatedLlmMetadata ?? {}), ...event.data };
+                            break;
+                        case 'ERROR':
+                            planningStreamError = event.data instanceof Error ? event.data : new Error(String(event.data));
+                            status = 'error';
+                            errorMessage = `Planning phase stream error: ${planningStreamError.message}`;
+                            Logger.error(`[${traceId}] Planning Stream Error:`, planningStreamError);
+                            await this.deps.observationManager.record({
+                                threadId: props.threadId, traceId, type: ObservationType.LLM_STREAM_ERROR, content: { phase: 'planning', error: planningStreamError.message, stack: planningStreamError.stack }, metadata: { timestamp: Date.now() }
+                            }).catch(err => Logger.error(`[${traceId}] Failed to record LLM_STREAM_ERROR observation:`, err));
+                            break;
+                        case 'END':
+                            await this.deps.observationManager.record({
+                                threadId: props.threadId, traceId, type: ObservationType.LLM_STREAM_END, content: { phase: 'planning' }, metadata: { timestamp: Date.now() }
+                            }).catch(err => Logger.error(`[${traceId}] Failed to record LLM_STREAM_END observation:`, err));
+                            break;
+                    }
+                    if (planningStreamError) break;
+                }
+
+                if (planningStreamError) {
+                     throw new ARTError(errorMessage!, ErrorCode.PLANNING_FAILED, planningStreamError);
+                }
+
+                // Parse the accumulated output
                 parsedPlanningOutput = await this.deps.outputParser.parsePlanningOutput(planningOutputText);
 
+                // Record Intent and Plan observations using the final text
                 await this.deps.observationManager.record({
                     threadId: props.threadId, traceId, type: ObservationType.INTENT, content: { intent: parsedPlanningOutput.intent }, metadata: { timestamp: Date.now() }
                 });
@@ -151,101 +207,151 @@ export class PESAgent implements IAgentCore {
                 }
 
             } catch (err: any) {
+                // Catch errors from initial call or re-thrown stream errors
                 status = 'error';
-                errorMessage = `Planning phase failed: ${err.message}`;
-                console.error(`[${traceId}] Planning Error:`, err);
-                await this.deps.observationManager.record({
-                    threadId: props.threadId, traceId, type: ObservationType.ERROR, content: { phase: 'planning', error: err.message, stack: err.stack }, metadata: { timestamp: Date.now() }
-                });
-                throw new ARTError(errorMessage, ErrorCode.PLANNING_FAILED, err); // Rethrow to stop execution
+                errorMessage = errorMessage ?? `Planning phase failed: ${err.message}`; // Use stream error message if available
+                Logger.error(`[${traceId}] Planning Error:`, err);
+                // Avoid duplicate error recording if it came from the stream
+                if (!planningStreamError) {
+                    await this.deps.observationManager.record({
+                        threadId: props.threadId, traceId, type: ObservationType.ERROR, content: { phase: 'planning', error: err.message, stack: err.stack }, metadata: { timestamp: Date.now() }
+                    });
+                }
+                throw err instanceof ARTError ? err : new ARTError(errorMessage, ErrorCode.PLANNING_FAILED, err); // Rethrow
             }
 
             // --- Stage 4: Tool Execution ---
             let toolResults: ToolResult[] = [];
             if (parsedPlanningOutput.toolCalls && parsedPlanningOutput.toolCalls.length > 0) {
-                console.log(`[${traceId}] Stage 4: Tool Execution (${parsedPlanningOutput.toolCalls.length} calls)`);
+                Logger.debug(`[${traceId}] Stage 4: Tool Execution (${parsedPlanningOutput.toolCalls.length} calls)`);
                 try {
-                    // ToolSystem is responsible for validation, execution, and recording TOOL_EXECUTION/ERROR observations
                     toolResults = await this.deps.toolSystem.executeTools(parsedPlanningOutput.toolCalls, props.threadId, traceId);
-                    toolCallsCount = toolResults.length; // Count actual executions/results
-                     // Check results for errors to potentially set status to 'partial'
+                    toolCallsCount = toolResults.length;
                     if (toolResults.some(r => r.status === 'error')) {
                         status = 'partial';
-                        console.warn(`[${traceId}] Partial success in tool execution.`);
-                        // Optionally collect specific tool errors for the final metadata
+                        Logger.warn(`[${traceId}] Partial success in tool execution.`);
                         errorMessage = errorMessage ? `${errorMessage}; Tool execution errors occurred.` : 'Tool execution errors occurred.';
                     }
                 } catch (err: any) {
-                     // This catch block might be redundant if ToolSystem handles internal errors and returns ToolResult[]
-                     // However, ToolSystem itself could throw an unexpected error.
                     status = 'error';
                     errorMessage = `Tool execution phase failed: ${err.message}`;
-                    console.error(`[${traceId}] Tool Execution System Error:`, err);
+                    Logger.error(`[${traceId}] Tool Execution System Error:`, err);
                     await this.deps.observationManager.record({
                         threadId: props.threadId, traceId, type: ObservationType.ERROR, content: { phase: 'tool_execution', error: err.message, stack: err.stack }, metadata: { timestamp: Date.now() }
                     });
-                    throw new ARTError(errorMessage, ErrorCode.TOOL_EXECUTION_FAILED, err); // Rethrow
+                    throw new ARTError(errorMessage, ErrorCode.TOOL_EXECUTION_FAILED, err);
                 }
             } else {
-                 console.log(`[${traceId}] Stage 4: Tool Execution (No tool calls)`);
+                 Logger.debug(`[${traceId}] Stage 4: Tool Execution (No tool calls)`);
             }
 
 
             // --- Stage 5: Synthesis Call ---
-             console.log(`[${traceId}] Stage 5: Synthesis Call`);
-            const synthesisPrompt = await this.deps.promptManager.createSynthesisPrompt(
-                props.query, parsedPlanningOutput.intent, parsedPlanningOutput.plan, toolResults, history, systemPrompt, threadContext
-            );
+            Logger.debug(`[${traceId}] Stage 5: Synthesis Call`);
+            // Record SYNTHESIS observation before making the call
+            await this.deps.observationManager.record({
+                threadId: props.threadId, traceId: traceId, type: ObservationType.SYNTHESIS, content: { message: "Preparing for synthesis LLM call." }, metadata: { timestamp: Date.now() }
+            }).catch(err => Logger.error(`[${traceId}] Failed to record SYNTHESIS observation:`, err));
+
+           const synthesisPrompt = await this.deps.promptManager.createSynthesisPrompt(
+               props.query, parsedPlanningOutput.intent, parsedPlanningOutput.plan, toolResults, history, systemPrompt, threadContext
+           );
 
             const synthesisOptions: CallOptions = {
                 threadId: props.threadId,
                 traceId: traceId,
                 userId: props.userId,
-                // TODO: Conditionally add VISION capability if toolResults contain image data
-                requiredCapabilities: [ModelCapability.TEXT], // <-- Added capabilities
-                 onThought: (thought: string) => {
-                    this.deps.observationManager.record({
-                        threadId: props.threadId, traceId, type: ObservationType.THOUGHTS, content: { phase: 'synthesis', thought }, metadata: { timestamp: Date.now() }
-                    }).catch(err => console.error(`[${traceId}] Failed to record synthesis thought observation:`, err));
-                },
+                sessionId: props.sessionId, // Pass sessionId
+                stream: true, // Request streaming
+                callContext: 'FINAL_SYNTHESIS', // Set context for synthesis
+                requiredCapabilities: [ModelCapability.TEXT],
                 ...(threadContext.config.reasoning.parameters ?? {}),
                 ...(props.options?.llmParams ?? {}),
             };
 
-            let finalResponseContent: string;
+            let finalResponseContent: string = ''; // Initialize buffer for final response
+            let synthesisStreamError: Error | null = null;
+
             try {
                 llmCalls++;
-                const synthesisOutputText = await this.deps.reasoningEngine.call(synthesisPrompt, synthesisOptions);
-                 await this.deps.observationManager.record({
-                        threadId: props.threadId, traceId, type: ObservationType.SYNTHESIS, content: { rawOutput: synthesisOutputText }, metadata: { timestamp: Date.now() }
-                 });
-                finalResponseContent = await this.deps.outputParser.parseSynthesisOutput(synthesisOutputText);
+                const synthesisStream = await this.deps.reasoningEngine.call(synthesisPrompt, synthesisOptions);
+
+                // Record stream start
+                await this.deps.observationManager.record({
+                    threadId: props.threadId, traceId, type: ObservationType.LLM_STREAM_START, content: { phase: 'synthesis' }, metadata: { timestamp: Date.now() }
+                }).catch(err => Logger.error(`[${traceId}] Failed to record LLM_STREAM_START observation:`, err));
+
+                // Consume the stream
+                for await (const event of synthesisStream) {
+                     // Call the base notify method directly
+                    this.deps.uiSystem.getLLMStreamSocket().notify(event, { targetThreadId: event.threadId, targetSessionId: event.sessionId });
+
+                    switch (event.type) {
+                        case 'TOKEN':
+                            // Append only final response tokens
+                            if (event.tokenType === 'FINAL_SYNTHESIS_LLM_RESPONSE' || event.tokenType === 'LLM_RESPONSE') {
+                                finalResponseContent += event.data;
+                            }
+                            break;
+                        case 'METADATA':
+                            aggregatedLlmMetadata = { ...(aggregatedLlmMetadata ?? {}), ...event.data }; // Aggregate metadata
+                            await this.deps.observationManager.record({
+                                threadId: props.threadId, traceId, type: ObservationType.LLM_STREAM_METADATA, content: event.data, metadata: { phase: 'synthesis', timestamp: Date.now() }
+                            }).catch(err => Logger.error(`[${traceId}] Failed to record LLM_STREAM_METADATA observation:`, err));
+                            break;
+                        case 'ERROR':
+                            synthesisStreamError = event.data instanceof Error ? event.data : new Error(String(event.data));
+                            status = status === 'partial' ? 'partial' : 'error';
+                            errorMessage = errorMessage ? `${errorMessage}; Synthesis stream error: ${synthesisStreamError.message}` : `Synthesis stream error: ${synthesisStreamError.message}`;
+                            Logger.error(`[${traceId}] Synthesis Stream Error:`, synthesisStreamError);
+                            await this.deps.observationManager.record({
+                                threadId: props.threadId, traceId, type: ObservationType.LLM_STREAM_ERROR, content: { phase: 'synthesis', error: synthesisStreamError.message, stack: synthesisStreamError.stack }, metadata: { timestamp: Date.now() }
+                            }).catch(err => Logger.error(`[${traceId}] Failed to record LLM_STREAM_ERROR observation:`, err));
+                            break;
+                        case 'END':
+                             await this.deps.observationManager.record({
+                                threadId: props.threadId, traceId, type: ObservationType.LLM_STREAM_END, content: { phase: 'synthesis' }, metadata: { timestamp: Date.now() }
+                            }).catch(err => Logger.error(`[${traceId}] Failed to record LLM_STREAM_END observation:`, err));
+                            break;
+                    }
+                     if (synthesisStreamError) break;
+                }
+
+                 // Handle stream error after loop
+                 if (synthesisStreamError) {
+                     if (status !== 'partial') {
+                         throw new ARTError(errorMessage!, ErrorCode.SYNTHESIS_FAILED, synthesisStreamError);
+                     }
+                     finalResponseContent = errorMessage!; // Use error message as content if synthesis failed partially
+                 }
+                 // No need to parse output anymore
 
             } catch (err: any) {
-                // If synthesis fails after partial tool success, status remains 'partial' but add synthesis error
+                // Catch errors from initial call or re-thrown stream errors
                 status = status === 'partial' ? 'partial' : 'error';
                 const synthesisErrorMessage = `Synthesis phase failed: ${err.message}`;
                 errorMessage = errorMessage ? `${errorMessage}; ${synthesisErrorMessage}` : synthesisErrorMessage;
-                console.error(`[${traceId}] Synthesis Error:`, err);
-                 await this.deps.observationManager.record({
-                    threadId: props.threadId, traceId, type: ObservationType.ERROR, content: { phase: 'synthesis', error: err.message, stack: err.stack }, metadata: { timestamp: Date.now() }
-                });
-                 // Decide whether to throw or allow returning partial results
-                 // For now, let's allow returning partial if tools ran, otherwise throw
+                Logger.error(`[${traceId}] Synthesis Error:`, err);
+                 // Avoid duplicate error recording if it came from the stream
+                 if (!synthesisStreamError) {
+                     await this.deps.observationManager.record({
+                        threadId: props.threadId, traceId, type: ObservationType.ERROR, content: { phase: 'synthesis', error: err.message, stack: err.stack }, metadata: { timestamp: Date.now() }
+                    });
+                 }
                  if (status !== 'partial') {
-                    throw new ARTError(synthesisErrorMessage, ErrorCode.SYNTHESIS_FAILED, err);
+                    throw err instanceof ARTError ? err : new ARTError(synthesisErrorMessage, ErrorCode.SYNTHESIS_FAILED, err);
                  }
                  finalResponseContent = errorMessage; // Use error message as content if synthesis failed partially
             }
 
             // --- Stage 6: Finalization ---
-            console.log(`[${traceId}] Stage 6: Finalization`);
+            Logger.debug(`[${traceId}] Stage 6: Finalization`);
             const finalTimestamp = Date.now();
             finalAiMessage = {
                 messageId: generateUUID(),
                 threadId: props.threadId,
                 role: MessageRole.AI,
-                content: finalResponseContent,
+                content: finalResponseContent, // Use buffered content
                 timestamp: finalTimestamp,
                 metadata: { traceId },
             };
@@ -266,7 +372,7 @@ export class PESAgent implements IAgentCore {
             await this.deps.stateManager.saveStateIfModified(props.threadId);
 
         } catch (error: any) {
-            console.error(`[${traceId}] PESAgent process error:`, error);
+            Logger.error(`[${traceId}] PESAgent process error:`, error);
             status = status === 'partial' ? 'partial' : 'error'; // Keep partial if it was set before the catch
             errorMessage = errorMessage ?? (error instanceof ARTError ? error.message : 'An unexpected error occurred.');
              // Ensure finalAiMessage is undefined if a critical error occurred before synthesis
@@ -280,7 +386,7 @@ export class PESAgent implements IAgentCore {
             ))) {
                  await this.deps.observationManager.record({
                     threadId: props.threadId, traceId, type: ObservationType.ERROR, content: { phase: 'agent_process', error: error.message, stack: error.stack }, metadata: { timestamp: Date.now() }
-                }).catch(err => console.error(`[${traceId}] Failed to record top-level error observation:`, err));
+                }).catch(err => Logger.error(`[${traceId}] Failed to record top-level error observation:`, err));
             }
         } finally {
             // Ensure state is attempted to be saved even if errors occurred mid-process
@@ -288,7 +394,7 @@ export class PESAgent implements IAgentCore {
              try {
                  await this.deps.stateManager.saveStateIfModified(props.threadId);
              } catch(saveError: any) {
-                 console.error(`[${traceId}] Failed to save state during finalization:`, saveError);
+                 Logger.error(`[${traceId}] Failed to save state during finalization:`, saveError);
                  // Potentially record another error observation
              }
         }
@@ -305,6 +411,7 @@ export class PESAgent implements IAgentCore {
             toolCalls: toolCallsCount, // Use the count of executed tools
             // llmCost: calculateCost(), // TODO: Implement cost calculation if needed
             error: errorMessage,
+            llmMetadata: aggregatedLlmMetadata, // Add aggregated LLM metadata
         };
 
         if (!finalAiMessage && status !== 'success') {

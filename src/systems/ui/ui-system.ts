@@ -6,15 +6,17 @@ import {
 } from '../../core/interfaces';
 import { ObservationSocket } from './observation-socket';
 import { ConversationSocket } from './conversation-socket';
+import { LLMStreamSocket } from './llm-stream-socket'; // Import the new socket
 import { Logger } from '../../utils/logger';
 
 /**
- * Provides access to the UI communication sockets (Observation and Conversation).
- * Instantiates the sockets with their required repository dependencies.
+ * Provides access to the UI communication sockets (Observation, Conversation, and LLM Stream).
+ * Instantiates the sockets with their required dependencies.
  */
 export class UISystem implements IUISystem {
     private observationSocketInstance: ObservationSocket;
     private conversationSocketInstance: ConversationSocket;
+    private llmStreamSocketInstance: LLMStreamSocket; // Add the new socket instance
 
     /**
      * Creates an instance of UISystem.
@@ -27,7 +29,8 @@ export class UISystem implements IUISystem {
     ) {
         this.observationSocketInstance = new ObservationSocket(observationRepository);
         this.conversationSocketInstance = new ConversationSocket(conversationRepository);
-        Logger.debug('UISystem initialized with Observation and Conversation sockets.');
+        this.llmStreamSocketInstance = new LLMStreamSocket(); // Instantiate the new socket
+        Logger.debug('UISystem initialized with Observation, Conversation, and LLM Stream sockets.');
     }
 
     /**
@@ -44,5 +47,13 @@ export class UISystem implements IUISystem {
      */
     getConversationSocket(): ConversationSocket {
         return this.conversationSocketInstance;
+    }
+
+    /**
+     * Gets the singleton instance of the LLMStreamSocket.
+     * @returns The LLMStreamSocket instance.
+     */
+    getLLMStreamSocket(): LLMStreamSocket {
+        return this.llmStreamSocketInstance;
     }
 }

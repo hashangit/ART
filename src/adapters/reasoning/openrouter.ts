@@ -1,6 +1,6 @@
 // src/adapters/reasoning/openrouter.ts
 import { ProviderAdapter } from '../../core/interfaces';
-import { FormattedPrompt, CallOptions } from '../../types';
+import { FormattedPrompt, CallOptions, StreamEvent, LLMMetadata } from '../../types'; // Added StreamEvent, LLMMetadata
 import { Logger } from '../../utils/logger';
 
 // Define expected options for the OpenRouter adapter constructor
@@ -58,7 +58,7 @@ interface OpenAIChatCompletionResponse {
  * which provides access to various LLMs through an OpenAI-compatible interface.
  *
  * Handles formatting requests and parsing responses for OpenRouter's chat completions endpoint.
- * Note: This basic version does not implement streaming or the `onThought` callback.
+ * Note: Streaming is **not yet implemented** for this adapter. Calls requesting streaming will yield an error.
  *
  * @implements {ProviderAdapter}
  */
@@ -97,93 +97,112 @@ export class OpenRouterAdapter implements ProviderAdapter {
     *
     * **Note:** This is a basic implementation.
     * - It currently assumes `prompt` is the primary user message content (string). It does not yet parse complex `FormattedPrompt` objects containing history or system roles directly. These would need to be handled by the `PromptManager`.
-    * - Streaming and the `onThought` callback are **not implemented** in this version.
     * - Includes recommended OpenRouter headers (`HTTP-Referer`, `X-Title`) if configured.
     *
-    * @param prompt - The prompt content, treated as the user message in this basic implementation.
-    * @param options - Call options, including `threadId`, `traceId`, and any OpenAI-compatible generation parameters (like `temperature`, `max_tokens`, `stop`).
-    * @returns A promise resolving to the content string of the assistant's response.
-    * @throws {Error} If the API request fails (network error, invalid API key, bad request, etc.).
+    * @param prompt - The prompt content.
+    * @param options - Call options, including `threadId`, `traceId`, `stream`, and any OpenAI-compatible generation parameters.
+    * @returns A promise resolving to an AsyncIterable of StreamEvent objects. If streaming is requested, it currently yields an error event.
+    * @throws {Error} If a non-streaming API request fails.
     */
-  async call(prompt: FormattedPrompt, options: CallOptions): Promise<string> {
-    if (typeof prompt !== 'string') {
-      Logger.warn('OpenRouterAdapter received non-string prompt. Treating as string.');
-      prompt = String(prompt);
-    }
-
-    const apiUrl = `${this.apiBaseUrl}/chat/completions`;
-
-    // Map relevant parameters from CallOptions, allowing provider-specific names
-    const stopSequences = options.stop || options.stop_sequences || options.stopSequences;
-
-    const payload: OpenAIChatCompletionPayload = {
-      model: this.model, // Use the specific model provided in options
-      messages: [
-        // TODO: Add system prompt/history handling
-        { role: 'user', content: prompt },
-      ],
-      temperature: options.temperature,
-      max_tokens: options.max_tokens || options.maxOutputTokens,
-      top_p: options.top_p || options.topP,
-      top_k: options.top_k || options.topK,
-      stop: stopSequences,
-      // Add other parameters compatible with OpenAI/OpenRouter spec
-    };
-
-    // Remove undefined parameters from payload
-    Object.keys(payload).forEach(key => payload[key as keyof OpenAIChatCompletionPayload] === undefined && delete payload[key as keyof OpenAIChatCompletionPayload]);
-
-    const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`,
-    };
-    // Add recommended OpenRouter headers if provided
-    if (this.siteUrl) {
-        headers['HTTP-Referer'] = this.siteUrl;
-    }
-     if (this.appName) {
-        headers['X-Title'] = this.appName;
-    }
-
-    Logger.debug(`Calling OpenRouter API: ${apiUrl} with model ${this.model}`, { threadId: options.threadId, traceId: options.traceId });
-
-    try {
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        Logger.error(`OpenRouter API request failed with status ${response.status}: ${errorBody}`, { threadId: options.threadId, traceId: options.traceId });
-        // Attempt to parse error for better message
-         let errorMessage = errorBody;
-        try {
-            const parsedError = JSON.parse(errorBody);
-            if (parsedError?.error?.message) {
-                errorMessage = parsedError.error.message;
-            }
-        } catch (e) { /* Ignore parsing error */ }
-        throw new Error(`OpenRouter API request failed: ${response.status} ${response.statusText} - ${errorMessage}`);
-      }
-
-      const data = await response.json() as OpenAIChatCompletionResponse;
-
-      if (!data.choices || data.choices.length === 0 || !data.choices[0].message?.content) {
-         Logger.error('Invalid response structure from OpenRouter API', { responseData: data, threadId: options.threadId, traceId: options.traceId });
-        throw new Error('Invalid response structure from OpenRouter API: No content found.');
-      }
-
-      // TODO: Implement onThought callback if streaming is added later.
-
-      const responseContent = data.choices[0].message.content.trim();
-      Logger.debug(`OpenRouter API call successful. Response length: ${responseContent.length}`, { threadId: options.threadId, traceId: options.traceId });
-      return responseContent;
-
-    } catch (error: any) {
-      Logger.error(`Error during OpenRouter API call: ${error.message}`, { error, threadId: options.threadId, traceId: options.traceId });
-      throw error;
-    }
-  }
-}
+   async call(prompt: FormattedPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
+     const { threadId, traceId = `openrouter-trace-${Date.now()}`, sessionId, stream } = options;
+   
+     // --- Placeholder for Streaming ---
+     if (stream) {
+         Logger.warn(`OpenRouterAdapter: Streaming requested but not implemented. Returning error stream.`, { threadId, traceId });
+         const errorGenerator = async function*(): AsyncIterable<StreamEvent> {
+             const err = new Error("Streaming is not yet implemented for the OpenRouterAdapter.");
+             yield { type: 'ERROR', data: err, threadId: threadId ?? '', traceId: traceId ?? '', sessionId };
+             yield { type: 'END', data: null, threadId: threadId ?? '', traceId: traceId ?? '', sessionId };
+         };
+         return errorGenerator();
+     }
+   
+     // --- Non-Streaming Logic ---
+     if (typeof prompt !== 'string') {
+       Logger.warn('OpenRouterAdapter received non-string prompt. Treating as string.');
+       prompt = String(prompt);
+     }
+   
+     const apiUrl = `${this.apiBaseUrl}/chat/completions`;
+     const stopSequences = options.stop || options.stop_sequences || options.stopSequences;
+   
+     const payload: OpenAIChatCompletionPayload = {
+       model: this.model,
+       messages: [
+         // TODO: Add system prompt/history handling
+         { role: 'user', content: prompt },
+       ],
+       temperature: options.temperature,
+       max_tokens: options.max_tokens || options.maxOutputTokens,
+       top_p: options.top_p || options.topP,
+       top_k: options.top_k || options.topK,
+       stop: stopSequences,
+     };
+   
+     Object.keys(payload).forEach(key => payload[key as keyof OpenAIChatCompletionPayload] === undefined && delete payload[key as keyof OpenAIChatCompletionPayload]);
+   
+     const headers: Record<string, string> = {
+         'Content-Type': 'application/json',
+         'Authorization': `Bearer ${this.apiKey}`,
+     };
+     if (this.siteUrl) headers['HTTP-Referer'] = this.siteUrl;
+     if (this.appName) headers['X-Title'] = this.appName;
+   
+     Logger.debug(`Calling OpenRouter API (non-streaming): ${apiUrl} with model ${this.model}`, { threadId, traceId });
+   
+     // Use an async generator for non-streaming case too
+     // const adapter = this; // Removed unused alias
+     const generator = async function*(): AsyncIterable<StreamEvent> {
+         try {
+             const response = await fetch(apiUrl, {
+                 method: 'POST',
+                 headers: headers,
+                 body: JSON.stringify(payload),
+             });
+   
+             if (!response.ok) {
+                 const errorBody = await response.text();
+                 let errorMessage = errorBody;
+                 try {
+                     const parsedError = JSON.parse(errorBody);
+                     if (parsedError?.error?.message) errorMessage = parsedError.error.message;
+                 } catch (e) { /* Ignore */ }
+                 throw new Error(`OpenRouter API request failed: ${response.status} ${response.statusText} - ${errorMessage}`);
+             }
+   
+             const data = await response.json() as OpenAIChatCompletionResponse;
+             const choice = data.choices?.[0];
+             const responseText = choice?.message?.content;
+   
+             if (!choice || responseText === undefined || responseText === null) {
+                 throw new Error('Invalid response structure from OpenRouter API: No content found.');
+             }
+   
+             const responseContent = responseText.trim();
+             Logger.debug(`OpenRouter API call successful. Response length: ${responseContent.length}`, { threadId, traceId });
+   
+             // Yield TOKEN
+             yield { type: 'TOKEN', data: responseContent, threadId, traceId, sessionId, tokenType: 'LLM_RESPONSE' };
+             // Yield METADATA
+             const metadata: LLMMetadata = {
+                 inputTokens: data.usage?.prompt_tokens,
+                 outputTokens: data.usage?.completion_tokens,
+                 stopReason: choice.finish_reason,
+                 providerRawUsage: data.usage,
+                 traceId: traceId,
+             };
+             yield { type: 'METADATA', data: metadata, threadId, traceId, sessionId };
+             // Yield END
+             yield { type: 'END', data: null, threadId, traceId, sessionId };
+   
+         } catch (error: any) {
+             Logger.error(`Error during OpenRouter API call: ${error.message}`, { error, threadId, traceId });
+             yield { type: 'ERROR', data: error instanceof Error ? error : new Error(String(error)), threadId, traceId, sessionId };
+             yield { type: 'END', data: null, threadId, traceId, sessionId };
+         }
+     }.bind(this); // Add .bind(this) back
+   
+     return generator();
+   }
+   }

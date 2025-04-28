@@ -29,7 +29,7 @@ export interface ConversationMessage {
 }
 
 /**
- * Represents the type of an observation record.
+ * Represents the type of an observation record, capturing significant events during agent execution.
  */
 export enum ObservationType {
   INTENT = 'INTENT',
@@ -47,6 +47,16 @@ export enum ObservationType {
   FINAL_RESPONSE = 'FINAL_RESPONSE',
   /** Records changes made to the agent's persistent state. */
   STATE_UPDATE = 'STATE_UPDATE',
+
+  // New types for streaming events
+  /** Logged by Agent Core when LLM stream consumption begins. */
+  LLM_STREAM_START = 'LLM_STREAM_START',
+  /** Logged by Agent Core upon receiving a METADATA stream event. Content should be LLMMetadata. */
+  LLM_STREAM_METADATA = 'LLM_STREAM_METADATA',
+  /** Logged by Agent Core upon receiving an END stream event. */
+  LLM_STREAM_END = 'LLM_STREAM_END',
+  /** Logged by Agent Core upon receiving an ERROR stream event. Content should be Error object or message. */
+  LLM_STREAM_ERROR = 'LLM_STREAM_ERROR',
 }
 
 // --- NEW ENUM DEFINITION ---
@@ -92,6 +102,28 @@ export interface Observation {
 }
 
 /**
+ * Represents a single event emitted from an asynchronous LLM stream,
+ * allowing for real-time delivery of tokens, metadata, and lifecycle signals.
+ */
+export interface StreamEvent {
+  /** The type of the stream event. */
+  type: 'TOKEN' | 'METADATA' | 'ERROR' | 'END';
+  /** The actual content of the event. Type depends on `type`. */
+  data: any;
+  /**
+   * Optional: Provides a more specific classification for TOKEN events,
+   * combining LLM-level detection (thinking/response) and agent-level context.
+   */
+  tokenType?: 'LLM_THINKING' | 'LLM_RESPONSE' | 'AGENT_THOUGHT_LLM_THINKING' | 'AGENT_THOUGHT_LLM_RESPONSE' | 'FINAL_SYNTHESIS_LLM_THINKING' | 'FINAL_SYNTHESIS_LLM_RESPONSE';
+  /** The identifier of the conversation thread this event belongs to. */
+  threadId: string;
+  /** The identifier tracing the specific agent execution cycle this event is part of. */
+  traceId: string;
+  /** Optional identifier linking the event to a specific UI tab/window. */
+  sessionId?: string;
+}
+
+/**
  * Represents a basic JSON Schema definition, focusing on object types commonly used for tool inputs/outputs.
  * This is a simplified representation and doesn't cover all JSON Schema features.
  */
@@ -116,6 +148,27 @@ export interface JsonObjectSchema {
 // Allow for other schema types (string, number, etc.) although object is most common for tools
 export type JsonSchema = JsonObjectSchema | { type: 'string' | 'number' | 'boolean' | 'array', [key: string]: any };
 
+/**
+ * Structure for holding detailed metadata parsed from LLM responses or stream events.
+ */
+export interface LLMMetadata {
+  /** The number of tokens in the input prompt. */
+  inputTokens?: number;
+  /** The number of tokens generated in the output response. */
+  outputTokens?: number;
+  /** The number of tokens identified as part of the LLM's internal thinking process (if available from provider). */
+  thinkingTokens?: number; // If available from provider
+  /** The time elapsed (in milliseconds) until the first token was generated in a streaming response. */
+  timeToFirstTokenMs?: number;
+  /** The total time elapsed (in milliseconds) for the entire generation process. */
+  totalGenerationTimeMs?: number;
+  /** The reason the LLM stopped generating tokens (e.g., 'stop_sequence', 'max_tokens', 'end_turn'). */
+  stopReason?: string; // e.g., 'stop_sequence', 'max_tokens', 'end_turn'
+  /** Optional raw usage data provided directly by the LLM provider for extensibility. */
+  providerRawUsage?: any; // Optional raw usage data from provider for extensibility
+  /** The trace ID associated with the LLM call, included if this object might be stored or passed independently. */
+  traceId?: string; // Include traceId if this object might be stored or passed independently.
+}
 
 /**
  * Defines the schema for a tool, including its input parameters.
@@ -133,7 +186,6 @@ export interface ToolSchema {
   /** Optional array of examples demonstrating how to use the tool, useful for few-shot prompting of the LLM. */
   examples?: Array<{ input: any; output?: any; description?: string }>;
 }
-
 /**
  * Represents the structured result of a tool execution.
  */
@@ -236,6 +288,8 @@ export interface AgentOptions {
   forceTools?: string[];
   /** Specify a particular reasoning model to use for this call, overriding the thread's default. */
   overrideModel?: { provider: string; model: string };
+  /** Request a streaming response for this specific agent process call. */
+  stream?: boolean;
   // TODO: Add other potential runtime overrides (e.g., specific system prompt, history length).
 }
 
@@ -250,14 +304,14 @@ export interface AgentFinalResponse {
 }
 
 /**
- * Metadata summarizing an agent execution cycle.
+ * Metadata summarizing an agent execution cycle, including performance metrics and outcomes.
  */
 export interface ExecutionMetadata {
   /** The thread ID associated with this execution cycle. */
   threadId: string;
   /** The trace ID used during this execution, if provided. */
   traceId?: string;
-  /** The user ID associated with this execution, if provided. */
+  /** The user ID associated with the execution, if provided. */
   userId?: string;
   /** The overall status of the execution ('success', 'error', or 'partial' if some steps failed but a response was generated). */
   status: 'success' | 'error' | 'partial';
@@ -271,6 +325,8 @@ export interface ExecutionMetadata {
   llmCost?: number;
   /** A top-level error message if the overall status is 'error' or 'partial'. */
   error?: string;
+  /** Aggregated metadata from LLM calls made during the execution. */
+  llmMetadata?: LLMMetadata;
 }
 
 /**
@@ -288,7 +344,7 @@ export interface ExecutionContext {
 }
 
 /**
- * Options for configuring an LLM call.
+ * Options for configuring an LLM call, including streaming and context information.
  */
 export interface CallOptions {
   /** The mandatory thread ID, used by the ReasoningEngine to fetch thread-specific configuration (e.g., model, params) via StateManager. */
@@ -299,9 +355,22 @@ export interface CallOptions {
   userId?: string;
   /** Optional session ID. */
   sessionId?: string; // Added sessionId
-  /** An optional callback function invoked when the LLM streams intermediate 'thoughts' or reasoning steps. */
-  onThought?: (thought: string) => void;
-  /** Additional key-value pairs representing provider-specific parameters (e.g., `temperature`, `max_tokens`, `model`). These often override defaults set in `ThreadConfig`. */
+  /**
+   * Request a streaming response from the LLM provider.
+   * Adapters MUST check this flag.
+   */
+  stream?: boolean;
+  /**
+   * Provides context for the LLM call, allowing adapters to differentiate
+   * between agent-level thoughts and final synthesis calls for token typing.
+   * Agent Core MUST provide this.
+   */
+  callContext?: 'AGENT_THOUGHT' | 'FINAL_SYNTHESIS' | string;
+  /** An optional callback function invoked when the LLM streams intermediate 'thoughts' or reasoning steps.
+   * @deprecated Prefer using StreamEvent with appropriate tokenType for thoughts. Kept for potential transitional compatibility.
+   */
+  // onThought?: (thought: string) => void; // Commented out as per implementation plan decision (Ref: 7.2, Checklist Phase 1)
+  /** Additional key-value pairs representing provider-specific parameters (e.g., `temperature`, `max_tokens`, `top_p`). These often override defaults set in `ThreadConfig`. */
   [key: string]: any;
 }
 
@@ -353,3 +422,6 @@ export interface ObservationFilter {
   afterTimestamp?: number;
   // TODO: Add other potential criteria like filtering by metadata content if needed.
 }
+
+// Removed duplicate TypedSocket interface definition.
+// The primary definition is in src/core/interfaces.ts

@@ -16,29 +16,29 @@ This checklist provides a granular breakdown of tasks required to implement the 
 *   **Priority:** P1 (Foundation for all other changes)
 *   **Goal:** Update core definitions to support streaming concepts.
 
-*   [ ] **(P1)** Define `StreamEvent` interface in `src/types/index.ts`. (Ref: 7.2)
-    *   [ ] Include `type: 'TOKEN' | 'METADATA' | 'ERROR' | 'END'`.
-    *   [ ] Include `data: any`.
-    *   [ ] Include `tokenType?: 'LLM_THINKING' | ... | 'FINAL_SYNTHESIS_LLM_RESPONSE'`.
-    *   [ ] Include `threadId: string`.
-    *   [ ] Include `traceId: string`.
-    *   [ ] Include `sessionId?: string`.
-*   [ ] **(P1)** Define `LLMMetadata` interface in `src/types/index.ts`. (Ref: 7.2)
-    *   [ ] Include fields: `inputTokens?`, `outputTokens?`, `thinkingTokens?`, `timeToFirstTokenMs?`, `totalGenerationTimeMs?`, `stopReason?`, `providerRawUsage?`, `traceId?`.
-*   [ ] **(P1)** Modify `CallOptions` interface in `src/types/index.ts`. (Ref: 7.2)
-    *   [ ] Add `stream?: boolean`.
-    *   [ ] Add `callContext?: 'AGENT_THOUGHT' | 'FINAL_SYNTHESIS' | string`.
+*   [x] **(P1)** Define `StreamEvent` interface in `src/types/index.ts`. (Ref: 7.2)
+    *   [x] Include `type: 'TOKEN' | 'METADATA' | 'ERROR' | 'END'`.
+    *   [x] Include `data: any`.
+    *   [x] Include `tokenType?: 'LLM_THINKING' | ... | 'FINAL_SYNTHESIS_LLM_RESPONSE'`.
+    *   [x] Include `threadId: string`.
+    *   [x] Include `traceId: string`.
+    *   [x] Include `sessionId?: string`.
+*   [x] **(P1)** Define `LLMMetadata` interface in `src/types/index.ts`. (Ref: 7.2)
+    *   [x] Include fields: `inputTokens?`, `outputTokens?`, `thinkingTokens?`, `timeToFirstTokenMs?`, `totalGenerationTimeMs?`, `stopReason?`, `providerRawUsage?`, `traceId?`.
+*   [x] **(P1)** Modify `CallOptions` interface in `src/types/index.ts`. (Ref: 7.2)
+    *   [x] Add `stream?: boolean`.
+    *   [x] Add `callContext?: 'AGENT_THOUGHT' | 'FINAL_SYNTHESIS' | string`.
     *   *Decision:* Keep optional callback fields commented out for now, prioritizing socket communication.
-*   [ ] **(P1)** Modify `ExecutionMetadata` interface in `src/types/index.ts`. (Ref: 7.2)
-    *   [ ] Add `llmMetadata?: LLMMetadata`.
-*   [ ] **(P1)** Modify `ObservationType` enum in `src/types/index.ts`. (Ref: 7.2)
-    *   [ ] Add `LLM_STREAM_START`.
-    *   [ ] Add `LLM_STREAM_METADATA`.
-    *   [ ] Add `LLM_STREAM_END`.
-    *   [ ] Add `LLM_STREAM_ERROR`.
-*   [ ] **(P1)** Modify `ReasoningEngine` interface in `src/core/interfaces.ts`. (Ref: 7.1)
-    *   [ ] Change `call(...)` return type to `Promise<AsyncIterable<StreamEvent>>`.
-*   [ ] **(P2)** Update relevant JSDoc comments for all modified types and interfaces.
+*   [x] **(P1)** Modify `ExecutionMetadata` interface in `src/types/index.ts`. (Ref: 7.2)
+    *   [x] Add `llmMetadata?: LLMMetadata`.
+*   [x] **(P1)** Modify `ObservationType` enum in `src/types/index.ts`. (Ref: 7.2)
+    *   [x] Add `LLM_STREAM_START`.
+    *   [x] Add `LLM_STREAM_METADATA`.
+    *   [x] Add `LLM_STREAM_END`.
+    *   [x] Add `LLM_STREAM_ERROR`.
+*   [x] **(P1)** Modify `ReasoningEngine` interface in `src/core/interfaces.ts`. (Ref: 7.1)
+    *   [x] Change `call(...)` return type to `Promise<AsyncIterable<StreamEvent>>`.
+*   [x] **(P2)** Update relevant JSDoc comments for all modified types and interfaces.
 
 ---
 
@@ -47,18 +47,18 @@ This checklist provides a granular breakdown of tasks required to implement the 
 *   **Priority:** P1 (Needed early for Agent Core and UI integration)
 *   **Goal:** Create the communication channel for stream events.
 
-*   [ ] **(P1)** Implement `LLMStreamSocket` class in `src/systems/ui/llm-stream-socket.ts`.
-    *   [ ] Extend `TypedSocket<StreamEvent>`.
-    *   [ ] Implement `subscribe` and `notify` methods.
+*   [x] **(P1)** Implement `LLMStreamSocket` class in `src/systems/ui/llm-stream-socket.ts`.
+    *   [x] Implement `TypedSocket<StreamEvent>`.
+    *   [x] Implement `subscribe` and `notify` methods (placeholder).
     *   *Decision:* No repository dependency needed initially, as it primarily broadcasts.
-*   [ ] **(P1)** Modify `UISystem` class in `src/systems/ui/ui-system.ts`.
-    *   [ ] Add `private llmStreamSocketInstance: LLMStreamSocket;`.
-    *   [ ] Instantiate `LLMStreamSocket` in the constructor.
-    *   [ ] Add `getLLMStreamSocket(): LLMStreamSocket` method.
-*   [ ] **(P1)** Update `UISystem` interface in `src/core/interfaces.ts`.
-    *   [ ] Add `getLLMStreamSocket(): LLMStreamSocket;` method signature.
-*   [ ] **(P1)** Update Dependency Injection (`AgentFactory` or manual setup).
-    *   [ ] Ensure `UISystem` instance (with the new socket) is correctly instantiated and potentially injected where needed (e.g., into Agent Core).
+*   [x] **(P1)** Modify `UISystem` class in `src/systems/ui/ui-system.ts`.
+    *   [x] Add `private llmStreamSocketInstance: LLMStreamSocket;`.
+    *   [x] Instantiate `LLMStreamSocket` in the constructor.
+    *   [x] Add `getLLMStreamSocket(): LLMStreamSocket` method.
+*   [x] **(P1)** Update `UISystem` interface in `src/core/interfaces.ts`.
+    *   [x] Add `getLLMStreamSocket(): LLMStreamSocket;` method signature.
+*   [x] **(P1)** Update Dependency Injection (`AgentFactory` or manual setup).
+    *   [x] Ensure `UISystem` instance (with the new socket) is correctly instantiated and potentially injected where needed (e.g., into Agent Core).
 
 ---
 
@@ -68,21 +68,21 @@ This checklist provides a granular breakdown of tasks required to implement the 
 *   **Goal:** Enable specific LLM providers to produce the stream events.
 *   **Note:** Repeat these steps for each target `ProviderAdapter` (e.g., OpenAI, Anthropic, Gemini).
 
-*   [ ] **(P2)** Modify `Adapter.call` method signature to match `ReasoningEngine` (`Promise<AsyncIterable<StreamEvent>>`).
-*   [ ] **(P2)** Implement logic to check `options.stream`.
-    *   [ ] If `false`, perform non-streaming call and yield minimal events (`TOKEN` with full response, `METADATA` if available, `END`).
-*   [ ] **(P2)** Implement streaming logic (if `options.stream` is true):
-    *   [ ] Connect to provider's streaming endpoint.
-    *   [ ] Implement async generator function (`async function* () {}`) to handle stream consumption and yielding.
-    *   [ ] Parse provider-specific stream chunks (SSE, JSON lines, etc.).
-    *   [ ] **(P1 - Per Adapter)** Implement provider-specific logic to detect thinking tokens (Type 1 thoughts).
-    *   [ ] Extract metadata (token counts, timing, stop reason) from stream/final message.
-    *   [ ] Yield `StreamEvent` objects for `TOKEN`, `METADATA`, `ERROR`, `END`.
-        *   [ ] Ensure `threadId`, `traceId`, `sessionId` are included.
-        *   [ ] Calculate and set `tokenType` based on `options.callContext` and Type 1 thought detection.
-        *   [ ] Package metadata into `LLMMetadata` structure for `METADATA` events.
+*   [x] **(P2)** Modify `Adapter.call` method signature to match `ReasoningEngine` (`Promise<AsyncIterable<StreamEvent>>`). (Completed for OpenAIAdapter)
+*   [x] **(P2)** Implement logic to check `options.stream`. (Completed for OpenAIAdapter)
+    *   [x] If `false`, perform non-streaming call and yield minimal events (`TOKEN` with full response, `METADATA` if available, `END`). (Completed for OpenAIAdapter)
+*   [/] **(P2)** Implement streaming logic (if `options.stream` is true): (In progress for OpenAIAdapter)
+    *   [x] Connect to provider's streaming endpoint. (Done in OpenAIAdapter)
+    *   [x] Implement async generator function (`async function* () {}`) to handle stream consumption and yielding. (Done in OpenAIAdapter - `processStream`)
+    *   [x] Parse provider-specific stream chunks (SSE, JSON lines, etc.). (Basic SSE parsing done for OpenAIAdapter)
+    *   [ ] **(P1 - Per Adapter)** Implement provider-specific logic to detect thinking tokens (Type 1 thoughts). (N/A for OpenAI Chat Stream)
+    *   [ ] Extract metadata (token counts, timing, stop reason) from stream/final message. (N/A for OpenAI Chat Stream)
+    *   [x] Yield `StreamEvent` objects for `TOKEN`, `METADATA`, `ERROR`, `END`. (Basic TOKEN/ERROR/END done for OpenAIAdapter; METADATA N/A for stream)
+    *   [x] Ensure `threadId`, `traceId`, `sessionId` are included. (Done for OpenAIAdapter)
+    *   [x] Calculate and set `tokenType` based on `options.callContext` and Type 1 thought detection. (Done for OpenAIAdapter based on callContext)
+    *   [ ] Package metadata into `LLMMetadata` structure for `METADATA` events. (N/A for OpenAI Chat Stream)
 *   [ ] **(P3)** (Optional) Implement legacy `onThought` callback invocation if desired for transitional compatibility.
-*   [ ] **(P2)** Add unit/integration tests for streaming behavior for each modified adapter.
+*   [x] **(P2)** Add unit/integration tests for streaming behavior for each modified adapter. (Completed E2E test for OpenAIAdapter in `e2e/adapters.spec.ts`)
 
 ---
 
@@ -92,23 +92,23 @@ This checklist provides a granular breakdown of tasks required to implement the 
 *   **Goal:** Consume the stream, drive sockets/observations, and manage final response aggregation.
 *   **Note:** Modify target `IAgentCore` implementations (e.g., `PESAgent`, `ReActAgent`).
 
-*   [ ] **(P1)** Update constructor dependencies to include `UISystem`.
-*   [ ] **(P1)** Modify `process` method logic:
-    *   [ ] Pass `stream: true` and appropriate `callContext` in `CallOptions` when calling `reasoningEngine.call`.
-    *   [ ] Implement `async for await (const event of stream)` loop to consume the iterator.
-    *   [ ] Initialize response buffer string and aggregated `LLMMetadata` object.
-    *   [ ] Implement `switch (event.type)` logic:
-        *   [ ] `TOKEN`: Push to `uiSystem.getLLMStreamSocket()`. Append to buffer if final response token.
-        *   [ ] `METADATA`: Push to `uiSystem.getLLMStreamSocket()`. Call `observationManager.record(LLM_STREAM_METADATA, ...)`. Aggregate metadata.
-        *   [ ] `ERROR`: Push to `uiSystem.getLLMStreamSocket()`. Call `observationManager.record(LLM_STREAM_ERROR, ...)`. Implement error handling.
-        *   [ ] `END`: Push to `uiSystem.getLLMStreamSocket()`. Call `observationManager.record(LLM_STREAM_END, ...)`. Finalize loop.
-    *   [ ] (Optional) Call `observationManager.record(LLM_STREAM_START, ...)` before the loop.
-*   [ ] **(P1)** Implement logic *after* the loop (on successful `END`):
-    *   [ ] Construct final `ConversationMessage` from the response buffer.
-    *   [ ] Call `conversationManager.addMessages()`.
-    *   [ ] Populate `llmMetadata` field in `ExecutionMetadata`.
-    *   [ ] Construct and return final `AgentFinalResponse`.
-*   [ ] **(P2)** Update unit/integration tests for Agent Core to cover streaming scenarios.
+*   [x] **(P1)** Update constructor dependencies to include `UISystem`.
+*   [x] **(P1)** Modify `process` method logic:
+    *   [x] Pass `stream: true` and appropriate `callContext` in `CallOptions` when calling `reasoningEngine.call`.
+    *   [x] Implement `async for await (const event of stream)` loop to consume the iterator.
+    *   [x] Initialize response buffer string and aggregated `LLMMetadata` object.
+    *   [x] Implement `switch (event.type)` logic:
+    *   [x] `TOKEN`: Push to `uiSystem.getLLMStreamSocket()`. Append to buffer if final response token.
+    *   [x] `METADATA`: Push to `uiSystem.getLLMStreamSocket()`. Call `observationManager.record(LLM_STREAM_METADATA, ...)`. Aggregate metadata.
+    *   [x] `ERROR`: Push to `uiSystem.getLLMStreamSocket()`. Call `observationManager.record(LLM_STREAM_ERROR, ...)`. Implement error handling.
+    *   [x] `END`: Push to `uiSystem.getLLMStreamSocket()`. Call `observationManager.record(LLM_STREAM_END, ...)`. Finalize loop.
+    *   [x] (Optional) Call `observationManager.record(LLM_STREAM_START, ...)` before the loop.
+*   [x] **(P1)** Implement logic *after* the loop (on successful `END`):
+    *   [x] Construct final `ConversationMessage` from the response buffer.
+    *   [x] Call `conversationManager.addMessages()`.
+    *   [x] Populate `llmMetadata` field in `ExecutionMetadata`.
+    *   [x] Construct and return final `AgentFinalResponse`.
+*   [x] **(P2)** Update unit/integration tests for Agent Core to cover streaming scenarios. (Completed E2E test for PESAgent in `e2e/pes-flow.spec.ts`)
 
 ---
 
@@ -117,9 +117,9 @@ This checklist provides a granular breakdown of tasks required to implement the 
 *   **Priority:** P2 (Supporting logging of stream events)
 *   **Goal:** Ensure the Observation system can store the new discrete stream events.
 
-*   [ ] **(P2)** Verify `ObservationManager.record` can handle the new `ObservationType` values (`LLM_STREAM_METADATA`, `LLM_STREAM_END`, `LLM_STREAM_ERROR`). (Code likely requires no change if `type` is just passed through).
-*   [ ] **(P2)** Update `IObservationRepository` interface if necessary (unlikely needed just for new types).
-*   [ ] **(P2)** Update concrete `ObservationRepository` implementation(s) (e.g., using `StorageAdapter`) to ensure they can correctly store and query observations with the new types and potentially complex `content` (like `LLMMetadata` or `Error` objects).
+*   [x] **(P2)** Verify `ObservationManager.record` can handle the new `ObservationType` values (`LLM_STREAM_METADATA`, `LLM_STREAM_END`, `LLM_STREAM_ERROR`). (Code likely requires no change if `type` is just passed through).
+*   [x] **(P2)** Verify `IObservationRepository` interface supports new types/content. (No change needed).
+*   [x] **(P2)** Verify concrete `ObservationRepository` implementation(s) (e.g., using `StorageAdapter`) supports storing/querying new types/content. (Relies on StorageAdapter; no repo change needed).
 *   [ ] **(P3)** Update tests for `ObservationManager` and `ObservationRepository` if applicable.
 
 ---
@@ -130,18 +130,18 @@ This checklist provides a granular breakdown of tasks required to implement the 
 *   **Goal:** Demonstrate how to consume the stream events in a UI.
 *   **Note:** This applies to example applications (like `sample-app`) or consuming applications.
 
-*   [ ] **(P2)** Update UI component(s) to subscribe to `LLMStreamSocket`.
+*   [x] **(P2)** Update UI component(s) to subscribe to `LLMStreamSocket`. (Done in `sample-app/index.ts` CLI)
     *   `const unsub = uiSystem.getLLMStreamSocket().subscribe(handleStreamEvent, filter?, { threadId });`
-*   [ ] **(P2)** Implement `handleStreamEvent(event: StreamEvent)` callback:
-    *   [ ] Use `event.traceId` to correlate events to the correct UI message element.
-    *   [ ] Handle `TOKEN` events: Append `event.data` to temporary message state. Differentiate display based on `event.tokenType`.
-    *   [ ] Handle `METADATA` events: Display `event.data` (e.g., token counts) if desired.
-    *   [ ] Handle `END` events: Finalize temporary message state (e.g., remove cursor).
-    *   [ ] Handle `ERROR` events: Display error state for the temporary message.
-*   [ ] **(P2)** Implement UI reconciliation logic:
-    *   [ ] Subscribe to `ConversationSocket` as usual.
-    *   [ ] When final `ConversationMessage` arrives, use `traceId` (or other correlation) to find the corresponding temporary streamed message element.
-    *   [ ] Replace the temporary element's content and ID with the final message data.
+*   [x] **(P2)** Implement `handleStreamEvent(event: StreamEvent)` callback: (Done in `sample-app/index.ts` CLI)
+    *   [ ] Use `event.traceId` to correlate events to the correct UI message element. (N/A for CLI demo)
+    *   [x] Handle `TOKEN` events: Append `event.data` to temporary message state. Differentiate display based on `event.tokenType`. (Printed directly in CLI demo)
+    *   [x] Handle `METADATA` events: Display `event.data` (e.g., token counts) if desired. (Logged in CLI demo)
+    *   [x] Handle `END` events: Finalize temporary message state (e.g., remove cursor). (Printed newline in CLI demo)
+    *   [x] Handle `ERROR` events: Display error state for the temporary message. (Logged in CLI demo)
+*   [x] **(P2)** Implement UI reconciliation logic: (Handled in `sample-app/index.ts` CLI by not re-printing final content)
+    *   [ ] Subscribe to `ConversationSocket` as usual. (Not needed for CLI demo)
+    *   [ ] When final `ConversationMessage` arrives, use `traceId` (or other correlation) to find the corresponding temporary streamed message element. (N/A for CLI demo)
+    *   [ ] Replace the temporary element's content and ID with the final message data. (N/A for CLI demo)
 *   [ ] **(P3)** Update UI component tests.
 
 ---

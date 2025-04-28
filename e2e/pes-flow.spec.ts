@@ -1,5 +1,21 @@
-import { test, expect } from '@playwright/test';
-import type { AgentFinalResponse } from 'art-framework'; // Import type for response assertion
+import { test, expect, APIRequestContext } from '@playwright/test'; // Import APIRequestContext
+import type { AgentFinalResponse } from 'art-framework'; // Keep only AgentFinalResponse import
+// Assuming StreamEvent and Observation types are available or defined similarly to adapters.spec.ts
+// import { StreamEvent, Observation } from 'art-framework';
+
+// Define a more complete response type including observations and stream events
+interface ProcessResponse extends AgentFinalResponse {
+  _testInfo?: { // Make optional as it might not always be present
+    requestedStorageType: string;
+    actualStorageType: string;
+    requestedProvider?: string; // Make optional
+    processingTimeMs?: number; // Make optional
+  };
+  _observations?: Array<any>; // Use 'any' for now, replace with Observation if imported
+  _streamEvents?: Array<any>; // Use 'any' for now, replace with StreamEvent if imported
+  // The 'metadata' property is now correctly inherited from AgentFinalResponse with type ExecutionMetadata
+}
+
 
 // Base URL is configured in playwright.config.ts
 const API_ENDPOINT = '/process';
@@ -7,36 +23,58 @@ const API_ENDPOINT = '/process';
 test.describe('ART Framework E2E - PES Flow', () => {
 
   // Helper function to make API calls
-  // Helper function to make API calls, now accepts optional threadId
+  // Updated helper function to accept APIRequestContext, requestStreamEvents, and return ProcessResponse
   async function processQuery(
-    request: any,
+    request: APIRequestContext, // Use specific type
     query: string,
     storageType: 'memory' | 'indexeddb',
-    threadId?: string // Optional threadId parameter
-  ): Promise<AgentFinalResponse & { metadata: { threadId: string } }> { // Ensure threadId is in metadata type
-    const payload: { query: string; storageType: string; threadId?: string } = {
+    threadId?: string, // Optional threadId parameter
+    requestStreamEvents: boolean = false // Add flag
+  ): Promise<ProcessResponse> { // Return updated type
+    const payload: any = {
       query: query,
       storageType: storageType,
+      threadId: threadId, // Pass threadId (will be undefined if not provided)
+      // Assuming default provider is handled by the server if not specified
     };
-    if (threadId) {
-      payload.threadId = threadId; // Add threadId to payload if provided
+    if (requestStreamEvents) {
+        payload.requestStreamEvents = true; // Add flag if true
     }
+
+    // Remove undefined keys from payload before sending
+    Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
+
 
     const response = await request.post(API_ENDPOINT, { data: payload });
     expect(response.ok(), `API request failed with status ${response.status()}`).toBeTruthy();
-    const jsonResponse = await response.json();
-    
-    // Log info about simulated vs actual storage for debugging
-    if (jsonResponse._testInfo) {
-      // console.log(`Test using storage type: requested=${jsonResponse._testInfo.requestedStorageType}, actual=${jsonResponse._testInfo.actualStorageType}`); // Removed
-    }
-    
-    // Ensure the response includes a threadId in metadata
+    const jsonResponse = await response.json() as ProcessResponse; // Cast to updated type
+
+    // Basic validation moved here
     expect(jsonResponse.metadata, 'Response metadata should exist').toBeDefined();
     expect(jsonResponse.metadata.threadId, 'Response metadata should include threadId').toBeDefined();
+    expect(jsonResponse.metadata.status, `Response status was not 'success'. Error: ${jsonResponse.metadata.error}`).toBe('success');
+    expect(jsonResponse.response?.content, 'Response content should not be empty').toBeTruthy(); // Check response.content
 
-    return jsonResponse as AgentFinalResponse & { metadata: { threadId: string } };
+    // Check for observations if they are expected/returned by the endpoint
+    if (jsonResponse._observations !== undefined) {
+        expect(Array.isArray(jsonResponse._observations), '_observations should be an array').toBe(true);
+    }
+    // Check for stream events if requested and returned
+    if (requestStreamEvents && jsonResponse._streamEvents !== undefined) {
+        expect(Array.isArray(jsonResponse._streamEvents), '_streamEvents should be an array').toBe(true);
+    }
+
+
+    return jsonResponse;
   }
+
+  // Helper function to check for specific observation types (requires observations in response)
+  function expectObservationType(observations: ProcessResponse['_observations'], type: string) {
+    expect(observations, `Cannot check observation type '${type}' because _observations array is missing in the response.`).toBeDefined();
+    const found = observations!.some(obs => obs.type === type);
+    expect(found, `Expected observation of type '${type}' but none was found. Found types: ${observations!.map(o => o.type).join(', ')}`).toBe(true);
+  }
+
 
   // --- Tests using InMemoryStorageAdapter ---
   test.describe('with InMemory Storage', () => {
@@ -72,6 +110,46 @@ test.describe('ART Framework E2E - PES Flow', () => {
       expect(response.metadata.threadId).toBeDefined();
       // We can't easily verify observations here without modifying the test app response,
       // but success implies the tool likely ran.
+    });
+
+    test('should handle a simple query with streaming enabled', async ({ request }) => {
+        const query = 'Write a short poem about code.';
+        const response = await processQuery(request, query, 'memory', undefined, true); // Request streaming
+
+        expect(response.metadata.status).toBe('success');
+        expect(response.response.content.length).toBeGreaterThan(10);
+
+        // Verify stream events (assuming endpoint returns them)
+        expect(response._streamEvents, 'Expected _streamEvents array in response').toBeDefined();
+        expect(response._streamEvents!.length, '_streamEvents should not be empty').toBeGreaterThan(0);
+
+        const tokenEvents = response._streamEvents!.filter(e => e.type === 'TOKEN');
+        const metadataEvents = response._streamEvents!.filter(e => e.type === 'METADATA');
+        const endEvents = response._streamEvents!.filter(e => e.type === 'END');
+        const errorEvents = response._streamEvents!.filter(e => e.type === 'ERROR');
+
+        expect(errorEvents.length, 'Should not have any ERROR events in stream').toBe(0);
+        expect(tokenEvents.length, 'Should have TOKEN events').toBeGreaterThan(0);
+        expect(metadataEvents.length, 'Should have METADATA events (at least planning+synthesis)').toBeGreaterThanOrEqual(2); // Expect metadata from both phases
+        expect(endEvents.length, 'Should have END events (at least planning+synthesis)').toBeGreaterThanOrEqual(2); // Expect end from both phases
+
+        // Verify stream-related observations (assuming endpoint returns them)
+        expect(response._observations, 'Expected _observations array in response').toBeDefined();
+        expectObservationType(response._observations, 'LLM_STREAM_START');
+        expectObservationType(response._observations, 'LLM_STREAM_METADATA');
+        expectObservationType(response._observations, 'LLM_STREAM_END');
+
+        // Optional: Check token types if needed (might vary based on phase)
+        // const planningTokens = tokenEvents.filter(t => t.tokenType === 'AGENT_THOUGHT_LLM_RESPONSE');
+        // const synthesisTokens = tokenEvents.filter(t => t.tokenType === 'FINAL_SYNTHESIS_LLM_RESPONSE');
+        // expect(planningTokens.length + synthesisTokens.length).toEqual(tokenEvents.length);
+
+        // Optional: Reconstruct final response from synthesis tokens
+        const synthesisContent = tokenEvents
+            .filter(t => t.tokenType === 'FINAL_SYNTHESIS_LLM_RESPONSE' || t.tokenType === 'LLM_RESPONSE') // Include fallback
+            .map(e => e.data)
+            .join('');
+        expect(synthesisContent).toEqual(response.response.content);
     });
   });
 

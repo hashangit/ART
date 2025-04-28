@@ -13,15 +13,24 @@ import {
   ArtInstance, // Import the ArtInstance type
   Observation, // Import the Observation type
   ConversationMessage, // Import ConversationMessage type
-  ObservationType, // Import ObservationType enum
-  MessageRole, // Import MessageRole enum
-  ObservationSocket, // Import ObservationSocket class type
-  ConversationSocket // Import ConversationSocket class type
+  // ObservationType, // Import ObservationType enum
+  // MessageRole, // Import MessageRole enum
+  // ObservationSocket, // Import ObservationSocket class type
+  // ConversationSocket // Import ConversationSocket class type
   // Remove unused ThreadContext import
 } from 'art-framework';
 
 // Load environment variables from .env file (if present)
-dotenv.config();
+import path from 'path'; // Import path module
+import { fileURLToPath } from 'url'; // Import url module
+
+// Determine the directory of the current module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Construct the absolute path to the .env.local file in the project root
+const envPath = path.resolve(__dirname, '..', '..', '.env.local');
+dotenv.config({ path: envPath });
 
 const app = express();
 const port = process.env.PORT || 3001; // Use environment variable or default
@@ -36,6 +45,11 @@ let artInstancePromise: Promise<ArtInstance | null> | null = null;
 async function initializeArt(): Promise<ArtInstance | null> {
   console.log('[E2E App] Initializing ART Instance...');
   try {
+    // *** Add logging to check API key before creating instance ***
+    const apiKeyFromEnv = process.env.GEMINI_API_KEY;
+    console.log(`[E2E App] GEMINI_API_KEY from env: ${apiKeyFromEnv ? 'Loaded (' + apiKeyFromEnv.substring(0, 4) + '...)' : 'MISSING or undefined'}`);
+    // *** End logging ***
+
     const art = await createArtInstance({
       storage: {
         type: 'memory' // Force memory storage on the server
@@ -117,6 +131,16 @@ artInstancePromise?.then(art => {
       broadcastToSubscribers('conversation', message.threadId, message);
     });
     console.log('[WS Server] UI Sockets Bridged.');
+
+    // --- Add Observation Logging ---
+    console.log('[E2E App] Subscribing to ObservationSocket for logging...');
+    obsSocket.subscribe((observation) => {
+      // Log all observations received via the socket
+      console.log(`[E2E App Observation] SUBSCRIBER CALLBACK ENTERED for obsId: ${observation.id}, type: ${observation.type}`); // Log entry
+      console.log(`[E2E App Observation] Received: ${JSON.stringify(observation, null, 2)}`);
+    });
+    console.log('[E2E App] Observation logging enabled.');
+    // --- End Observation Logging ---
   } else {
     console.error('[WS Server] Cannot bridge UI Sockets: ART instance is null.');
   }
@@ -183,8 +207,14 @@ app.get('/', (req: Request, res: Response): void => {
 // Endpoint to process queries
 app.post('/process', async (req: Request, res: Response): Promise<void> => {
   // console.log('Received request on /process'); // Removed for linting
-  // Extract query, storageType, and optional threadId from request body
-  const { query, storageType = 'memory', threadId: requestThreadId, provider = 'gemini' } = req.body; // Add provider
+  // Extract query, storageType, optional threadId, provider, and streaming request flag
+  const {
+    query,
+    storageType = 'memory',
+    threadId: requestThreadId,
+    provider = 'gemini',
+    requestStreamEvents = false // Default to false if not provided
+  } = req.body;
 
   if (!query) {
     res.status(400).json({
@@ -308,30 +338,78 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
 
     // Process the query
     // console.log(`Processing query: "${query}"`); // Removed for linting
-    // Restore original AgentProps without options override
+    // Construct AgentProps, including the stream option if requested
+    // Ensure traceId is assigned for stream event filtering
+    const traceId = `e2e-trace-${Date.now()}`;
     const agentProps: AgentProps = {
       query,
-      threadId
+      threadId,
+      traceId, // Assign traceId
+      options: {
+        stream: requestStreamEvents // Pass the streaming flag here
+      }
     };
 
     try {
+      // *** Add logging before art.process ***
+      console.log(`[E2E App] Calling art.process for thread ${threadId} with provider ${provider}, model ${model}`);
+      console.log(`[E2E App] Agent Props:`, agentProps);
+      // Re-load config to confirm what art.process will likely use
+      const currentContext = await art.stateManager.loadThreadContext(threadId).catch(() => null);
+      console.log(`[E2E App] Current Thread Config before process:`, currentContext?.config);
+      // *** End logging ***
+
+      const collectedStreamEvents: any[] = []; // Use const
+      let streamSubscription: (() => void) | null = null;
+
+      // Subscribe to stream events if requested
+      if (requestStreamEvents) {
+        console.log(`[E2E App] Subscribing to LLMStreamSocket for test response (traceId: ${traceId})...`);
+        const llmSocket = art.uiSystem.getLLMStreamSocket();
+        streamSubscription = llmSocket.subscribe((event) => {
+          // Log ALL events received by this subscriber, regardless of traceId
+          console.log(`[E2E App Stream Event - RAW] Received event type: ${event.type}, event traceId: ${event.traceId}, expected traceId: ${traceId}`);
+          try {
+            // Only collect events for the current traceId
+            if (event.traceId === traceId) {
+               collectedStreamEvents.push(event);
+               // Log stream events received by the test harness *after* filtering
+               console.log(`[E2E App Stream Event - Filtered] Collected: ${JSON.stringify(event)}`);
+            }
+          } catch (subError) {
+            console.error(`[E2E App Stream Event] Error in subscriber callback:`, subError);
+          }
+        });
+      }
+
       const startTime = Date.now();
       const finalResponse: AgentFinalResponse = await art.process(agentProps);
       const duration = Date.now() - startTime;
-      // console.log(`Processing complete in ${duration}ms. Status: ${finalResponse.metadata.status}`);
 
-      // Fetch observations for the thread
-      let observations: Observation[] = [];
-      try {
-        observations = await art.observationManager.getObservations(threadId); // Access via observationManager
-        // console.log(`Fetched ${observations.length} observations for thread ${threadId}`);
-      } catch (obsError) {
-        console.error(`Error fetching observations for thread ${threadId}:`, obsError);
-        // Decide if this should be a fatal error or just logged
+      // Unsubscribe if we subscribed
+      if (streamSubscription) {
+        streamSubscription();
+        console.log('[E2E App] Unsubscribed from LLMStreamSocket.');
       }
 
+      // *** Add logging after art.process ***
+      console.log(`[E2E App] art.process completed in ${duration}ms. Status: ${finalResponse.metadata.status}`);
+      console.log(`[E2E App] Final Response object:`, finalResponse); // Log the entire response object
+      // *** End logging ***
+
+      // Fetch observations for the thread
+      let allObservations: Observation[] = [];
+      try {
+        allObservations = await art.observationManager.getObservations(threadId); // Get all observations for the thread
+        // console.log(`Fetched ${allObservations.length} observations for thread ${threadId}`);
+      } catch (obsError) {
+        console.error(`Error fetching observations for thread ${threadId}:`, obsError);
+      }
+      // Manually filter observations by traceId
+      const observations = allObservations.filter(obs => obs.traceId === finalResponse.metadata.traceId);
+
       // Add test info and observations to the response
-      const responsePayload = {
+      const responsePayload: any = { // Use 'any' temporarily
         ...finalResponse,
         _testInfo: {
           requestedStorageType: storageType,
@@ -341,6 +419,11 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
         },
         _observations: observations // Add observations
       };
+
+      // Add collected stream events if requested
+      if (requestStreamEvents) {
+        responsePayload._streamEvents = collectedStreamEvents;
+      }
 
       // Send the final response back to the client
       res.status(200).json(responsePayload);

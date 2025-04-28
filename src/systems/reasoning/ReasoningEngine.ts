@@ -3,7 +3,7 @@ import {
   ReasoningEngine as IReasoningEngine,
   ProviderAdapter,
 } from '../../core/interfaces';
-import { FormattedPrompt, CallOptions } from '../../types';
+import { FormattedPrompt, CallOptions, StreamEvent } from '../../types'; // Added StreamEvent
 import { Logger } from '../../utils/logger';
 
 /**
@@ -35,18 +35,18 @@ export class ReasoningEngine implements IReasoningEngine {
     * Executes an LLM call by delegating to the configured `ProviderAdapter`.
     * It passes the prompt and options directly to the adapter's `call` method.
     * @param prompt - The prompt to send to the LLM, potentially formatted specifically for the provider by the `PromptManager`.
-    * @param options - Options controlling the LLM call, including mandatory `threadId`, tracing IDs, model parameters, and callbacks like `onThought`.
-    * @returns A promise resolving to the raw string response from the LLM adapter.
-    * @throws {ARTError | Error} Re-throws any error encountered by the underlying `ProviderAdapter` during the LLM call (e.g., API errors, network issues). The Agent Core is responsible for handling these errors.
+    * @param options - Options controlling the LLM call, including mandatory `threadId`, tracing IDs, model parameters, streaming flags, and context.
+    * @returns A promise resolving to an AsyncIterable of StreamEvent objects, as returned by the adapter.
+    * @throws {ARTError | Error} Re-throws any error encountered by the underlying `ProviderAdapter` during the initial call setup (errors during stream consumption are handled via ERROR StreamEvents).
     */
-  async call(prompt: FormattedPrompt, options: CallOptions): Promise<string> {
-    Logger.debug(`ReasoningEngine delegating call to adapter: ${this.adapter.providerName}`, { threadId: options.threadId, traceId: options.traceId });
-    try {
-      // Directly call the adapter's call method
-      const result = await this.adapter.call(prompt, options);
-      return result;
-    } catch (error: any) {
-      Logger.error(`ReasoningEngine encountered an error during adapter call: ${error.message}`, { error, threadId: options.threadId, traceId: options.traceId });
+   async call(prompt: FormattedPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
+     Logger.debug(`ReasoningEngine delegating call to adapter: ${this.adapter.providerName}`, { threadId: options.threadId, traceId: options.traceId, stream: options.stream });
+     try {
+       // Directly call the adapter's call method, which now returns an AsyncIterable
+       const streamResult = await this.adapter.call(prompt, options);
+       return streamResult;
+     } catch (error: any) {
+       Logger.error(`ReasoningEngine encountered an error during adapter call setup: ${error.message}`, { error, threadId: options.threadId, traceId: options.traceId });
 
       // TODO: Implement more nuanced error handling for adapter calls.
       // Currently, *any* error from the adapter.call (including network issues,

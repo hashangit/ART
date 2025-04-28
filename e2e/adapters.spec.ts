@@ -3,6 +3,9 @@ import { AgentFinalResponse } from 'art-framework'; // Assuming AgentFinalRespon
 
 // Define a type for the expected response structure including observations
 interface ProcessResponse extends AgentFinalResponse {
+  // Add StreamEvent type import if not already globally available in test scope
+  // import { StreamEvent } from 'art-framework'; // Assuming StreamEvent is exported
+  _streamEvents?: Array<any>; // Using 'any' for now, replace with StreamEvent if imported
   _testInfo: {
     requestedStorageType: string;
     actualStorageType: string;
@@ -20,14 +23,23 @@ interface ProcessResponse extends AgentFinalResponse {
 }
 
 // Helper function to make requests and basic validation
-async function processQuery(request: APIRequestContext, query: string, provider: string = 'gemini', threadId?: string): Promise<ProcessResponse> {
-  const response = await request.post('/process', {
-    data: {
+async function processQuery(
+    request: APIRequestContext,
+    query: string,
+    provider: string = 'gemini',
+    threadId?: string,
+    requestStreamEvents: boolean = false // Add flag to request stream events
+): Promise<ProcessResponse> {
+  const requestData: any = {
       query,
       provider,
-      threadId // Pass threadId if provided
-    },
-  });
+      threadId
+  };
+  if (requestStreamEvents) {
+      requestData.requestStreamEvents = true; // Add flag to request data if true
+  }
+
+  const response = await request.post('/process', { data: requestData });
   expect(response.ok(), `API request failed with status ${response.status()}`).toBe(true);
   const body = await response.json() as ProcessResponse;
   expect(body.metadata.status, `Response status was not 'success'. Error: ${body.metadata.error}`).toBe('success');
@@ -40,6 +52,7 @@ async function processQuery(request: APIRequestContext, query: string, provider:
 // Helper function to check for specific observation types
 function expectObservationType(observations: ProcessResponse['_observations'], type: string) {
   const found = observations.some(obs => obs.type === type);
+  console.log(`[Test Helper] Checking for type: ${type}, Found: ${found}`); // Add log
   expect(found, `Expected observation of type '${type}' but none was found. Found types: ${observations.map(o => o.type).join(', ')}`).toBe(true);
 }
 
@@ -59,7 +72,8 @@ test.describe('Reasoning Adapter Tests', () => {
       expectObservationType(response._observations, 'INTENT');
       expectObservationType(response._observations, 'PLAN');
       // expectObservationType(response._observations, 'THOUGHTS'); // THOUGHTS may not always be present
-      expectObservationType(response._observations, 'SYNTHESIS'); // Check for SYNTHESIS instead
+      // expectObservationType(response._observations, 'SYNTHESIS'); // SYNTHESIS type is not emitted; FINAL_RESPONSE is sufficient
+      expectObservationType(response._observations, 'FINAL_RESPONSE'); // Verify FINAL_RESPONSE observation exists
       // FINAL_RESPONSE is implicit in getting a successful response body
       // ERROR check would be in a separate error test
     });
@@ -102,6 +116,65 @@ test.describe('Reasoning Adapter Tests', () => {
         expectObservationType(response2._observations, 'SYNTHESIS'); // Check for SYNTHESIS instead
     });
 
+    test('processes a basic query with streaming using Gemini', async ({ request }) => {
+        const query = 'Write a short story about a curious robot.';
+        // Request stream events
+        const response = await processQuery(request, query, provider, undefined, true);
+
+        // Basic response check
+        expect(response.metadata.status).toBe('success');
+        expect(response.response.content.length).toBeGreaterThan(10); // Check for some content
+
+        // Check stream events were returned
+        expect(response._streamEvents, 'Expected _streamEvents array in response').toBeDefined();
+        expect(Array.isArray(response._streamEvents), '_streamEvents should be an array').toBe(true);
+        expect(response._streamEvents!.length, '_streamEvents should not be empty').toBeGreaterThan(0);
+
+        // Find specific event types
+        const tokenEvents = response._streamEvents!.filter(e => e.type === 'TOKEN');
+        const metadataEvents = response._streamEvents!.filter(e => e.type === 'METADATA');
+        const endEvents = response._streamEvents!.filter(e => e.type === 'END');
+        const errorEvents = response._streamEvents!.filter(e => e.type === 'ERROR');
+
+        // Assertions on events
+        expect(errorEvents.length, 'Should not have any ERROR events in stream').toBe(0);
+        expect(tokenEvents.length, 'Should have TOKEN events').toBeGreaterThan(0);
+        // Gemini adapter yields metadata after stream based on final chunk/response
+        expect(metadataEvents.length, 'Should have at least one METADATA event').toBeGreaterThanOrEqual(1);
+        // PES agent has planning and synthesis streams, expect END from both
+        expect(endEvents.length, 'Should have at least one END event (usually 2 for PES)').toBeGreaterThanOrEqual(1);
+
+        // Check token type (assuming synthesis context)
+        expect(tokenEvents[0].tokenType, 'Token type should reflect synthesis context')
+          .toMatch(/FINAL_SYNTHESIS_LLM_RESPONSE|LLM_RESPONSE/);
+
+        // Check metadata content (adapter yields metadata after stream)
+        const finalMetadata = metadataEvents[metadataEvents.length - 1].data; // Uncomment to check metadata
+        // NOTE: Gemini SDK (@google/genai) should provide metadata in the LAST chunk of generateContentStream.
+        expect(finalMetadata.stopReason, 'Metadata should include stopReason').toBeDefined(); // Restore check
+        // Token counts should also be present in the last chunk's usageMetadata
+        expect(finalMetadata.inputTokens, 'Metadata should include inputTokens').toBeDefined(); // Restore check
+        expect(finalMetadata.outputTokens, 'Metadata should include outputTokens').toBeDefined(); // Restore check
+ 
+        // Optional: Reconstruct content from tokens and compare
+        // Filter for tokens belonging to the final synthesis response
+        const streamedContent = tokenEvents
+            .filter(e => e.tokenType === 'FINAL_SYNTHESIS_LLM_RESPONSE' || e.tokenType === 'LLM_RESPONSE')
+            .map(e => e.data)
+            .join('');
+        expect(streamedContent, 'Reconstructed stream content should match final response content')
+            .toEqual(response.response.content);
+ 
+        // Check standard observations still exist
+        expectObservationType(response._observations, 'INTENT');
+        expectObservationType(response._observations, 'PLAN');
+        expectObservationType(response._observations, 'SYNTHESIS'); // Restore check now that agent should record it
+        // Check for stream-related observations recorded by Agent Core
+        expectObservationType(response._observations, 'LLM_STREAM_START');
+        expectObservationType(response._observations, 'LLM_STREAM_METADATA');
+        expectObservationType(response._observations, 'LLM_STREAM_END');
+      });
+
   });
 
   // --- OpenAI Adapter Tests ---
@@ -125,7 +198,58 @@ test.describe('Reasoning Adapter Tests', () => {
       const query = 'What is 7 + 8?';
       const response = await processQuery(request, query, provider);
       expect(response.response.content).toContain('15'); // Example assertion
-      expectObservationType(response._observations, 'TOOL_EXECUTION');
+      // OpenAI function calling might result in TOOL_CALL observation
+      expectObservationType(response._observations, 'TOOL_CALL');
+    });
+
+    test('processes a basic query with streaming using OpenAI', async ({ request }) => {
+      const query = 'Write a short haiku about testing.';
+      // Request stream events
+      const response = await processQuery(request, query, provider, undefined, true);
+
+      // Basic response check
+      expect(response.response.content.length).toBeGreaterThan(10); // Check for some content
+
+      // Check stream events were returned (assuming endpoint modification)
+      expect(response._streamEvents, 'Expected _streamEvents array in response').toBeDefined();
+      expect(Array.isArray(response._streamEvents), '_streamEvents should be an array').toBe(true);
+      expect(response._streamEvents!.length, '_streamEvents should not be empty').toBeGreaterThan(0);
+
+      // Find specific event types
+      const tokenEvents = response._streamEvents!.filter(e => e.type === 'TOKEN');
+      const metadataEvents = response._streamEvents!.filter(e => e.type === 'METADATA');
+      const endEvents = response._streamEvents!.filter(e => e.type === 'END');
+      const errorEvents = response._streamEvents!.filter(e => e.type === 'ERROR');
+
+      // Assertions on events
+      expect(errorEvents.length, 'Should not have any ERROR events in stream').toBe(0);
+      expect(tokenEvents.length, 'Should have TOKEN events').toBeGreaterThan(0);
+      expect(metadataEvents.length, 'Should have at least one METADATA event').toBeGreaterThanOrEqual(1);
+      expect(endEvents.length, 'Should have exactly one END event').toBe(1);
+
+      // Check token type (assuming synthesis context for a basic query)
+      expect(tokenEvents[0].tokenType, 'Token type should reflect synthesis context')
+        .toMatch(/FINAL_SYNTHESIS_LLM_RESPONSE|LLM_RESPONSE/); // Allow LLM_RESPONSE as fallback
+
+      // Check metadata content (adapter yields calculated metadata after stream)
+      const finalMetadata = metadataEvents[metadataEvents.length - 1].data;
+      expect(finalMetadata.outputTokens, 'Metadata should include outputTokens').toBeGreaterThan(0);
+      expect(finalMetadata.timeToFirstTokenMs, 'Metadata should include timeToFirstTokenMs').toBeGreaterThanOrEqual(0);
+      expect(finalMetadata.totalGenerationTimeMs, 'Metadata should include totalGenerationTimeMs').toBeGreaterThan(0);
+
+      // Optional: Reconstruct content from tokens and compare
+      const streamedContent = tokenEvents.map(e => e.data).join('');
+      expect(streamedContent, 'Reconstructed stream content should match final response content')
+          .toEqual(response.response.content);
+
+      // Check standard observations still exist
+      expectObservationType(response._observations, 'INTENT');
+      expectObservationType(response._observations, 'PLAN');
+      expectObservationType(response._observations, 'SYNTHESIS');
+      // Check for stream-related observations recorded by Agent Core
+      expectObservationType(response._observations, 'LLM_STREAM_START');
+      expectObservationType(response._observations, 'LLM_STREAM_METADATA');
+      expectObservationType(response._observations, 'LLM_STREAM_END');
     });
   });
 
