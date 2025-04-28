@@ -131,6 +131,16 @@ artInstancePromise?.then(art => {
       broadcastToSubscribers('conversation', message.threadId, message);
     });
     console.log('[WS Server] UI Sockets Bridged.');
+
+    // --- Add Observation Logging ---
+    console.log('[E2E App] Subscribing to ObservationSocket for logging...');
+    obsSocket.subscribe((observation) => {
+      // Log all observations received via the socket
+      console.log(`[E2E App Observation] SUBSCRIBER CALLBACK ENTERED for obsId: ${observation.id}, type: ${observation.type}`); // Log entry
+      console.log(`[E2E App Observation] Received: ${JSON.stringify(observation, null, 2)}`);
+    });
+    console.log('[E2E App] Observation logging enabled.');
+    // --- End Observation Logging ---
   } else {
     console.error('[WS Server] Cannot bridge UI Sockets: ART instance is null.');
   }
@@ -329,9 +339,12 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
     // Process the query
     // console.log(`Processing query: "${query}"`); // Removed for linting
     // Construct AgentProps, including the stream option if requested
+    // Ensure traceId is assigned for stream event filtering
+    const traceId = `e2e-trace-${Date.now()}`;
     const agentProps: AgentProps = {
       query,
       threadId,
+      traceId, // Assign traceId
       options: {
         stream: requestStreamEvents // Pass the streaming flag here
       }
@@ -346,9 +359,38 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
       console.log(`[E2E App] Current Thread Config before process:`, currentContext?.config);
       // *** End logging ***
 
+      const collectedStreamEvents: any[] = []; // Use const
+      let streamSubscription: (() => void) | null = null;
+
+      // Subscribe to stream events if requested
+      if (requestStreamEvents) {
+        console.log(`[E2E App] Subscribing to LLMStreamSocket for test response (traceId: ${traceId})...`);
+        const llmSocket = art.uiSystem.getLLMStreamSocket();
+        streamSubscription = llmSocket.subscribe((event) => {
+          // Log ALL events received by this subscriber, regardless of traceId
+          console.log(`[E2E App Stream Event - RAW] Received event type: ${event.type}, event traceId: ${event.traceId}, expected traceId: ${traceId}`);
+          try {
+            // Only collect events for the current traceId
+            if (event.traceId === traceId) {
+               collectedStreamEvents.push(event);
+               // Log stream events received by the test harness *after* filtering
+               console.log(`[E2E App Stream Event - Filtered] Collected: ${JSON.stringify(event)}`);
+            }
+          } catch (subError) {
+            console.error(`[E2E App Stream Event] Error in subscriber callback:`, subError);
+          }
+        });
+      }
+
       const startTime = Date.now();
       const finalResponse: AgentFinalResponse = await art.process(agentProps);
       const duration = Date.now() - startTime;
+
+      // Unsubscribe if we subscribed
+      if (streamSubscription) {
+        streamSubscription();
+        console.log('[E2E App] Unsubscribed from LLMStreamSocket.');
+      }
 
       // *** Add logging after art.process ***
       console.log(`[E2E App] art.process completed in ${duration}ms. Status: ${finalResponse.metadata.status}`);
@@ -356,17 +398,18 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
       // *** End logging ***
 
       // Fetch observations for the thread
-      let observations: Observation[] = [];
+      let allObservations: Observation[] = [];
       try {
-        observations = await art.observationManager.getObservations(threadId); // Access via observationManager
-        // console.log(`Fetched ${observations.length} observations for thread ${threadId}`);
+        allObservations = await art.observationManager.getObservations(threadId); // Get all observations for the thread
+        // console.log(`Fetched ${allObservations.length} observations for thread ${threadId}`);
       } catch (obsError) {
         console.error(`Error fetching observations for thread ${threadId}:`, obsError);
-        // Decide if this should be a fatal error or just logged
       }
+      // Manually filter observations by traceId
+      const observations = allObservations.filter(obs => obs.traceId === finalResponse.metadata.traceId);
 
       // Add test info and observations to the response
-      const responsePayload = {
+      const responsePayload: any = { // Use 'any' temporarily
         ...finalResponse,
         _testInfo: {
           requestedStorageType: storageType,
@@ -376,6 +419,11 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
         },
         _observations: observations // Add observations
       };
+
+      // Add collected stream events if requested
+      if (requestStreamEvents) {
+        responsePayload._streamEvents = collectedStreamEvents;
+      }
 
       // Send the final response back to the client
       res.status(200).json(responsePayload);

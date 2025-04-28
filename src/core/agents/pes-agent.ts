@@ -139,6 +139,11 @@ export class PESAgent implements IAgentCore {
             let planningStreamError: Error | null = null;
 
             try {
+                // Record PLAN observation before making the call
+                await this.deps.observationManager.record({
+                    threadId: props.threadId, traceId: traceId, type: ObservationType.PLAN, content: { message: "Preparing for planning LLM call." }, metadata: { timestamp: Date.now() }
+                }).catch(err => Logger.error(`[${traceId}] Failed to record PLAN observation:`, err));
+
                 llmCalls++;
                 const planningStream = await this.deps.reasoningEngine.call(planningPrompt, planningOptions);
 
@@ -149,7 +154,8 @@ export class PESAgent implements IAgentCore {
 
                 // Consume the stream
                 for await (const event of planningStream) {
-                    this.deps.uiSystem.getLLMStreamSocket().notifyStreamEvent(event); // Use specific notify method
+                    // Call the base notify method directly
+                    this.deps.uiSystem.getLLMStreamSocket().notify(event, { targetThreadId: event.threadId, targetSessionId: event.sessionId });
 
                     switch (event.type) {
                         case 'TOKEN':
@@ -241,10 +247,15 @@ export class PESAgent implements IAgentCore {
 
 
             // --- Stage 5: Synthesis Call ---
-             Logger.debug(`[${traceId}] Stage 5: Synthesis Call`);
-            const synthesisPrompt = await this.deps.promptManager.createSynthesisPrompt(
-                props.query, parsedPlanningOutput.intent, parsedPlanningOutput.plan, toolResults, history, systemPrompt, threadContext
-            );
+            Logger.debug(`[${traceId}] Stage 5: Synthesis Call`);
+            // Record SYNTHESIS observation before making the call
+            await this.deps.observationManager.record({
+                threadId: props.threadId, traceId: traceId, type: ObservationType.SYNTHESIS, content: { message: "Preparing for synthesis LLM call." }, metadata: { timestamp: Date.now() }
+            }).catch(err => Logger.error(`[${traceId}] Failed to record SYNTHESIS observation:`, err));
+
+           const synthesisPrompt = await this.deps.promptManager.createSynthesisPrompt(
+               props.query, parsedPlanningOutput.intent, parsedPlanningOutput.plan, toolResults, history, systemPrompt, threadContext
+           );
 
             const synthesisOptions: CallOptions = {
                 threadId: props.threadId,
@@ -272,7 +283,8 @@ export class PESAgent implements IAgentCore {
 
                 // Consume the stream
                 for await (const event of synthesisStream) {
-                    this.deps.uiSystem.getLLMStreamSocket().notifyStreamEvent(event); // Use specific notify method
+                     // Call the base notify method directly
+                    this.deps.uiSystem.getLLMStreamSocket().notify(event, { targetThreadId: event.threadId, targetSessionId: event.sessionId });
 
                     switch (event.type) {
                         case 'TOKEN':

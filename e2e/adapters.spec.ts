@@ -52,6 +52,7 @@ async function processQuery(
 // Helper function to check for specific observation types
 function expectObservationType(observations: ProcessResponse['_observations'], type: string) {
   const found = observations.some(obs => obs.type === type);
+  console.log(`[Test Helper] Checking for type: ${type}, Found: ${found}`); // Add log
   expect(found, `Expected observation of type '${type}' but none was found. Found types: ${observations.map(o => o.type).join(', ')}`).toBe(true);
 }
 
@@ -140,28 +141,34 @@ test.describe('Reasoning Adapter Tests', () => {
         expect(tokenEvents.length, 'Should have TOKEN events').toBeGreaterThan(0);
         // Gemini adapter yields metadata after stream based on final chunk/response
         expect(metadataEvents.length, 'Should have at least one METADATA event').toBeGreaterThanOrEqual(1);
-        expect(endEvents.length, 'Should have exactly one END event').toBe(1);
+        // PES agent has planning and synthesis streams, expect END from both
+        expect(endEvents.length, 'Should have at least one END event (usually 2 for PES)').toBeGreaterThanOrEqual(1);
 
         // Check token type (assuming synthesis context)
         expect(tokenEvents[0].tokenType, 'Token type should reflect synthesis context')
           .toMatch(/FINAL_SYNTHESIS_LLM_RESPONSE|LLM_RESPONSE/);
 
         // Check metadata content (adapter yields metadata after stream)
-        const finalMetadata = metadataEvents[metadataEvents.length - 1].data;
-        expect(finalMetadata.stopReason, 'Metadata should include stopReason').toBeDefined();
-        // Token counts might be present in usageMetadata
-        // expect(finalMetadata.inputTokens, 'Metadata might include inputTokens').toBeDefined();
-        // expect(finalMetadata.outputTokens, 'Metadata might include outputTokens').toBeDefined();
-
+        const finalMetadata = metadataEvents[metadataEvents.length - 1].data; // Uncomment to check metadata
+        // NOTE: Gemini SDK (@google/genai) should provide metadata in the LAST chunk of generateContentStream.
+        expect(finalMetadata.stopReason, 'Metadata should include stopReason').toBeDefined(); // Restore check
+        // Token counts should also be present in the last chunk's usageMetadata
+        expect(finalMetadata.inputTokens, 'Metadata should include inputTokens').toBeDefined(); // Restore check
+        expect(finalMetadata.outputTokens, 'Metadata should include outputTokens').toBeDefined(); // Restore check
+ 
         // Optional: Reconstruct content from tokens and compare
-        const streamedContent = tokenEvents.map(e => e.data).join('');
+        // Filter for tokens belonging to the final synthesis response
+        const streamedContent = tokenEvents
+            .filter(e => e.tokenType === 'FINAL_SYNTHESIS_LLM_RESPONSE' || e.tokenType === 'LLM_RESPONSE')
+            .map(e => e.data)
+            .join('');
         expect(streamedContent, 'Reconstructed stream content should match final response content')
             .toEqual(response.response.content);
-
+ 
         // Check standard observations still exist
         expectObservationType(response._observations, 'INTENT');
         expectObservationType(response._observations, 'PLAN');
-        expectObservationType(response._observations, 'SYNTHESIS');
+        expectObservationType(response._observations, 'SYNTHESIS'); // Restore check now that agent should record it
         // Check for stream-related observations recorded by Agent Core
         expectObservationType(response._observations, 'LLM_STREAM_START');
         expectObservationType(response._observations, 'LLM_STREAM_METADATA');

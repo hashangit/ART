@@ -73,8 +73,11 @@ export class GeminiAdapter implements ProviderAdapter {
     const generator = async function*(): AsyncIterable<StreamEvent> {
       const startTime = Date.now(); // Use const
       let timeToFirstTokenMs: number | undefined;
+      let streamUsageMetadata: any = undefined; // Variable to hold aggregated usage metadata from stream
+      let streamFinishReason: string | undefined; // Will hold finishReason from the LAST chunk
+      let lastChunk: GenerateContentResponse | undefined = undefined; // Variable to store the last chunk
       // Removed unused aggregatedResponseText
-
+ 
       try {
         // --- Handle Streaming Response using SDK ---
         if (stream) {
@@ -88,6 +91,7 @@ export class GeminiAdapter implements ProviderAdapter {
 
           // Process the stream by iterating directly over streamResult (based on docs)
           for await (const chunk of streamResult) {
+            lastChunk = chunk; // Store the current chunk as the potential last one
             if (!timeToFirstTokenMs) {
                 timeToFirstTokenMs = Date.now() - startTime;
             }
@@ -98,8 +102,13 @@ export class GeminiAdapter implements ProviderAdapter {
               yield { type: 'TOKEN', data: textPart, threadId, traceId, sessionId, tokenType };
             }
              // Log potential usage metadata if available in chunks (less common)
+             // Capture usage metadata if present in chunks
              if (chunk.usageMetadata) {
++               // <<< ADDED LOGGING TO VERIFY IF THIS BLOCK EVER EXECUTES >>>
++               Logger.warn(">>> !!! Gemini stream chunk CONTAINS usageMetadata !!!", { usageMetadata: chunk.usageMetadata, threadId, traceId });
                 Logger.debug("Gemini stream chunk usageMetadata:", { usageMetadata: chunk.usageMetadata, threadId, traceId });
+                // Simple merge/overwrite for now, might need more sophisticated aggregation
+                streamUsageMetadata = { ...(streamUsageMetadata || {}), ...chunk.usageMetadata };
              }
           }
 
@@ -111,9 +120,30 @@ export class GeminiAdapter implements ProviderAdapter {
           Logger.debug("Gemini stream finished processing chunks.", { totalGenerationTimeMs, threadId, traceId });
 
           // TODO: Revisit how to get final metadata (stopReason, token counts) for streams if needed.
-          // Yield placeholder METADATA for now? Or omit? Let's omit for now to match docs pattern.
-
-        // --- Handle Non-Streaming Response using SDK ---
+          // --- Extract metadata from the LAST chunk AFTER the loop ---
+          if (lastChunk) {
+              streamFinishReason = lastChunk.candidates?.[0]?.finishReason;
+              streamUsageMetadata = lastChunk.usageMetadata; // Get metadata directly from last chunk
+              Logger.debug("Gemini stream - Extracted from last chunk:", { finishReason: streamFinishReason, usageMetadata: streamUsageMetadata, threadId, traceId });
+          } else {
+              Logger.warn("Gemini stream - No last chunk found after loop.", { threadId, traceId });
+          }
+          // --- End extraction from last chunk ---
+ 
+          // Yield final METADATA using values extracted from the last chunk
+          const finalUsage = streamUsageMetadata || {}; // Use extracted metadata or empty object
+          const metadata: LLMMetadata = {
+             stopReason: streamFinishReason, // Use finishReason from last chunk
+             inputTokens: finalUsage?.promptTokenCount,
+             outputTokens: finalUsage?.candidatesTokenCount, // Or totalTokenCount? Check SDK details
+             timeToFirstTokenMs: timeToFirstTokenMs,
+             totalGenerationTimeMs: totalGenerationTimeMs,
+             providerRawUsage: finalUsage, // Use usage from last chunk
+             traceId: traceId,
+           };
+           yield { type: 'METADATA', data: metadata, threadId, traceId, sessionId };
+ 
+          // --- Handle Non-Streaming Response using SDK ---
         } else {
           // Use the new SDK pattern: genAIInstance.models.generateContent
           // Revert direct parameter passing
