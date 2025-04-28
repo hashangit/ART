@@ -1,5 +1,5 @@
 // src/systems/tool/ToolRegistry.ts
-import { ToolRegistry as IToolRegistry, IToolExecutor } from '../../core/interfaces';
+import { ToolRegistry as IToolRegistry, IToolExecutor, StateManager } from '../../core/interfaces'; // Added StateManager import
 import { ToolSchema } from '../../types';
 import { Logger } from '../../utils/logger';
 
@@ -9,6 +9,16 @@ import { Logger } from '../../utils/logger';
  */
 export class ToolRegistry implements IToolRegistry {
   private executors: Map<string, IToolExecutor> = new Map();
+  private stateManager: StateManager | undefined; // Added stateManager property
+
+  /**
+   * Creates an instance of ToolRegistry.
+   * @param stateManager - Optional StateManager instance for advanced filtering.
+   */
+   constructor(stateManager?: StateManager) {
+       this.stateManager = stateManager;
+       Logger.debug(`ToolRegistry initialized ${stateManager ? 'with' : 'without'} StateManager.`);
+   }
 
   /**
    * Registers a tool executor instance, making it available for lookup via `getToolExecutor`.
@@ -45,19 +55,46 @@ export class ToolRegistry implements IToolRegistry {
 
   /**
    * Retrieves the schemas of all currently registered tools.
-   * **Note:** This basic implementation ignores the `filter` parameter, specifically the `enabledForThreadId` option.
-   * A more advanced implementation could integrate with the `StateManager` to filter tools based on thread configuration.
-   * @param filter - Optional filter criteria (currently ignored).
-   * @returns A promise resolving to an array containing the `ToolSchema` of all registered tools.
+   * Retrieves the schemas of available tools, optionally filtering by those enabled for a specific thread.
+   * If `filter.enabledForThreadId` is provided and a `StateManager` was injected, it attempts to load the thread's configuration
+   * and return only the schemas for tools listed in `enabledTools`. Otherwise, it returns all registered tool schemas.
+   * @param filter - Optional filter criteria. `enabledForThreadId` triggers filtering based on thread config.
+   * @returns A promise resolving to an array containing the `ToolSchema` of the available tools based on the filter.
    */
-  async getAvailableTools(filter?: { enabledForThreadId?: string }): Promise<ToolSchema[]> {
-     if (filter?.enabledForThreadId) {
-        Logger.warn('ToolRegistry: Filtering by enabledForThreadId is not implemented in the basic ToolRegistry. Returning all tools.');
-        // In a real scenario, this might interact with StateManager
-     }
-    const schemas = Array.from(this.executors.values()).map(executor => executor.schema);
-    Logger.debug(`ToolRegistry: Returning ${schemas.length} available tool schemas.`);
-    return schemas;
+   async getAvailableTools(filter?: { enabledForThreadId?: string }): Promise<ToolSchema[]> {
+    const allExecutors = Array.from(this.executors.values());
+    const allSchemas = allExecutors.map(executor => executor.schema);
+
+    if (filter?.enabledForThreadId && this.stateManager) {
+      const threadId = filter.enabledForThreadId;
+      Logger.debug(`ToolRegistry: Attempting to filter tools for threadId: ${threadId}`);
+      try {
+        // Assuming loadThreadContext returns null/undefined if not found or lacks config
+        const threadContext = await this.stateManager.loadThreadContext(threadId);
+        const enabledToolNames = threadContext?.config?.enabledTools;
+
+        if (enabledToolNames && Array.isArray(enabledToolNames)) {
+          Logger.debug(`ToolRegistry: Found enabled tools for thread ${threadId}: ${enabledToolNames.join(', ')}`);
+          const enabledExecutors = allExecutors.filter(executor =>
+            enabledToolNames.includes(executor.schema.name)
+          );
+          const enabledSchemas = enabledExecutors.map(executor => executor.schema);
+          Logger.debug(`ToolRegistry: Returning ${enabledSchemas.length} enabled tool schemas for thread ${threadId}.`);
+          return enabledSchemas;
+        } else {
+          Logger.warn(`ToolRegistry: No specific enabledTools found for thread ${threadId} or config missing. Returning all tools.`);
+        }
+      } catch (error: any) {
+        Logger.error(`ToolRegistry: Error loading thread config for ${threadId}: ${error.message}. Returning all tools.`);
+        // Fallback to returning all tools in case of error loading config
+      }
+    } else if (filter?.enabledForThreadId && !this.stateManager) {
+        Logger.warn('ToolRegistry: Filtering by enabledForThreadId requested, but StateManager was not provided. Returning all tools.');
+    }
+
+    // Default: return all schemas if no filtering is applied or possible
+    Logger.debug(`ToolRegistry: Returning all ${allSchemas.length} registered tool schemas.`);
+    return allSchemas;
   }
 
   /**

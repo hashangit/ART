@@ -71,9 +71,10 @@ export class CalculatorTool implements IToolExecutor {
    * It defines the tool's name, description, input parameters (expression and optional scope),
    * and provides examples for the LLM.
    */
+  // TODO: Consider renaming this property to `getSchema()` for better idiomatic consistency? (See sample-app feedback)
   readonly schema: ToolSchema = {
     name: CalculatorTool.toolName,
-    description: `Evaluates mathematical expressions using a sandboxed mathjs environment. 
+    description: `Evaluates mathematical expressions using a sandboxed mathjs environment.
 You can reference previous calculation results using the 'ans' variable.
 Supports standard operators (+, -, *, /, %, ^), variables via 'scope', complex numbers, and the following allowed functions:
 sqrt, cbrt, abs, pow, exp, log, log10, log2, sin, cos, tan, asin, acos, atan, atan2, round, floor, ceil, mod, 

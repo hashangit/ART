@@ -177,7 +177,8 @@ export class AgentFactory {
         this.observationManager = new ObservationManagerImpl(this.observationRepository!, this.uiSystem.getObservationSocket());
 
         // --- Initialize Tool Registry & Register Tools ---
-        this.toolRegistry = new ToolRegistryImpl();
+        // Pass the initialized StateManager to the ToolRegistry constructor
+        this.toolRegistry = new ToolRegistryImpl(this.stateManager!);
         if (this.config.tools) {
             for (const tool of this.config.tools) {
                 await this.toolRegistry!.registerTool(tool); // Add non-null assertion
