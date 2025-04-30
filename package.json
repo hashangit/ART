@@ -61,8 +61,10 @@
   "dependencies": {
     "@google/genai": "^0.10.0",
     "@types/mathjs": "^9.4.1",
+    "@types/mustache": "^4.2.5",
     "ajv": "^8.17.1",
     "mathjs": "^14.4.0",
+    "mustache": "^4.2.0",
     "uuid": "^9.0.0",
     "zod": "^3.24.2"
   },

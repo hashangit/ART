@@ -1,4 +1,4 @@
-import { ModelCapability } from './types';
+import { ModelCapability } from '../../src/types'; // Corrected import path
 
 /**
  * Detailed information about an AI model
@@ -661,10 +661,11 @@ export class ModelRegistry {
           .replace('deepseek-', 'DeepSeek ')
           .replace('v', 'V')
           .replace('r', 'R');
-      case 'openrouter':
+      case 'openrouter': { // Add block scope
         // For OpenRouter proxied models, show original provider
         const [origProvider, origModel] = modelId.split('/');
         return `${origProvider.charAt(0).toUpperCase() + origProvider.slice(1)} ${origModel}`;
+      } // Close block scope
       default:
         return modelId;
     }

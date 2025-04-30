@@ -6,7 +6,7 @@ import {
   ConversationMessage,
   ExecutionContext,
   FilterOptions,
-  FormattedPrompt,
+  // FormattedPrompt, // Keep commented or remove later when ReasoningEngine is updated
   MessageOptions,
   MessageRole, // Added import
   Observation,
@@ -17,8 +17,11 @@ import {
   ThreadContext,
   ToolResult,
   ToolSchema,
-  AgentState // Added import
-} from '../types'; // Assuming types are exported from src/types/index.ts
+  AgentState,
+  // --- Import new types (Refactor Phase 1) ---
+  ArtStandardPrompt,
+  PromptContext,
+} from '../types';
 
 /**
  * Interface for the central agent orchestrator.
@@ -51,53 +54,28 @@ export interface ReasoningEngine {
    * @returns A promise resolving to an AsyncIterable of `StreamEvent` objects.
    * @throws {ARTError} If a critical error occurs during the initial call setup or if the stream itself errors out (typically code `LLM_PROVIDER_ERROR`).
    */
-  call(prompt: FormattedPrompt, options: CallOptions): Promise<AsyncIterable<import("../types").StreamEvent>>;
+  // TODO (Refactor): Update prompt type from FormattedPrompt to FormattedPromptResult['prompt'] in Phase 2
+  call(prompt: import('../types').FormattedPrompt, options: CallOptions): Promise<AsyncIterable<import("../types").StreamEvent>>;
 }
 
+// --- PromptManager Interface (Refactor Phase 1) ---
 /**
- * Interface for managing and constructing prompts for the LLM.
+ * Interface for the stateless prompt assembler.
+ * Uses a blueprint (template) and context provided by Agent Logic
+ * to create a standardized prompt format (`ArtStandardPrompt`).
  */
 export interface PromptManager {
   /**
-   * Constructs the prompt specifically for the planning phase of an agent's execution cycle (e.g., in PES).
-   * This prompt typically instructs the LLM to understand the query, form a plan, and identify necessary tool calls.
-   * @param query - The user's original query.
-   * @param history - Recent conversation history relevant to the current context.
-   * @param systemPrompt - The base system instructions for the agent in this thread.
-   * @param availableTools - An array of schemas for tools that are enabled and available for use in this thread.
-   * @param threadContext - The full context (config and state) for the current thread.
-   * @returns A promise resolving to the formatted prompt (string or provider-specific object) ready for the `ReasoningEngine`.
+   * Assembles a standardized prompt using a blueprint and context data.
+   * @param blueprint - The template string (e.g., Mustache format) defining the prompt structure. Agent logic provides this.
+   * @param context - The `PromptContext` object containing all data needed to populate the blueprint (query, history, tools, system prompt, custom data, etc.). Agent logic gathers this.
+   * @returns A promise resolving to the assembled `ArtStandardPrompt` (an array of `ArtStandardMessage` objects).
+   * @throws {ARTError} If the assembly process fails (e.g., template parsing error, missing context variables), typically with code `PROMPT_ASSEMBLY_FAILED`.
    */
-  createPlanningPrompt(
-    query: string,
-    history: ConversationMessage[],
-    systemPrompt: string | undefined,
-    availableTools: ToolSchema[],
-    threadContext: ThreadContext
-  ): Promise<FormattedPrompt>;
-
-  /**
-   * Constructs the prompt specifically for the synthesis phase of an agent's execution cycle (e.g., in PES).
-   * This prompt typically provides the LLM with the original query, the plan, tool results, and history, asking it to generate the final user-facing response.
-   * @param query - The user's original query.
-   * @param intent - The intent extracted during the planning phase.
-   * @param plan - The plan generated during the planning phase.
-   * @param toolResults - An array of results obtained from executing the tools specified in the plan.
-   * @param history - Recent conversation history.
-   * @param systemPrompt - The base system instructions for the agent.
-   * @param threadContext - The full context (config and state) for the current thread.
-   * @returns A promise resolving to the formatted prompt (string or provider-specific object) ready for the `ReasoningEngine`.
-   */
-  createSynthesisPrompt(
-    query: string,
-    intent: string | undefined, // Or a structured intent object
-    plan: string | undefined, // Or a structured plan object
-    toolResults: ToolResult[],
-    history: ConversationMessage[],
-    systemPrompt: string | undefined,
-    threadContext: ThreadContext
-  ): Promise<FormattedPrompt>;
+  assemblePrompt(blueprint: string, context: PromptContext): Promise<ArtStandardPrompt>;
 }
+// --- END PromptManager Interface ---
+
 
 /**
  * Interface for parsing structured output from LLM responses.

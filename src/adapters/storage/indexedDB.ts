@@ -1,5 +1,6 @@
 import { StorageAdapter } from '../../core/interfaces';
 import { FilterOptions } from '../../types';
+import { Logger } from '../../utils/logger'; // Import Logger at top level
 
 // Default configuration
 const DEFAULT_DB_NAME = 'ART_Framework_DB';
@@ -66,45 +67,47 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
       return this.initPromise;
     }
 
+// ... (rest of the file remains the same until line 71)
+
     this.initPromise = new Promise((resolve, reject) => {
       if (!('indexedDB' in window)) {
-        console.error("IndexedDBStorageAdapter: IndexedDB not supported in this browser.");
+        Logger.error("IndexedDBStorageAdapter: IndexedDB not supported in this browser."); // Use Logger
         return reject(new Error("IndexedDB not supported"));
       }
 
       const request = indexedDB.open(this.dbName, this.dbVersion);
 
       request.onerror = (event) => {
-        console.error(`IndexedDBStorageAdapter: Database error: ${request.error}`, event);
+        Logger.error(`IndexedDBStorageAdapter: Database error: ${request.error}`, event); // Use Logger
         reject(new Error(`IndexedDB error: ${request.error?.message}`));
       };
 
       request.onsuccess = (event) => {
         this.db = (event.target as IDBOpenDBRequest).result;
-        console.log(`IndexedDBStorageAdapter: Database '${this.dbName}' opened successfully (Version: ${this.db.version}).`);
+        Logger.info(`IndexedDBStorageAdapter: Database '${this.dbName}' opened successfully (Version: ${this.db.version}).`); // Use Logger
 
         // Optional: Check if all required stores actually exist after opening
         const existingStores = new Set(Array.from(this.db.objectStoreNames));
         const missingStores = [...this.requiredObjectStores].filter(store => !existingStores.has(store));
         if (missingStores.length > 0) {
-            console.warn(`IndexedDBStorageAdapter: The following required object stores were not found after opening DB version ${this.db.version}: ${missingStores.join(', ')}. This might happen if the DB version wasn't incremented after adding stores.`);
+            Logger.warn(`IndexedDBStorageAdapter: The following required object stores were not found after opening DB version ${this.db.version}: ${missingStores.join(', ')}. This might happen if the DB version wasn't incremented after adding stores.`); // Use Logger
             // Depending on strictness, you might reject here
         }
 
         this.db.onerror = (errorEvent) => {
             // Generic error handler for the database connection
-            console.error(`IndexedDBStorageAdapter: Generic database error:`, errorEvent);
+            Logger.error(`IndexedDBStorageAdapter: Generic database error:`, errorEvent); // Use Logger
         };
         resolve();
       };
 
       request.onupgradeneeded = (event) => {
-        console.log(`IndexedDBStorageAdapter: Upgrading database '${this.dbName}' from version ${event.oldVersion} to ${event.newVersion}...`);
+        Logger.info(`IndexedDBStorageAdapter: Upgrading database '${this.dbName}' from version ${event.oldVersion} to ${event.newVersion}...`); // Use Logger
         this.db = (event.target as IDBOpenDBRequest).result;
         const transaction = (event.target as IDBOpenDBRequest).transaction; // Get transaction for upgrade
 
         if (!transaction) {
-            console.error("IndexedDBStorageAdapter: Upgrade transaction is null!");
+            Logger.error("IndexedDBStorageAdapter: Upgrade transaction is null!"); // Use Logger
             reject(new Error("Upgrade transaction failed"));
             return;
         }
@@ -113,7 +116,7 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
 
         this.requiredObjectStores.forEach(storeName => {
           if (!existingStoreNames.has(storeName)) {
-            console.log(`IndexedDBStorageAdapter: Creating object store '${storeName}'...`);
+            Logger.info(`IndexedDBStorageAdapter: Creating object store '${storeName}'...`); // Use Logger
             // Use 'id' as the key path, assuming all stored objects will have an 'id' property.
             // If not, a different key strategy or autoIncrement might be needed.
             // For flexibility, we might need a config per store, but 'id' is common.
@@ -127,18 +130,18 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
         // Example: Removing old stores if needed (use with caution)
         // existingStoreNames.forEach(storeName => {
         //   if (!this.requiredObjectStores.has(storeName)) {
-        //     console.log(`IndexedDBStorageAdapter: Deleting old object store '${storeName}'...`);
+        //     Logger.info(`IndexedDBStorageAdapter: Deleting old object store '${storeName}'...`); // Use Logger
         //     this.db?.deleteObjectStore(storeName);
         //   }
         // });
 
-        console.log(`IndexedDBStorageAdapter: Database upgrade complete.`);
+        Logger.info(`IndexedDBStorageAdapter: Database upgrade complete.`); // Use Logger
         // Note: onsuccess will be called automatically after onupgradeneeded completes.
       };
 
        request.onblocked = (event) => {
             // This event fires if the database is open in another tab/window with an older version
-            console.warn(`IndexedDBStorageAdapter: Database open request blocked for '${this.dbName}'. Please close other tabs/connections using an older version of this database.`, event);
+            Logger.warn(`IndexedDBStorageAdapter: Database open request blocked for '${this.dbName}'. Please close other tabs/connections using an older version of this database.`, event); // Use Logger
             reject(new Error(`IndexedDB open blocked for ${this.dbName}. Close other connections.`));
         };
 
@@ -197,7 +200,7 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
             };
 
             request.onerror = () => {
-                console.error(`IndexedDBStorageAdapter: Error getting item '${id}' from '${collection}':`, request.error);
+                Logger.error(`IndexedDBStorageAdapter: Error getting item '${id}' from '${collection}':`, request.error); // Use Logger
                 reject(new Error(`Failed to get item: ${request.error?.message}`));
             };
         } catch (error) {
@@ -227,7 +230,7 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
          return Promise.reject(new Error(`IndexedDBStorageAdapter: Data for collection '${collection}' must have an 'id' property matching the keyPath.`));
      }
      if (dataAsAny.id !== id) {
-        console.warn(`IndexedDBStorageAdapter: Provided id ('${id}') and data.id ('${dataAsAny.id}') mismatch for collection '${collection}'. Using data.id as the key.`);
+        Logger.warn(`IndexedDBStorageAdapter: Provided id ('${id}') and data.id ('${dataAsAny.id}') mismatch for collection '${collection}'. Using data.id as the key.`); // Use Logger
         // Optionally throw an error or enforce consistency based on project needs.
         // For now, we proceed using data.id as the key for the put operation.
      }
@@ -249,7 +252,7 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
 
             request.onerror = () => {
                 // Use dataAsAny.id in the error message as it's the actual key used
-                console.error(`IndexedDBStorageAdapter: Error setting item with id '${dataAsAny.id}' in '${collection}':`, request.error);
+                Logger.error(`IndexedDBStorageAdapter: Error setting item with id '${dataAsAny.id}' in '${collection}':`, request.error); // Use Logger
                 reject(new Error(`Failed to set item: ${request.error?.message}`));
             };
 
@@ -259,7 +262,7 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
 
             transaction.onerror = (event) => {
                  // Use dataAsAny.id in the error message
-                console.error(`IndexedDBStorageAdapter: Transaction error setting item with id '${dataAsAny.id}' in '${collection}':`, transaction.error, event);
+                Logger.error(`IndexedDBStorageAdapter: Transaction error setting item with id '${dataAsAny.id}' in '${collection}':`, transaction.error, event); // Use Logger
                 reject(new Error(`Transaction failed: ${transaction.error?.message}`));
             };
         } catch (error) {
@@ -288,12 +291,12 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
             };
 
             request.onerror = () => {
-                console.error(`IndexedDBStorageAdapter: Error deleting item '${id}' from '${collection}':`, request.error);
+                Logger.error(`IndexedDBStorageAdapter: Error deleting item '${id}' from '${collection}':`, request.error); // Use Logger
                 reject(new Error(`Failed to delete item: ${request.error?.message}`));
             };
 
              transaction.onerror = (event) => {
-                console.error(`IndexedDBStorageAdapter: Transaction error deleting item '${id}' from '${collection}':`, transaction.error, event);
+                Logger.error(`IndexedDBStorageAdapter: Transaction error deleting item '${id}' from '${collection}':`, transaction.error, event); // Use Logger
                 reject(new Error(`Transaction failed: ${transaction.error?.message}`));
             };
         } catch (error) {
@@ -367,7 +370,7 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
              };
 
              request.onerror = () => {
-                 console.error(`IndexedDBStorageAdapter: Error querying collection '${collection}':`, request.error);
+                 Logger.error(`IndexedDBStorageAdapter: Error querying collection '${collection}':`, request.error); // Use Logger
                  reject(new Error(`Failed to query collection: ${request.error?.message}`));
              };
          } catch (error) {
@@ -395,12 +398,12 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
             };
 
             request.onerror = () => {
-                console.error(`IndexedDBStorageAdapter: Error clearing collection '${collection}':`, request.error);
+                Logger.error(`IndexedDBStorageAdapter: Error clearing collection '${collection}':`, request.error); // Use Logger
                 reject(new Error(`Failed to clear collection: ${request.error?.message}`));
             };
 
              transaction.onerror = (event) => {
-                console.error(`IndexedDBStorageAdapter: Transaction error clearing collection '${collection}':`, transaction.error, event);
+                Logger.error(`IndexedDBStorageAdapter: Transaction error clearing collection '${collection}':`, transaction.error, event); // Use Logger
                 reject(new Error(`Transaction failed: ${transaction.error?.message}`));
             };
         } catch (error) {
@@ -444,18 +447,18 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
                 };
                 request.onerror = () => {
                     // Error on individual clear, transaction might still complete or abort
-                    console.error(`IndexedDBStorageAdapter: Error clearing object store '${storeName}':`, request.error);
+                    Logger.error(`IndexedDBStorageAdapter: Error clearing object store '${storeName}':`, request.error); // Use Logger
                     // Don't reject immediately, let transaction handle overall status
                 };
             });
 
             transaction.oncomplete = () => {
-                console.log(`IndexedDBStorageAdapter: All object stores cleared successfully.`);
+                Logger.info(`IndexedDBStorageAdapter: All object stores cleared successfully.`); // Use Logger
                 resolve();
             };
 
             transaction.onerror = (event) => {
-                console.error(`IndexedDBStorageAdapter: Transaction error during clearAll:`, transaction.error, event);
+                Logger.error(`IndexedDBStorageAdapter: Transaction error during clearAll:`, transaction.error, event); // Use Logger
                 reject(new Error(`Failed to clear all stores: ${transaction.error?.message}`));
             };
         } catch (error) {
