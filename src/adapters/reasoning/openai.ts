@@ -1,7 +1,17 @@
 // src/adapters/reasoning/openai.ts
-import { ProviderAdapter } from '../../core/interfaces'; // Import only ProviderAdapter from here
-import { FormattedPrompt, CallOptions } from '../../types'; // Import CallOptions directly from types
+import { ProviderAdapter } from '../../core/interfaces';
+import {
+  ArtStandardPrompt, // Use the new standard type
+  ArtStandardMessage, // Keep for translation function type hint
+  // ArtStandardMessageRole, // Not directly used after import
+  CallOptions,
+  StreamEvent,
+  LLMMetadata,
+} from '../../types';
 import { Logger } from '../../utils/logger';
+import { ARTError, ErrorCode } from '../../errors'; // Import ARTError and ErrorCode
+
+// TODO: Upgrade to use the official 'openai' SDK package instead of raw fetch calls.
 
 // Define expected options for the OpenAI adapter constructor
 /**
@@ -17,18 +27,38 @@ export interface OpenAIAdapterOptions {
 }
 
 // Define the structure expected by the OpenAI Chat Completions API
-interface OpenAIChatCompletionPayload {
-  model: string;
-  messages: { role: 'system' | 'user' | 'assistant'; content: string }[];
-  temperature?: number;
-  max_tokens?: number;
-  // Add other OpenAI parameters as needed
+// Based on https://platform.openai.com/docs/api-reference/chat/create
+interface OpenAIMessage {
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content: string | null; // Content can be null for assistant messages with only tool_calls
+  name?: string; // Required for tool role
+  tool_calls?: OpenAIToolCall[]; // For assistant role
+  tool_call_id?: string; // Required for tool role
 }
 
-// Extend payload type to include optional stream property
-interface OpenAIChatCompletionPayloadWithStream extends OpenAIChatCompletionPayload {
-    stream?: boolean;
+interface OpenAIToolCall {
+  id: string;
+  type: 'function'; // Currently only 'function' is supported
+  function: {
+    name: string;
+    arguments: string; // Stringified JSON
+  };
 }
+
+interface OpenAIChatCompletionPayload {
+  model: string;
+  messages: OpenAIMessage[];
+  temperature?: number;
+  max_tokens?: number;
+  top_p?: number;
+  frequency_penalty?: number;
+  presence_penalty?: number;
+  stop?: string | string[];
+  stream?: boolean;
+  // TODO: Add support for 'tools' and 'tool_choice' parameters if needed later
+}
+
+// Note: No separate WithStream type needed if stream is part of the main payload
 
 interface OpenAIChatCompletionResponse {
   id: string;
@@ -37,13 +67,11 @@ interface OpenAIChatCompletionResponse {
   model: string;
   choices: {
     index: number;
-    message: {
-      role: 'assistant';
-      content: string;
-    };
-    finish_reason: string;
+    message: OpenAIMessage; // Use the defined OpenAIMessage type
+    // logprobs?: object | null; // Optional logprobs
+    finish_reason: string; // e.g., 'stop', 'length', 'tool_calls'
   }[];
-  usage: {
+  usage?: { // Usage might be optional in some error cases or streams
     prompt_tokens: number;
     completion_tokens: number;
     total_tokens: number;
@@ -55,10 +83,11 @@ interface OpenAIChatCompletionResponse {
  * Chat Completions API (compatible models like GPT-3.5, GPT-4, GPT-4o).
  *
  * Handles formatting requests and parsing responses for OpenAI.
- * Note: This basic version does not implement streaming or the `onThought` callback.
+ * Uses raw `fetch` for now.
  *
  * @implements {ProviderAdapter}
  */
+// TODO: Refactor to use the official OpenAI SDK for better error handling, types, and features.
 export class OpenAIAdapter implements ProviderAdapter {
   readonly providerName = 'openai';
   private apiKey: string;
@@ -81,55 +110,54 @@ export class OpenAIAdapter implements ProviderAdapter {
   }
 
   /**
-   /**
-    * Sends a request to the OpenAI Chat Completions API.
-    * Handles both standard and streaming requests based on `options.stream`.
-    *
-    * **Note:**
-    * - It currently assumes `prompt` is the primary user message content (string). It does not yet parse complex `FormattedPrompt` objects containing history or system roles directly. These would need to be handled by the `PromptManager` creating the input string.
-    * - Streaming implementation is basic and needs further development to handle different event types (METADATA, ERROR) and token types (THINKING vs RESPONSE).
-    * - Error handling is basic; specific OpenAI error codes are not parsed in detail.
-    *
-    * @param prompt - The prompt content, treated as the user message in this basic implementation.
-    * @param options - Call options, including `threadId`, `traceId`, `stream` preference, and any OpenAI-specific parameters (like `temperature`, `max_tokens`) passed through.
-    * @returns A promise resolving to an AsyncIterable of StreamEvent objects.
-    * @throws {Error} If the API request fails (network error, invalid API key, bad request, etc.).
-    */
-   async call(prompt: FormattedPrompt, options: CallOptions): Promise<AsyncIterable<import("../../types").StreamEvent>> {
-    const { threadId, traceId, sessionId } = options;
+   * Sends a request to the OpenAI Chat Completions API.
+   * Translates `ArtStandardPrompt` to the OpenAI format, handles streaming and non-streaming responses.
+   *
+   * @param {ArtStandardPrompt} prompt - The standardized prompt messages.
+   * @param {CallOptions} options - Call options, including `threadId`, `traceId`, `stream` preference, and any OpenAI-specific parameters (like `temperature`, `max_tokens`) passed through.
+   * @returns {Promise<AsyncIterable<StreamEvent>>} A promise resolving to an AsyncIterable of StreamEvent objects.
+   */
+  async call(prompt: ArtStandardPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
+    const { threadId, traceId = `openai-trace-${Date.now()}`, sessionId, stream, callContext, model: modelOverride } = options;
+    const modelToUse = modelOverride || this.model;
 
-    // Basic assumption: prompt is the user message string.
-    // TODO: Enhance prompt handling to support system prompts and history from FormattedPrompt if it becomes structured.
-    if (typeof prompt !== 'string') {
-        Logger.warn('OpenAIAdapter received non-string prompt. Treating as string.', { threadId, traceId });
-        prompt = String(prompt);
+    // --- Translate Prompt ---
+    let openAiMessages: OpenAIMessage[];
+    try {
+      openAiMessages = this.translateToOpenAI(prompt);
+    } catch (error: any) {
+      Logger.error(`Error translating ArtStandardPrompt to OpenAI format: ${error.message}`, { error, threadId, traceId });
+      // Immediately yield error and end if translation fails
+      const generator = async function*(): AsyncIterable<StreamEvent> {
+          const err = error instanceof ARTError ? error : new ARTError(`Prompt translation failed: ${error.message}`, ErrorCode.PROMPT_TRANSLATION_FAILED, error);
+          yield { type: 'ERROR', data: err, threadId, traceId, sessionId };
+          yield { type: 'END', data: null, threadId, traceId, sessionId };
+      }
+      return generator();
     }
+    // --- End Translate Prompt ---
 
     const apiUrl = `${this.apiBaseUrl}/chat/completions`;
-    const payload: OpenAIChatCompletionPayloadWithStream = {
-      model: this.model,
-      messages: [
-        // TODO: Add system prompt handling based on options or thread config
-        { role: 'user', content: prompt },
-        // TODO: Add conversation history handling
-      ],
+    const payload: OpenAIChatCompletionPayload = {
+      model: modelToUse,
+      messages: openAiMessages,
       // Pass through relevant LLM parameters from CallOptions
       temperature: options.temperature,
       max_tokens: options.max_tokens,
-      // top_p: options.top_p, // Example of another parameter
+      top_p: options.top_p,
+      frequency_penalty: options.frequency_penalty,
+      presence_penalty: options.presence_penalty,
+      stop: options.stop || options.stop_sequences,
+      stream: !!stream, // Set stream based on options
+      // TODO: Add 'tools' and 'tool_choice' if needed
     };
 
-    // Add stream flag if requested
-    if (options.stream) {
-      payload.stream = true;
-    }
-
     // Remove undefined parameters from payload
-    Object.keys(payload).forEach(key => payload[key as keyof OpenAIChatCompletionPayloadWithStream] === undefined && delete payload[key as keyof OpenAIChatCompletionPayloadWithStream]);
+    Object.keys(payload).forEach(key => payload[key as keyof OpenAIChatCompletionPayload] === undefined && delete payload[key as keyof OpenAIChatCompletionPayload]);
 
+    Logger.debug(`Calling OpenAI API: ${apiUrl} with model ${modelToUse}, stream: ${!!stream}`, { threadId, traceId });
 
-    Logger.debug(`Calling OpenAI API: ${apiUrl} with model ${this.model}, stream: ${!!options.stream}`, { threadId, traceId });
-
+    // TODO: Replace fetch with official OpenAI SDK client call
     try {
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -144,83 +172,100 @@ export class OpenAIAdapter implements ProviderAdapter {
         const errorBody = await response.text();
         Logger.error(`OpenAI API request failed with status ${response.status}: ${errorBody}`, { threadId, traceId });
         // Still yield an ERROR event before throwing for consistency
-        const errorGenerator = async function*(): AsyncIterable<import("../../types").StreamEvent> {
-            yield { type: 'ERROR', data: new Error(`OpenAI API request failed: ${response.status} ${response.statusText} - ${errorBody}`), threadId: threadId ?? '', traceId: traceId ?? '', sessionId };
+        const errorGenerator = async function*(): AsyncIterable<StreamEvent> {
+            // Pass the underlying error object directly
+            const err = new ARTError(
+                `OpenAI API request failed: ${response.status} ${response.statusText} - ${errorBody}`,
+                ErrorCode.LLM_PROVIDER_ERROR,
+                new Error(errorBody) // Create a basic error from the body for context
+            );
+            yield { type: 'ERROR', data: err, threadId, traceId, sessionId };
+            yield { type: 'END', data: null, threadId, traceId, sessionId }; // Ensure END is yielded
         };
-        // Throw after yielding error event if needed by caller, or just return the generator
-        // For now, let's return the generator containing the error.
         return errorGenerator();
-        // throw new Error(`OpenAI API request failed: ${response.status} ${response.statusText} - ${errorBody}`);
       }
 
       // --- Handle Streaming Response ---
-      if (options.stream && response.body) {
-        return this.processStream(response.body, options); // Pass full options object
+      if (stream && response.body) {
+        // TODO: Update processStream to potentially use official SDK stream handling
+        return this.processStream(response.body, options);
       }
       // --- Handle Non-Streaming Response ---
       else {
         const data = await response.json() as OpenAIChatCompletionResponse;
-        if (!data.choices || data.choices.length === 0 || !data.choices[0].message?.content) {
-           Logger.error('Invalid response structure from OpenAI API', { responseData: data, threadId, traceId });
-           // Yield ERROR event
-           const errorGenerator = async function*(): AsyncIterable<import("../../types").StreamEvent> {
-               yield { type: 'ERROR', data: new Error('Invalid response structure from OpenAI API: No content found.'), threadId: threadId ?? '', traceId: traceId ?? '', sessionId };
+        const firstChoice = data.choices?.[0];
+
+        // TODO: Improve error handling for different API error responses
+        if (!firstChoice?.message) {
+           Logger.error('Invalid response structure from OpenAI API: No message found', { responseData: data, threadId, traceId });
+           const errorGenerator = async function*(): AsyncIterable<StreamEvent> {
+               // Pass the problematic data as context in the error
+               const err = new ARTError('Invalid response structure from OpenAI API: No message found.', ErrorCode.LLM_PROVIDER_ERROR, new Error(JSON.stringify(data)));
+               yield { type: 'ERROR', data: err, threadId, traceId, sessionId };
+               yield { type: 'END', data: null, threadId, traceId, sessionId };
            };
            return errorGenerator();
-           // throw new Error('Invalid response structure from OpenAI API: No content found.');
         }
 
-        const responseContent = data.choices[0].message.content.trim();
-        Logger.debug(`OpenAI API call successful. Response length: ${responseContent.length}`, { threadId, traceId });
+        const responseMessage = firstChoice.message;
+        // TODO: Handle tool_calls in non-streaming response if needed by agent logic
+        if (responseMessage.tool_calls) {
+             Logger.debug("OpenAI response included tool calls (non-streaming)", { toolCalls: responseMessage.tool_calls, threadId, traceId });
+             // The OutputParser in PESAgent should handle extracting these from the raw LLM response text if needed.
+        }
+        Logger.debug(`OpenAI API call successful. Finish reason: ${firstChoice.finish_reason}`, { threadId, traceId });
 
         // Return AsyncIterable for non-streaming case
-        const nonStreamGenerator = async function*(): AsyncIterable<import("../../types").StreamEvent> {
-            // 1. Yield Token
-            yield { type: 'TOKEN', data: responseContent, threadId: threadId ?? '', traceId: traceId ?? '', sessionId, tokenType: 'LLM_RESPONSE' }; // Default token type
-            // 2. Yield Metadata (if available)
-            if (data.usage) {
-                yield {
-                    type: 'METADATA',
-                    data: {
-                        inputTokens: data.usage.prompt_tokens,
-                        outputTokens: data.usage.completion_tokens,
-                        stopReason: data.choices[0].finish_reason,
-                        providerRawUsage: data.usage,
-                        traceId: traceId, // Keep original traceId here if needed for metadata itself
-                    },
-                    threadId: threadId ?? '',
-                    traceId: traceId ?? '',
-                    sessionId
-                };
-            }
+        const nonStreamGenerator = async function*(): AsyncIterable<StreamEvent> {
+            // 1. Yield Token (entire response content)
+            // Determine tokenType based on callContext
+            const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'FINAL_SYNTHESIS_LLM_RESPONSE';
+            const responseContent = responseMessage.content ?? ''; // Handle null content
+            yield { type: 'TOKEN', data: responseContent.trim(), threadId, traceId, sessionId, tokenType };
+
+            // 2. Yield Metadata
+            const metadata: LLMMetadata = {
+                stopReason: firstChoice.finish_reason,
+                inputTokens: data.usage?.prompt_tokens,
+                outputTokens: data.usage?.completion_tokens,
+                providerRawUsage: { usage: data.usage, finish_reason: firstChoice.finish_reason }, // Include usage and finish reason
+                traceId: traceId,
+            };
+            yield { type: 'METADATA', data: metadata, threadId, traceId, sessionId };
+
             // 3. Yield End
-            yield { type: 'END', data: null, threadId: threadId ?? '', traceId: traceId ?? '', sessionId };
+            yield { type: 'END', data: null, threadId, traceId, sessionId };
         };
         return nonStreamGenerator();
       }
 
     } catch (error: any) {
       Logger.error(`Error during OpenAI API call: ${error.message}`, { error, threadId, traceId });
-      // Yield ERROR event from the catch block
-      const errorGenerator = async function*(): AsyncIterable<import("../../types").StreamEvent> {
-          yield { type: 'ERROR', data: error instanceof Error ? error : new Error(String(error)), threadId: threadId ?? '', traceId: traceId ?? '', sessionId };
+      const errorGenerator = async function*(): AsyncIterable<StreamEvent> {
+          const artError = error instanceof ARTError ? error : new ARTError(error.message, ErrorCode.LLM_PROVIDER_ERROR, error);
+          yield { type: 'ERROR', data: artError, threadId, traceId, sessionId };
+          yield { type: 'END', data: null, threadId, traceId, sessionId }; // Ensure END is yielded
       };
       return errorGenerator();
-      // throw error; // Re-throwing might prevent the ERROR event from being processed
     }
   }
 
-  /**
+ /**
    * Processes the Server-Sent Events (SSE) stream from OpenAI.
    * @param stream - The ReadableStream from the fetch response.
    * @param options - The original CallOptions containing threadId, traceId, sessionId, and callContext.
    * @returns An AsyncIterable yielding StreamEvent objects.
    */
-  private async *processStream(stream: ReadableStream<Uint8Array>, options: CallOptions): AsyncIterable<import("../../types").StreamEvent> {
-    const { threadId, traceId, sessionId, callContext } = options; // Destructure options
+  // TODO: Refactor this significantly when switching to the official SDK's stream handling.
+  private async *processStream(stream: ReadableStream<Uint8Array>, options: CallOptions): AsyncIterable<StreamEvent> {
+    const { threadId, traceId, sessionId, callContext } = options;
     const startTime = Date.now();
-    let firstTokenTime: number | undefined;
-    let tokenCount = 0;
+    let timeToFirstTokenMs: number | undefined;
+    let outputTokens = 0; // Simple token count based on chunks with content
+    let finalStopReason: string | undefined; // Store stop reason from the last relevant chunk
+    const aggregatedUsage: any = undefined; // Store usage if provided in stream
+    // TODO: Add proper aggregation for streamed tool calls if needed
+    let aggregatedToolCalls: any[] | undefined = undefined;
     const reader = stream.pipeThrough(new TextDecoderStream()).getReader();
     let buffer = '';
     let done = false;
@@ -249,22 +294,58 @@ export class OpenAIAdapter implements ProviderAdapter {
                     }
 
                     try {
-                        const jsonData = JSON.parse(dataContent);
-                        const delta = jsonData.choices?.[0]?.delta?.content;
+                        const chunk = JSON.parse(dataContent);
+                        const choice = chunk.choices?.[0];
 
-                        if (typeof delta === 'string' && delta.length > 0) {
-                            // Track token timing and count
+                        if (!choice) continue; // Skip if no choices in chunk
+
+                        // --- Handle Content Delta ---
+                        const deltaContent = choice.delta?.content;
+                        if (typeof deltaContent === 'string' && deltaContent.length > 0) {
                             const now = Date.now();
-                            if (firstTokenTime === undefined) {
-                              firstTokenTime = now - startTime;
+                            if (timeToFirstTokenMs === undefined) {
+                                timeToFirstTokenMs = now - startTime;
                             }
-                            tokenCount++;
-                            // Determine tokenType based on callContext (OpenAI doesn't provide thinking markers)
+                            outputTokens++; // Increment token count
                             const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'FINAL_SYNTHESIS_LLM_RESPONSE';
-                            yield { type: 'TOKEN', data: delta, threadId: threadId ?? '', traceId: traceId ?? '', sessionId, tokenType };
+                            yield { type: 'TOKEN', data: deltaContent, threadId: threadId ?? '', traceId: traceId ?? '', sessionId, tokenType };
                         }
-                        // TODO: Extract metadata if provided in stream chunks (less common for OpenAI chat)
-                        // TODO: Extract stop reason from final chunk if needed
+
+                        // --- Handle Tool Call Delta ---
+                        // OpenAI streams tool calls piece by piece (index, id, type, function name, function args)
+                        const deltaToolCalls = choice.delta?.tool_calls;
+                        if (deltaToolCalls) {
+                            // We need to aggregate these deltas. For simplicity in this stream processor,
+                            // we'll just store the latest full set if available, or log the deltas.
+                            // A more robust implementation would aggregate them properly.
+                            if (!aggregatedToolCalls) aggregatedToolCalls = [];
+                            // This simple aggregation might be incorrect if multiple tool calls are streamed concurrently.
+                            deltaToolCalls.forEach((tcDelta: any) => {
+                                if (tcDelta.index !== undefined) {
+                                    if (!aggregatedToolCalls![tcDelta.index]) aggregatedToolCalls![tcDelta.index] = {};
+                                    if (tcDelta.id) aggregatedToolCalls![tcDelta.index].id = tcDelta.id;
+                                    if (tcDelta.type) aggregatedToolCalls![tcDelta.index].type = tcDelta.type;
+                                    if (tcDelta.function) {
+                                        if (!aggregatedToolCalls![tcDelta.index].function) aggregatedToolCalls![tcDelta.index].function = {};
+                                        if (tcDelta.function.name) aggregatedToolCalls![tcDelta.index].function.name = tcDelta.function.name;
+                                        // Append arguments
+                                        if (tcDelta.function.arguments) {
+                                            aggregatedToolCalls![tcDelta.index].function.arguments = (aggregatedToolCalls![tcDelta.index].function.arguments || '') + tcDelta.function.arguments;
+                                        }
+                                    }
+                                }
+                            });
+                            // Logging the delta might be more practical here than full aggregation
+                            Logger.debug("OpenAI stream tool call delta:", { deltaToolCalls, threadId, traceId });
+                        }
+
+
+                        // --- Handle Finish Reason ---
+                        if (choice.finish_reason) {
+                            finalStopReason = choice.finish_reason; // Correct variable name
+                            Logger.debug(`OpenAI stream finish reason received: ${finalStopReason}`, { threadId, traceId }); // Correct variable name
+                            // Potentially break if needed, but let loop finish for [DONE]
+                        }
 
                     } catch (parseError: any) {
                         Logger.warn(`Failed to parse OpenAI stream chunk: ${dataContent}`, { parseError, threadId, traceId });
@@ -278,26 +359,137 @@ export class OpenAIAdapter implements ProviderAdapter {
 
         } catch (error: any) {
             Logger.error(`Error reading OpenAI stream: ${error.message}`, { error, threadId, traceId });
-            yield { type: 'ERROR', data: error instanceof Error ? error : new Error(String(error)), threadId: threadId ?? '', traceId: traceId ?? '', sessionId };
-            done = true; // Stop processing on error
+            const artError = error instanceof ARTError ? error : new ARTError(`Error reading OpenAI stream: ${error.message}`, ErrorCode.LLM_PROVIDER_ERROR, error);
+            yield { type: 'ERROR', data: artError, threadId: threadId ?? '', traceId: traceId ?? '', sessionId: sessionId ?? '' }; // Ensure strings
+            done = true; // Stop processing on stream read error
         }
     }
 
-    // Yield metadata event before ending the stream
-    yield {
-      type: 'METADATA',
-      data: {
-        outputTokens: tokenCount,
-        timeToFirstTokenMs: firstTokenTime,
-        totalGenerationTimeMs: Date.now() - startTime,
-        traceId,
-      },
-      threadId: threadId ?? '',
-      traceId: traceId ?? '',
-      sessionId
+    // --- Stream finished ---
+    const totalGenerationTimeMs = Date.now() - startTime;
+
+    // Yield final METADATA event
+    // TODO: Get accurate token counts if possible (e.g., if provided in a final stream message or via separate API call)
+    const metadata: LLMMetadata = {
+        stopReason: finalStopReason,
+        // inputTokens: undefined, // Not available from basic stream processing
+        outputTokens: outputTokens > 0 ? outputTokens : undefined, // Use chunk count as rough estimate if > 0
+        timeToFirstTokenMs: timeToFirstTokenMs,
+        totalGenerationTimeMs: totalGenerationTimeMs,
+        providerRawUsage: { finish_reason: finalStopReason, usage: aggregatedUsage, aggregatedToolCalls }, // Include collected raw data
+        traceId: traceId,
     };
-    // Final END event after the loop finishes (either by [DONE] or reader completion)
-    yield { type: 'END', data: null, threadId: threadId ?? '', traceId: traceId ?? '', sessionId };
+    yield { type: 'METADATA', data: metadata, threadId: threadId ?? '', traceId: traceId ?? '', sessionId: sessionId ?? '' }; // Ensure strings
+
+    // Final END event
+    yield { type: 'END', data: null, threadId: threadId ?? '', traceId: traceId ?? '', sessionId: sessionId ?? '' }; // Ensure strings
     Logger.debug("OpenAI stream processing finished.", { threadId, traceId });
+  }
+
+  /**
+   * Translates the provider-agnostic `ArtStandardPrompt` into the OpenAI API's `OpenAIMessage[]` format.
+   *
+   * @private
+   * @param {ArtStandardPrompt} artPrompt - The input `ArtStandardPrompt` array.
+   * @returns {OpenAIMessage[]} The `OpenAIMessage[]` array formatted for the OpenAI API.
+   * @throws {ARTError} If translation encounters an issue (ErrorCode.PROMPT_TRANSLATION_FAILED).
+   */
+  private translateToOpenAI(artPrompt: ArtStandardPrompt): OpenAIMessage[] {
+    return artPrompt.map((message: ArtStandardMessage): OpenAIMessage => {
+      switch (message.role) {
+        case 'system':
+          if (typeof message.content !== 'string') {
+            Logger.warn(`OpenAIAdapter: System message content is not a string. Stringifying.`, { content: message.content });
+            return { role: 'system', content: String(message.content) };
+          }
+          return { role: 'system', content: message.content };
+
+        case 'user':
+          if (typeof message.content !== 'string') {
+            Logger.warn(`OpenAIAdapter: User message content is not a string. Stringifying.`, { content: message.content });
+            return { role: 'user', content: String(message.content) };
+          }
+          return { role: 'user', content: message.content };
+
+        case 'assistant': { // Add block scope for lexical declaration
+          // Assistant message can have content, tool_calls, or both
+          const assistantMsg: OpenAIMessage = {
+            role: 'assistant',
+            content: typeof message.content === 'string' ? message.content : null, // Content can be null
+          };
+          if (message.tool_calls && message.tool_calls.length > 0) {
+            assistantMsg.tool_calls = message.tool_calls.map(tc => {
+                // Basic validation
+                if (tc.type !== 'function' || !tc.function?.name || typeof tc.function?.arguments !== 'string') {
+                     throw new ARTError(
+                        `OpenAIAdapter: Invalid tool_call structure in assistant message. ID: ${tc.id}`,
+                        ErrorCode.PROMPT_TRANSLATION_FAILED
+                    );
+                }
+                return {
+                    id: tc.id,
+                    type: tc.type, // Assuming 'function'
+                    function: {
+                        name: tc.function.name,
+                        arguments: tc.function.arguments, // Arguments should already be stringified JSON
+                    }
+                };
+            });
+          }
+          // If content is null/empty and there are no tool_calls, OpenAI might require content to be explicitly null
+          if (assistantMsg.content === '' && !assistantMsg.tool_calls) {
+              assistantMsg.content = null;
+          }
+          // Ensure content is not empty string if tool_calls are present (OpenAI requirement)
+          if (assistantMsg.content === '' && assistantMsg.tool_calls) {
+              assistantMsg.content = null;
+          }
+          // Ensure content is null if it's not a string (shouldn't happen with current types but good practice)
+          if (typeof assistantMsg.content !== 'string' && assistantMsg.content !== null) {
+              assistantMsg.content = null;
+          }
+
+          return assistantMsg;
+        } // Close block scope
+
+        case 'tool_result': { // Add block scope
+          if (!message.tool_call_id) {
+            throw new ARTError(
+              `OpenAIAdapter: 'tool_result' message missing required 'tool_call_id'.`,
+              ErrorCode.PROMPT_TRANSLATION_FAILED
+            );
+          }
+          if (typeof message.content !== 'string') {
+             Logger.warn(`OpenAIAdapter: Tool result content is not a string. Stringifying.`, { content: message.content });
+          }
+          return {
+            role: 'tool',
+            tool_call_id: message.tool_call_id,
+            // name: message.name, // OpenAI uses tool_call_id, name is part of the function call itself
+            content: String(message.content), // Content is the stringified result/error
+          };
+        } // Close block scope
+
+        case 'tool_request': { // Add block scope
+          // Skip this role, handled by assistant's tool_calls
+          Logger.debug(`OpenAIAdapter: Skipping 'tool_request' role message as it's handled by assistant's tool_calls.`);
+          // Throw an error for now, as it shouldn't appear if PESAgent is correct
+           throw new ARTError(
+              `OpenAIAdapter: Unexpected 'tool_request' role encountered during translation.`,
+              ErrorCode.PROMPT_TRANSLATION_FAILED
+            );
+        } // Close block scope
+
+        default: { // Add block scope
+          // Should not happen with ArtStandardMessageRole
+          Logger.warn(`OpenAIAdapter: Skipping message with unknown role: ${message.role}`);
+           throw new ARTError(
+              `OpenAIAdapter: Unknown message role '${message.role}' encountered during translation.`,
+              ErrorCode.PROMPT_TRANSLATION_FAILED
+            );
+        } // Close block scope
+      }
+    });
+    // Note: No need to filter nulls if we throw on unexpected roles
   }
 }

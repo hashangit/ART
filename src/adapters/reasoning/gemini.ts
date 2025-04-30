@@ -2,8 +2,17 @@
 // Use correct import based on documentation for @google/genai
 import { GoogleGenAI, Content, Part, GenerationConfig, GenerateContentResponse } from "@google/genai"; // Import SDK components
 import { ProviderAdapter } from '../../core/interfaces';
-import { FormattedPrompt, CallOptions, StreamEvent, LLMMetadata, ConversationMessage, MessageRole } from '../../types';
+import {
+  ArtStandardPrompt, // Use the new standard type
+  // ArtStandardMessage, // Removed unused import
+  // ArtStandardMessageRole, // Removed unused import
+  CallOptions,
+  StreamEvent,
+  LLMMetadata,
+  // Removed ConversationMessage, MessageRole as they are replaced by ArtStandard types for input
+} from '../../types';
 import { Logger } from '../../utils/logger';
+import { ARTError, ErrorCode } from '../../errors'; // Import ARTError and ErrorCode
 
 // Define expected options for the Gemini adapter constructor
 /**
@@ -25,8 +34,13 @@ export class GeminiAdapter implements ProviderAdapter {
   readonly providerName = 'gemini';
   private apiKey: string;
   private defaultModel: string; // Renamed for clarity
-  private genAI: GoogleGenAI; // Store SDK instance (using correct type)
+  private genAI: GoogleGenAI; // Stores the initialized GoogleGenAI SDK instance.
 
+  /**
+   * Creates an instance of GeminiAdapter.
+   * @param {GeminiAdapterOptions} options - Configuration options for the adapter.
+   * @throws {Error} If `apiKey` is missing in the options.
+   */
   constructor(options: GeminiAdapterOptions) {
     if (!options.apiKey) {
       throw new Error('GeminiAdapter requires an apiKey in options.');
@@ -41,18 +55,47 @@ export class GeminiAdapter implements ProviderAdapter {
     Logger.debug(`GeminiAdapter initialized with default model: ${this.defaultModel}`);
   }
 
-  async call(prompt: FormattedPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
+  /**
+   * Makes a call to the configured Gemini model.
+   * Translates the `ArtStandardPrompt` into the Gemini API format, sends the request
+   * using the `@google/genai` SDK, and yields `StreamEvent` objects representing
+   * the response (tokens, metadata, errors, end signal).
+   *
+   * Handles both streaming and non-streaming requests based on `options.stream`.
+   *
+   * @param {ArtStandardPrompt} prompt - The standardized prompt messages.
+   * @param {CallOptions} options - Options for the LLM call, including streaming preference, model override, and execution context.
+   * @returns {Promise<AsyncIterable<StreamEvent>>} An async iterable that yields `StreamEvent` objects.
+   *   - `TOKEN`: Contains a chunk of the response text. `tokenType` indicates if it's part of agent thought or final synthesis.
+   *   - `METADATA`: Contains information like stop reason, token counts, and timing, yielded once at the end.
+   *   - `ERROR`: Contains any error encountered during translation, SDK call, or response processing.
+   *   - `END`: Signals the completion of the stream.
+   * @see {ArtStandardPrompt}
+   * @see {CallOptions}
+   * @see {StreamEvent}
+   * @see {LLMMetadata}
+   */
+  async call(prompt: ArtStandardPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
     const { threadId, traceId = `gemini-trace-${Date.now()}`, sessionId, stream, callContext, model: modelOverride } = options;
     const modelToUse = modelOverride || this.defaultModel;
 
-    // With the new SDK, we call methods directly on genAI.models
-    // No need to get a separate model instance here.
-
     // --- Format Payload for SDK ---
-    const contents: Content[] = this.formatMessagesForSDK(prompt); // Use SDK-specific formatter
+    let contents: Content[];
+    try {
+      contents = this.translateToGemini(prompt); // Use the new translation function
+    } catch (error: any) {
+      Logger.error(`Error translating ArtStandardPrompt to Gemini format: ${error.message}`, { error, threadId, traceId });
+      // Immediately yield error and end if translation fails
+      const generator = async function*(): AsyncIterable<StreamEvent> {
+          yield { type: 'ERROR', data: error instanceof Error ? error : new Error(String(error)), threadId, traceId, sessionId };
+          yield { type: 'END', data: null, threadId, traceId, sessionId };
+      }
+      return generator();
+    }
+
     const generationConfig: GenerationConfig = { // Use SDK GenerationConfig type
       temperature: options.temperature,
-      maxOutputTokens: options.max_tokens || options.maxOutputTokens,
+      maxOutputTokens: options.max_tokens || options.maxOutputTokens, // Allow both snake_case and camelCase
       topP: options.top_p || options.topP,
       topK: options.top_k || options.topK,
       stopSequences: options.stop || options.stop_sequences || options.stopSequences,
@@ -104,8 +147,8 @@ export class GeminiAdapter implements ProviderAdapter {
              // Log potential usage metadata if available in chunks (less common)
              // Capture usage metadata if present in chunks
              if (chunk.usageMetadata) {
-+               // <<< ADDED LOGGING TO VERIFY IF THIS BLOCK EVER EXECUTES >>>
-+               Logger.warn(">>> !!! Gemini stream chunk CONTAINS usageMetadata !!!", { usageMetadata: chunk.usageMetadata, threadId, traceId });
+                // Note: Based on testing, usageMetadata usually appears only in the *last* chunk,
+                // but we check here just in case the behavior changes or varies.
                 Logger.debug("Gemini stream chunk usageMetadata:", { usageMetadata: chunk.usageMetadata, threadId, traceId });
                 // Simple merge/overwrite for now, might need more sophisticated aggregation
                 streamUsageMetadata = { ...(streamUsageMetadata || {}), ...chunk.usageMetadata };
@@ -206,47 +249,135 @@ export class GeminiAdapter implements ProviderAdapter {
   }
 
   /**
-   * Formats messages for the @google/genai SDK's `contents` array.
-   * Handles ConversationMessage[] and maps roles correctly.
+   * Translates the provider-agnostic `ArtStandardPrompt` into the Gemini API's `Content[]` format.
+   *
+   * Key translations:
+   * - `system` role: Merged into the first `user` message.
+   * - `user` role: Maps to Gemini's `user` role.
+   * - `assistant` role: Maps to Gemini's `model` role. Handles text content and `tool_calls` (mapped to `functionCall`).
+   * - `tool_result` role: Maps to Gemini's `user` role with a `functionResponse` part.
+   * - `tool_request` role: Skipped (implicitly handled by `assistant`'s `tool_calls`).
+   *
+   * Adds validation to ensure the conversation doesn't start with a 'model' role.
+   *
+   * @private
+   * @param {ArtStandardPrompt} artPrompt - The input `ArtStandardPrompt` array.
+   * @returns {Content[]} The `Content[]` array formatted for the Gemini API.
+   * @throws {ARTError} If translation encounters an issue, such as a `tool_result` missing required fields (ErrorCode.PROMPT_TRANSLATION_FAILED).
+   * @see https://ai.google.dev/api/rest/v1beta/Content
    */
-  private formatMessagesForSDK(prompt: FormattedPrompt): Content[] {
-    const sdkContents: Content[] = [];
-    let messages: ConversationMessage[] = [];
+  private translateToGemini(artPrompt: ArtStandardPrompt): Content[] {
+    const geminiContents: Content[] = [];
 
-    if (typeof prompt === 'string') {
-        messages.push({ role: MessageRole.USER, content: prompt, messageId: '', threadId: '', timestamp: 0 });
-    } else if (Array.isArray(prompt)) {
-        messages = prompt as ConversationMessage[];
-    } else {
-        Logger.warn('GeminiAdapter received complex FormattedPrompt object, attempting to stringify.');
-        messages.push({ role: MessageRole.USER, content: JSON.stringify(prompt), messageId: '', threadId: '', timestamp: 0 });
+    // System prompt handling: Gemini prefers system instructions via specific parameters or
+    // potentially as the first part of the first 'user' message. For simplicity,
+    // we'll merge the system prompt content into the first user message if present.
+    let systemPromptContent: string | null = null;
+
+    for (const message of artPrompt) {
+      let role: 'user' | 'model';
+      const parts: Part[] = [];
+
+      switch (message.role) {
+        case 'system':
+          // Store system prompt content to potentially merge later.
+          if (typeof message.content === 'string') {
+            systemPromptContent = message.content;
+          } else {
+             Logger.warn(`GeminiAdapter: Ignoring non-string system prompt content.`, { content: message.content });
+          }
+          continue; // Don't add a separate 'system' role message
+
+        case 'user': { // Added braces to fix ESLint error
+          role = 'user';
+          let userContent = '';
+          // Prepend system prompt if this is the first user message
+          if (systemPromptContent) {
+            userContent += systemPromptContent + "\n\n";
+            systemPromptContent = null; // Clear after merging
+          }
+          if (typeof message.content === 'string') {
+            userContent += message.content;
+          } else {
+             Logger.warn(`GeminiAdapter: Stringifying non-string user content.`, { content: message.content });
+             userContent += JSON.stringify(message.content);
+          }
+          parts.push({ text: userContent });
+          break;
+        } // Added braces
+
+        case 'assistant':
+          role = 'model';
+          // Handle text content
+          if (typeof message.content === 'string' && message.content.trim() !== '') {
+            parts.push({ text: message.content });
+          }
+          // Handle tool calls (function calls in Gemini)
+          if (message.tool_calls && message.tool_calls.length > 0) {
+            message.tool_calls.forEach(toolCall => {
+              if (toolCall.type === 'function') {
+                parts.push({
+                  functionCall: {
+                    name: toolCall.function.name,
+                    args: JSON.parse(toolCall.function.arguments || '{}'), // Gemini expects parsed args object
+                  }
+                });
+              } else {
+                 Logger.warn(`GeminiAdapter: Skipping unsupported tool call type: ${toolCall.type}`);
+              }
+            });
+          }
+           // If assistant message has neither content nor tool calls, add empty text part? Gemini might require it.
+           if (parts.length === 0) {
+             parts.push({ text: "" }); // Add empty text part if no content or tool calls
+           }
+          break;
+
+        case 'tool_result':
+          role = 'user'; // Gemini expects tool results within a 'user' role message
+          if (!message.tool_call_id || !message.name) {
+             throw new ARTError(
+               `GeminiAdapter: 'tool_result' message missing required 'tool_call_id' or 'name'.`,
+               ErrorCode.PROMPT_TRANSLATION_FAILED
+             );
+          }
+          parts.push({
+            functionResponse: {
+              name: message.name, // Tool name
+              response: {
+                // Gemini expects the result content under a 'content' key within 'response'
+                // The content should be the stringified output/error from ArtStandardMessage.content
+                content: message.content // Assuming content is already stringified result/error
+              }
+            }
+          });
+          break;
+
+        case 'tool_request':
+           // This role is implicitly handled by 'tool_calls' in the preceding 'assistant' message.
+           Logger.debug(`GeminiAdapter: Skipping 'tool_request' role message as it's handled by assistant's tool_calls.`);
+           continue; // Skip this message
+
+        default:
+          Logger.warn(`GeminiAdapter: Skipping message with unhandled role: ${message.role}`);
+          continue;
+      }
+
+      geminiContents.push({ role, parts });
     }
 
-    // Map ART roles to SDK roles ('user' or 'model')
-    for (const message of messages) {
-        let role: 'user' | 'model';
-        if (message.role === MessageRole.USER) {
-            role = 'user';
-        } else if (message.role === MessageRole.AI) { // Map AI to model (ASSISTANT role doesn't exist in enum)
-            role = 'model';
-        } else {
-            Logger.debug(`Skipping message with role ${message.role} for Gemini contents.`);
-            continue; // Skip SYSTEM, TOOL, etc. for basic contents array
-        }
-
-        // SDK expects parts array, currently just using text part
-        const parts: Part[] = [{ text: message.content }];
-        sdkContents.push({ role, parts });
-    }
-
-     // Gemini SDK generally handles history ordering, but basic validation can be useful.
-     // Ensure conversation doesn't start with 'model' if possible (SDK might handle this better)
-     if (sdkContents.length > 0 && sdkContents[0].role === 'model') {
-         Logger.warn("Gemini conversation history starts with 'model' role. Prepending a dummy 'user' turn might be needed if issues arise.", { firstRole: sdkContents[0].role });
-         // Consider prepending: sdkContents.unshift({ role: 'user', parts: [{ text: "(Context)" }] });
+     // Handle case where system prompt was provided but no user message followed
+     if (systemPromptContent) {
+         Logger.warn("GeminiAdapter: System prompt provided but no user message found to merge it into. Adding as a separate initial user message.");
+         geminiContents.unshift({ role: 'user', parts: [{ text: systemPromptContent }] });
      }
 
+    // Gemini specific validation: Ensure conversation doesn't start with 'model'
+    if (geminiContents.length > 0 && geminiContents[0].role === 'model') {
+      Logger.warn("Gemini conversation history starts with 'model' role. Prepending a dummy 'user' turn.", { firstRole: geminiContents[0].role });
+      geminiContents.unshift({ role: 'user', parts: [{ text: "(Initial context)" }] }); // Prepend a generic user turn
+    }
 
-    return sdkContents;
+    return geminiContents;
   }
 }

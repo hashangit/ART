@@ -1,3 +1,4 @@
+import { Logger } from '../../utils/logger'; // Import Logger
 //import { StateManager } from './managers/StateManager';
 //import { ConversationManager } from './managers/ConversationManager';
 // Import other necessary types or interfaces if needed in the future
@@ -21,7 +22,7 @@ export class ContextProvider {
     // ) {}
 
     constructor() {
-        console.log("ContextProvider initialized (v1.0 Placeholder)");
+        Logger.info("ContextProvider initialized (v1.0 Placeholder)"); // Use Logger
     }
 
     /**
@@ -39,7 +40,7 @@ export class ContextProvider {
         // 3. Format the retrieved information.
         // 4. Return the formatted context.
 
-        console.log("ContextProvider.getDynamicContext called (v1.0 Placeholder - returning empty context)");
+        Logger.info("ContextProvider.getDynamicContext called (v1.0 Placeholder - returning empty context)"); // Use Logger
         return Promise.resolve({}); // Return empty object for v1.0
     }
 

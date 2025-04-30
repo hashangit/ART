@@ -1,7 +1,7 @@
 // src/core/agent-factory.test.ts
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { AgentFactory, AgentFactoryConfig, StorageConfig, ReasoningConfig } from './agent-factory';
-import { IAgentCore, IToolExecutor, StorageAdapter, ProviderAdapter } from './interfaces';
+import { IAgentCore, IToolExecutor, StorageAdapter, ProviderAdapter } from './interfaces'; // Restore unused imports to fix mock types
 import { PESAgent } from './agents/pes-agent';
 
 // --- Mock Concrete Implementations ---

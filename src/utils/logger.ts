@@ -47,6 +47,7 @@ export class Logger {
    */
   static debug(message: string, ...args: any[]): void {
     if (Logger.config.level <= LogLevel.DEBUG) {
+      // eslint-disable-next-line no-console
       console.debug(`${Logger.config.prefix || '[ART]'} ${message}`, ...args);
     }
   }
@@ -59,6 +60,7 @@ export class Logger {
    */
   static info(message: string, ...args: any[]): void {
     if (Logger.config.level <= LogLevel.INFO) {
+      // eslint-disable-next-line no-console
       console.info(`${Logger.config.prefix || '[ART]'} ${message}`, ...args);
     }
   }
@@ -71,6 +73,7 @@ export class Logger {
    */
   static warn(message: string, ...args: any[]): void {
     if (Logger.config.level <= LogLevel.WARN) {
+      // eslint-disable-next-line no-console
       console.warn(`${Logger.config.prefix || '[ART]'} ${message}`, ...args);
     }
   }
@@ -83,6 +86,7 @@ export class Logger {
    */
   static error(message: string, ...args: any[]): void {
     if (Logger.config.level <= LogLevel.ERROR) {
+      // eslint-disable-next-line no-console
       console.error(`${Logger.config.prefix || '[ART]'} ${message}`, ...args);
     }
   }

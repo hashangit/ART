@@ -1,189 +1,197 @@
 // src/systems/reasoning/PromptManager.test.ts
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PromptManager } from './PromptManager';
 import {
-  ConversationMessage,
-  MessageRole,
-  ThreadContext,
+  // ArtStandardPrompt, // Removed unused import
+  // ArtStandardMessage, // Removed unused import
+  PromptContext,
   ToolSchema,
   ToolResult,
-  ThreadConfig,
-  AgentState,
 } from '../../types';
+import { ARTError, ErrorCode } from '../../errors';
+import render from 'mustache'; // Import the default export
 
-describe('PromptManager', () => {
+// Mock the mustache default export (render function)
+vi.mock('mustache'); // Just mock the module
+
+describe('PromptManager (Refactored)', () => {
   let promptManager: PromptManager;
-  let mockThreadContext: ThreadContext;
-  let mockHistory: ConversationMessage[];
-  let mockTools: ToolSchema[];
-  let mockToolResults: ToolResult[];
+  let mockContext: PromptContext;
+  let mockBlueprint: string;
 
   beforeEach(() => {
     promptManager = new PromptManager();
-    mockThreadContext = {
-      config: {
-        reasoning: {},
-        enabledTools: ['calculator'],
-        historyLimit: 10,
-        systemPrompt: 'Test System Prompt',
-      } as ThreadConfig, // Cast for simplicity in test
-      state: null as AgentState | null, // Cast for simplicity
+    // Reset mocks before each test
+    vi.resetAllMocks();
+
+    // Basic context for testing
+    mockContext = {
+      query: 'Test query',
+      systemPrompt: 'You are a test AI.',
+      history: [
+        { role: 'user', content: 'Previous user message' },
+        { role: 'assistant', content: 'Previous AI response' },
+      ],
+      availableTools: [
+        { name: 'tool1', description: 'Does something', inputSchema: { type: 'object', properties: { arg1: { type: 'string' } } } } as ToolSchema,
+      ],
+      toolResults: [
+        { callId: 'c1', toolName: 'tool1', status: 'success', output: { result: 'ok' } } as ToolResult,
+      ],
+      customData: 'some value',
     };
-    mockHistory = [
-      {
-        messageId: 'msg1',
-        threadId: 't1',
-        role: MessageRole.USER,
-        content: 'Hello there!',
-        timestamp: Date.now() - 1000,
-      },
-      {
-        messageId: 'msg2',
-        threadId: 't1',
-        role: MessageRole.AI,
-        content: 'Hi! How can I help?',
-        timestamp: Date.now() - 500,
-      },
-    ];
-    mockTools = [
-      {
-        name: 'calculator',
-        description: 'Calculates mathematical expressions.',
-        inputSchema: { type: 'object', properties: { expression: { type: 'string' } } },
-      },
-      {
-        name: 'weather',
-        description: 'Gets the weather forecast.',
-        inputSchema: { type: 'object', properties: { location: { type: 'string' } } },
-      },
-    ];
-    mockToolResults = [
-        {
-            callId: 'call_1',
-            toolName: 'calculator',
-            status: 'success',
-            output: 42,
-            metadata: {}
-        },
-        {
-            callId: 'call_2',
-            toolName: 'weather',
-            status: 'error',
-            error: 'API key invalid',
-            metadata: {}
-        }
-    ];
+
+    // Basic blueprint targeting ArtStandardPrompt JSON structure
+    mockBlueprint = `[
+      { "role": "system", "content": "{{systemPrompt}}" },
+      {{#history}}
+      { "role": "{{role}}", "content": "{{content}}" }{{^last}},{{/last}}
+      {{/history}},
+      { "role": "user", "content": "{{query}} - Custom: {{customData}}" }
+    ]`;
   });
 
-  // --- createPlanningPrompt Tests ---
+  it('should call Mustache.render with the blueprint and context', async () => {
+    const expectedRenderedJson = `[
+      { "role": "system", "content": "You are a test AI." },
+      { "role": "user", "content": "Previous user message" },
+      { "role": "assistant", "content": "Previous AI response" },
+      { "role": "user", "content": "Test query - Custom: some value" }
+    ]`;
+    (render as any).mockReturnValue(expectedRenderedJson); // Use default import, cast to any for now to bypass TS check
 
-  it('should create a basic planning prompt with default system prompt', async () => {
-    const query = 'What is 2+2?';
-    const prompt = await promptManager.createPlanningPrompt(
-      query,
-      [], // No history
-      undefined, // Use default system prompt
-      [], // No tools
-      mockThreadContext,
-    );
+    await promptManager.assemblePrompt(mockBlueprint, mockContext);
 
-    expect(prompt).toContain('System Prompt:\nYou are a helpful AI assistant.');
-    expect(prompt).toContain('Conversation History:\nNo history yet.');
-    expect(prompt).toContain(`User Query:\n${query}`);
-    expect(prompt).toContain('Available Tools:\nNo tools available.');
-    expect(prompt).toContain('Intent:');
-    expect(prompt).toContain('Plan:');
-    expect(prompt).toContain('Tool Calls:');
+    expect(render).toHaveBeenCalledTimes(1); // Use imported render
+    expect(render).toHaveBeenCalledWith(mockBlueprint, mockContext); // Use imported render
   });
 
-  it('should create a planning prompt with history and tools', async () => {
-    const query = 'Calculate 5*8 and tell me the weather in London.';
-    const prompt = await promptManager.createPlanningPrompt(
-      query,
-      mockHistory,
-      'Custom Planning Prompt', // Custom system prompt
-      mockTools,
-      mockThreadContext,
-    );
+  it('should parse the rendered JSON string into ArtStandardPrompt', async () => {
+    const renderedJson = `[{"role": "system", "content": "Test"}, {"role": "user", "content": "Hello"}]`;
+    (render as any).mockReturnValue(renderedJson); // Use default import
 
-    expect(prompt).toContain('System Prompt:\nCustom Planning Prompt');
-    expect(prompt).toContain('Conversation History:\nUser: Hello there!\nAI: Hi! How can I help?');
-    expect(prompt).toContain(`User Query:\n${query}`);
-    expect(prompt).toContain('Available Tools:');
-    expect(prompt).toContain('- calculator: Calculates mathematical expressions.');
-    expect(prompt).toContain('"expression": { "type": "string" }');
-    expect(prompt).toContain('- weather: Gets the weather forecast.');
-    expect(prompt).toContain('"location": { "type": "string" }');
+    const result = await promptManager.assemblePrompt(mockBlueprint, mockContext);
+
+    expect(result).toEqual([
+      { role: 'system', content: 'Test' },
+      { role: 'user', content: 'Hello' },
+    ]);
+    expect(Array.isArray(result)).toBe(true);
   });
 
-  // --- createSynthesisPrompt Tests ---
+   it('should correctly assemble a prompt with history and tools context', async () => {
+    const blueprintWithTools = `[
+      { "role": "system", "content": "{{systemPrompt}}" },
+      {{#history}}
+      { "role": "{{role}}", "content": "{{content}}" }{{^last}},{{/last}}
+      {{/history}},
+      { "role": "user", "content": "Query: {{query}}\\nTools: {{#availableTools}}{{name}} {{/availableTools}}" }
+    ]`;
+    const expectedRenderedJson = `[
+      { "role": "system", "content": "You are a test AI." },
+      { "role": "user", "content": "Previous user message" },
+      { "role": "assistant", "content": "Previous AI response" },
+      { "role": "user", "content": "Query: Test query\\nTools: tool1 " }
+    ]`;
+    (render as any).mockReturnValue(expectedRenderedJson); // Use default import
 
-  it('should create a basic synthesis prompt with default system prompt and no tool results', async () => {
-    const query = 'Tell me a joke.';
-    const intent = 'Tell a joke';
-    const plan = '1. Generate a joke.\n2. Return the joke.';
-    const prompt = await promptManager.createSynthesisPrompt(
-      query,
-      intent,
-      plan,
-      [], // No tool results
-      mockHistory,
-      undefined, // Default system prompt
-      mockThreadContext,
-    );
+    const result = await promptManager.assemblePrompt(blueprintWithTools, mockContext);
 
-    expect(prompt).toContain('System Prompt:\nYou are a helpful AI assistant.');
-    expect(prompt).toContain('Conversation History:\nUser: Hello there!\nAI: Hi! How can I help?');
-    expect(prompt).toContain(`User Query:\n${query}`);
-    expect(prompt).toContain(`Original Intent:\n${intent}`);
-    expect(prompt).toContain(`Execution Plan:\n${plan}`);
-    expect(prompt).toContain('Tool Execution Results:\nNo tools were executed.');
-    expect(prompt).toContain('synthesize a final response');
+    expect(render).toHaveBeenCalledWith(blueprintWithTools, mockContext); // Use imported render
+    expect(result).toEqual([
+      { role: 'system', content: 'You are a test AI.' },
+      { role: 'user', content: 'Previous user message' },
+      { role: 'assistant', content: 'Previous AI response' },
+      { role: 'user', content: 'Query: Test query\nTools: tool1 ' },
+    ]);
   });
 
-  it('should create a synthesis prompt with tool results (success and error)', async () => {
-    const query = 'What is 10 + 32 and the weather in Paris?';
-    const intent = 'Calculate sum and get weather';
-    const plan = '1. Use calculator for 10+32.\n2. Use weather tool for Paris.\n3. Combine results.';
-    const prompt = await promptManager.createSynthesisPrompt(
-      query,
-      intent,
-      plan,
-      mockToolResults,
-      mockHistory,
-      'Custom Synthesis Prompt', // Custom system prompt
-      mockThreadContext,
-    );
+   it('should correctly assemble a prompt with tool results context', async () => {
+    const blueprintWithResults = `[
+      { "role": "system", "content": "{{systemPrompt}}" },
+      { "role": "user", "content": "{{query}}" },
+      { "role": "assistant", "content": "Okay, using tools..." },
+      {{#toolResults}}
+      { "role": "tool_result", "tool_call_id": "{{callId}}", "name": "{{toolName}}", "content": "{{outputJson}}" }{{^last}},{{/last}}
+      {{/toolResults}}
+    ]`;
+    // Simulate context having pre-stringified output
+    const contextWithStrResults = {
+        ...mockContext,
+        toolResults: mockContext.toolResults?.map(r => ({...r, outputJson: JSON.stringify(r.output)}))
+    };
+    const expectedRenderedJson = `[
+      { "role": "system", "content": "You are a test AI." },
+      { "role": "user", "content": "Test query" },
+      { "role": "assistant", "content": "Okay, using tools..." },
+      { "role": "tool_result", "tool_call_id": "c1", "name": "tool1", "content": "{\\"result\\":\\"ok\\"}" }
+    ]`;
+    (render as any).mockReturnValue(expectedRenderedJson); // Use default import
 
-    expect(prompt).toContain('System Prompt:\nCustom Synthesis Prompt');
-    expect(prompt).toContain(`User Query:\n${query}`);
-    expect(prompt).toContain(`Original Intent:\n${intent}`);
-    expect(prompt).toContain(`Execution Plan:\n${plan}`);
-    expect(prompt).toContain('Tool Execution Results:');
-    expect(prompt).toContain('- Tool: calculator (Call ID: call_1)');
-    expect(prompt).toContain('Status: success');
-    expect(prompt).toContain('Output: 42');
-    expect(prompt).toContain('- Tool: weather (Call ID: call_2)');
-    expect(prompt).toContain('Status: error');
-    expect(prompt).toContain('Error: API key invalid');
-    expect(prompt).toContain('synthesize a final response');
+    const result = await promptManager.assemblePrompt(blueprintWithResults, contextWithStrResults);
+
+    expect(render).toHaveBeenCalledWith(blueprintWithResults, contextWithStrResults); // Use imported render
+    expect(result).toEqual([
+      { role: 'system', content: 'You are a test AI.' },
+      { role: 'user', content: 'Test query' },
+      { role: 'assistant', content: 'Okay, using tools...' },
+      { role: 'tool_result', tool_call_id: 'c1', name: 'tool1', content: '{"result":"ok"}' },
+    ]);
   });
 
-   it('should handle undefined intent and plan in synthesis prompt', async () => {
-    const query = 'Hi again';
-    const prompt = await promptManager.createSynthesisPrompt(
-      query,
-      undefined, // No specific intent parsed
-      undefined, // No specific plan parsed
-      [],
-      mockHistory,
-      undefined,
-      mockThreadContext,
-    );
 
-    expect(prompt).toContain(`User Query:\n${query}`);
-    expect(prompt).toContain('Original Intent:\nundefined'); // Check how undefined is handled
-    expect(prompt).toContain('Execution Plan:\nundefined'); // Check how undefined is handled
-    expect(prompt).toContain('Tool Execution Results:\nNo tools were executed.');
+  it('should throw ARTError with PROMPT_ASSEMBLY_FAILED code if render fails', async () => {
+    const renderError = new Error('Mustache rendering failed');
+    (render as any).mockImplementation(() => { // Use default import
+      throw renderError;
+    });
+
+    await expect(promptManager.assemblePrompt(mockBlueprint, mockContext))
+      .rejects.toThrow(ARTError);
+
+    try {
+      await promptManager.assemblePrompt(mockBlueprint, mockContext);
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(ARTError);
+      expect(e.code).toBe(ErrorCode.PROMPT_ASSEMBLY_FAILED);
+      expect(e.message).toContain('Failed to render prompt blueprint');
+      expect(e.originalError).toBe(renderError);
+    }
   });
+
+  it('should throw ARTError with PROMPT_ASSEMBLY_FAILED code if JSON.parse fails', async () => {
+    const invalidJson = `[{"role": "system", "content": "Test"}, {"role": "user"`; // Missing closing bracket
+    (render as any).mockReturnValue(invalidJson); // Use default import
+
+    await expect(promptManager.assemblePrompt(mockBlueprint, mockContext))
+      .rejects.toThrow(ARTError);
+
+    try {
+      await promptManager.assemblePrompt(mockBlueprint, mockContext);
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(ARTError);
+      expect(e.code).toBe(ErrorCode.PROMPT_ASSEMBLY_FAILED);
+      expect(e.message).toContain('Failed to parse rendered blueprint');
+      expect(e.originalError).toBeInstanceOf(Error); // JSON.parse throws SyntaxError
+    }
+  });
+
+  it('should throw ARTError if rendered JSON is not an array', async () => {
+    const notAnArrayJson = `{"role": "system", "content": "Test"}`;
+    (render as any).mockReturnValue(notAnArrayJson); // Use default import
+
+    await expect(promptManager.assemblePrompt(mockBlueprint, mockContext))
+      .rejects.toThrow(ARTError);
+
+     try {
+      await promptManager.assemblePrompt(mockBlueprint, mockContext);
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(ARTError);
+      expect(e.code).toBe(ErrorCode.PROMPT_ASSEMBLY_FAILED);
+      expect(e.message).toContain('Rendered template did not produce a valid JSON array');
+      expect(e.originalError).toBeInstanceOf(Error);
+    }
+  });
+
+  // TODO: Add tests for more complex blueprints and context variations if needed
 });

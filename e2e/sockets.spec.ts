@@ -1,4 +1,4 @@
-import { test, expect, APIRequestContext } from '@playwright/test';
+import { test, expect /*, APIRequestContext */ } from '@playwright/test'; // Removed unused APIRequestContext
 import WebSocket from 'ws';
 import { Observation, ConversationMessage, ObservationType, MessageRole } from 'art-framework';
 
@@ -73,7 +73,7 @@ class TestWebSocketClient {
         };
          // Wrap for removal
         const findSubscriptionConfirmationWrapper = (data: Buffer) => {
-            try { findSubscriptionConfirmation(JSON.parse(data.toString())); } catch {}
+            try { findSubscriptionConfirmation(JSON.parse(data.toString())); } catch { /* Ignore parsing errors */ }
         };
         this.ws?.on('message', findSubscriptionConfirmationWrapper);
     });
@@ -97,7 +97,7 @@ class TestWebSocketClient {
             }
         };
         const findUnsubConfirmationWrapper = (data: Buffer) => {
-             try { findUnsubConfirmation(JSON.parse(data.toString())); } catch {}
+             try { findUnsubConfirmation(JSON.parse(data.toString())); } catch { /* Ignore parsing errors */ }
         };
         this.ws?.on('message', findUnsubConfirmationWrapper);
      });

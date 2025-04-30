@@ -3,7 +3,8 @@ import { describe, it, expect, beforeEach, vi, Mock } from 'vitest'; // Import M
 import { ReasoningEngine } from './ReasoningEngine';
 import { ProviderAdapter } from '../../core/interfaces';
 import { Logger } from '../../utils/logger';
-import { FormattedPrompt, CallOptions } from '../../types';
+// Import the new prompt type (MessageRole is no longer needed here)
+import { ArtStandardPrompt, CallOptions } from '../../types';
 
 // Mock Logger
 vi.mock('../../utils/logger', () => ({
@@ -25,7 +26,8 @@ const mockAdapter: ProviderAdapter = {
 describe('ReasoningEngine', () => {
   let engine: ReasoningEngine;
   const defaultCallOptions: CallOptions = { threadId: 't1' };
-  const defaultPrompt: FormattedPrompt = 'Test prompt';
+  // Define defaultPrompt using ArtStandardPrompt with string literal roles
+  const defaultPrompt: ArtStandardPrompt = [{ role: 'user', content: 'Test prompt' }];
 
   beforeEach(() => {
     // Reset mocks before each test
@@ -59,7 +61,11 @@ describe('ReasoningEngine', () => {
   });
 
   it('should pass prompt and options correctly to the adapter', async () => {
-    const specificPrompt: FormattedPrompt = { complex: 'prompt' };
+    // Define specificPrompt using ArtStandardPrompt with string literal roles
+    const specificPrompt: ArtStandardPrompt = [
+        { role: 'system', content: 'System instruction' },
+        { role: 'user', content: 'Specific user query' }
+    ];
     const specificOptions: CallOptions = { threadId: 't2', traceId: 'trace-123', temperature: 0.7 };
     (mockAdapter.call as Mock).mockResolvedValueOnce('Success'); // Use Mock type directly
 
@@ -77,7 +83,8 @@ describe('ReasoningEngine', () => {
     expect(mockAdapter.call).toHaveBeenCalledOnce();
     expect(Logger.error).toHaveBeenCalledOnce();
     expect(Logger.error).toHaveBeenCalledWith(
-      'ReasoningEngine encountered an error during adapter call: Adapter failed',
+      // Update expected message to include "setup"
+      'ReasoningEngine encountered an error during adapter call setup: Adapter failed',
       expect.objectContaining({ error: adapterError })
     );
   });
