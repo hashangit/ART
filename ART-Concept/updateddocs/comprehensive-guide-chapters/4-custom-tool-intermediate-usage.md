@@ -3,6 +3,22 @@
 Now, let's extend our chatbot by adding a custom tool that provides current information like date, time, and approximate location/locale.
 
 **Goal:** Create a `CurrentInfoTool` and integrate it into the ART configuration.
+**Simplified Explanation for Developers:**
+
+Imagine ART is like a highly capable smart assistant you've hired for your application. This assistant comes with some built-in abilities (like a calculator), but its real power is that you can easily teach it *new* skills that you create yourself.
+
+1.  **Creating Your Custom Skill (Your Tool):** You, as the developer, define the new skill you want the assistant to have. This involves writing the code for that skill (your custom tool) and describing what it does and what information it needs to work. ART provides a standard way to define these skills (an "interface" called `IToolExecutor`). You just need to make sure your skill follows this standard format so the ART assistant can understand it.
+2.  **Giving the Skill to the Assistant:** When you set up the ART assistant for your application (using the `createArtInstance` function from the ART package), you provide it with a configuration. This configuration is like giving the assistant its instructions and resources. Crucially, this configuration includes a list of *all* the skills you want the assistant to have. You add your newly created custom skill to this list, along with any of ART's built-in skills you want to use.
+3.  **The Assistant Learns Your Skill:** When `createArtInstance` runs, the ART framework reads your configuration. It sees the list of skills you provided and adds them to its internal "skill library" (the `ToolRegistry`).
+
+So, to integrate your custom tool without modifying the ART framework's source code:
+
+*   You create your custom tool's code in a file within your application's project structure (like a `tools` folder).
+*   Inside that file, you define a class for your tool and make sure it follows the rules defined by ART's `IToolExecutor` interface.
+*   In the part of your application where you set up ART (where you call `createArtInstance`), you import the custom tool class you just created.
+*   When you call `createArtInstance`, you pass a configuration object. Within this object, there's a `tools` array. You create a new instance of your custom tool class (`new YourCustomTool()`) and include it in this array.
+
+By doing this, you're effectively handing your custom skill to the ART assistant during its setup. ART then knows about your tool and how to use it when needed, all without you having to touch the core ART framework code itself.
 
 **4.1. Necessary Imports & Explanations**
 
@@ -169,5 +185,5 @@ import { CurrentInfoTool } from './tools/CurrentInfoTool'; // Adjust path if nee
 **How it Works Now:**
 
 *   **Node 1 (Developer Interface):** You've defined the `CurrentInfoTool` and told ART about it by adding `new CurrentInfoTool()` to the `tools` array in the configuration.
-*   **Node 2 (Core Orchestration):** When the user asks something like "What time is it?" or "Where am I?", the `PESAgent` asks the LLM to plan. The LLM, seeing `get_current_info` in its list of available tools (because you registered it), should plan to call it. The `OutputParser` extracts this call. The `ToolSystem` finds your `CurrentInfoTool` in the `ToolRegistry` and calls its `execute` method. The results (date, time, location status, locale) are passed back. The `PESAgent` then uses the `PromptManager` to create the synthesis prompt including this information, asking the LLM to formulate the final answer.
-*   **Node 3 (External Connections):** The `CurrentInfoTool` interacts with browser APIs (`Date`, `navigator.geolocation`, `navigator.language`). If geolocation permission is granted, it interacts with the device's location services.
+*   **Node 2 (Core Orchestration):** When the user asks something like "What time is it?" or "Where am I?", the `PESAgent` gathers the necessary `PromptContext` (including the user query, history, and available tools like `get_current_info`). It then uses the `PromptManager` with its planning blueprint and this context to create a standardized `ArtStandardPrompt`. This prompt is sent to the LLM via the `ReasoningEngine` (which handles streaming). The `OutputParser` then parses the LLM's response (from the stream) to identify the user's intent and any planned tool calls. If the LLM plans to use `get_current_info`, the `ToolSystem` finds your `CurrentInfoTool` in the `ToolRegistry` and calls its `execute` method. The results (date, time, location status, locale) are passed back to the `PESAgent`. The agent then gathers a new `PromptContext` (including the original query, plan, and tool results) and uses the `PromptManager` with its synthesis blueprint to create another `ArtStandardPrompt`. This is sent to the LLM via the `ReasoningEngine` (again, handling streaming), and the `OutputParser` extracts the final response from the stream.
+*   **Node 3 (External Connections):** The `CurrentInfoTool` interacts with browser APIs (`Date`, `navigator.geolocation`, `navigator.language`). If geolocation permission is granted, it interacts with the device's location services. The `ProviderAdapter` used by the `ReasoningEngine` handles communication with the external LLM API, including processing streaming responses.

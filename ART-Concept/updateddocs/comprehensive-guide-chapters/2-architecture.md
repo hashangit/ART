@@ -16,10 +16,10 @@ flowchart LR
 
 *   **Node 2: ART Core Orchestration (The Framework's Brain)**
     *   **What it is:** This is the internal engine of ART, set up based on your configuration in Node 1. It manages the entire process of understanding a request, using tools, and generating a response.
-    *   **What it does:** Follows the chosen agent pattern (like "Plan-Execute-Synthesize"), manages conversation history, keeps track of the agent's state, prepares instructions (prompts) for the AI model, understands the AI's responses, coordinates tool usage, and logs important events happening inside.
-    *   **Key ART parts involved:** The specific Agent Core implementation (`PESAgent`, `ReActAgent`), Managers (`StateManager`, `ConversationManager`, `ObservationManager`), Systems (`ToolSystem`, `UISystem`), Reasoning Components (`ReasoningEngine`, `PromptManager`, `OutputParser`). You usually don't interact with these directly after setup unless you're doing advanced customization.
+    *   **What it does:** Follows the chosen agent pattern (like "Plan-Execute-Synthesize" or "ReAct"), manages conversation history, keeps track of the agent's state, prepares instructions (prompts) for the AI model using blueprints and context, understands the AI's responses (including streaming tokens), coordinates tool usage, logs important events (observations), and broadcasts real-time updates to the UI.
+    *   **Key ART parts involved:** The specific Agent Core implementation (`PESAgent`, `ReActAgent`), Managers (`StateManager`, `ConversationManager`, `ObservationManager`), Systems (`ToolSystem`, `UISystem`), Reasoning Components (`ReasoningEngine`, `PromptManager`, `OutputParser`). You usually don't interact with these directly after setup unless you're doing advanced customization or consuming UI sockets.
 
-*   **Node 3: External Connections (LLMs, Tools, Storage)**
-    *   **What it is:** This layer handles ART's communication with the outside world – the specific services and capabilities you plugged in via Node 1's configuration.
-    *   **What it does:** Makes the actual calls to the AI model's API (like OpenAI), runs the code for any tools the agent decides to use (which might involve calling other web services or using browser features), and saves/loads data from the chosen storage (like the browser's IndexedDB).
-    *   **Key ART parts involved:** Adapters (`ProviderAdapter` for LLMs, `StorageAdapter` for memory/storage), Tool Implementations (`IToolExecutor`).
+*   **Node 3: External Dependencies & Interactions (The Outside World)**
+    *   **What it is:** This node represents where the ART engine connects to resources outside its core orchestration logic. These are the pluggable pieces configured in Node 1.
+    *   **What it does:** Makes the actual calls to the LLM provider APIs (handling both traditional request/response and streaming), executes tool logic (which might involve calling other web services or using browser features), and persists/retrieves data from the chosen storage mechanism.
+    *   **Key Elements (Interfaces & Implementations):** Adapters (`ProviderAdapter` for LLMs, `StorageAdapter` for memory/storage), Tool Implementations (`IToolExecutor`).

@@ -32,6 +32,7 @@ import {
   OutputParser, // You'll likely need custom parsing logic for ReAct
   ObservationManager,
   ToolSystem,
+  UISystem, // Include UISystem for streaming
   // (Already imported) Needed types like ToolSchema, ParsedToolCall, ToolResult etc.
 } from 'art-framework';
 ```
@@ -41,20 +42,21 @@ import {
 *   **`IAgentCore`**
     The main blueprint for creating a new "thinking style" or reasoning process for the agent. If you want the agent to think differently than the default "Plan -> Use Tools -> Answer" style, you implement this.
     *   **Developer Notes:** The core interface for custom agent logic. Your class must implement `IAgentCore`. Key requirements:
-        *   Implement `async process(props: AgentProps): Promise<AgentFinalResponse>`: This method *is* your agent's brain. It receives the `AgentProps` (query, threadId, etc.) and must orchestrate all steps (loading data, calling LLMs, calling tools, saving data) according to your custom logic (e.g., a ReAct loop, or something else entirely) and return the final response.
-        *   Define a `constructor` that accepts a single argument: an object containing instances of the necessary ART subsystems (dependencies) defined by the interfaces below (e.g., `constructor(private deps: { stateManager: StateManager, reasoningEngine: ReasoningEngine, ... })`). The `AgentFactory` will automatically provide (inject) these dependencies when it instantiates your custom agent core based on the `config.agentCore` setting.
+        *   Implement `async process(props: AgentProps): Promise<AgentFinalResponse>`: This method *is* your agent's brain. It receives the `AgentProps` (query, threadId, etc.) and must orchestrate all steps (loading data, calling LLMs, calling tools, saving data, handling streaming responses) according to your custom logic (e.g., a ReAct loop, or something else entirely) and return the final response.
+        *   Define a `constructor` that accepts a single argument: an object containing instances of the necessary ART subsystems (dependencies) defined by the interfaces below (e.g., `constructor(private deps: { stateManager: StateManager, reasoningEngine: ReasoningEngine, uiSystem: UISystem, ... })`). The `AgentFactory` will automatically provide (inject) these dependencies when it instantiates your custom agent core based on the `config.agentCore` setting.
 
-*   **Dependency Interfaces (`StateManager`, `ConversationManager`, `ToolRegistry`, `PromptManager`, `ReasoningEngine`, `OutputParser`, `ObservationManager`, `ToolSystem`)**
-    These are the built-in helpers and managers that ART gives to your custom agent brain so it doesn't have to reinvent everything (like how to talk to the LLM, use tools, remember history, or log events). Your custom `process` method will use these helpers.
+*   **Dependency Interfaces (`StateManager`, `ConversationManager`, `ToolRegistry`, `PromptManager`, `ReasoningEngine`, `OutputParser`, `ObservationManager`, `ToolSystem`, `UISystem`)**
+    These are the built-in helpers and managers that ART gives to your custom agent brain so it doesn't have to reinvent everything (like how to talk to the LLM, use tools, remember history, log events, or broadcast UI updates). Your custom `process` method will use these helpers.
     *   **Developer Notes:** These interfaces define the contracts for the core ART subsystems injected into your `IAgentCore` constructor. You'll use their methods within your `process` implementation:
         *   `StateManager`: Use `.loadThreadContext(threadId)` to get `ThreadConfig` and `AgentState`. Use `.saveStateIfModified(threadId)` to persist state changes. Use `.isToolEnabled(threadId, toolName)` for checks.
         *   `ConversationManager`: Use `.getMessages(threadId, options)` to retrieve history. Use `.addMessages(threadId, messages)` to save new user/assistant messages.
         *   `ToolRegistry`: Use `.getAvailableTools({ enabledForThreadId })` to get `ToolSchema[]` for prompting the LLM. Use `.getToolExecutor(toolName)` if needed (though `ToolSystem` is usually preferred).
-        *   `PromptManager`: Use `.createPlanningPrompt(...)`, `.createSynthesisPrompt(...)` (for PES-like flows) or potentially define/use custom methods if your agent needs different prompt structures (like ReAct).
-        *   `ReasoningEngine`: Use `.call(prompt, options)` to send a formatted prompt to the configured LLM (via the underlying `ProviderAdapter`) and get the raw response string.
-        *   `OutputParser`: Use `.parsePlanningOutput(...)`, `.parseSynthesisOutput(...)` (for PES-like flows) or potentially define/use custom methods to extract structured data (like thoughts, actions, final answers) from the LLM's raw response string.
-        *   `ObservationManager`: Use `.record(observationData)` frequently within your `process` logic to log key steps (start/end, LLM calls, tool calls, custom steps like 'thought' or 'action') for debugging and UI feedback via sockets.
+        *   `PromptManager`: Now a stateless assembler. Use `.assemblePrompt(blueprint, context)` with your custom blueprints and gathered `PromptContext` to create `ArtStandardPrompt` objects.
+        *   `ReasoningEngine`: Use `.call(prompt, options)` to send an `ArtStandardPrompt` to the configured LLM (via the underlying `ProviderAdapter`). This method now returns a `Promise<AsyncIterable<StreamEvent>>`, which your agent must consume to process streaming responses.
+        *   `OutputParser`: Use `.parsePlanningOutput(...)`, `.parseSynthesisOutput(...)` (for PES-like flows) or potentially define/use custom methods to extract structured data (like thoughts, actions, final answers) from the LLM's raw response content (assembled from the stream).
+        *   `ObservationManager`: Use `.record(observationData)` frequently within your `process` logic to log key steps (start/end, LLM calls, tool calls, custom steps like 'thought' or 'action', and new `LLM_STREAM_...` events) for debugging and UI feedback via sockets.
         *   `ToolSystem`: Use `.executeTools(parsedToolCalls, threadId, traceId)` to run one or more tools identified by your agent's logic. It handles retrieving the executor, validating input against the schema, calling `execute`, and returning `ToolResult[]`.
+        *   `UISystem`: Use `.getLLMStreamSocket()` to access the socket for broadcasting real-time `StreamEvent`s to the UI.
 
 **7.2. Implementing the `ReActAgent` (Skeleton)**
 
@@ -158,6 +160,7 @@ export class ReActAgent implements IAgentCore {
     const reactSteps: { thought: string; action?: string; actionInput?: any; observation: string }[] = [];
     let step = 0;
     const maxSteps = 7; // Limit loops
+    let aggregatedMetadata: any = {}; // To aggregate metadata across LLM calls
 
     while (step < maxSteps) {
       step++;
@@ -166,13 +169,47 @@ export class ReActAgent implements IAgentCore {
       // 2. Create ReAct Prompt using custom logic
       const currentPrompt = this.createReActPrompt(query, initialHistory, tools, reactSteps);
 
-      // 3. Call LLM
+      // 3. Call LLM and process stream
       await this.deps.observationManager.record({ type: ObservationType.LLM_REQUEST, threadId, traceId, content: { phase: `react_step_${step}` } });
-      const llmResponse = await this.deps.reasoningEngine.call(currentPrompt, { threadId, traceId });
-      await this.deps.observationManager.record({ type: ObservationType.LLM_RESPONSE, threadId, traceId, content: { phase: `react_step_${step}`, response: llmResponse } });
+      const stream = await this.deps.reasoningEngine.call(currentPrompt, { threadId, traceId, stream: true, callContext: 'AGENT_THOUGHT' }); // Request stream, provide context
 
-      // 4. Parse ReAct Output using custom logic
-      const parsedOutput = this.parseReActOutput(llmResponse);
+      let llmResponseBuffer = '';
+      for await (const event of stream) {
+        switch (event.type) {
+          case 'TOKEN':
+            // Push token to UI socket (assuming UI system is available and connected)
+            // this.deps.uiSystem.getLLMStreamSocket().notify(event);
+            llmResponseBuffer += event.data; // Buffer for parsing later
+            break;
+          case 'METADATA':
+            // Push metadata to UI socket
+            // this.deps.uiSystem.getLLMStreamSocket().notify(event);
+            // Record as observation
+            await this.deps.observationManager.record({ type: ObservationType.LLM_STREAM_METADATA, content: event.data, threadId: event.threadId, traceId: event.traceId, sessionId: event.sessionId });
+            // Aggregate metadata (simple merge, needs more robust logic for real aggregation)
+            aggregatedMetadata = { ...aggregatedMetadata, ...event.data };
+            break;
+          case 'ERROR':
+            // Push error to UI socket
+            // this.deps.uiSystem.getLLMStreamSocket().notify(event);
+            // Record as observation
+            await this.deps.observationManager.record({ type: ObservationType.LLM_STREAM_ERROR, content: event.data, threadId: event.threadId, traceId: event.traceId, sessionId: event.sessionId });
+            console.error(`ReAct Agent LLM Stream Error:`, event.data);
+            // Decide how to handle error (e.g., break loop, return error response)
+            throw new Error(`LLM Stream Error during ReAct step ${step}: ${event.data.message || event.data}`);
+          case 'END':
+            // Push end signal to UI socket
+            // this.deps.uiSystem.getLLMStreamSocket().notify(event);
+            // Record as observation
+            await this.deps.observationManager.record({ type: ObservationType.LLM_STREAM_END, threadId: event.threadId, traceId: event.traceId, sessionId: event.sessionId });
+            break;
+        }
+      }
+      await this.deps.observationManager.record({ type: ObservationType.LLM_RESPONSE, threadId, traceId, content: { phase: `react_step_${step}`, response: llmResponseBuffer, metadata: aggregatedMetadata } });
+
+
+      // 4. Parse ReAct Output using custom logic (using the buffered response)
+      const parsedOutput = this.parseReActOutput(llmResponseBuffer);
       await this.deps.observationManager.record({ type: 'thought' as ObservationType, threadId, traceId, content: parsedOutput.thought });
 
       // 5. Check for Final Answer
@@ -181,7 +218,7 @@ export class ReActAgent implements IAgentCore {
         // TODO: Save history (user query + final answer)
         // await this.deps.conversationManager.addMessages(...)
         await this.deps.stateManager.saveStateIfModified(threadId);
-        return { responseId: `react-final-${Date.now()}`, responseText: parsedOutput.finalAnswer, traceId };
+        return { responseId: `react-final-${Date.now()}`, responseText: parsedOutput.finalAnswer, traceId, metadata: { llmMetadata: aggregatedMetadata } };
       }
 
       // 6. Execute Action (if any)
@@ -215,7 +252,7 @@ export class ReActAgent implements IAgentCore {
     await this.deps.observationManager.record({ type: ObservationType.PROCESS_END, threadId, traceId, content: { status: 'max_steps_reached' } });
     // TODO: Save history
     await this.deps.stateManager.saveStateIfModified(threadId);
-    return { responseId: `react-maxstep-${Date.now()}`, responseText: finalResponseText, traceId };
+    return { responseId: `react-maxstep-${Date.now()}`, responseText: finalResponseText, traceId, metadata: { llmMetadata: aggregatedMetadata } };
   }
 }
 ```

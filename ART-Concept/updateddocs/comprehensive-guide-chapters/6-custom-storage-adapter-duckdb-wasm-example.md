@@ -3,6 +3,73 @@
 Let's explore using DuckDB WASM as a storage backend. DuckDB is an in-process analytical data management system, and its WASM version allows running it directly in the browser. This could enable more powerful local data storage and querying, including potential vector similarity search for RAG-like capabilities, compared to basic `localStorage` or `IndexedDB`.
 
 **Goal:** Implement a skeleton `DuckDBWasmAdapter` demonstrating basic CRUD and conceptual vector storage/search.
+**Simplified Explanation for Developers:**
+
+Imagine ART, our smart assistant, needs a place to keep its notes and memories (like conversation history or agent state). By default, it might use a simple notebook (IndexedDB) or just remember things short-term (in-memory). But you want it to use a more robust, cloud-based filing cabinet (like Supabase) for long-term storage, while still using a quick notepad (in-memory) for temporary notes to speed things up.
+
+1.  **Creating Your Filing Cabinet Connector (Your Custom Supabase Adapter):** You need to build a special connector that knows how to talk to your Supabase filing cabinet. This connector is your custom **Storage Adapter**. You'll write code that implements ART's standard `StorageAdapter` blueprint. This blueprint requires your connector to have methods for basic filing operations:
+    *   `get`: How to find a specific note in the filing cabinet.
+    *   `set`: How to save or update a note in the filing cabinet.
+    *   `delete`: How to throw away a note.
+    *   `query`: How to find multiple notes based on certain criteria.
+    *   `init` (optional): How to set up the connection to the filing cabinet when ART starts.
+    *   `clearCollection` / `clearAll` (optional): How to empty specific drawers or the whole cabinet.
+
+    Your code for the Supabase adapter will use the Supabase client library to perform these operations against your Supabase database.
+
+2.  **Setting Up the Quick Notepad (Using InMemoryStorageAdapter):** ART already comes with a simple in-memory notepad (`InMemoryStorageAdapter`). This adapter is very fast because it just keeps notes in the assistant's short-term memory, but the notes are lost when the assistant is turned off (the browser tab is closed).
+
+3.  **Connecting the Notepad and the Filing Cabinet (Creating a Caching Adapter):** This is where you get clever. You can create *another* custom adapter, let's call it `CachingStorageAdapter`. This adapter won't talk directly to a storage system itself. Instead, it will *use* both the `InMemoryStorageAdapter` (the notepad) and your `SupabaseAdapter` (the filing cabinet connector).
+    *   When ART asks the `CachingStorageAdapter` to `get` a note, it first checks the notepad (`InMemoryStorageAdapter`). If the note is there, it returns it quickly.
+    *   If the note is *not* in the notepad, the `CachingStorageAdapter` then asks the filing cabinet connector (`SupabaseAdapter`) to `get` it from Supabase. If found, it returns the note *and* saves a copy in the notepad for next time.
+    *   When ART asks the `CachingStorageAdapter` to `set` or `delete` a note, it performs the operation on *both* the notepad (`InMemoryStorageAdapter`) and the filing cabinet connector (`SupabaseAdapter`) to keep them in sync.
+    *   The `query` method might be more complex, potentially querying Supabase and then populating the cache.
+
+4.  **Giving the Combined Setup to the Assistant:** When you set up the ART assistant using `createArtInstance`, you provide your `CachingStorageAdapter` as the main `storage` component in the configuration. Your `CachingStorageAdapter` instance will be created with instances of the `InMemoryStorageAdapter` and your `SupabaseAdapter` inside it.
+
+So, to use Supabase with in-memory caching:
+
+*   You create a custom `SupabaseAdapter` class that implements ART's `StorageAdapter` interface and talks to your Supabase database.
+*   You create a `CachingStorageAdapter` class that also implements `StorageAdapter`. Its constructor takes instances of a primary storage adapter (your `SupabaseAdapter`) and a cache adapter (`InMemoryStorageAdapter`). Its methods implement the caching logic (read from cache, fallback to primary, write to both).
+*   In your application's setup code, you create instances: `const supabaseAdapter = new SupabaseAdapter(...)`, `const inMemoryAdapter = new InMemoryStorageAdapter()`, `const cachingAdapter = new CachingStorageAdapter(supabaseAdapter, inMemoryAdapter)`.
+*   You pass the `cachingAdapter` instance in the `storage` part of the configuration when calling `createArtInstance`.
+
+You don't need to change any of ART's core files. You build custom components that adhere to ART's standard interfaces and wire them together during your application's initialization.
+
+**How to Create and Use Your Custom Storage Adapter:**
+
+1.  **Create Your Adapter File(s):** Create new file(s) in your application's project, perhaps in a folder like `storage-adapters` or `data`. For example, `supabase-adapter.ts` and `caching-adapter.ts`.
+2.  **Import Necessary ART Components:** Inside your adapter files, import the required types and interfaces from `art-framework`. Key imports for a storage adapter include:
+    *   `StorageAdapter`: The interface your adapter class must implement.
+    *   `FilterOptions`: The type for query options.
+    *   You might also need types for the data you are storing (e.g., `ConversationMessage`, `AgentState`, `Observation`) if you want type safety within your adapter, although the `StorageAdapter` interface uses generic types (`<T>`).
+3.  **Implement Your Adapter Class(es):** Create the class(es) that implement the `StorageAdapter` interface.
+    *   For the `SupabaseAdapter`, implement the `get`, `set`, `delete`, and `query` methods using the Supabase client library to interact with your database. Implement `init` if you need to establish the Supabase connection asynchronously.
+    *   For the `CachingStorageAdapter`, implement the `get`, `set`, `delete`, and `query` methods by coordinating calls to the injected primary and cache adapters (e.g., check cache on `get`, write to both on `set`).
+4.  **Import and Pass to `createArtInstance`:** In the file where you initialize ART, import your custom adapter class(es). In the configuration object passed to `createArtInstance`, create instances of your custom adapters and pass the top-level adapter (e.g., your `CachingStorageAdapter`) in the `storage` part:
+
+    ```typescript
+    import { createArtInstance, InMemoryStorageAdapter } from 'art-framework';
+    import { SupabaseAdapter } from './storage-adapters/supabase-adapter'; // Import your Supabase adapter
+    import { CachingStorageAdapter } from './storage-adapters/caching-adapter'; // Import your Caching adapter
+
+    // Assuming SupabaseAdapter constructor takes options like URL and Key
+    const supabaseAdapter = new SupabaseAdapter({ url: 'YOUR_SUPABASE_URL', apiKey: 'YOUR_SUPABASE_API_KEY' });
+    const inMemoryAdapter = new InMemoryStorageAdapter(); // Use the built-in in-memory adapter
+
+    // Instantiate your caching adapter with the primary and cache adapters
+    const cachingAdapter = new CachingStorageAdapter(supabaseAdapter, inMemoryAdapter);
+
+    const config = {
+      storage: cachingAdapter, // Pass the caching adapter instance
+      reasoning: { /* ... */ },
+      // ... other config (agentCore, tools)
+    };
+
+    const art = await createArtInstance(config);
+    ```
+
+By following these steps, you can seamlessly integrate your custom storage solution(s) with ART without modifying the framework's core code.
 
 **Disclaimer:** Integrating DuckDB WASM is significantly more complex than `localStorage` or `IndexedDB`. It involves asynchronous initialization, managing WASM bundles, understanding SQL, and potentially handling vector embeddings and similarity calculations. This example provides a conceptual structure.
 

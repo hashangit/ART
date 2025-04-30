@@ -104,17 +104,29 @@ import {
     Labels for the different types of internal notifications (like "Started thinking", "Asking the AI", "Finished using a tool").
     *   **Developer Notes:** TypeScript enum listing event types (e.g., `PROCESS_START`, `LLM_REQUEST`, `LLM_RESPONSE`, `TOOL_START`, `TOOL_END`, `PLANNING_OUTPUT`, `SYNTHESIS_OUTPUT`, `PROCESS_END`, `REACT_STEP`, `thought`, `action`, `observation`). Includes new types for discrete streaming events: `LLM_STREAM_START`, `LLM_STREAM_METADATA`, `LLM_STREAM_END`, `LLM_STREAM_ERROR`. Used to categorize `Observation` events and filter subscriptions on the `ObservationSocket`.
 
-*   **`StreamEvent` (New for Streaming)**
+*   **`StreamEvent`**
     Represents a single piece of information arriving from the LLM's real-time stream (like a word, statistics, or an end signal).
     *   **Developer Notes:** Interface defining the structure of events yielded by the `ReasoningEngine.call` async iterable. Properties: `type` ('TOKEN', 'METADATA', 'ERROR', 'END'), `data` (content), `tokenType` (classification like 'LLM_THINKING', 'FINAL_SYNTHESIS_LLM_RESPONSE'), `threadId`, `traceId`, `sessionId`. Consumed by the Agent Core and pushed to the `LLMStreamSocket`.
 
-*   **`LLMMetadata` (New for Streaming)**
+*   **`LLMMetadata`**
     A structured way to hold detailed statistics about an LLM call (token counts, timing, etc.).
     *   **Developer Notes:** Interface defining the structure for LLM statistics. Properties: `inputTokens?`, `outputTokens?`, `thinkingTokens?`, `timeToFirstTokenMs?`, `totalGenerationTimeMs?`, `stopReason?`, `providerRawUsage?`, `traceId?`. Delivered via `StreamEvent` (type 'METADATA') and aggregated into `ExecutionMetadata.llmMetadata`.
 
 *   **`PESAgent`**
     The specific "thinking style" the agent will use by default (Plan -> Use Tools -> Answer).
-    *   **Developer Notes:** Concrete class implementing `IAgentCore`. Instantiated by `AgentFactory` if specified in `config.agentCore` or if `agentCore` is omitted. Receives dependencies (`StateManager`, `ReasoningEngine`, `ToolSystem`, etc.) in its constructor. Its `process` method orchestrates the Plan-Execute-Synthesize flow, interacting with the injected dependencies.
+    *   **Developer Notes:** Concrete class implementing `IAgentCore`. Instantiated by `AgentFactory` if specified in `config.agentCore` or if `agentCore` is omitted. Receives dependencies (`StateManager`, `ReasoningEngine`, `ToolSystem`, `UISystem`, etc.) in its constructor. Its `process` method orchestrates the Plan-Execute-Synthesize flow, interacting with the injected dependencies and handling the consumption and processing of the `AsyncIterable<StreamEvent>` from the `ReasoningEngine`.
+
+*   **`PromptManager`**
+    This component is now a stateless assembler that takes a prompt "blueprint" (template) and a `PromptContext` object to generate a standardized `ArtStandardPrompt` (an array of messages). It no longer has hardcoded prompt logic tied to specific agent patterns.
+    *   **Developer Notes:** The `PromptManager` interface now has an `assemblePrompt(blueprint: string | object, context: PromptContext): Promise<ArtStandardPrompt>` method. Agent implementations are responsible for providing the appropriate blueprint and gathering the necessary data into the `PromptContext`.
+
+*   **`ReasoningEngine`**
+    This component is responsible for interacting with the configured `ProviderAdapter`. Its `call` method now returns a `Promise<AsyncIterable<StreamEvent>>`, allowing for real-time streaming of LLM responses.
+    *   **Developer Notes:** The `ReasoningEngine` interface's `call` method signature has been updated. Agent implementations consume this `AsyncIterable` to process the stream events.
+
+*   **`UISystem`**
+    This system provides access to communication channels for the UI. It now includes a dedicated `LLMStreamSocket` for broadcasting real-time `StreamEvent`s from the LLM.
+    *   **Developer Notes:** The `UISystem` interface includes a `getLLMStreamSocket(): LLMStreamSocket` method. UI components subscribe to this socket to receive and display streaming tokens and other stream events.
 
 *   **`IndexedDBStorageAdapter` / `InMemoryStorageAdapter`**
     How the agent remembers the conversation. `IndexedDB` is like saving to a file (remembers after closing), `InMemory` is like writing on a whiteboard (erased when closed).
@@ -371,12 +383,12 @@ export default ArtChatbot;
 1.  **Initialization (`createArtInstance`):** Sets up ART with chosen adapters (`IndexedDBStorageAdapter`, `OpenAIAdapter`), the default `PESAgent`, and a built-in `CalculatorTool`.
 2.  **Conversation Management (`conversationManager.getMessages`):** Loads previous messages from storage when the component mounts, providing history. Messages are saved implicitly by the `PESAgent` after `process` completes.
 3.  **State Management (`StateManager`):** Used internally by ART to load thread configuration (like the OpenAI model specified) and potentially save agent state between turns (though this simple example doesn't explicitly manipulate `AgentState`).
-4.  **Reasoning (`OpenAIAdapter`, `PESAgent`):** Handles the core logic of understanding the query, planning (potentially deciding to use the calculator), and synthesizing the response via calls to the OpenAI API.
+4.  **Reasoning (`OpenAIAdapter`, `PESAgent`):** Handles the core logic of understanding the query, planning (potentially deciding to use the calculator), and synthesizing the response. This now involves requesting and consuming an `AsyncIterable<StreamEvent>` from the `ReasoningEngine` for both planning and synthesis steps, allowing for token streaming and metadata handling.
 5.  **Tools (`CalculatorTool`, `ToolSystem`):** The calculator is available. If the user asks "What is 5*5?", the `PESAgent` should plan to use it, the `ToolSystem` will execute it, and the result will inform the final answer.
 6.  **Storage (`IndexedDBStorageAdapter`):** Ensures conversation history persists even if the user closes and reopens the browser tab.
-7.  **Observations & UI Sockets (`uiSystem.getObservationSocket`):** Subscribes to internal ART events to provide simple real-time feedback to the user in the `status-indicator` div (e.g., "Asking AI...", "Using calculator...").
+7.  **Observations & UI Sockets (`uiSystem.getObservationSocket`, `uiSystem.getLLMStreamSocket`):** The UI subscribes to the `ObservationSocket` for discrete events (like tool start/end, process start/end) and the new `LLMStreamSocket` for real-time `StreamEvent`s (tokens, metadata, errors, end signals) from the LLM. This provides detailed real-time feedback and enables token-by-token display.
 
-This component provides a solid foundation, demonstrating the core ART features working together in a practical application.
+This component provides a solid foundation, demonstrating the core ART features working together in a practical application, including the new streaming and enhanced observation capabilities.
 ## Detailed Internal Workflow: `art.process()` with PESAgent
 
 When you call `art.process()` using the default Plan-Execute-Synthesize (PES) agent, a sequence of steps occurs internally to understand your request, potentially use tools, and generate a response. Here’s a breakdown, with both technical details and simpler explanations:
@@ -393,10 +405,15 @@ When you call `art.process()` using the default Plan-Execute-Synthesize (PES) ag
     *   *In simple terms:* The agent checks which tools (like a calculator or weather lookup) it's allowed to use in this conversation.
 6.  **Create Planning Prompt:** Use `PromptManager` to combine query, history, system prompt (from `ThreadConfig`), and tool schemas into a prompt asking the LLM to plan and identify tool calls.
     *   *In simple terms:* The agent prepares instructions for the AI brain (the LLM). It includes your query, the chat history, its available tools, and asks the AI to figure out a plan to answer your query, including whether any tools are needed.
-7.  **Execute Planning LLM Call:** Log `LLM_REQUEST`, call `ReasoningEngine.call()` (which uses the configured `ProviderAdapter`), log `LLM_RESPONSE`.
-    *   *In simple terms:* The agent sends the planning instructions to the AI brain (e.g., OpenAI's GPT-4). It notes down that it sent the request and when it gets the response back.
-8.  **Parse Planning Output:** Use `OutputParser` to extract intent, plan description, and `ParsedToolCall[]` from the LLM response.
-    *   *In simple terms:* The agent reads the AI's response and tries to understand the plan it came up with, specifically looking for which tools (if any) the AI wants to use and what information to give them.
+7.  **Execute Planning LLM Call:** Log `LLM_REQUEST`, call `ReasoningEngine.call()` (which uses the configured `ProviderAdapter`), and process the `AsyncIterable<StreamEvent>` response.
+    *   *In simple terms:* The agent sends the planning instructions to the AI brain (e.g., OpenAI's GPT-4). It then starts receiving the response piece by piece.
+    *   **Streaming Details:** The Agent Core consumes the `AsyncIterable`. For each `StreamEvent` received:
+        *   If `type` is `TOKEN`, it's pushed to `uiSystem.getLLMStreamSocket()` and potentially buffered for the final response (if `tokenType` indicates final output).
+        *   If `type` is `METADATA`, it's pushed to `uiSystem.getLLMStreamSocket()`, recorded as an `LLM_STREAM_METADATA` observation, and aggregated.
+        *   If `type` is `ERROR`, it's pushed to `uiSystem.getLLMStreamSocket()` and recorded as an `LLM_STREAM_ERROR` observation.
+        *   If `type` is `END`, it's pushed to `uiSystem.getLLMStreamSocket()` and recorded as an `LLM_STREAM_END` observation.
+8.  **Parse Planning Output:** After the planning LLM call stream ends, use `OutputParser` to extract intent, plan description, and `ParsedToolCall[]` from the *aggregated* LLM response content.
+    *   *In simple terms:* The agent reads the complete planning response (assembled from the streamed tokens) and tries to understand the plan it came up with, specifically looking for which tools (if any) the AI wants to use and what information to give them.
 9.  **Record Plan:** Log `PLANNING_OUTPUT` observation.
     *   *In simple terms:* The agent notes down the plan it received from the AI.
 10. **Execute Tools (if `ParsedToolCall[]` is not empty):**
@@ -406,10 +423,11 @@ When you call `art.process()` using the default Plan-Execute-Synthesize (PES) ag
     *   *In simple terms:* If the plan requires using tools, the agent now runs them one by one. For each tool, it checks if it's allowed, gets the tool ready, gives it the necessary information (e.g., the city for the weather tool), runs the tool, and records the result (or any errors).
 11. **Create Synthesis Prompt:** Use `PromptManager` to combine original query, plan, tool results, history, and system prompt into a prompt asking the LLM for the final user response.
     *   *In simple terms:* The agent gathers everything – your original query, the AI's plan, the results from any tools used, and the chat history – and prepares new instructions for the AI brain. This time, it asks the AI to write the final answer you will see.
-12. **Execute Synthesis LLM Call:** Log `LLM_REQUEST`, call `ReasoningEngine.call()`, log `LLM_RESPONSE`.
-    *   *In simple terms:* The agent sends these final instructions to the AI brain.
-13. **Parse Synthesis Output:** Use `OutputParser` to extract the final `responseText`.
-    *   *In simple terms:* The agent reads the AI's response and extracts the actual chat message to send back to you.
+12. **Execute Synthesis LLM Call:** Log `LLM_REQUEST`, call `ReasoningEngine.call()` (which uses the configured `ProviderAdapter`), and process the `AsyncIterable<StreamEvent>` response.
+    *   *In simple terms:* The agent sends these final instructions to the AI brain and starts receiving the final response piece by piece.
+    *   **Streaming Details:** Similar to the planning step, the Agent Core consumes the `AsyncIterable`, pushes `TOKEN`, `METADATA`, `ERROR`, and `END` events to `uiSystem.getLLMStreamSocket()`, records `METADATA`, `ERROR`, and `END` as observations, and buffers final response tokens.
+13. **Parse Synthesis Output:** After the synthesis LLM call stream ends, use `OutputParser` to extract the final `responseText` from the *aggregated* LLM response content.
+    *   *In simple terms:* The agent reads the complete final response (assembled from the streamed tokens) and extracts the actual chat message to send back to you.
 14. **Record Synthesis:** Log `SYNTHESIS_OUTPUT` observation.
     *   *In simple terms:* The agent notes down the final answer it generated.
 15. **Save History:** Persist user query and AI response via `ConversationManager`.
@@ -418,8 +436,8 @@ When you call `art.process()` using the default Plan-Execute-Synthesize (PES) ag
     *   *In simple terms:* If the agent learned something or changed its internal state during the process, it saves that information.
 17. **Record End:** Log `PROCESS_END` observation.
     *   *In simple terms:* The agent notes down that it has finished processing your request.
-18. **Return Result:** Return `AgentFinalResponse` object.
-    *   *In simple terms:* The agent sends the final response back to the part of the application that called it (e.g., the chatbot UI).
+18. **Return Result:** Return `AgentFinalResponse` object, including aggregated `llmMetadata`.
+    *   *In simple terms:* The agent sends the final response and any collected statistics back to the part of the application that called it (e.g., the chatbot UI).
 ## Detailed Internal Workflow: `art.process()` with PESAgent
 
 When you call `art.process()` using the default Plan-Execute-Synthesize (PES) agent, a sequence of steps occurs internally to understand your request, potentially use tools, and generate a response. Here’s a breakdown, with both technical details and simpler explanations:

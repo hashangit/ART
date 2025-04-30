@@ -3,6 +3,68 @@
 Sometimes, you might want to connect ART to an LLM provider that isn't supported out-of-the-box, like Anthropic's Claude models, or perhaps use a proxy or a self-hosted model with a unique API. This requires creating a custom Provider Adapter.
 
 **Goal:** Implement a functional `AnthropicAdapter` using the Anthropic Messages API.
+**Simplified Explanation for Developers:**
+
+Think of ART as that smart assistant again. This assistant needs to talk to different "AI brains" (Large Language Models like GPT, Gemini, Claude, Ollama, etc.) to get its work done. But each AI brain speaks a slightly different language (their API format).
+
+1.  **Creating a Translator (Your Custom Provider Adapter):** If you want the ART assistant to be able to talk to a *new* AI brain it doesn't already know, you need to create a special "translator" for that specific AI brain. This translator is what we call a **Provider Adapter**. Your job is to write the code for this translator. ART provides a standard blueprint (the `ProviderAdapter` interface) that your translator must follow. This blueprint ensures that your translator knows how to:
+    *   Receive instructions from the ART assistant in a standard format (the `ArtStandardPrompt` we talked about).
+    *   Translate those standard instructions into the specific language the new AI brain understands (its API format).
+    *   Send the translated request to the new AI brain.
+    *   Receive the response back from the new AI brain (including handling streaming responses).
+    *   Translate the AI brain's response back into a standard format that the ART assistant can understand (`AsyncIterable<StreamEvent>`).
+
+2.  **Giving the Translator to the Assistant:** Just like with custom tools, when you set up the ART assistant for your application using `createArtInstance`, you tell it which translator to use for its AI brain communication. In the configuration you provide to `createArtInstance`, you specify your custom Provider Adapter as the `reasoning` provider.
+
+3.  **The Assistant Uses Your Translator:** When `createArtInstance` runs, ART sees that you've specified your custom translator. From then on, whenever the ART assistant needs to talk to an AI brain (i.e., when the `ReasoningEngine` is called), it will use *your* translator to handle the communication with the specific AI brain you've set up.
+
+So, in simple terms:
+
+You create a custom Provider Adapter that acts as a translator for a specific LLM API, making sure it follows ART's standard `ProviderAdapter` blueprint. Then, when you initialize ART in your application, you tell it to use your custom adapter for reasoning. You don't need to change any of ART's core files; you just provide your new component during the setup process.
+
+This allows you to connect ART to virtually any LLM provider by writing a single translator for that provider, without altering the core framework.
+
+**How to Create and Use Your Custom Adapter:**
+
+1.  **Create Your Adapter File:** Create a new file in your application's project, perhaps in a folder like `llm-adapters` or `providers`. For example, `ollama-adapter.ts`.
+2.  **Import Necessary ART Components:** Inside your adapter file, import the required types and interfaces from `art-framework`. Key imports include:
+    *   `ProviderAdapter`: The interface your adapter class must implement.
+    *   `ArtStandardPrompt`: The input format your adapter's `call` method will receive.
+    *   `CallOptions`: Contains options for the LLM call (like `stream` and `callContext`).
+    *   `StreamEvent`: The format for events yielded by your adapter's `call` method when streaming.
+    *   `LLMMetadata`: The format for metadata events.
+    *   You might also need `ObservationType` if your adapter logs specific events directly.
+3.  **Implement Your Adapter Class:** Create a class that implements the `ProviderAdapter` interface. This class will contain the logic to:
+    *   Receive the `ArtStandardPrompt` and `CallOptions` in its `call` method.
+    *   Translate the `ArtStandardPrompt` into the specific API request format for your LLM provider (e.g., Ollama).
+    *   Make the API call (using `fetch` or a library), handling both non-streaming and streaming responses.
+    *   If streaming, parse the provider's stream chunks and yield `StreamEvent` objects (`TOKEN`, `METADATA`, `ERROR`, `END`), ensuring correct `tokenType` based on `callContext` and provider markers.
+    *   If not streaming, make the call, parse the full response, and yield a minimal sequence of `StreamEvent`s.
+    *   Extract and include `LLMMetadata` in `METADATA` events.
+4.  **Import and Pass to `createArtInstance`:** In the file where you initialize ART, import your custom adapter class. In the configuration object passed to `createArtInstance`, specify your adapter for the `reasoning` part:
+
+    ```typescript
+    import { createArtInstance, IndexedDBStorageAdapter } from 'art-framework';
+    import { OllamaAdapter } from './llm-adapters/ollama-adapter'; // Import your custom adapter
+
+    const config = {
+      storage: { type: 'indexedDB', dbName: 'myAppHistory' },
+      reasoning: {
+        provider: 'ollama', // A unique name for your provider
+        adapter: OllamaAdapter, // Pass the adapter class
+        options: { // Options specific to your OllamaAdapter constructor
+          baseUrl: 'http://localhost:11434',
+          model: 'llama2',
+          // ... other Ollama specific options
+        }
+      },
+      // ... other config (agentCore, tools)
+    };
+
+    const art = await createArtInstance(config);
+    ```
+
+By following these steps, you can seamlessly integrate your custom LLM provider with ART without modifying the framework's core code.
 
 **5.1. Necessary Imports & Explanations**
 
@@ -58,9 +120,9 @@ interface AnthropicResponse {
     Defines the basic capability of making a call to an AI model with a prompt. `ProviderAdapter` builds upon this.
     *   **Developer Notes:** The base interface defining the core `async call(prompt: FormattedPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>>` method signature (updated for streaming). Your `ProviderAdapter` implementation provides the concrete logic for this method, typically returning an async generator function.
 
-*   **`FormattedPrompt`**
-    Represents the instructions prepared for the AI model, which might be a simple string or a more complex structure depending on the AI provider.
-    *   **Developer Notes:** A type alias. Your adapter needs to know how to handle the format provided by the `PromptManager` (which should ideally format it suitably, e.g., as `ConversationMessage[]`) and convert it to the specific format the target API requires (e.g., `AnthropicMessage[]`).
+*   **`FormattedPrompt` (`ArtStandardPrompt`)**
+    Represents the standardized, provider-agnostic instructions prepared for the AI model by the `PromptManager`. This is now an array of `ArtStandardMessage` objects.
+    *   **Developer Notes:** The `FormattedPrompt` type alias now points to `ArtStandardPrompt` (`ArtStandardMessage[]`). Your adapter's `call` method receives this standard format from the `ReasoningEngine` and is responsible for translating it into the specific message structure and format required by the target LLM provider's API (e.g., mapping roles, handling content types, structuring tool calls/results).
 
 *   **`CallOptions`**
     Additional settings and information passed along when making the AI call, like which specific model version to use (e.g., 'claude-3-opus-20240229'), creativity settings (temperature), max response length (`maxTokens`), stop sequences, and importantly, whether to stream the response (`stream: true`) and the context of the call (`callContext`).
@@ -81,13 +143,13 @@ interface AnthropicResponse {
 
 import {
   ProviderAdapter, FormattedPrompt, CallOptions, ConversationMessage, MessageRole,
-  ObservationType, ObservationManager // Assuming ObservationManager is injected
+  ObservationType, ObservationManager, ArtStandardPrompt, ArtStandardMessage // Assuming ObservationManager is injected and new types are available
 } from 'art-framework';
 
 // Example types matching Anthropic Messages API structure
 interface AnthropicMessage {
   role: 'user' | 'assistant';
-  content: string;
+  content: string | Array<{ type: 'text', text: string } | { type: 'tool_use', id: string, name: string, input: any } | { type: 'tool_result', tool_use_id: string, content: string }>; // Updated content type for tool use/result
 }
 interface AnthropicRequestBody {
   model: string;
@@ -96,10 +158,13 @@ interface AnthropicRequestBody {
   max_tokens: number;
   temperature?: number;
   stop_sequences?: string[];
+  // ... other Anthropic params
 }
 interface AnthropicResponse {
-  content: { type: string, text: string }[];
-  // ... other fields like usage, stop_reason
+  content: Array<{ type: 'text', text: string } | { type: 'tool_use', id: string, name: string, input: any }>; // Updated content type for tool use
+  stop_reason?: string;
+  usage?: { input_tokens: number, output_tokens: number };
+  // ... other fields
 }
 
 interface AnthropicAdapterOptions {
@@ -125,65 +190,95 @@ export class AnthropicAdapter implements ProviderAdapter {
     this.options.defaultTemperature = options.defaultTemperature ?? 0.7;
   }
 
-  // Helper to format ART messages to Anthropic format
-  private formatMessages(prompt: FormattedPrompt): { messages: AnthropicMessage[], system?: string } {
-    if (!Array.isArray(prompt)) {
-      // Handle simple string prompts if necessary, though chat format is preferred
-      return { messages: [{ role: 'user', content: String(prompt) }] };
-    }
-
-    const history = prompt as ConversationMessage[];
+  // Helper to format ArtStandardPrompt messages to Anthropic format
+  // Now expects ArtStandardPrompt as input
+  private formatMessages(prompt: ArtStandardPrompt): { messages: AnthropicMessage[], system?: string } {
     let systemPrompt: string | undefined = undefined;
     const anthropicMessages: AnthropicMessage[] = [];
 
-    // Extract system prompt and filter messages
-    // Anthropic API expects alternating user/assistant roles
-    let lastRole: MessageRole | null = null;
-    for (const message of history) {
-      if (message.role === MessageRole.SYSTEM) {
-        systemPrompt = message.content; // Use the last system message
+    // Anthropic API expects alternating user/assistant roles and a single system prompt
+    let lastRole: 'user' | 'assistant' | null = null;
+    for (const message of prompt) {
+      if (message.role === 'system') {
+        systemPrompt = message.content as string; // Use the last system message
         continue;
       }
-      if (message.role === MessageRole.USER) {
-         if (lastRole === MessageRole.USER) {
-             // Handle consecutive user messages if needed (e.g., merge or error)
-             console.warn("AnthropicAdapter: Consecutive user messages detected, merging content.");
-             const lastMsg = anthropicMessages.pop();
-             anthropicMessages.push({ role: 'user', content: `${lastMsg?.content ?? ''}\n${message.content}` });
-         } else {
-            anthropicMessages.push({ role: 'user', content: message.content });
-            lastRole = MessageRole.USER;
-         }
-      } else if (message.role === MessageRole.ASSISTANT) {
-         if (lastRole === MessageRole.ASSISTANT) {
-             // Handle consecutive assistant messages if needed
-             console.warn("AnthropicAdapter: Consecutive assistant messages detected, merging content.");
-             const lastMsg = anthropicMessages.pop();
-             anthropicMessages.push({ role: 'assistant', content: `${lastMsg?.content ?? ''}\n${message.content}` });
-         } else {
-            anthropicMessages.push({ role: 'assistant', content: message.content });
-            lastRole = MessageRole.ASSISTANT;
-         }
-      }
-      // Ignore TOOL messages for Anthropic's main message list for now
-    }
 
-     // Ensure the conversation starts with a user message if possible
-     if (anthropicMessages.length > 0 && anthropicMessages[0].role === 'assistant') {
-         console.warn("AnthropicAdapter: Conversation starts with assistant message, prepending empty user message.");
-         anthropicMessages.unshift({ role: 'user', content: "(Previous turn)" });
+      // Convert ArtStandardMessage to AnthropicMessage content structure
+      let content: AnthropicMessage['content'];
+      if (message.role === 'tool_request' && Array.isArray(message.content)) {
+          // ArtStandardPrompt tool_request content is an array of tool calls
+          content = message.content.map((toolCall: any) => ({
+              type: 'tool_use',
+              id: toolCall.id,
+              name: toolCall.function.name,
+              input: JSON.parse(toolCall.function.arguments) // Anthropic expects object, ArtStandardPrompt stores string
+          }));
+      } else if (message.role === 'tool_result') {
+          // ArtStandardPrompt tool_result content is the tool output/error
+           content = [{
+               type: 'tool_result',
+               tool_use_id: message.tool_call_id!, // tool_call_id is required for tool_result role
+               content: typeof message.content === 'object' ? JSON.stringify(message.content) : String(message.content)
+           }];
+      }
+      else {
+          // Standard text content for user/assistant
+          content = typeof message.content === 'object' ? JSON.stringify(message.content) : String(message.content);
+      }
+
+
+      if (message.role === 'user' || message.role === 'tool_result') {
+         // Anthropic treats tool_result as part of the user turn
+         if (lastRole === 'user') {
+              // Handle consecutive user/tool_result messages by merging content
+              console.warn("AnthropicAdapter: Consecutive user/tool_result messages detected, merging content.");
+              const lastMsg = anthropicMessages.pop();
+              // Merge content arrays or strings
+              const mergedContent = Array.isArray(lastMsg?.content) && Array.isArray(content)
+                ? [...lastMsg!.content, ...content]
+                : `${lastMsg?.content ?? ''}\n${content}`; // Fallback to string concat
+              anthropicMessages.push({ role: 'user', content: mergedContent });
+          } else {
+             anthropicMessages.push({ role: 'user', content: content });
+             lastRole = 'user';
+          }
+       } else if (message.role === 'assistant' || message.role === 'tool_request') {
+          // Anthropic treats tool_request as part of the assistant turn
+          if (lastRole === 'assistant') {
+              // Handle consecutive assistant/tool_request messages by merging content
+              console.warn("AnthropicAdapter: Consecutive assistant/tool_request messages detected, merging content.");
+              const lastMsg = anthropicMessages.pop();
+               // Merge content arrays or strings
+              const mergedContent = Array.isArray(lastMsg?.content) && Array.isArray(content)
+                ? [...lastMsg!.content, ...content]
+                : `${lastMsg?.content ?? ''}\n${content}`; // Fallback to string concat
+              anthropicMessages.push({ role: 'assistant', content: mergedContent });
+          } else {
+             anthropicMessages.push({ role: 'assistant', content: content });
+             lastRole = 'assistant';
+          }
+       }
+       // Ignore other roles if necessary
      }
+
+      // Ensure the conversation starts with a user message if possible
+      if (anthropicMessages.length > 0 && anthropicMessages[0].role === 'assistant') {
+          console.warn("AnthropicAdapter: Conversation starts with assistant message, prepending empty user message.");
+          anthropicMessages.unshift({ role: 'user', content: "(Previous turn)" });
+      }
 
 
     return { messages: anthropicMessages, system: systemPrompt };
   }
 
-  async call(prompt: FormattedPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
+  // Updated to accept ArtStandardPrompt
+  async call(prompt: ArtStandardPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
     const { threadId, traceId = `anthropic-trace-${Date.now()}`, sessionId, stream, callContext } = options;
 
     // AgentCore handles LLM_REQUEST observation before calling this method.
 
-    const { messages, system } = this.formatMessages(prompt);
+    const { messages, system } = this.formatMessages(prompt); // Use updated formatMessages
     const modelToUse = options.model || this.options.model || 'claude-3-5-sonnet-20240620'; // Use latest Sonnet
     const maxTokens = options.maxTokens ?? this.options.defaultMaxTokens!;
     const temperature = options.temperature ?? this.options.defaultTemperature!;
@@ -255,6 +350,7 @@ export class AnthropicAdapter implements ProviderAdapter {
                                 if (jsonData.type === 'content_block_delta' && jsonData.delta?.type === 'text_delta') {
                                     const textDelta = jsonData.delta.text;
                                     // Determine tokenType based on callContext (Anthropic doesn't mark thinking tokens in stream)
+                                    // We rely on callContext provided by the Agent Core
                                     const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'FINAL_SYNTHESIS_LLM_RESPONSE';
                                     yield { type: 'TOKEN', data: textDelta, threadId, traceId, sessionId, tokenType };
                                 } else if (jsonData.type === 'message_start') {
@@ -265,6 +361,17 @@ export class AnthropicAdapter implements ProviderAdapter {
                                 } else if (jsonData.type === 'message_stop') {
                                     // Stream finished signal from Anthropic
                                     break; // Exit inner loop
+                                } else if (jsonData.type === 'content_block_start' && jsonData.content_block?.type === 'tool_use') {
+                                     // Handle tool_use block start - yield as a structured event if needed by UI
+                                     // For now, we might just log or ignore in the stream, the full tool_use will be in the final message
+                                     console.log("AnthropicAdapter: Received tool_use_start in stream:", jsonData.content_block);
+                                } else if (jsonData.type === 'content_block_delta' && jsonData.delta?.type === 'tool_use') {
+                                     // Handle tool_use delta - usually arguments streaming
+                                      console.log("AnthropicAdapter: Received tool_use_delta in stream:", jsonData.delta);
+                                      // Could yield a specific event type for tool_use arguments streaming if needed
+                                } else if (jsonData.type === 'content_block_stop' && jsonData.content_block?.type === 'tool_use') {
+                                     // Handle tool_use block stop
+                                      console.log("AnthropicAdapter: Received tool_use_stop in stream:", jsonData.content_block);
                                 }
                                 // Handle other event types like content_block_start/stop if needed
 
@@ -290,13 +397,31 @@ export class AnthropicAdapter implements ProviderAdapter {
             // --- Handle Non-Streaming Response ---
             } else {
                 const responseData = await response.json();
-                const responseText = responseData.content
-                    ?.filter((block: any) => block.type === 'text')
-                    ?.map((block: any) => block.text)
-                    ?.join('') ?? '';
+                 // Extract text content and tool_use blocks from the response
+                let responseContent: Array<string | { type: 'tool_use', id: string, name: string, input: any }> = [];
+                 if (responseData.content) {
+                     for (const block of responseData.content) {
+                         if (block.type === 'text') {
+                             responseContent.push(block.text);
+                         } else if (block.type === 'tool_use') {
+                             responseContent.push({
+                                 type: 'tool_use',
+                                 id: block.id,
+                                 name: block.name,
+                                 input: block.input // Anthropic provides input as object
+                             });
+                         }
+                     }
+                 }
 
-                // Yield TOKEN
-                yield { type: 'TOKEN', data: responseText, threadId, traceId, sessionId, tokenType: 'LLM_RESPONSE' };
+
+                // Determine tokenType based on callContext for non-streaming
+                 const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'FINAL_SYNTHESIS_LLM_RESPONSE';
+
+                // Yield TOKEN(s) - potentially yield structured content if needed
+                // For simplicity, yield the raw response content array/string
+                yield { type: 'TOKEN', data: responseContent.length === 1 && typeof responseContent[0] === 'string' ? responseContent[0] : responseContent, threadId, traceId, sessionId, tokenType: tokenType };
+
                 // Yield METADATA
                 const usage = responseData.usage;
                 if (usage) {
