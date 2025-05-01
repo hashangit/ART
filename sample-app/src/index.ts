@@ -232,16 +232,14 @@ function displayFinalResponse(
   console.log(`Plan: ${planContent ? (typeof planContent === 'string' ? planContent : JSON.stringify(planContent, null, 2)) : 'N/A'}`);
   console.log('---');
   console.log(`Final Response:`);
-  if (!streaming) {
-      // Handle potential structured content in final response
-      if (typeof finalResponse.response.content === 'string') {
-          console.log(finalResponse.response.content); // Print final content only if not streamed
-      } else {
-          console.log(JSON.stringify(finalResponse.response.content, null, 2));
-      }
+  // Always print the final response content, regardless of streaming
+  if (typeof finalResponse.response.content === 'string') {
+      console.log(finalResponse.response.content);
   } else {
-    console.log("(Content streamed above)");
+      // Handle potential structured content (e.g., from certain models/tools)
+      console.log(JSON.stringify(finalResponse.response.content, null, 2));
   }
+  // Removed the "else { console.log("(Content streamed above)"); }" block
   console.log('---------------------------');
 
   // --- Metadata Section ---
