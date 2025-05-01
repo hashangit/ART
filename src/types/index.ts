@@ -1,4 +1,14 @@
 // src/types/index.ts
+import type { RuntimeProviderConfig } from './providers'; // Import for use within this file
+
+// Re-export necessary types from submodules
+export type {
+    ProviderManagerConfig,
+    AvailableProviderEntry,
+    RuntimeProviderConfig,
+    ManagedAdapterAccessor,
+    IProviderManager
+} from './providers';
 
 /**
  * Represents the role of a message sender in a conversation.
@@ -243,28 +253,15 @@ export interface ParsedToolCall {
 /**
  * Configuration specific to a conversation thread.
  */
-export interface ThreadConfig {
-  /** Configuration for the Reasoning System for this thread. */
-  reasoning: {
-    /** Identifier for the primary LLM provider adapter to use (e.g., 'openai', 'anthropic'). */
-    provider: string;
-    /** The specific model identifier to use with the provider (e.g., 'gpt-4o', 'claude-3-5-sonnet-20240620'). */
-    model: string;
-    /** Optional provider-specific parameters (e.g., temperature, max_tokens, top_p). */
-    parameters?: Record<string, any>;
-    /** Optional identifier for a specific prompt template to use for this thread. */
-    promptTemplateId?: string;
-  };
-  /** An array of tool names (matching `ToolSchema.name`) that are permitted for use within this thread. */
-  enabledTools: string[];
-  /** The maximum number of past messages (`ConversationMessage` objects) to retrieve for context. */
-  historyLimit: number;
-  /** An optional system prompt string that overrides any default system prompt for this thread.
-   * @deprecated Prefer using prompt templates via `reasoning.promptTemplateId`. This may be removed in future versions.
-   */
-  systemPrompt?: string;
-  // TODO: Add other potential thread-specific settings (e.g., RAG configuration, default timeouts)
-}
+ export interface ThreadConfig {
+   /** Default provider configuration for this thread. */
+   providerConfig: RuntimeProviderConfig;
+   /** An array of tool names (matching `ToolSchema.name`) that are permitted for use within this thread. */
+   enabledTools: string[];
+   /** The maximum number of past messages (`ConversationMessage` objects) to retrieve for context. */
+   historyLimit: number;
+   // TODO: Add other potential thread-specific settings (e.g., RAG configuration, default timeouts)
+ }
 
 /**
  * Represents non-configuration state associated with an agent or thread.
@@ -308,19 +305,21 @@ export interface AgentProps {
 /**
  * Options to override agent behavior at runtime.
  */
-export interface AgentOptions {
-  /** Override specific LLM parameters (e.g., temperature, max_tokens) for this call only. */
-  llmParams?: Record<string, any>;
-  /** Force the use of specific tools, potentially overriding the thread's `enabledTools` for this call (use with caution). */
-  forceTools?: string[];
-  /** Specify a particular reasoning model to use for this call, overriding the thread's default. */
-  overrideModel?: { provider: string; model: string };
-  /** Request a streaming response for this specific agent process call. */
-  stream?: boolean;
-  /** Override the prompt template used for this specific call. */
-  promptTemplateId?: string;
-  // TODO: Add other potential runtime overrides (e.g., specific system prompt, history length).
-}
+ export interface AgentOptions {
+   /** Override specific LLM parameters (e.g., temperature, max_tokens) for this call only. */
+   llmParams?: Record<string, any>;
+   /** Override provider configuration for this specific call. */
+   providerConfig?: RuntimeProviderConfig; // Add this line
+   /** Force the use of specific tools, potentially overriding the thread's `enabledTools` for this call (use with caution). */
+   forceTools?: string[];
+   /** Specify a particular reasoning model to use for this call, overriding the thread's default. */
+   overrideModel?: { provider: string; model: string };
+   /** Request a streaming response for this specific agent process call. */
+   stream?: boolean;
+   /** Override the prompt template used for this specific call. */
+   promptTemplateId?: string;
+   // TODO: Add other potential runtime overrides (e.g., specific system prompt, history length).
+ }
 
 /**
  * The final structured response returned by the agent core after processing.
@@ -399,6 +398,8 @@ export interface CallOptions {
    * @deprecated Prefer using StreamEvent with appropriate tokenType for thoughts. Kept for potential transitional compatibility.
    */
   // onThought?: (thought: string) => void; // Commented out as per implementation plan decision (Ref: 7.2, Checklist Phase 1)
+  /** Carries the specific target provider and configuration for this call. */
+  providerConfig: RuntimeProviderConfig;
   /** Additional key-value pairs representing provider-specific parameters (e.g., `temperature`, `max_tokens`, `top_p`). These often override defaults set in `ThreadConfig`. */
   [key: string]: any;
 }
@@ -417,7 +418,7 @@ export interface CallOptions {
  * - `tool_request`: Represents the LLM's request to use tools (often implicitly part of an `assistant` message with `tool_calls`). Included for potential future explicit use.
  * - `tool_result`: The outcome (output or error) of executing a requested tool call.
  */
-export type ArtStandardMessageRole = 'system' | 'user' | 'assistant' | 'tool_request' | 'tool_result';
+ export type ArtStandardMessageRole = 'system' | 'user' | 'assistant' | 'tool_request' | 'tool_result' | 'tool'; // Added 'tool' role
 
 /**
  * Represents a single message in the standardized, provider-agnostic `ArtStandardPrompt` format.

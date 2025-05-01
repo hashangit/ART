@@ -11,13 +11,15 @@ import {
     ToolRegistry,
     IToolExecutor,
     PromptManager,
-    ProviderAdapter,
+    // ProviderAdapter, // Removed direct ProviderAdapter interface import
     ReasoningEngine,
     OutputParser,
     ToolSystem,
     UISystem
     // Removed ObservationSocket, ConversationSocket interface imports
 } from './interfaces';
+import { IProviderManager, ProviderManagerConfig } from '../types/providers'; // Corrected path and added ProviderManagerConfig
+import { ProviderManagerImpl } from '../providers/ProviderManagerImpl'; // Corrected path
 import { PESAgent } from './agents/pes-agent';
 
 // Import concrete implementations (assuming paths)
@@ -39,17 +41,12 @@ import { ToolSystem as ToolSystemImpl } from '../systems/tool/ToolSystem'; // Co
 import { PromptManager as PromptManagerImpl } from '../systems/reasoning/PromptManager'; // Correct path
 import { ReasoningEngine as ReasoningEngineImpl } from '../systems/reasoning/ReasoningEngine'; // Correct path
 import { OutputParser as OutputParserImpl } from '../systems/reasoning/OutputParser'; // Correct path
-// Provider Adapters (Examples - Assuming correct paths/exports)
-import { OpenAIAdapter } from '../adapters/reasoning/openai';
-import { GeminiAdapter } from '../adapters/reasoning/gemini';
-import { AnthropicAdapter } from '../adapters/reasoning/anthropic';
-import { OpenRouterAdapter } from '../adapters/reasoning/openrouter';
-import { DeepSeekAdapter } from '../adapters/reasoning/deepseek';
+// Provider Adapters are now managed by ProviderManagerImpl
 // UI System
 import { UISystem as UISystemImpl } from '../systems/ui/ui-system'; // Correct path
 // Removed direct imports of concrete socket classes - they will be accessed via UISystem instance
 // Removed unused type imports: Observation, ConversationMessage, ObservationType, MessageRole
-import { LogLevel } from '../utils/logger'; // Import LogLevel
+import { LogLevel, Logger } from '../utils/logger'; // Import LogLevel and Logger
 
 
 /**
@@ -90,8 +87,8 @@ export interface ReasoningConfig {
 export interface AgentFactoryConfig {
     /** Configuration for the storage adapter. */
     storage: StorageConfig;
-    /** Configuration for the reasoning provider adapter. */
-    reasoning: ReasoningConfig;
+    /** Configuration for the Provider Manager, defining available adapters and rules. */
+    providers: ProviderManagerConfig; // Changed from reasoning: ReasoningConfig
     /** Optional array of tool executor instances to register at initialization. */
     tools?: IToolExecutor[];
     /** Optional: Specify a different Agent Core implementation class (defaults to PESAgent). */
@@ -117,7 +114,8 @@ export class AgentFactory {
     private stateManager: StateManager | null = null;
     private observationManager: ObservationManager | null = null;
     private toolRegistry: ToolRegistry | null = null;
-    private providerAdapter: ProviderAdapter | null = null;
+    // private providerAdapter: ProviderAdapter | null = null; // Replaced with providerManager
+    private providerManager: IProviderManager | null = null; // Added providerManager
     private reasoningEngine: ReasoningEngine | null = null;
     private promptManager: PromptManager | null = null;
     private outputParser: OutputParser | null = null;
@@ -132,7 +130,7 @@ export class AgentFactory {
         this.config = config;
         // Basic validation
         if (!config.storage) throw new Error("AgentFactoryConfig requires 'storage' configuration.");
-        if (!config.reasoning) throw new Error("AgentFactoryConfig requires 'reasoning' configuration.");
+        if (!config.providers) throw new Error("AgentFactoryConfig requires 'providers' configuration."); // Changed from reasoning
     }
 
     /**
@@ -185,31 +183,18 @@ export class AgentFactory {
             }
         }
 
-        // --- Initialize Reasoning Provider ---
-        // --- Initialize Reasoning Provider ---
-        const reasoningConfig = this.config.reasoning;
-        switch (reasoningConfig.provider) {
-            case 'openai':
-                this.providerAdapter = new OpenAIAdapter({ apiKey: reasoningConfig.apiKey, model: reasoningConfig.model });
-                break;
-            case 'gemini':
-                 this.providerAdapter = new GeminiAdapter({ apiKey: reasoningConfig.apiKey, model: reasoningConfig.model });
-                 break;
-            case 'anthropic':
-                 this.providerAdapter = new AnthropicAdapter({ apiKey: reasoningConfig.apiKey, model: reasoningConfig.model });
-                 break;
-            case 'openrouter':
-                 this.providerAdapter = new OpenRouterAdapter({ apiKey: reasoningConfig.apiKey, model: reasoningConfig.model! }); // Model is required for OpenRouter
-                 break;
-            case 'deepseek':
-                 this.providerAdapter = new DeepSeekAdapter({ apiKey: reasoningConfig.apiKey, model: reasoningConfig.model });
-                 break;
-            default:
-                throw new Error(`Unsupported reasoning provider: ${reasoningConfig.provider}`);
-        }
+        // --- Initialize Provider Manager ---
+        // ProviderManagerImpl likely needs configuration for *all* potential providers.
+        // The current AgentFactoryConfig only holds one reasoning config. This needs refactoring
+        // for a true multi-provider setup where the manager knows all potential credentials/configs.
+        // For now, instantiate it simply to fix the type error. Runtime provider selection might fail
+        // Pass the provider configuration from the main config
+        this.providerManager = new ProviderManagerImpl(this.config.providers);
+        Logger.info("ProviderManager initialized.");
+
 
         // --- Initialize Reasoning Components ---
-        this.reasoningEngine = new ReasoningEngineImpl(this.providerAdapter!); // Add non-null assertion
+        this.reasoningEngine = new ReasoningEngineImpl(this.providerManager!); // Pass ProviderManager
         this.promptManager = new PromptManagerImpl(); // Basic implementation for now
         this.outputParser = new OutputParserImpl(); // Basic implementation for now
 
@@ -229,7 +214,7 @@ export class AgentFactory {
         // Check for all required components after initialization
         if (!this.stateManager || !this.conversationManager || !this.toolRegistry ||
             !this.promptManager || !this.reasoningEngine || !this.outputParser ||
-            !this.observationManager || !this.toolSystem || !this.providerAdapter) { // Added providerAdapter check
+            !this.observationManager || !this.toolSystem || !this.providerManager) { // Check providerManager
             throw new Error("AgentFactory not fully initialized. Call initialize() before creating an agent.");
         }
 

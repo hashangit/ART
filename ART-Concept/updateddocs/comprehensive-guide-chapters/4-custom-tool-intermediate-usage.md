@@ -169,8 +169,17 @@ import { CurrentInfoTool } from './tools/CurrentInfoTool'; // Adjust path if nee
 
 // ... inside initializeArt function ...
           const config = {
-            storage: { /* ... */ },
-            reasoning: { /* ... */ },
+            storage: { /* ... */ }, // Same as Chapter 3 example
+            providers: { // New ProviderManager configuration
+              availableProviders: [
+                {
+                  name: 'openai', // Or 'anthropic', 'gemini', etc.
+                  adapter: OpenAIAdapter, // Or your chosen adapter CLASS
+                  // adapterOptions: { /* Default options if any */ }
+                }
+                // Add other registered providers if needed
+              ]
+            },
             agentCore: PESAgent,
             tools: [
                 new CalculatorTool(),
@@ -184,6 +193,6 @@ import { CurrentInfoTool } from './tools/CurrentInfoTool'; // Adjust path if nee
 
 **How it Works Now:**
 
-*   **Node 1 (Developer Interface):** You've defined the `CurrentInfoTool` and told ART about it by adding `new CurrentInfoTool()` to the `tools` array in the configuration.
-*   **Node 2 (Core Orchestration):** When the user asks something like "What time is it?" or "Where am I?", the `PESAgent` gathers the necessary `PromptContext` (including the user query, history, and available tools like `get_current_info`). It then uses the `PromptManager` with its planning blueprint and this context to create a standardized `ArtStandardPrompt`. This prompt is sent to the LLM via the `ReasoningEngine` (which handles streaming). The `OutputParser` then parses the LLM's response (from the stream) to identify the user's intent and any planned tool calls. If the LLM plans to use `get_current_info`, the `ToolSystem` finds your `CurrentInfoTool` in the `ToolRegistry` and calls its `execute` method. The results (date, time, location status, locale) are passed back to the `PESAgent`. The agent then gathers a new `PromptContext` (including the original query, plan, and tool results) and uses the `PromptManager` with its synthesis blueprint to create another `ArtStandardPrompt`. This is sent to the LLM via the `ReasoningEngine` (again, handling streaming), and the `OutputParser` extracts the final response from the stream.
-*   **Node 3 (External Connections):** The `CurrentInfoTool` interacts with browser APIs (`Date`, `navigator.geolocation`, `navigator.language`). If geolocation permission is granted, it interacts with the device's location services. The `ProviderAdapter` used by the `ReasoningEngine` handles communication with the external LLM API, including processing streaming responses.
+*   **Node 1 (Developer Interface):** You've defined the `CurrentInfoTool` and told ART about it by adding `new CurrentInfoTool()` to the `tools` array in the configuration. You've also registered available LLM provider adapter *classes* (like `OpenAIAdapter`) in the `providers` configuration.
+*   **Node 2 (Core Orchestration):** When the user asks something like "What time is it?", the `PESAgent` gathers `PromptContext` (including the query, history, and tool schemas like `get_current_info`). It uses `PromptManager` to create the `ArtStandardPrompt`. It determines the `RuntimeProviderConfig` (specifying provider name, model, API key, etc., likely from `AgentProps.configOverrides` or `ThreadConfig`), creates `CallOptions`, and calls `ReasoningEngine`. The `ReasoningEngine` uses the `RuntimeProviderConfig` to request the appropriate adapter instance (e.g., `OpenAIAdapter`) from the `ProviderManager` and sends the prompt via the adapter's `call` method. The `OutputParser` parses the LLM's response stream. If the LLM plans to use `get_current_info`, the `ToolSystem` finds and executes your tool. The results are used in the synthesis step, which again involves `PromptManager`, determining `RuntimeProviderConfig`, `ReasoningEngine`, `ProviderManager`, and the LLM adapter to generate the final response stream.
+*   **Node 3 (External Connections):** The `CurrentInfoTool` interacts with browser APIs (`Date`, `navigator.geolocation`, `navigator.language`). The specific `ProviderAdapter` instance (instantiated and managed by `ProviderManager` based on the `RuntimeProviderConfig`) handles communication with the external LLM API (e.g., OpenAI), including processing streaming responses.

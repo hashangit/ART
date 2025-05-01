@@ -28,5 +28,5 @@ Developers can engage with ART at different levels of complexity, depending on t
 
 *   **Level 3: Advanced Usage (Implementing Custom Agent Patterns)**
     *   **Focus:** Core Logic Customization.
-    *   **Activities:** Includes Intermediate Usage activities, PLUS implementing a custom `IAgentCore` interface. This involves defining a completely new reasoning loop or modifying an existing one significantly. Requires a deep understanding of how all internal ART components interact.
-    *   **Goal:** Gain maximum control over the agent's behavior and reasoning process.
+    *   **Activities:** Includes Intermediate Usage activities, PLUS implementing a custom `IAgentCore` interface. This involves defining a completely new reasoning loop or modifying an existing one significantly, including logic for determining the `RuntimeProviderConfig` for each LLM call. Requires a deep understanding of how all internal ART components interact.
+    *   **Goal:** Gain maximum control over the agent's behavior, reasoning process, and dynamic LLM selection logic.

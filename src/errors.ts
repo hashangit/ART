@@ -36,6 +36,13 @@ export enum ErrorCode {
     NETWORK_ERROR = 'NETWORK_ERROR',
     TIMEOUT_ERROR = 'TIMEOUT_ERROR',
     UNKNOWN_ERROR = 'UNKNOWN_ERROR',
+
+    // Provider Manager Errors
+    UNKNOWN_PROVIDER = 'UNKNOWN_PROVIDER', // Checklist item 4.7
+    LOCAL_PROVIDER_CONFLICT = 'LOCAL_PROVIDER_CONFLICT', // Checklist item 4.7
+    LOCAL_INSTANCE_BUSY = 'LOCAL_INSTANCE_BUSY', // Checklist item 4.7
+    API_QUEUE_TIMEOUT = 'API_QUEUE_TIMEOUT', // Checklist item 4.7 (optional)
+    ADAPTER_INSTANTIATION_ERROR = 'ADAPTER_INSTANTIATION_ERROR', // Checklist item 4.7
 }
 
 /**
@@ -63,5 +70,41 @@ export class ARTError extends Error {
             str += `\nCaused by: ${this.originalError.stack || this.originalError.toString()}`;
         }
         return str;
+    }
+}
+
+// Specific error classes for Provider Manager (Checklist item 4.7)
+export class UnknownProviderError extends ARTError {
+    constructor(providerName: string) {
+        super(`Unknown provider requested: ${providerName}`, ErrorCode.UNKNOWN_PROVIDER);
+        this.name = 'UnknownProviderError';
+    }
+}
+
+export class LocalProviderConflictError extends ARTError {
+    constructor(requestedProvider: string, activeProvider: string) {
+        super(`Cannot activate local provider '${requestedProvider}'. Local provider '${activeProvider}' is already active.`, ErrorCode.LOCAL_PROVIDER_CONFLICT);
+        this.name = 'LocalProviderConflictError';
+    }
+}
+
+export class LocalInstanceBusyError extends ARTError {
+    constructor(providerName: string, modelId: string) {
+        super(`Local provider instance '${providerName}:${modelId}' is currently busy.`, ErrorCode.LOCAL_INSTANCE_BUSY);
+        this.name = 'LocalInstanceBusyError';
+    }
+}
+
+export class ApiQueueTimeoutError extends ARTError {
+    constructor(providerName: string) {
+        super(`Timeout waiting for an available instance of API provider '${providerName}'.`, ErrorCode.API_QUEUE_TIMEOUT);
+        this.name = 'ApiQueueTimeoutError';
+    }
+}
+
+export class AdapterInstantiationError extends ARTError {
+    constructor(providerName: string, originalError: Error) {
+        super(`Failed to instantiate adapter for provider '${providerName}'.`, ErrorCode.ADAPTER_INSTANTIATION_ERROR, originalError);
+        this.name = 'AdapterInstantiationError';
     }
 }

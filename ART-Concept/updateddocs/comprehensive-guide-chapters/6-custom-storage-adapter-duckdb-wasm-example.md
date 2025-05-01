@@ -62,7 +62,15 @@ You don't need to change any of ART's core files. You build custom components th
 
     const config = {
       storage: cachingAdapter, // Pass the caching adapter instance
-      reasoning: { /* ... */ },
++      providers: { // New ProviderManager configuration
++        availableProviders: [
++          {
++            name: 'openai', // Or your chosen provider name
++            adapter: OpenAIAdapter, // Or your chosen adapter CLASS
++            // adapterOptions: { /* Default options if any */ }
++          }
++        ]
++      },
       // ... other config (agentCore, tools)
     };
 
@@ -529,7 +537,8 @@ async function setupDuckDbArt(): Promise<ArtInstance> {
     const toolRegistry = new ToolRegistryImpl();
     // await toolRegistry.registerTool(...)
     const toolSystem = new ToolSystemImpl(toolRegistry, stateManager, observationManager);
-    const reasoningEngine = new ReasoningEngineImpl(providerAdapter);
++    // ReasoningEngine now takes the ProviderManager
++    const reasoningEngine = new ReasoningEngineImpl(providerManager);
     const promptManager = new PromptManagerImpl();
     const outputParser = new OutputParserImpl();
 

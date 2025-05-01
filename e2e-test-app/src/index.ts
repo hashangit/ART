@@ -10,14 +10,19 @@ import {
   AgentProps,
   AgentFinalResponse,
   ThreadConfig,
-  ArtInstance, // Import the ArtInstance type
-  Observation, // Import the Observation type
-  ConversationMessage, // Import ConversationMessage type
-  // ObservationType, // Import ObservationType enum
-  // MessageRole, // Import MessageRole enum
-  // ObservationSocket, // Import ObservationSocket class type
-  // ConversationSocket // Import ConversationSocket class type
-  // Remove unused ThreadContext import
+  ArtInstance,
+  Observation,
+  ConversationMessage,
+  ProviderAdapter,
+  FormattedPrompt,
+  CallOptions,
+  StreamEvent,
+} from 'art-framework';
+// Import provider types from main package entry (now that they are re-exported)
+import type {
+ProviderManagerConfig,
+//AvailableProviderEntry, // Keep for potential future use, suppress warning if needed
+RuntimeProviderConfig,
 } from 'art-framework';
 
 // Load environment variables from .env file (if present)
@@ -39,29 +44,105 @@ const port = process.env.PORT || 3001; // Use environment variable or default
 // Middleware to parse JSON bodies
 app.use(express.json());
 
+// --- Mock Adapters for E2E Testing ---
+
+// Mock ProviderAdapter for testing API providers
+class MockApiProviderAdapter implements ProviderAdapter {
+    providerName: string;
+    options: any;
+    instanceId: string; // Add instance ID for testing
+
+    constructor(options: any) {
+        this.options = options;
+        this.providerName = options.providerName || 'mock-api';
+        this.instanceId = `mock-api-instance-${Date.now()}-${Math.random().toString(16).substring(2)}`;
+        console.log(`[E2E Mock Adapter] Created API instance: ${this.instanceId} for ${this.providerName}`);
+    }
+
+    async call(_prompt: FormattedPrompt, _options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
+        console.log(`[E2E Mock Adapter] API Call on instance: ${this.instanceId}`);
+        // Simulate API work
+        await new Promise(resolve => setTimeout(resolve, 50)); // Simulate some delay
+        const mockResponse = `mock response from ${this.providerName} (instance: ${this.instanceId})`;
+
+        const stream: AsyncIterable<StreamEvent> = (async function*() {
+            yield { type: 'TOKEN', data: mockResponse, threadId: _options.threadId, traceId: _options.traceId || 'mock-trace-id' };
+            yield { type: 'END', data: null, threadId: _options.threadId, traceId: _options.traceId || 'mock-trace-id' };
+        })();
+        return stream;
+    }
+
+    async shutdown(): Promise<void> {
+        console.log(`[E2E Mock Adapter] Shutdown API instance: ${this.instanceId}`);
+    }
+}
+
+// Mock ProviderAdapter for testing Local providers
+class MockLocalProviderAdapter implements ProviderAdapter {
+    providerName: string;
+    options: any;
+    instanceId: string; // Add instance ID for testing
+
+    constructor(options: any) {
+        this.options = options;
+        this.providerName = options.providerName || 'mock-local';
+         this.instanceId = `mock-local-instance-${Date.now()}-${Math.random().toString(16).substring(2)}`;
+        console.log(`[E2E Mock Adapter] Created LOCAL instance: ${this.instanceId} for ${this.providerName}`);
+    }
+
+     async call(_prompt: FormattedPrompt, _options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
+        console.log(`[E2E Mock Adapter] LOCAL Call on instance: ${this.instanceId}`);
+        // Simulate local work (faster than API)
+        await new Promise(resolve => setTimeout(resolve, 10));
+        const mockResponse = `mock response from ${this.providerName} (instance: ${this.instanceId})`;
+
+        const stream: AsyncIterable<StreamEvent> = (async function*() {
+            yield { type: 'TOKEN', data: mockResponse, threadId: _options.threadId, traceId: _options.traceId || 'mock-trace-id' };
+            yield { type: 'END', data: null, threadId: _options.threadId, traceId: _options.traceId || 'mock-trace-id' };
+        })();
+        return stream;
+    }
+
+    async shutdown(): Promise<void> {
+         console.log(`[E2E Mock Adapter] Shutdown LOCAL instance: ${this.instanceId}`);
+    }
+}
+
 // --- ART Instance Initialization (Run Once) ---
 let artInstancePromise: Promise<ArtInstance | null> | null = null;
 
 async function initializeArt(): Promise<ArtInstance | null> {
-  console.log('[E2E App] Initializing ART Instance...');
+  console.log('[E2E App] Initializing ART Instance with Multi-Provider Config...');
   try {
-    // *** Add logging to check API key before creating instance ***
-    const apiKeyFromEnv = process.env.GEMINI_API_KEY;
-    console.log(`[E2E App] GEMINI_API_KEY from env: ${apiKeyFromEnv ? 'Loaded (' + apiKeyFromEnv.substring(0, 4) + '...)' : 'MISSING or undefined'}`);
-    // *** End logging ***
+    const providerConfig: ProviderManagerConfig = {
+      availableProviders: [
+        { name: 'mock-api', adapter: MockApiProviderAdapter, isLocal: false },
+        { name: 'mock-api-limited', adapter: MockApiProviderAdapter, isLocal: false }, // Another API provider for testing limits
+        { name: 'mock-local-1', adapter: MockLocalProviderAdapter, isLocal: true },
+        { name: 'mock-local-2', adapter: MockLocalProviderAdapter, isLocal: true },
+        // Add back real providers if needed, guarded by env vars
+        // Cast to 'any' to bypass type check for string adapter names
+        ...(process.env.GEMINI_API_KEY ? [{ name: 'gemini', adapter: 'gemini', isLocal: false } as any] : []),
+        ...(process.env.OPENAI_API_KEY ? [{ name: 'openai', adapter: 'openai', isLocal: false } as any] : []),
+      ],
+      maxParallelApiInstancesPerProvider: 1, // Set low for testing API limits
+      apiInstanceIdleTimeoutSeconds: 2, // Set low for testing eviction
+    };
 
+    // Cast config to 'any' to bypass persistent AgentFactoryConfig type error
     const art = await createArtInstance({
       storage: {
         type: 'memory' // Force memory storage on the server
       },
-      reasoning: {
-        // Provide a default reasoning config for the instance
-        provider: 'gemini',
-        model: 'gemini-2.0-flash-lite', // Use the updated default model
-        apiKey: process.env.GEMINI_API_KEY || '',
+      providerManagerConfig: providerConfig, // Use providerManagerConfig
+      // Pass API keys if real providers are included
+      apiKeys: {
+        gemini: process.env.GEMINI_API_KEY,
+        openai: process.env.OPENAI_API_KEY,
+        // Add other keys if needed
       },
       tools: [new CalculatorTool()]
-    });
+    } as any); // Add 'as any' here
     console.log('[E2E App] ART Instance Initialized Successfully.');
     return art;
   } catch (error: any) {
@@ -122,19 +203,19 @@ artInstancePromise?.then(art => {
     const convSocket = art.uiSystem.getConversationSocket();
 
     // Subscribe to internal ART Observation Socket
-    obsSocket.subscribe((observation) => {
+    obsSocket.subscribe((observation: Observation) => { // Add Observation type
       broadcastToSubscribers('observation', observation.threadId, observation);
     });
 
     // Subscribe to internal ART Conversation Socket
-    convSocket.subscribe((message) => {
+    convSocket.subscribe((message: ConversationMessage) => { // Add ConversationMessage type
       broadcastToSubscribers('conversation', message.threadId, message);
     });
     console.log('[WS Server] UI Sockets Bridged.');
 
     // --- Add Observation Logging ---
     console.log('[E2E App] Subscribing to ObservationSocket for logging...');
-    obsSocket.subscribe((observation) => {
+    obsSocket.subscribe((observation: Observation) => { // Add Observation type
       // Log all observations received via the socket
       console.log(`[E2E App Observation] SUBSCRIBER CALLBACK ENTERED for obsId: ${observation.id}, type: ${observation.type}`); // Log entry
       console.log(`[E2E App Observation] Received: ${JSON.stringify(observation, null, 2)}`);
@@ -210,10 +291,11 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
   // Extract query, storageType, optional threadId, provider, and streaming request flag
   const {
     query,
-    storageType = 'memory',
+    storageType = 'memory', // Keep storageType for potential future use, but force memory below
     threadId: requestThreadId,
-    provider = 'gemini',
-    requestStreamEvents = false // Default to false if not provided
+    provider, // Old provider name, used for fallback/default
+    providerConfig: requestProviderConfig, // New: Accept RuntimeProviderConfig object
+    requestStreamEvents = false
   } = req.body;
 
   if (!query) {
@@ -249,115 +331,80 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
     // Use the provided threadId if available, otherwise generate a new one
     const threadId = requestThreadId || `e2e-thread-${Date.now()}`;
 
-    // Determine API Key based on provider
-    let apiKey = '';
-    let model = 'default-model'; // Provide a default or handle missing models
-    switch (provider) {
-      case 'gemini':
-        apiKey = process.env.GEMINI_API_KEY || '';
-        model = 'gemini-1.5-flash-latest'; // Use a common model
-        break;
-      case 'openai':
-        apiKey = process.env.OPENAI_API_KEY || '';
-        model = 'gpt-3.5-turbo'; // Example model
-        break;
-      case 'anthropic':
-        apiKey = process.env.ANTHROPIC_API_KEY || '';
-        model = 'claude-3-haiku-20240307'; // Example model
-        break;
-      case 'openrouter':
-        apiKey = process.env.OPENROUTER_API_KEY || '';
-        model = 'openrouter/auto'; // Example model
-        break;
-      case 'deepseek':
-        apiKey = process.env.DEEPSEEK_API_KEY || '';
-        model = 'deepseek-chat'; // Example model
-        break;
-      default:
-        console.warn(`[E2E App] Unknown provider requested: ${provider}. Using default Gemini config.`);
-        apiKey = process.env.GEMINI_API_KEY || '';
-        model = 'gemini-1.5-flash-latest';
-        // Optionally return an error if an unsupported provider is critical
-        // res.status(400).json({ error: `Unsupported provider: ${provider}` });
-        // return;
+    // Determine the RuntimeProviderConfig to use
+    let runtimeProviderConfig: RuntimeProviderConfig;
+    if (requestProviderConfig && requestProviderConfig.providerName) {
+      // Use the config provided in the request body
+      runtimeProviderConfig = requestProviderConfig;
+      console.log(`[E2E App] Using providerConfig from request body:`, runtimeProviderConfig);
+    } else {
+      // Fallback: Construct a basic config using the old 'provider' name or a default
+      const fallbackProviderName = provider || 'mock-api'; // Default to mock-api
+      runtimeProviderConfig = {
+        providerName: fallbackProviderName,
+        modelId: 'default-mock-model', // Use a generic model ID for mocks
+        adapterOptions: {} // Mock adapters don't need API keys here
+      };
+      console.log(`[E2E App] Using fallback providerConfig:`, runtimeProviderConfig);
     }
 
-    if (!apiKey) {
-      console.warn(`[E2E App] API Key for provider ${provider} is missing.`);
-      // Optionally return an error if API key is missing
-      // res.status(400).json({ error: `Missing API Key for provider: ${provider}` });
-      // return;
-    }
-
-    // Set up thread configuration dynamically
-    const threadConfig: ThreadConfig = {
-      reasoning: {
-        provider: provider, // Use requested provider
-        model: model,       // Use determined model
-        // apiKey is typically configured at the instance level, not per-thread config
-        parameters: { temperature: 0.7 }
+    // Set up a *default* thread configuration (less critical now)
+    // This ensures the thread exists, but the provider used will be determined by runtimeProviderConfig
+    const defaultThreadConfig: ThreadConfig = {
+      reasoning: { // Add default reasoning block
+          provider: 'mock-api', // Default provider for the thread if not overridden
+          model: 'default-mock-model',
       },
       enabledTools: ['calculator'],
       historyLimit: 10,
-      systemPrompt: 'You are a helpful assistant.'
     };
 
-    // Ensure thread configuration exists, setting it if necessary.
-    // This is crucial for InMemoryStorageAdapter which doesn't persist across requests here.
+    // Ensure thread exists by setting a default config if needed
     try {
-      let contextExists = false;
-      try {
-          // Attempt to load context first
-          const existingContext = await art.stateManager.loadThreadContext(threadId);
-          // Check if config actually exists within the loaded context
-          if (existingContext?.config) {
-              contextExists = true;
-              // console.log(`[E2E App] Context found for thread ${threadId}`);
-          }
-      } catch (loadError) {
-          // Ignore error if context simply not found, log others
-          if (!(loadError instanceof Error && loadError.message.includes('not found'))) {
-              console.warn(`[E2E App] Error loading context for thread ${threadId}:`, loadError);
-          }
-      }
-
-      // If context/config doesn't exist, set it
-      if (!contextExists) {
-          // console.log(`[E2E App] Setting config for thread ${threadId} (Provider: ${provider})`);
-          await art.stateManager.setThreadConfig(threadId, threadConfig);
-      }
-
-    } catch (configError) {
-        console.error(`[E2E App] Error setting up thread ${threadId}: ${configError}`);
-        res.status(500).json({
-            error: 'Failed to configure thread',
-            details: configError instanceof Error ? configError.message : String(configError)
-        });
-        return;
+        await art.stateManager.loadThreadContext(threadId);
+        // console.log(`[E2E App] Context found for thread ${threadId}`);
+    } catch (e) {
+        if (e instanceof Error && e.message.includes('not found')) {
+            try {
+                console.log(`[E2E App] Setting default config for new thread ${threadId}`);
+                await art.stateManager.setThreadConfig(threadId, defaultThreadConfig);
+            } catch (setConfigError) {
+                console.error(`[E2E App] Failed to set default config for thread ${threadId}:`, setConfigError);
+                res.status(500).json({
+                    error: 'Failed to initialize thread configuration',
+                    details: setConfigError instanceof Error ? setConfigError.message : String(setConfigError)
+                });
+                return; // Stop if setting default config fails
+            }
+        } else {
+            // Log and respond for unexpected errors during context loading
+            console.error(`[E2E App] Unexpected error loading thread config for ${threadId}:`, e);
+            res.status(500).json({
+                error: 'Failed to load thread configuration',
+                details: e instanceof Error ? e.message : String(e)
+            });
+            return; // Stop if loading context fails unexpectedly
+        }
     }
 
-    // Process the query
-    // console.log(`Processing query: "${query}"`); // Removed for linting
-    // Construct AgentProps, including the stream option if requested
-    // Ensure traceId is assigned for stream event filtering
-    const traceId = `e2e-trace-${Date.now()}`;
-    const agentProps: AgentProps = {
-      query,
-      threadId,
-      traceId, // Assign traceId
-      options: {
-        stream: requestStreamEvents // Pass the streaming flag here
-      }
-    };
-
+    // --- Process the query ---
+    let streamSubscription: (() => void) | null = null; // Declare here for broader scope
     try {
-      // *** Add logging before art.process ***
-      console.log(`[E2E App] Calling art.process for thread ${threadId} with provider ${provider}, model ${model}`);
-      console.log(`[E2E App] Agent Props:`, agentProps);
-      // Re-load config to confirm what art.process will likely use
-      const currentContext = await art.stateManager.loadThreadContext(threadId).catch(() => null);
-      console.log(`[E2E App] Current Thread Config before process:`, currentContext?.config);
-      // *** End logging ***
+        const traceId = `e2e-trace-${Date.now()}`; // Define traceId here
+        const agentProps: AgentProps = {
+          query,
+          threadId,
+          traceId, // Assign traceId
+          options: {
+            stream: requestStreamEvents, // Pass the streaming flag here
+            providerConfig: runtimeProviderConfig // Pass the determined provider config
+          }
+        };
+
+        console.log(`[E2E App] Calling art.process for thread ${threadId} with providerConfig:`, runtimeProviderConfig);
+        // Optional debug logging:
+        // const currentContext = await art.stateManager.loadThreadContext(threadId).catch(() => null);
+        // console.log(`[E2E App] Current Thread Config before process:`, currentContext?.config);
 
       const collectedStreamEvents: any[] = []; // Use const
       let streamSubscription: (() => void) | null = null;
@@ -366,7 +413,7 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
       if (requestStreamEvents) {
         console.log(`[E2E App] Subscribing to LLMStreamSocket for test response (traceId: ${traceId})...`);
         const llmSocket = art.uiSystem.getLLMStreamSocket();
-        streamSubscription = llmSocket.subscribe((event) => {
+        streamSubscription = llmSocket.subscribe((event: StreamEvent) => { // Add StreamEvent type
           // Log ALL events received by this subscriber, regardless of traceId
           console.log(`[E2E App Stream Event - RAW] Received event type: ${event.type}, event traceId: ${event.traceId}, expected traceId: ${traceId}`);
           try {
@@ -386,8 +433,8 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
       const finalResponse: AgentFinalResponse = await art.process(agentProps);
       const duration = Date.now() - startTime;
 
-      // Unsubscribe if we subscribed
-      if (streamSubscription) {
+      // Unsubscribe if we subscribed (Use typeof check)
+      if (typeof streamSubscription === 'function') {
         streamSubscription();
         console.log('[E2E App] Unsubscribed from LLMStreamSocket.');
       }
@@ -427,23 +474,28 @@ app.post('/process', async (req: Request, res: Response): Promise<void> => {
 
       // Send the final response back to the client
       res.status(200).json(responsePayload);
-    } catch (error: any) {
-      console.error('--- Error during ART processing ---');
-      console.error(error);
-      res.status(500).json({
-        error: 'Internal server error during processing.',
-        details: error.message || String(error),
-      });
+    } catch (processError: any) { // Catch errors during art.process
+        console.error('--- Error during ART processing ---');
+        console.error(processError);
+        // Ensure stream subscription is cleaned up on error too (Use typeof check)
+        if (typeof streamSubscription === 'function') {
+            (streamSubscription as () => void)(); // Use specific function type assertion
+            streamSubscription = null; // Explicitly nullify after call
+            console.log('[E2E App] Unsubscribed from LLMStreamSocket due to error.');
+        }
+        res.status(500).json({
+          error: 'Internal server error during processing.',
+          details: processError.message || String(processError),
+        });
     }
-  } catch (initError: any) {
-     // This catch block might be less likely to be hit now,
-     // but kept for safety during request processing itself.
-    console.error('--- Error during request processing setup ---');
-    console.error(initError);
-    res.status(500).json({
-      error: 'Failed during request processing setup',
-      details: initError.message || String(initError),
-    });
+    // Outer catch remains for errors during setup before art.process try block
+  } catch (setupError: any) {
+     console.error('--- Error during request processing setup ---');
+     console.error(setupError);
+     res.status(500).json({
+       error: 'Failed during request processing setup',
+       details: setupError.message || String(setupError),
+     });
   }
 });
 
