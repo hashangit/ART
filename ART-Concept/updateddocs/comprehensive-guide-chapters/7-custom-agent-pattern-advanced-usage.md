@@ -52,7 +52,7 @@ import {
         *   `ConversationManager`: Use `.getMessages(threadId, options)` to retrieve history. Use `.addMessages(threadId, messages)` to save new user/assistant messages.
         *   `ToolRegistry`: Use `.getAvailableTools({ enabledForThreadId })` to get `ToolSchema[]` for prompting the LLM. Use `.getToolExecutor(toolName)` if needed (though `ToolSystem` is usually preferred).
         *   `PromptManager`: Now a stateless assembler. Use `.assemblePrompt(blueprint, context)` with your custom blueprints and gathered `PromptContext` to create `ArtStandardPrompt` objects.
-        *   `ReasoningEngine`: Use `.call(prompt, options)` to send an `ArtStandardPrompt` to the configured LLM (via the underlying `ProviderAdapter`). This method now returns a `Promise<AsyncIterable<StreamEvent>>`, which your agent must consume to process streaming responses.
++        *   `ReasoningEngine`: Use `.call(prompt, callOptions)` to interact with the LLM. The `callOptions` object (type `CallOptions`) must include the `RuntimeProviderConfig` (specifying provider name, model, API key, etc.) along with other parameters like `stream`, `threadId`, `traceId`. The `ReasoningEngine` uses this config to get the correct adapter instance from the `ProviderManager`. The method returns a `Promise<AsyncIterable<StreamEvent>>`, which your agent must consume.
         *   `OutputParser`: Use `.parsePlanningOutput(...)`, `.parseSynthesisOutput(...)` (for PES-like flows) or potentially define/use custom methods to extract structured data (like thoughts, actions, final answers) from the LLM's raw response content (assembled from the stream).
         *   `ObservationManager`: Use `.record(observationData)` frequently within your `process` logic to log key steps (start/end, LLM calls, tool calls, custom steps like 'thought' or 'action', and new `LLM_STREAM_...` events) for debugging and UI feedback via sockets.
         *   `ToolSystem`: Use `.executeTools(parsedToolCalls, threadId, traceId)` to run one or more tools identified by your agent's logic. It handles retrieving the executor, validating input against the schema, calling `execute`, and returning `ToolResult[]`.
@@ -171,7 +171,29 @@ export class ReActAgent implements IAgentCore {
 
       // 3. Call LLM and process stream
       await this.deps.observationManager.record({ type: ObservationType.LLM_REQUEST, threadId, traceId, content: { phase: `react_step_${step}` } });
-      const stream = await this.deps.reasoningEngine.call(currentPrompt, { threadId, traceId, stream: true, callContext: 'AGENT_THOUGHT' }); // Request stream, provide context
+      // Determine RuntimeProviderConfig (from overrides or thread defaults)
++      let runtimeConfig: RuntimeProviderConfig | undefined = props.configOverrides?.runtimeProviderConfig;
++      if (!runtimeConfig) {
++          // Placeholder: Load default config for the thread if not overridden
++          // runtimeConfig = await this.deps.stateManager.getThreadConfigValue(threadId, 'runtimeProviderConfig');
++          // If still no config, throw an error or use a hardcoded fallback (not recommended for production)
++          if (!runtimeConfig) {
++              throw new Error("RuntimeProviderConfig not found in overrides or thread config.");
++              // Example fallback (use with caution):
++              // runtimeConfig = { providerName: 'openai', modelId: 'gpt-4o', adapterOptions: { apiKey: 'YOUR_FALLBACK_KEY' } };
++          }
++      }
++
++      // Construct CallOptions
++      const callOptions: CallOptions = {
++          providerConfig: runtimeConfig,
++          threadId: threadId,
++          traceId: traceId,
++          stream: true, // Request streaming
++          callContext: 'AGENT_THOUGHT' // Provide context for the call
++      };
++
++      const stream = await this.deps.reasoningEngine.call(currentPrompt, callOptions);
 
       let llmResponseBuffer = '';
       for await (const event of stream) {
@@ -322,11 +344,17 @@ const ArtChatbot: React.FC = () => {
 
         const config = {
           storage: { type: 'indexedDB', dbName: `artWebChatHistory-${selectedAgent}` }, // Separate DB per agent? Or shared?
-          reasoning: {
-            provider: 'openai',
-            apiKey: import.meta.env.VITE_OPENAI_API_KEY || 'YOUR_OPENAI_API_KEY',
-            model: 'gpt-4o' // Ensure model is suitable for the chosen agent pattern
-          },
++          providers: { // New ProviderManager configuration
++            availableProviders: [
++              {
++                name: 'openai', // Identifier for this provider setup
++                adapter: OpenAIAdapter, // Pass the adapter CLASS
++                // Default options (like model) could be set here, but API keys
++                // are better handled at runtime via RuntimeProviderConfig.
++                // adapterOptions: { model: 'gpt-4o' }
++              }
++            ]
++          },
           agentCore: AgentCoreClass, // Dynamically set the agent core
           tools: [
               new CalculatorTool(),

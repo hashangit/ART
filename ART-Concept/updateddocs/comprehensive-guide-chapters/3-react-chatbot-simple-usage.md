@@ -199,10 +199,16 @@ const ArtChatbot: React.FC = () => {
               type: 'indexedDB',
               dbName: 'artWebChatHistory'
             },
-            reasoning: {
-              provider: 'openai',
-              apiKey: import.meta.env.VITE_OPENAI_API_KEY || 'YOUR_OPENAI_API_KEY', // Use env var
-              model: 'gpt-4o'
+            providers: { // New ProviderManager configuration
+              availableProviders: [
+                {
+                  name: 'openai', // Identifier for this provider setup
+                  adapter: OpenAIAdapter, // Pass the adapter CLASS
+                  // Default options for the adapter constructor can be set here,
+                  // but API keys are better handled at runtime or via environment variables.
+                  // adapterOptions: { model: 'gpt-4o' } // Example: Set default model
+                }
+              ]
             },
             agentCore: PESAgent, // Explicitly using the default
             tools: [new CalculatorTool()] // Include the calculator
@@ -313,10 +319,26 @@ const ArtChatbot: React.FC = () => {
     setStatus('Sending to ART...');
 
     try {
-      const props: AgentProps = {
-        query: currentInput,
-        threadId: threadId,
-      };
++      // Define the runtime provider configuration for this specific call
++      const runtimeConfig: RuntimeProviderConfig = {
++        providerName: 'openai', // Must match the name registered in createArtInstance
++        modelId: 'gpt-4o', // Specify the desired model
++        adapterOptions: {
++          apiKey: import.meta.env.VITE_OPENAI_API_KEY || 'YOUR_OPENAI_API_KEY', // Provide API key at runtime
++        }
++      };
++
++      // Prepare the properties for the agent process call
++      // We pass the runtimeConfig via configOverrides. The AgentCore will extract this
++      // and pass it within CallOptions to the ReasoningEngine.
++      const props: AgentProps = {
++        query: currentInput,
++        threadId: threadId,
++        configOverrides: {
++          runtimeProviderConfig: runtimeConfig
++        }
++      };
++
       const response: AgentFinalResponse = await artInstanceRef.current.process(props);
 
       const aiMessage: ConversationMessage = {
@@ -421,11 +443,18 @@ When you call `art.process()` using the default Plan-Execute-Synthesize (PES) ag
     *   `ToolSystem` iterates through calls: validates tool enablement (`StateManager`), gets executor (`ToolRegistry`), validates args, logs `TOOL_START`, calls `executor.execute()`, logs `TOOL_END` with result/error.
     *   Log `TOOL_EXECUTION_COMPLETE` observation.
     *   *In simple terms:* If the plan requires using tools, the agent now runs them one by one. For each tool, it checks if it's allowed, gets the tool ready, gives it the necessary information (e.g., the city for the weather tool), runs the tool, and records the result (or any errors).
-11. **Create Synthesis Prompt:** Use `PromptManager` to combine original query, plan, tool results, history, and system prompt into a prompt asking the LLM for the final user response.
+11. **Create Synthesis Prompt:** Use `PromptManager` to combine original query, plan, tool results, history, and the resolved system prompt into a prompt asking the LLM for the final user response.
     *   *In simple terms:* The agent gathers everything – your original query, the AI's plan, the results from any tools used, and the chat history – and prepares new instructions for the AI brain. This time, it asks the AI to write the final answer you will see.
-12. **Execute Synthesis LLM Call:** Log `LLM_REQUEST`, call `ReasoningEngine.call()` (which uses the configured `ProviderAdapter`), and process the `AsyncIterable<StreamEvent>` response.
-    *   *In simple terms:* The agent sends these final instructions to the AI brain and starts receiving the final response piece by piece.
-    *   **Streaming Details:** Similar to the planning step, the Agent Core consumes the `AsyncIterable`, pushes `TOKEN`, `METADATA`, `ERROR`, and `END` events to `uiSystem.getLLMStreamSocket()`, records `METADATA`, `ERROR`, and `END` as observations, and buffers final response tokens.
+12. **Execute Synthesis LLM Call:**
+    *   Determine `RuntimeProviderConfig` (e.g., from `AgentProps.configOverrides` or thread defaults - same as planning step).
+    *   Create `CallOptions` including the `providerConfig`.
+    *   Log `LLM_REQUEST`.
+    *   Call `ReasoningEngine.call(prompt, callOptions)`.
++    *   `ReasoningEngine` requests the appropriate adapter instance from `ProviderManager` based on `providerConfig`.
+    *   `ReasoningEngine` calls adapter, gets `AsyncIterable<StreamEvent>`.
+    *   `ReasoningEngine` returns the stream wrapped in a releasing generator.
+    *   *In simple terms:* The agent figures out which AI connection to use again, sends the final instructions, and starts receiving the final response piece by piece.
+    *   **Streaming Details:** Similar to the planning step, the Agent Core consumes the `AsyncIterable` (releasing generator), pushes `TOKEN`, `METADATA`, `ERROR`, and `END` events to `uiSystem.getLLMStreamSocket()`, records `METADATA`, `ERROR`, and `END` as observations, and buffers final response tokens. The `finally` block of the generator ensures the adapter instance is released.
 13. **Parse Synthesis Output:** After the synthesis LLM call stream ends, use `OutputParser` to extract the final `responseText` from the *aggregated* LLM response content.
     *   *In simple terms:* The agent reads the complete final response (assembled from the streamed tokens) and extracts the actual chat message to send back to you.
 14. **Record Synthesis:** Log `SYNTHESIS_OUTPUT` observation.
@@ -438,46 +467,3 @@ When you call `art.process()` using the default Plan-Execute-Synthesize (PES) ag
     *   *In simple terms:* The agent notes down that it has finished processing your request.
 18. **Return Result:** Return `AgentFinalResponse` object, including aggregated `llmMetadata`.
     *   *In simple terms:* The agent sends the final response and any collected statistics back to the part of the application that called it (e.g., the chatbot UI).
-## Detailed Internal Workflow: `art.process()` with PESAgent
-
-When you call `art.process()` using the default Plan-Execute-Synthesize (PES) agent, a sequence of steps occurs internally to understand your request, potentially use tools, and generate a response. Here’s a breakdown, with both technical details and simpler explanations:
-
-1.  **Call Received:** `PESAgent.process(props)` starts.
-    *   *In simple terms:* The agent receives your query and gets ready to work.
-2.  **Record Start:** Log `PROCESS_START` observation.
-    *   *In simple terms:* The agent makes a note that it has started processing a new request. This helps track what's happening internally.
-3.  **Load Context:** Fetch `ThreadConfig` and `AgentState` via `StateManager`.
-    *   *In simple terms:* The agent retrieves any specific settings for this conversation (like which AI model to use) and any memory it has about the current state of the conversation.
-4.  **Load History:** Fetch recent `ConversationMessage`s via `ConversationManager`.
-    *   *In simple terms:* The agent looks up the recent messages exchanged in this specific chat thread to understand the context.
-5.  **Get Available Tools:** Fetch enabled `ToolSchema`s via `ToolRegistry` (using `StateManager` to check permissions).
-    *   *In simple terms:* The agent checks which tools (like a calculator or weather lookup) it's allowed to use in this conversation.
-6.  **Create Planning Prompt:** Use `PromptManager` to combine query, history, system prompt (from `ThreadConfig`), and tool schemas into a prompt asking the LLM to plan and identify tool calls.
-    *   *In simple terms:* The agent prepares instructions for the AI brain (the LLM). It includes your query, the chat history, its available tools, and asks the AI to figure out a plan to answer your query, including whether any tools are needed.
-7.  **Execute Planning LLM Call:** Log `LLM_REQUEST`, call `ReasoningEngine.call()` (which uses the configured `ProviderAdapter`), log `LLM_RESPONSE`.
-    *   *In simple terms:* The agent sends the planning instructions to the AI brain (e.g., OpenAI's GPT-4). It notes down that it sent the request and when it gets the response back.
-8.  **Parse Planning Output:** Use `OutputParser` to extract intent, plan description, and `ParsedToolCall[]` from the LLM response.
-    *   *In simple terms:* The agent reads the AI's response and tries to understand the plan it came up with, specifically looking for which tools (if any) the AI wants to use and what information to give them.
-9.  **Record Plan:** Log `PLANNING_OUTPUT` observation.
-    *   *In simple terms:* The agent notes down the plan it received from the AI.
-10. **Execute Tools (if `ParsedToolCall[]` is not empty):**
-    *   Call `ToolSystem.executeTools()`.
-    *   `ToolSystem` iterates through calls: validates tool enablement (`StateManager`), gets executor (`ToolRegistry`), validates args, logs `TOOL_START`, calls `executor.execute()`, logs `TOOL_END` with result/error.
-    *   Log `TOOL_EXECUTION_COMPLETE` observation.
-    *   *In simple terms:* If the plan requires using tools, the agent now runs them one by one. For each tool, it checks if it's allowed, gets the tool ready, gives it the necessary information (e.g., the city for the weather tool), runs the tool, and records the result (or any errors).
-11. **Create Synthesis Prompt:** Use `PromptManager` to combine original query, plan, tool results, history, and system prompt into a prompt asking the LLM for the final user response.
-    *   *In simple terms:* The agent gathers everything – your original query, the AI's plan, the results from any tools used, and the chat history – and prepares new instructions for the AI brain. This time, it asks the AI to write the final answer you will see.
-12. **Execute Synthesis LLM Call:** Log `LLM_REQUEST`, call `ReasoningEngine.call()`, log `LLM_RESPONSE`.
-    *   *In simple terms:* The agent sends these final instructions to the AI brain.
-13. **Parse Synthesis Output:** Use `OutputParser` to extract the final `responseText`.
-    *   *In simple terms:* The agent reads the AI's response and extracts the actual chat message to send back to you.
-14. **Record Synthesis:** Log `SYNTHESIS_OUTPUT` observation.
-    *   *In simple terms:* The agent notes down the final answer it generated.
-15. **Save History:** Persist user query and AI response via `ConversationManager`.
-    *   *In simple terms:* The agent saves your query and its final response to the chat history so they can be remembered for later.
-16. **Save State:** Persist any changes to `AgentState` via `StateManager`.
-    *   *In simple terms:* If the agent learned something or changed its internal state during the process, it saves that information.
-17. **Record End:** Log `PROCESS_END` observation.
-    *   *In simple terms:* The agent notes down that it has finished processing your request.
-18. **Return Result:** Return `AgentFinalResponse` object.
-    *   *In simple terms:* The agent sends the final response back to the part of the application that called it (e.g., the chatbot UI).

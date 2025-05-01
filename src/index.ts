@@ -48,6 +48,14 @@ export { CalculatorTool } from './tools/CalculatorTool';
 export * from './types';
 /** Export all core system interfaces. @see {@link ./core/interfaces.ts} */
 export * from './core/interfaces';
+// Explicitly export Provider types from their source file
+export type {
+    ProviderManagerConfig,
+    AvailableProviderEntry,
+    RuntimeProviderConfig,
+    ManagedAdapterAccessor,
+    IProviderManager
+} from './types/providers';
 
 // --- Utility Functions & Classes ---
 /** Basic logging utility with configurable levels. */

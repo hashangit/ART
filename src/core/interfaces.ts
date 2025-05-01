@@ -113,6 +113,9 @@ export interface ProviderAdapter extends ReasoningEngine {
   // The 'call' method implementation will be provider-specific.
   /** The unique identifier name for this provider (e.g., 'openai', 'anthropic'). */
   readonly providerName: string;
+
+  /** Optional: Method for graceful shutdown */
+  shutdown?(): Promise<void>;
 }
 
 /**

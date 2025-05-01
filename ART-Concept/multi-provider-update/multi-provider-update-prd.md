@@ -405,3 +405,39 @@ interface ProviderAdapter {
 **10. Rationale Summary**
 
 This architectural change addresses the core limitation of the previous single-provider model. By introducing the `ProviderManager` and shifting model/config selection to runtime via `RuntimeProviderConfig`, ART gains significant flexibility. It allows applications to seamlessly integrate and switch between various LLM providers (API/local) without needing multiple ART instances. The defined instance management rules provide control over resource usage (concurrency, idle cleanup) while enforcing necessary constraints (local singleton). Separating model list management clarifies ART's role as an orchestration framework, empowering developers to manage provider specifics within their application context. The use of the `ManagedAdapterAccessor` and the releasing generator in `ReasoningEngine` ensures reliable instance release after asynchronous stream processing.
+---
+
+## Implementation Review (Checklist Items 1-17) - [Date: 2025-01-05]
+
+**Overall Assessment:** The core structure and logic for checklist items 1-17 are largely implemented. The primary area needing refinement is the request queueing mechanism within `ProviderManagerImpl` (parts of items 12 and 13), which is currently simplified and marked with TODO comments.
+
+**Detailed Findings:**
+
+*   **Interfaces (`src/types/providers.ts`, `src/types/index.ts`)**:
+    *   Items 1, 2, 3 (`AvailableProviderEntry`, `ProviderManagerConfig`, `RuntimeProviderConfig`): **Implemented.**
+    *   Item 4 (`CallOptions` update): **Implemented.**
+    *   Item 6 (`ManagedAdapterAccessor`): **Implemented.**
+    *   Item 7 (`IProviderManager`): **Implemented.**
+*   **Configuration (`src/core/agent-factory.ts`)**:
+    *   Item 5 (`AgentFactoryConfig` update): **Implemented.**
+*   **`ProviderManagerImpl` (`src/providers/ProviderManagerImpl.ts`)**:
+    *   Item 8 (`ManagedInstance` type): **Implemented.**
+    *   Item 9 (`ProviderManagerImpl` class): **Implemented.**
+    *   Item 10 (Constructor): **Implemented.**
+    *   Item 11 (`getAvailableProviders`): **Implemented.**
+    *   Item 12 (`getAdapter` core logic): **Mostly Implemented.** (Queueing logic needs refinement).
+    *   Item 13 (`_releaseAdapter` logic): **Mostly Implemented.** (Queue processing logic needs refinement).
+    *   Item 14 (`_evictInstance` logic): **Implemented.**
+*   **`AgentFactory` (`src/core/agent-factory.ts`)**:
+    *   Item 15 (Modifications): **Implemented.**
+*   **`ReasoningEngineImpl` (`src/systems/reasoning/ReasoningEngine.ts`)**:
+    *   Item 16 (Modifications): **Implemented.**
+*   **`PESAgent` (`src/core/agents/pes-agent.ts`)**:
+    *   Item 17 (Modifications): **Implemented.**
+
+**Confirmed Refinement Plan:**
+
+*   Refine the request queueing logic in `ProviderManagerImpl.ts` to fully meet the requirements outlined in the PRD (specifically checklist items 12 and 13). This involves:
+    *   Modifying the `requestQueue` structure to store the `RuntimeProviderConfig` and the `resolve`/`reject` functions of the pending Promise.
+    *   Updating the `getAdapter` method to correctly add the request details to the queue when limits are hit.
+    *   Updating the `_releaseAdapter` method to correctly dequeue a request, call `getAdapter` with the queued config, and resolve/reject the original Promise.

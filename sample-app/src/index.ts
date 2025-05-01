@@ -8,67 +8,75 @@ import {
   generateUUID,
   StreamEvent,
   Observation,
-  ToolSchema, // Import ToolSchema
-  ObservationType // Import ObservationType enum
+  ToolSchema,
+  ObservationType,
+  // --- New Imports based on Multi-Provider Update ---
+  ProviderManagerConfig,
+  AvailableProviderEntry,
+  RuntimeProviderConfig,
+  OpenAIAdapter, // Import Adapter Class
+  GeminiAdapter, // Import Adapter Class
+  // --- End New Imports ---
 } from 'art-framework';
 import dotenv from 'dotenv';
 import path from 'path';
-import inquirer from 'inquirer'; // <-- Import inquirer
-import * as readline from 'node:readline/promises'; // <-- Import readline/promises
-import { stdin as input, stdout as output } from 'node:process'; // <-- Import process streams
+import inquirer from 'inquirer';
+import * as readline from 'node:readline/promises';
+import { stdin as input, stdout as output } from 'node:process';
 
 // --- Configuration ---
 const AVAILABLE_PROVIDERS = ['gemini', 'openai'] as const;
 type ProviderChoice = (typeof AVAILABLE_PROVIDERS)[number];
-const AVAILABLE_TOOLS: ToolSchema[] = [new CalculatorTool().schema]; // Corrected: Use .schema property
+const AVAILABLE_TOOLS: ToolSchema[] = [new CalculatorTool().schema];
 
 // --- Load Environment Variables ---
 const envPath = path.resolve(__dirname, '../.env.local');
 dotenv.config({ path: envPath });
 console.log(`[Sample App] Attempting to load .env from: ${envPath}`);
 
-// --- ART Initialization Function (Mostly Unchanged) ---
-async function initializeART(provider: ProviderChoice): Promise<ArtInstance> {
-  console.log(`\nART Sample App - Initializing ART Instance for provider: ${provider}...`);
+// --- ART Initialization Function (Updated for Multi-Provider) ---
+async function initializeART(): Promise<ArtInstance> {
+  console.log(`\nART Sample App - Initializing ART Instance with Multi-Provider Support...`);
 
-  let apiKey: string | undefined;
-  let reasoningConfig: any;
+  // Define available providers for the ProviderManager
+  const availableProviders: AvailableProviderEntry[] = [
+    {
+      name: 'gemini',
+      adapter: GeminiAdapter, // Pass the class constructor
+      // isLocal: false, // Default is false
+    },
+    {
+      name: 'openai',
+      adapter: OpenAIAdapter, // Pass the class constructor
+      // isLocal: false, // Default is false
+    },
+    // Add other providers here if needed, e.g., AnthropicAdapter, OllamaAdapter
+  ];
 
-  if (provider === 'gemini') {
-    apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error('Error: GEMINI_API_KEY not found in environment variables.');
-      process.exit(1);
-    }
-    reasoningConfig = { provider: 'gemini', apiKey: apiKey };
-  } else if (provider === 'openai') {
-    apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      console.error('Error: OPENAI_API_KEY not found in environment variables.');
-      process.exit(1);
-    }
-    reasoningConfig = { provider: 'openai', apiKey: apiKey };
-  } else {
-    console.error(`Unsupported provider: ${provider}`);
-    process.exit(1);
-  }
+  // Configure the ProviderManager
+  const providerManagerConfig: ProviderManagerConfig = {
+    availableProviders: availableProviders,
+    maxParallelApiInstancesPerProvider: 3, // Example limit
+    apiInstanceIdleTimeoutSeconds: 180, // Example timeout
+  };
 
   try {
+    // Create the ART instance with the ProviderManager configuration
     const instance = await createArtInstance({
-      storage: { type: 'memory' },
-      reasoning: reasoningConfig,
-      tools: [new CalculatorTool()], // Instantiate tools needed by the instance
+      storage: { type: 'memory' }, // Keep using memory storage for simplicity
+      providers: providerManagerConfig, // Pass the ProviderManager config
+      tools: [new CalculatorTool()], // Tools available to the instance
     });
-    console.log(`ART Instance Initialized Successfully for ${provider}.`);
+    console.log(`ART Instance Initialized Successfully with available providers: ${availableProviders.map(p => p.name).join(', ')}.`);
     return instance;
   } catch (error) {
-    console.error(`\n--- Failed to initialize ART Instance for ${provider} ---`);
+    console.error(`\n--- Failed to initialize ART Instance ---`);
     console.error(error);
     process.exit(1);
   }
 }
 
-// --- Interactive Setup Function ---
+// --- Interactive Setup Function (Unchanged) ---
 async function setupSession(): Promise<{
   provider: ProviderChoice;
   stream: boolean;
@@ -81,7 +89,7 @@ async function setupSession(): Promise<{
     {
       type: 'list',
       name: 'provider',
-      message: 'Select the LLM provider:',
+      message: 'Select the LLM provider for this session:', // Clarified message
       choices: AVAILABLE_PROVIDERS,
       default: 'gemini',
     },
@@ -99,7 +107,7 @@ async function setupSession(): Promise<{
         name: `${tool.name} - ${tool.description}`,
         value: tool.name,
       })),
-      default: [], // Default to no tools selected
+      default: [],
     },
   ]);
 
@@ -114,7 +122,9 @@ async function setupSession(): Promise<{
 let currentIntent: any | null = null;
 let currentPlan: any | null = null;
 
-// --- Function to Log Observations (Filter by Thread and Capture Intent/Plan) ---
+// --- Function to Log Observations (Unchanged) ---
+// (Keep the existing logObservation function as it filters by threadId and traceId correctly)
+let currentTraceId: string | null = null; // Moved currentTraceId definition here
 function logObservation(observation: Observation, expectedThreadId: string) {
   if (observation.threadId !== expectedThreadId) return; // Filter by thread first
 
@@ -152,13 +162,13 @@ function logObservation(observation: Observation, expectedThreadId: string) {
           break;
       case ObservationType.LLM_STREAM_START: // Use Enum
       case ObservationType.LLM_STREAM_END: // Use Enum
-          console.log(`Phase: ${observation.content.phase}`);
+          console.log(`Phase: ${observation.content?.phase ?? 'N/A'}`); // Added null check for content
           break;
       case ObservationType.LLM_STREAM_METADATA: // Use Enum
-          console.log(`Phase: ${observation.metadata?.phase}, Stop Reason: ${observation.content.stopReason}, Tokens: ${observation.content.outputTokens}`);
+          console.log(`Phase: ${observation.metadata?.phase}, Stop Reason: ${observation.content?.stopReason}, Tokens: ${observation.content?.outputTokens}`); // Added null check for content
           break;
       case ObservationType.FINAL_RESPONSE: // Use Enum
-          console.log(`Final Message ID: ${observation.content.message.messageId}`);
+          console.log(`Final Message ID: ${observation.content?.message?.messageId}`); // Added null check for content/message
           break;
       default:
           // Fallback for any other types
@@ -166,10 +176,9 @@ function logObservation(observation: Observation, expectedThreadId: string) {
   }
 }
 
-// --- Enhanced Stream Event Handler (Filter by Trace) ---
-// Keep track of the current trace ID being processed
-let currentTraceId: string | null = null;
-// Removed unused expectedThreadId parameter
+
+// --- Enhanced Stream Event Handler (Unchanged) ---
+// (Keep the existing handleStreamEvent function as it filters by traceId correctly)
 function handleStreamEvent(event: StreamEvent) {
   // Filter stream events for the specific traceId being processed
   if (!currentTraceId || event.traceId !== currentTraceId) return;
@@ -177,7 +186,13 @@ function handleStreamEvent(event: StreamEvent) {
   switch (event.type) {
     case 'TOKEN': {
       const typeLabel = event.tokenType ? `[${event.tokenType}]` : ''; // Make label less verbose
-      process.stdout.write(`${typeLabel}${event.data}`); // Show type before token
+      // Handle potential structured content (like tool calls in Anthropic)
+      if (typeof event.data === 'string') {
+          process.stdout.write(`${typeLabel}${event.data}`); // Show type before token
+      } else {
+          // Log structured data differently if needed
+          process.stdout.write(`${typeLabel}[Structured Data]: ${JSON.stringify(event.data)} `);
+      }
       break;
     }
     case 'METADATA':
@@ -204,7 +219,9 @@ function handleStreamEvent(event: StreamEvent) {
   }
 }
 
-// --- Function to Display Final Response (with Summary) ---
+
+// --- Function to Display Final Response (Unchanged) ---
+// (Keep the existing displayFinalResponse function)
 function displayFinalResponse(
     finalResponse: AgentFinalResponse,
     duration: number,
@@ -222,7 +239,12 @@ function displayFinalResponse(
   console.log('---');
   console.log(`Final Response:`);
   if (!streaming) {
-    console.log(finalResponse.response.content); // Print final content only if not streamed
+      // Handle potential structured content in final response
+      if (typeof finalResponse.response.content === 'string') {
+          console.log(finalResponse.response.content); // Print final content only if not streamed
+      } else {
+          console.log(JSON.stringify(finalResponse.response.content, null, 2));
+      }
   } else {
     console.log("(Content streamed above)");
   }
@@ -250,43 +272,76 @@ function displayFinalResponse(
   console.log('---------------------------');
 }
 
-// --- Main Interactive Session Logic ---
+
+// --- Main Interactive Session Logic (Updated for Multi-Provider) ---
 async function runSession() {
-  // 1. Setup Session Configuration
+  // 1. Setup Session Configuration (Get user preferences)
   const { provider, stream, enabledToolNames } = await setupSession();
   const threadId = `interactive-thread-${generateUUID()}`;
 
   console.log('\n--- Session Configuration ---');
-  console.log(`Provider: ${provider}`);
+  console.log(`Selected Provider: ${provider}`); // User's choice for this session
   console.log(`Streaming: ${stream}`);
   console.log(`Enabled Tools: ${enabledToolNames.join(', ') || 'None'}`);
   console.log(`Thread ID: ${threadId}`);
   console.log('---------------------------\n');
 
-  // 2. Initialize ART
-  const art = await initializeART(provider);
+  // 2. Initialize ART (Now initializes with all available providers)
+  const art = await initializeART();
 
-  // 3. Set Thread Configuration
-  const threadConfig: ThreadConfig = {
-    reasoning: {
-      provider: provider,
-      model: provider === 'openai' ? 'gpt-4o' : 'gemini-1.5-flash-latest', // Example model selection
-    },
-    enabledTools: enabledToolNames, // Use selected tools
-    historyLimit: 20,
-    systemPrompt: "You are a helpful assistant. Use tools when necessary.",
+  // 3. Prepare Runtime Provider Configuration for the selected provider
+  let apiKey: string | undefined;
+  if (provider === 'gemini') {
+    apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error('Error: GEMINI_API_KEY not found in environment variables for selected provider.');
+      process.exit(1);
+    }
+  } else if (provider === 'openai') {
+    apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      console.error('Error: OPENAI_API_KEY not found in environment variables for selected provider.');
+      process.exit(1);
+    }
+  } else {
+    console.error(`Unsupported provider selected: ${provider}`);
+    process.exit(1);
+  }
+
+  // Construct the RuntimeProviderConfig based on user selection and API key
+  const runtimeProviderConfig: RuntimeProviderConfig = {
+    providerName: provider, // The provider selected by the user for this session
+    modelId: provider === 'openai' ? 'gpt-4o' : 'gemini-1.5-flash-latest', // Example model selection based on provider
+    adapterOptions: {
+      apiKey: apiKey, // API key is now part of runtime config
+      // Add other adapter-specific options here if needed, e.g.:
+      // temperature: 0.7,
+    }
   };
+  console.log(`Runtime provider config prepared for: ${provider}`);
+
+  // 4. Set Thread Configuration (Including the runtime provider config)
+  // Assuming the IAgentCore implementation (e.g., PESAgent) is updated
+  // to look for 'providerConfig' within the ThreadConfig loaded via StateManager.
+  const threadConfig: ThreadConfig = { // Simplified type annotation
+    providerConfig: runtimeProviderConfig, // Store the runtime config for the agent core to use
+    enabledTools: enabledToolNames,
+    historyLimit: 20,
+    // systemPrompt: "You are a helpful assistant. Use tools when necessary.", // Removed deprecated field
+    // Remove old 'reasoning' field if it existed
+  };
+
   try {
-    await art.stateManager.setThreadConfig(threadId, threadConfig);
-    console.log(`Configuration set for thread: ${threadId}`);
+    // The object should now conform directly to ThreadConfig
+    await art.stateManager.setThreadConfig(threadId, threadConfig); // Removed type assertion
+    console.log(`Configuration set for thread: ${threadId} (Using ${provider})`);
   } catch (configError) {
     console.error(`Error setting thread config: ${configError}`);
     process.exit(1);
   }
 
-  // 4. Setup Persistent Subscriptions for the Session
+  // 5. Setup Persistent Subscriptions for the Session (Unchanged logic)
   const observationSocket = art.uiSystem.getObservationSocket();
-  // Note: logObservation now updates currentIntent/currentPlan based on currentTraceId
   const unsubObservation = observationSocket.subscribe(
     (observation: Observation) => logObservation(observation, threadId)
   );
@@ -295,14 +350,13 @@ async function runSession() {
   let unsubLlmStream: (() => void) | null = null;
   if (stream) {
     const llmStreamSocket = art.uiSystem.getLLMStreamSocket();
-    // Note: Filtering by traceId happens inside handleStreamEvent using currentTraceId
     unsubLlmStream = llmStreamSocket.subscribe(
-        (event: StreamEvent) => handleStreamEvent(event) // Removed threadId argument
+        (event: StreamEvent) => handleStreamEvent(event)
     );
     console.log('Subscribed to LLM stream events.');
   }
 
-  // 5. Start Interactive Loop
+  // 6. Start Interactive Loop (Unchanged logic, AgentProps don't need provider info directly)
   const rl = readline.createInterface({ input, output });
   console.log('\nEnter your query or type "/bye" to exit.');
 
@@ -323,15 +377,20 @@ async function runSession() {
     currentPlan = null;
     console.log(`\nProcessing (Trace: ${currentTraceId.substring(0, 8)})...`);
 
+    // AgentProps now only needs query, threadId, traceId, and stream option.
+    // The provider configuration is retrieved by the AgentCore from ThreadConfig.
     const agentProps: AgentProps = {
       query: query,
       threadId: threadId,
       traceId: currentTraceId,
       options: { stream: stream },
+      // No need for configOverrides here as we set it in ThreadConfig
     };
 
     const startTime = Date.now();
     try {
+      // The art.process call remains the same. The internal AgentCore implementation
+      // will now use the ProviderManager and the RuntimeProviderConfig from ThreadConfig.
       const finalResponse: AgentFinalResponse = await art.process(agentProps);
       const duration = Date.now() - startTime;
       // Pass captured data to display function
@@ -346,12 +405,12 @@ async function runSession() {
     console.log('\nEnter your query or type "/bye" to exit.'); // Prompt again
   }
 
-  // 6. Cleanup
+  // 7. Cleanup (Unchanged logic)
   console.log('\nExiting session. Goodbye!');
   rl.close();
   unsubObservation();
   if (unsubLlmStream) unsubLlmStream();
-  // Optionally add art.shutdown() if implemented
+  // Optionally add art.shutdown() if implemented in the framework
 }
 
 // --- Run the Application ---

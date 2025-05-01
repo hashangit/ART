@@ -14,9 +14,9 @@ Think of ART as that smart assistant again. This assistant needs to talk to diff
     *   Receive the response back from the new AI brain (including handling streaming responses).
     *   Translate the AI brain's response back into a standard format that the ART assistant can understand (`AsyncIterable<StreamEvent>`).
 
-2.  **Giving the Translator to the Assistant:** Just like with custom tools, when you set up the ART assistant for your application using `createArtInstance`, you tell it which translator to use for its AI brain communication. In the configuration you provide to `createArtInstance`, you specify your custom Provider Adapter as the `reasoning` provider.
+2.  **Registering the Translator:** When you set up the ART assistant using `createArtInstance`, you provide a configuration (`ProviderManagerConfig`) that lists all the available translators (Provider Adapters) the assistant *could* use. You add your custom adapter *class* to this list, giving it a unique name (e.g., 'anthropic').
 
-3.  **The Assistant Uses Your Translator:** When `createArtInstance` runs, ART sees that you've specified your custom translator. From then on, whenever the ART assistant needs to talk to an AI brain (i.e., when the `ReasoningEngine` is called), it will use *your* translator to handle the communication with the specific AI brain you've set up.
+3.  **The Assistant Selects and Uses Your Translator:** When the ART assistant needs to talk to an AI brain (when the `ReasoningEngine` is called), the application logic (usually the `AgentCore`) decides *which* translator to use for that specific call (based on user choice, task requirements, etc., often stored in `ThreadConfig`). It tells the `ProviderManager` the name of the desired translator (e.g., 'anthropic') and any specific options (like API key, model). The `ProviderManager` then creates an instance of your custom adapter class (using the options provided) and gives it to the `ReasoningEngine` to make the call.
 
 So, in simple terms:
 
@@ -41,22 +41,30 @@ This allows you to connect ART to virtually any LLM provider by writing a single
     *   If streaming, parse the provider's stream chunks and yield `StreamEvent` objects (`TOKEN`, `METADATA`, `ERROR`, `END`), ensuring correct `tokenType` based on `callContext` and provider markers.
     *   If not streaming, make the call, parse the full response, and yield a minimal sequence of `StreamEvent`s.
     *   Extract and include `LLMMetadata` in `METADATA` events.
-4.  **Import and Pass to `createArtInstance`:** In the file where you initialize ART, import your custom adapter class. In the configuration object passed to `createArtInstance`, specify your adapter for the `reasoning` part:
++    *   The constructor will receive options (like API keys, base URLs) when the `ProviderManager` instantiates the adapter at runtime, based on the `RuntimeProviderConfig`.
++4.  **Import and Register in `createArtInstance`:** In the file where you initialize ART, import your custom adapter class. In the configuration object passed to `createArtInstance`, include your adapter class in the `providers.availableProviders` array within the `ProviderManagerConfig`:
 
     ```typescript
     import { createArtInstance, IndexedDBStorageAdapter } from 'art-framework';
-    import { OllamaAdapter } from './llm-adapters/ollama-adapter'; // Import your custom adapter
+    import { ProviderManagerConfig, AgentFactoryConfig } from 'art-framework';
++    import { AnthropicAdapter } from './llm-adapters/anthropic-adapter'; // Import your custom adapter class
 
     const config = {
       storage: { type: 'indexedDB', dbName: 'myAppHistory' },
-      reasoning: {
-        provider: 'ollama', // A unique name for your provider
-        adapter: OllamaAdapter, // Pass the adapter class
-        options: { // Options specific to your OllamaAdapter constructor
-          baseUrl: 'http://localhost:11434',
-          model: 'llama2',
-          // ... other Ollama specific options
-        }
+      providers: {
+        availableProviders: [
+          {
+-            name: 'ollama', // Unique identifier for this provider configuration
+-            adapter: OllamaAdapter, // Pass the adapter CLASS
++            name: 'anthropic', // Unique identifier for this provider configuration
++            adapter: AnthropicAdapter, // Pass the adapter CLASS
+            // isLocal: true // Indicate if it's a local provider (optional, defaults to false)
+          },
+          // You could also register built-in adapters here, e.g., OpenAIAdapter
+        ],
+        // Optional global limits
+        // maxParallelApiInstancesPerProvider: 5,
+        // apiInstanceIdleTimeoutSeconds: 300,
       },
       // ... other config (agentCore, tools)
     };
@@ -64,7 +72,8 @@ This allows you to connect ART to virtually any LLM provider by writing a single
     const art = await createArtInstance(config);
     ```
 
-By following these steps, you can seamlessly integrate your custom LLM provider with ART without modifying the framework's core code.
+-By following these steps, you can seamlessly integrate your custom LLM provider with ART without modifying the framework's core code.
++By following these steps, you can seamlessly register your custom LLM provider adapter with ART, allowing the `ProviderManager` to instantiate and use it at runtime.
 
 **5.1. Necessary Imports & Explanations**
 
@@ -129,8 +138,8 @@ interface AnthropicResponse {
     *   **Developer Notes:** Interface for the options object passed to `ReasoningEngine.call`. Includes properties like `threadId`, `traceId`, `sessionId`, `model` (optional override), `temperature`, `maxTokens`, `stopSequences`, `systemPrompt` (important for Anthropic), and crucially `stream?: boolean` and `callContext?: string`. Your adapter's `call` method must check `stream` and map relevant options to the provider API.
 
 *   **`ConversationMessage`, `MessageRole`**
-    Needed to correctly interpret the `FormattedPrompt` if it's an array of messages and map the roles (`USER`, `ASSISTANT`) to the provider's expected roles (`user`, `assistant`).
-    *   **Developer Notes:** Used within the adapter's `call` method during the prompt formatting step before sending the request to the Anthropic API. System messages might need special handling (passed via the `system` parameter in Anthropic's API).
+    Needed to correctly interpret the `ArtStandardPrompt` (which uses `MessageRole` enum values like `USER`, `ASSISTANT`, `SYSTEM`, `TOOL_REQUEST`, `TOOL_RESULT`) and map them to the provider's expected roles (`user`, `assistant`).
+    *   **Developer Notes:** Used within the adapter's `call` method during the prompt translation step before sending the request to the Anthropic API. System messages need special handling (passed via the `system` parameter in Anthropic's API). Tool request/result roles also need specific translation.
 
 *   **`StreamEvent`, `LLMMetadata`**
     These are the types your adapter's `call` method will yield via its `AsyncIterable` return value when streaming is enabled.
@@ -142,8 +151,8 @@ interface AnthropicResponse {
 // src/adapters/AnthropicAdapter.ts
 
 import {
-  ProviderAdapter, FormattedPrompt, CallOptions, ConversationMessage, MessageRole,
-  ObservationType, ObservationManager, ArtStandardPrompt, ArtStandardMessage // Assuming ObservationManager is injected and new types are available
+  ProviderAdapter, ArtStandardPrompt, ArtStandardMessage, CallOptions, ConversationMessage, MessageRole,
+  StreamEvent, LLMMetadata
 } from 'art-framework';
 
 // Example types matching Anthropic Messages API structure
@@ -169,7 +178,7 @@ interface AnthropicResponse {
 
 interface AnthropicAdapterOptions {
   apiKey: string;
-  model?: string; // e.g., 'claude-3-opus-20240229'
+  model?: string; // e.g., 'claude-3-opus-20240229' - Can be set here as a default
   defaultMaxTokens?: number;
   defaultTemperature?: number;
   // Add other necessary options like API version header
@@ -178,15 +187,18 @@ interface AnthropicAdapterOptions {
 export class AnthropicAdapter implements ProviderAdapter {
   readonly providerName = 'anthropic';
   private options: AnthropicAdapterOptions;
-  // ObservationManager is typically not injected into adapters
 
+  // The constructor receives options when the ProviderManager instantiates the adapter.
+  // These options come from RuntimeProviderConfig.adapterOptions.
   constructor(options: AnthropicAdapterOptions) {
     if (!options.apiKey) {
-      throw new Error(`Anthropic adapter requires an apiKey.`);
+      // In a real scenario, the ProviderManager might handle this validation
+      // or the error would propagate up from here.
+      throw new Error(`Anthropic adapter requires an apiKey in adapterOptions.`);
     }
     this.options = options;
-    // No ObservationManager injection needed here
-    this.options.defaultMaxTokens = options.defaultMaxTokens ?? 1024; // Set a reasonable default
+    // Set defaults if not provided in options
+    this.options.defaultMaxTokens = options.defaultMaxTokens ?? 1024;
     this.options.defaultTemperature = options.defaultTemperature ?? 0.7;
   }
 
@@ -274,14 +286,22 @@ export class AnthropicAdapter implements ProviderAdapter {
 
   // Updated to accept ArtStandardPrompt
   async call(prompt: ArtStandardPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
-    const { threadId, traceId = `anthropic-trace-${Date.now()}`, sessionId, stream, callContext } = options;
+    const { threadId, traceId = `anthropic-trace-${Date.now()}`, sessionId, stream, callContext, providerConfig } = options;
 
-    // AgentCore handles LLM_REQUEST observation before calling this method.
+    // Observations like LLM_REQUEST are typically handled by the AgentCore or ReasoningEngine
+    // before the adapter's call method is invoked.
 
     const { messages, system } = this.formatMessages(prompt); // Use updated formatMessages
-    const modelToUse = options.model || this.options.model || 'claude-3-5-sonnet-20240620'; // Use latest Sonnet
-    const maxTokens = options.maxTokens ?? this.options.defaultMaxTokens!;
-    const temperature = options.temperature ?? this.options.defaultTemperature!;
+    // Model should primarily come from the RuntimeProviderConfig used to instantiate this adapter,
+    // accessed via providerConfig.modelId. Fallback to adapter default or hardcoded.
+    const modelToUse = providerConfig.modelId || this.options.model || 'claude-3-5-sonnet-20240620'; // Prefer model from runtime config
+    // API key comes from constructor options (originally from RuntimeProviderConfig.adapterOptions)
+    const apiKey = this.options.apiKey;
+
+    // Other parameters can come from adapter defaults or RuntimeProviderConfig.adapterOptions
+    const maxTokens = providerConfig.adapterOptions?.max_tokens ?? this.options.defaultMaxTokens!;
+    const temperature = providerConfig.adapterOptions?.temperature ?? this.options.defaultTemperature!;
+    const stopSequences = providerConfig.adapterOptions?.stop_sequences ?? options.stopSequences; // Allow override? Design decision.
 
     const requestBody: any = { // Use 'any' for flexibility with stream param
       model: modelToUse,
@@ -293,8 +313,8 @@ export class AnthropicAdapter implements ProviderAdapter {
     if (system) {
       requestBody.system = system;
     }
-    if (options.stopSequences) {
-      requestBody.stop_sequences = options.stopSequences;
+    if (stopSequences) {
+      requestBody.stop_sequences = stopSequences;
     }
     if (stream) {
         requestBody.stream = true; // Add stream parameter if requested
@@ -309,7 +329,7 @@ export class AnthropicAdapter implements ProviderAdapter {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-api-key': this.options.apiKey,
+                    'x-api-key': apiKey,
                     'anthropic-version': '2023-06-01',
                     'anthropic-beta': 'messages-2023-12-15', // May be needed for some features/models
                 },
@@ -456,87 +476,92 @@ export class AnthropicAdapter implements ProviderAdapter {
 
 1.  **Implement `ProviderAdapter`:** The class adheres to the contract.
 2.  **`providerName`:** Set to 'anthropic'.
-3.  **Constructor:** Takes API key and other options. Includes optional `ObservationManager` for logging.
-4.  **`formatMessages` Helper:** Converts the `FormattedPrompt` (expected to be `ConversationMessage[]`) into the `AnthropicMessage[]` format, handling role mapping and extracting the system prompt. Includes basic handling for consecutive messages of the same role.
+3.  **Constructor:** Takes `AnthropicAdapterOptions` (like API key). These options are provided by the `ProviderManager` when it instantiates the adapter based on `RuntimeProviderConfig.adapterOptions`.
+4.  **`formatMessages` Helper:** Translates the standard `ArtStandardPrompt` into the `AnthropicMessage[]` format required by the API, including handling system prompts and tool use/result structures.
 5.  **`call` Method:**
-    *   Logs the request using `ObservationManager`.
-    *   Calls `formatMessages`.
-    *   Determines model, max tokens, temperature from `options` or defaults.
+    *   Receives `ArtStandardPrompt` and `CallOptions` (which includes `providerConfig`).
+    *   Calls `formatMessages` to translate the prompt.
+    *   Determines model, API key, and other parameters primarily from the options set in the constructor (`this.options`, derived from `RuntimeProviderConfig.adapterOptions`) and the `providerConfig` passed in `CallOptions`.
     *   Constructs the `requestBody` for the Anthropic Messages API.
     *   Uses `fetch` to make the POST request to the Anthropic API endpoint.
     *   Includes necessary headers (`x-api-key`, `anthropic-version`).
     *   Handles potential API errors.
-    *   Parses the JSON response and extracts the text content.
-    *   Logs the response using `ObservationManager`.
-    *   Returns the extracted text.
+    *   If `stream` is true, reads the response stream, parses Server-Sent Events (SSE), and yields `StreamEvent` objects (`TOKEN`, `METADATA`, `ERROR`, `END`) via an async generator.
+    *   If `stream` is false, parses the complete JSON response and yields a minimal sequence of `StreamEvent`s.
+    *   Extracts usage info and yields `METADATA` events.
+    *   Yields an `END` event when finished or on error.
 
 **5.3. Integrating the `AnthropicAdapter`**
 
-As noted before, the default `AgentFactory` doesn't directly support custom provider classes. You would likely need to:
-
-1.  **Manually Instantiate:** Create instances of `AnthropicAdapter`, `StorageAdapter`, Repositories, Managers, Systems, and your chosen `IAgentCore` implementation, injecting dependencies manually.
-2.  **Extend/Modify `AgentFactory`:** If you control the framework code, modify the factory to recognize a custom provider option (e.g., `providerInstance` or `providerClass` in the config) and use it instead of the built-in ones.
-
-**Example Manual Instantiation Snippet (Conceptual):**
+Integrating a custom adapter is straightforward with the `ProviderManager`. You simply register the adapter *class* in the `ProviderManagerConfig` when calling `createArtInstance`. ART handles the instantiation when needed.
 
 ```typescript
-// --- Manual Instantiation Example ---
+// --- Integration Example ---
 import { AnthropicAdapter } from './adapters/AnthropicAdapter';
-import { IndexedDBStorageAdapter } from 'art-framework';
-import { ConversationRepository, StateRepository, ObservationRepository } from 'art-framework'; // Assuming concrete repo exports
-import { ConversationManagerImpl, StateManagerImpl, ObservationManagerImpl } from 'art-framework'; // Assuming concrete manager exports
-import { ToolRegistryImpl, ToolSystemImpl } from 'art-framework'; // Assuming concrete system exports
-import { PromptManagerImpl, OutputParserImpl, ReasoningEngineImpl } from 'art-framework'; // Assuming concrete reasoning exports
-import { PESAgent } from 'art-framework';
-import { CalculatorTool } from 'art-framework';
-// ... other necessary imports
+// Import other necessary components (Storage, Agent Core, Tools)
+import { createArtInstance, ProviderManagerConfig, AgentFactoryConfig, IndexedDBStorageAdapter, PESAgent, CalculatorTool, ArtInstance, RuntimeProviderConfig } from 'art-framework';
 
-async function setupManually(): Promise<ArtInstance> {
-    // 1. Init Adapters
-    const storageAdapter = new IndexedDBStorageAdapter({ dbName: 'manualArtDb', objectStores: ['conversations', 'state', 'observations'] });
-    await storageAdapter.init?.(); // If adapter has init
+async function setupWithCustomAdapter(): Promise<ArtInstance> {
 
-    const observationManager = new ObservationManagerImpl(/* Need repo, socket - complex setup */); // UISystem setup needed first
-    const providerAdapter = new AnthropicAdapter({ apiKey: 'YOUR_ANTHROPIC_KEY' }, observationManager); // Inject logger/observer if needed
-
-    // 2. Init Repositories
-    const conversationRepository = new ConversationRepository(storageAdapter);
-    const stateRepository = new StateRepository(storageAdapter);
-    // const observationRepository = new ObservationRepository(storageAdapter); // Used by ObservationManager
-
-    // 3. Init Managers (Need UI System/Sockets first - simplified here)
-    // const uiSystem = new UISystemImpl(...)
-    const conversationManager = new ConversationManagerImpl(conversationRepository, /* uiSystem.getConversationSocket() */);
-    const stateManager = new StateManagerImpl(stateRepository);
-    // observationManager initialized above
-
-    // 4. Init Tooling
-    const toolRegistry = new ToolRegistryImpl();
-    await toolRegistry.registerTool(new CalculatorTool());
-    const toolSystem = new ToolSystemImpl(toolRegistry, stateManager, observationManager);
-
-    // 5. Init Reasoning Components
-    const reasoningEngine = new ReasoningEngineImpl(providerAdapter); // Use the custom adapter instance
-    const promptManager = new PromptManagerImpl();
-    const outputParser = new OutputParserImpl();
-
-    // 6. Init Agent Core
-    const agentCore = new PESAgent({
-        stateManager, conversationManager, toolRegistry, promptManager,
-        reasoningEngine, outputParser, observationManager, toolSystem
-    });
-
-    // 7. Construct ArtInstance object
-    const artInstance: ArtInstance = {
-        process: agentCore.process.bind(agentCore),
-        conversationManager,
-        stateManager,
-        toolRegistry,
-        observationManager,
-        uiSystem: /* Need actual UISystem instance */
+    // Define the ProviderManagerConfig, including the custom adapter
+    const providerConfig: ProviderManagerConfig = {
+      availableProviders: [
+        {
+          name: 'anthropic', // Unique identifier for this provider configuration
+          adapter: AnthropicAdapter, // Pass the adapter CLASS
+        },
+        // You could also register built-in adapters here if needed
+        // { name: 'openai', adapter: OpenAIAdapter },
+      ],
+      // Optional global limits
+      // maxParallelApiInstancesPerProvider: 2,
     };
 
-    return artInstance;
+    // Define the overall ART configuration
+    const config: AgentFactoryConfig = {
+      storage: { type: 'indexedDB', dbName: 'artWithAnthropic' }, // Or your custom storage adapter
+      providers: providerConfig, // Pass the provider config
+      agentCore: PESAgent, // Use the default agent core
+      tools: [new CalculatorTool()], // Include any tools
+    };
+
+    // Create the ART instance
+    const art = await createArtInstance(config);
+    console.log("ART instance created with Anthropic adapter registered.");
+    return art;
 }
+
+// --- Runtime Usage (Conceptual) ---
+
+async function useAnthropic(art: ArtInstance, threadId: string, query: string) {
+    // Define the runtime configuration for this specific call
+    const runtimeConfig: RuntimeProviderConfig = {
+        providerName: 'anthropic', // Must match the name registered in ProviderManagerConfig
+        modelId: 'claude-3-opus-20240229', // Specify the desired model
+        adapterOptions: {
+            apiKey: 'YOUR_ANTHROPIC_API_KEY', // Provide necessary options for the adapter constructor
+            // Add other Anthropic-specific options if needed
+            // defaultTemperature: 0.5
+        }
+    };
+
+    // Persist this choice for the thread (optional but common)
+    await art.stateManager.setThreadConfigValue(threadId, 'runtimeProviderConfig', runtimeConfig);
+
+    // Make the call - the agent core will load the runtimeProviderConfig from state
+    const response = await art.process({ query, threadId });
+    console.log("Response from Anthropic:", response.responseText);
+}
+
 ```
-*Note: The manual setup is complex, especially around the `UISystem` and `ObservationManager` which have interdependencies. Using the factory is highly recommended if possible.*
+
+**How it Works Now:**
+
+1.  **Registration:** `createArtInstance` receives the `ProviderManagerConfig` which includes the `AnthropicAdapter` class associated with the name 'anthropic'. The `ProviderManager` is initialized with this mapping.
+2.  **Runtime Selection:** When `art.process` is called, the `PESAgent` (or whichever `IAgentCore` is used) loads the `runtimeProviderConfig` from the `ThreadConfig` (which was set by the application, e.g., in `useAnthropic`).
+3.  **Instantiation:** The `PESAgent` passes this `runtimeProviderConfig` within `CallOptions` to the `ReasoningEngine`. The `ReasoningEngine` calls `providerManager.getAdapter(runtimeConfig)`.
+4.  **ProviderManager Logic:** The `ProviderManager` finds the registered class (`AnthropicAdapter`) for the name 'anthropic'. It creates a *new instance* of `AnthropicAdapter`, passing `runtimeConfig.adapterOptions` (containing the API key, etc.) to its constructor. It manages the lifecycle of this instance (pooling, caching based on config).
+5.  **Execution:** The `ReasoningEngine` receives the managed adapter instance and calls its `call` method with the prompt and options. The `AnthropicAdapter` instance uses its configured options (API key) to communicate with the Anthropic API.
+6.  **Release:** After the `call` completes (or the stream ends), the `ReasoningEngine` releases the adapter instance back to the `ProviderManager`.
+
+This approach cleanly separates adapter implementation from instantiation and configuration, allowing flexible runtime selection and management of multiple providers.

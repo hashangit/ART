@@ -10,7 +10,8 @@
     "forceConsistentCasingInFileNames": true, // Enforce consistent file casing
     "strict": true, // Enable all strict type-checking options
     "skipLibCheck": true, // Skip type checking of declaration files
-    "resolveJsonModule": true // Allow importing JSON files
+    "resolveJsonModule": true, // Allow importing JSON files
+    "preserveSymlinks": true // Add this to help resolve types from file: dependencies
   },
   "include": ["src/**/*"], // Include all files in the src directory
   "exclude": ["node_modules", "dist"] // Exclude node_modules and dist directories

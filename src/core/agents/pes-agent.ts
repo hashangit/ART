@@ -27,9 +27,11 @@ import {
     ArtStandardPrompt, // Import new types
     ArtStandardMessageRole,
     PromptContext,
+    // ThreadConfig, // Removed unused import (config accessed via ThreadContext)
     // ToolSchema, // Removed unused import
     // ThreadContext, // Removed unused import
 } from '../../types';
+import { RuntimeProviderConfig } from '../../types/providers'; // Import RuntimeProviderConfig
 import { generateUUID } from '../../utils/uuid';
 import { ARTError, ErrorCode } from '../../errors';
 import { Logger } from '../../utils/logger'; // Added Logger import
@@ -107,9 +109,9 @@ const DEFAULT_SYNTHESIS_BLUEPRINT = `[
 /**
  * Implements the Plan-Execute-Synthesize (PES) agent orchestration logic.
  * This agent follows a structured approach:
- * 1. **Plan:** Understand the user query, determine intent, and create a plan (potentially involving tool calls).
- * 2. **Execute:** Run any necessary tools identified in the planning phase.
- * 3. **Synthesize:** Generate a final response based on the query, plan, and tool results.
+ * 1.  **Plan:** Understand the user query, determine intent, and create a plan (potentially involving tool calls).
+ * 2.  **Execute:** Run any necessary tools identified in the planning phase.
+ * 3.  **Synthesize:** Generate a final response based on the query, plan, and tool results.
  *
  * It utilizes a stateless `PromptManager` with Mustache blueprints to construct standardized prompts (`ArtStandardPrompt`)
  * for the `ReasoningEngine`. It processes the `StreamEvent` output from the reasoning engine for both planning and synthesis.
@@ -179,10 +181,20 @@ export class PESAgent implements IAgentCore {
             if (!threadContext) {
                 throw new ARTError(`Thread context not found for threadId: ${props.threadId}`, ErrorCode.THREAD_NOT_FOUND);
             }
-            // Resolve system prompt: Use config value or internal default
+            // Resolve system prompt: Use config value (via StateManager) or internal default
             const systemPrompt = await this.deps.stateManager.getThreadConfigValue<string>(props.threadId, 'systemPrompt')
-                                  || threadContext.config.systemPrompt // Fallback to potentially deprecated direct config value
+                                  // || threadContext.config.systemPrompt // Removed: systemPrompt field removed from ThreadConfig interface
                                   || this.defaultSystemPrompt; // Final fallback to agent's internal default
+
+            // Determine RuntimeProviderConfig (Checklist item 17)
+            // This config specifies the provider/model/adapterOptions for the LLM call
+            const runtimeProviderConfig: RuntimeProviderConfig | undefined =
+                props.options?.providerConfig || threadContext.config.providerConfig;
+
+            if (!runtimeProviderConfig) {
+                 throw new ARTError(`RuntimeProviderConfig is missing in AgentProps.options or ThreadConfig for threadId: ${props.threadId}`, ErrorCode.INVALID_CONFIG);
+            }
+
 
             // --- Stage 2: Planning Context Assembly ---
             Logger.debug(`[${traceId}] Stage 2: Planning Context Assembly`);
@@ -222,8 +234,11 @@ export class PESAgent implements IAgentCore {
                 stream: true, // Request streaming
                 callContext: 'AGENT_THOUGHT', // Set context for planning
                 requiredCapabilities: [ModelCapability.REASONING],
-                ...(threadContext.config.reasoning.parameters ?? {}),
-                ...(props.options?.llmParams ?? {}),
+                // Pass the determined runtimeProviderConfig
+                providerConfig: runtimeProviderConfig,
+                // Merge additional LLM parameters from ThreadConfig and AgentProps (AgentProps overrides ThreadConfig)
+                // ...(threadContext.config.reasoning?.parameters ?? {}), // Removed: Parameters are now in providerConfig.adapterOptions
+                ...(props.options?.llmParams ?? {}), // AgentProps.options.llmParams can still override adapterOptions at call time if needed
             };
 
             let planningOutputText: string = ''; // Initialize buffer for planning output
@@ -378,8 +393,11 @@ export class PESAgent implements IAgentCore {
                 stream: true, // Request streaming
                 callContext: 'FINAL_SYNTHESIS', // Set context for synthesis
                 requiredCapabilities: [ModelCapability.TEXT],
-                ...(threadContext.config.reasoning.parameters ?? {}),
-                ...(props.options?.llmParams ?? {}),
+                // Pass the determined runtimeProviderConfig
+                providerConfig: runtimeProviderConfig,
+                // Merge additional LLM parameters from ThreadConfig and AgentProps (AgentProps overrides ThreadConfig)
+                // ...(threadContext.config.reasoning?.parameters ?? {}), // Removed: Parameters are now in providerConfig.adapterOptions
+                ...(props.options?.llmParams ?? {}), // AgentProps.options.llmParams can still override adapterOptions at call time if needed
             };
 
             let finalResponseContent: string = ''; // Initialize buffer for final response
@@ -424,14 +442,14 @@ export class PESAgent implements IAgentCore {
                         case 'END':
                              await this.deps.observationManager.record({
                                 threadId: props.threadId, traceId, type: ObservationType.LLM_STREAM_END, content: { phase: 'synthesis' }, metadata: { timestamp: Date.now() }
-                            }).catch(err => Logger.error(`[${traceId}] Failed to record LLM_STREAM_END observation:`, err));
-                            break;
+                             }).catch(err => Logger.error(`[${traceId}] Failed to record LLM_STREAM_END observation:`, err));
+                             break;
                     }
                      if (synthesisStreamError) break;
                 }
 
                  // Handle stream error after loop
-                 if (synthesisStreamError) {
+                if (synthesisStreamError) {
                      if (status !== 'partial') {
                          throw new ARTError(errorMessage!, ErrorCode.SYNTHESIS_FAILED, synthesisStreamError);
                      }
@@ -530,12 +548,12 @@ export class PESAgent implements IAgentCore {
         if (!finalAiMessage && status !== 'success') {
              // If we had an error before generating a final message, create a placeholder error response
              finalAiMessage = {
-                 messageId: generateUUID(),
-                 threadId: props.threadId,
-                 role: MessageRole.AI,
-                 content: errorMessage ?? "Agent execution failed.",
-                 timestamp: Date.now(),
-                 metadata: { traceId, error: true }
+                messageId: generateUUID(),
+                threadId: props.threadId,
+                role: MessageRole.AI,
+                content: errorMessage ?? "Agent execution failed.",
+                timestamp: Date.now(),
+                metadata: { traceId, error: true }
              };
              // Optionally save this error message to history? For now, just return it.
         } else if (!finalAiMessage) {
@@ -551,32 +569,33 @@ export class PESAgent implements IAgentCore {
     }
 
     /**
-     * Helper function to format conversation history for the blueprint context.
-     * Maps `ConversationMessage` roles to `ArtStandardMessageRole` and adds Mustache flags.
-     * @param history - Array of `ConversationMessage` from storage.
-     * @returns Array formatted for Mustache context.
+     * Formats conversation history messages for inclusion in LLM prompts.
+     * Converts internal MessageRole to ArtStandardMessageRole and adds 'last' flag.
+     * @param history - Array of ConversationMessage objects.
+     * @returns Formatted array of messages.
      */
     private formatHistoryForBlueprint(history: ConversationMessage[]): Array<{ role: ArtStandardMessageRole; content: string; last?: boolean }> {
         return history.map((msg, index) => {
             let role: ArtStandardMessageRole;
             switch (msg.role) {
-                case MessageRole.USER:
+                case MessageRole.USER: // Changed from User to USER
                     role = 'user';
                     break;
                 case MessageRole.AI:
                     role = 'assistant';
                     break;
-                // Skip SYSTEM/TOOL roles from raw history for basic prompt context
+                case MessageRole.TOOL: // Changed from Tool to TOOL
+                    role = 'tool';
+                    break;
                 default:
-                    // This case should ideally not happen if history is clean, but return a default/skip
-                    Logger.warn(`[PESAgent] Skipping history message with unmappable role: ${msg.role}`);
-                    return null; // Filter out nulls later
+                    // Handle other potential roles or default to 'user' or 'system' if appropriate
+                    role = 'user'; // Defaulting to user for unknown roles
             }
             return {
                 role: role,
                 content: msg.content,
-                last: index === history.length - 1 // Add 'last' flag for Mustache conditional commas
+                last: index === history.length - 1 ? true : undefined, // Add 'last' flag for the last message
             };
-        }).filter(item => item !== null) as Array<{ role: ArtStandardMessageRole; content: string; last?: boolean }>; // Type assertion after filtering nulls
+        });
     }
 }
