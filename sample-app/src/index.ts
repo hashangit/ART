@@ -78,7 +78,7 @@ async function initializeART(): Promise<ArtInstance> {
 
 // --- Interactive Setup Function (Unchanged) ---
 async function setupSession(): Promise<{
-  provider: ProviderChoice;
+  // provider: ProviderChoice; // Removed provider from initial setup
   stream: boolean;
   enabledToolNames: string[];
 }> {
@@ -86,13 +86,7 @@ async function setupSession(): Promise<{
   console.log('Let\'s configure your session.');
 
   const answers = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'provider',
-      message: 'Select the LLM provider for this session:', // Clarified message
-      choices: AVAILABLE_PROVIDERS,
-      default: 'gemini',
-    },
+    // Removed provider selection prompt
     {
       type: 'confirm',
       name: 'stream',
@@ -112,7 +106,7 @@ async function setupSession(): Promise<{
   ]);
 
   return answers as {
-    provider: ProviderChoice;
+    // provider: ProviderChoice; // Removed provider
     stream: boolean;
     enabledToolNames: string[];
   };
@@ -276,11 +270,11 @@ function displayFinalResponse(
 // --- Main Interactive Session Logic (Updated for Multi-Provider) ---
 async function runSession() {
   // 1. Setup Session Configuration (Get user preferences)
-  const { provider, stream, enabledToolNames } = await setupSession();
+  const { /* provider, */ stream, enabledToolNames } = await setupSession(); // Removed provider
   const threadId = `interactive-thread-${generateUUID()}`;
 
   console.log('\n--- Session Configuration ---');
-  console.log(`Selected Provider: ${provider}`); // User's choice for this session
+  // console.log(`Selected Provider: ${provider}`); // Removed initial provider log
   console.log(`Streaming: ${stream}`);
   console.log(`Enabled Tools: ${enabledToolNames.join(', ') || 'None'}`);
   console.log(`Thread ID: ${threadId}`);
@@ -289,58 +283,15 @@ async function runSession() {
   // 2. Initialize ART (Now initializes with all available providers)
   const art = await initializeART();
 
-  // 3. Prepare Runtime Provider Configuration for the selected provider
-  let apiKey: string | undefined;
-  if (provider === 'gemini') {
-    apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error('Error: GEMINI_API_KEY not found in environment variables for selected provider.');
-      process.exit(1);
-    }
-  } else if (provider === 'openai') {
-    apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      console.error('Error: OPENAI_API_KEY not found in environment variables for selected provider.');
-      process.exit(1);
-    }
-  } else {
-    console.error(`Unsupported provider selected: ${provider}`);
-    process.exit(1);
-  }
-
-  // Construct the RuntimeProviderConfig based on user selection and API key
-  const runtimeProviderConfig: RuntimeProviderConfig = {
-    providerName: provider, // The provider selected by the user for this session
-    modelId: provider === 'openai' ? 'gpt-4o' : 'gemini-1.5-flash-latest', // Example model selection based on provider
-    adapterOptions: {
-      apiKey: apiKey, // API key is now part of runtime config
-      // Add other adapter-specific options here if needed, e.g.:
-      // temperature: 0.7,
-    }
-  };
-  console.log(`Runtime provider config prepared for: ${provider}`);
-
-  // 4. Set Thread Configuration (Including the runtime provider config)
-  // Assuming the IAgentCore implementation (e.g., PESAgent) is updated
-  // to look for 'providerConfig' within the ThreadConfig loaded via StateManager.
-  const threadConfig: ThreadConfig = { // Simplified type annotation
-    providerConfig: runtimeProviderConfig, // Store the runtime config for the agent core to use
+  // 3. Prepare base Thread Configuration (without provider initially)
+  const baseThreadConfig: Omit<ThreadConfig, 'providerConfig'> = { // Type ensures providerConfig is handled later
     enabledTools: enabledToolNames,
     historyLimit: 20,
-    // systemPrompt: "You are a helpful assistant. Use tools when necessary.", // Removed deprecated field
-    // Remove old 'reasoning' field if it existed
   };
+  console.log(`Base configuration prepared for thread: ${threadId}`);
+  // We will set the full ThreadConfig including provider inside the loop
 
-  try {
-    // The object should now conform directly to ThreadConfig
-    await art.stateManager.setThreadConfig(threadId, threadConfig); // Removed type assertion
-    console.log(`Configuration set for thread: ${threadId} (Using ${provider})`);
-  } catch (configError) {
-    console.error(`Error setting thread config: ${configError}`);
-    process.exit(1);
-  }
-
-  // 5. Setup Persistent Subscriptions for the Session (Unchanged logic)
+  // 4. Setup Persistent Subscriptions for the Session (Unchanged logic)
   const observationSocket = art.uiSystem.getObservationSocket();
   const unsubObservation = observationSocket.subscribe(
     (observation: Observation) => logObservation(observation, threadId)
@@ -356,13 +307,73 @@ async function runSession() {
     console.log('Subscribed to LLM stream events.');
   }
 
-  // 6. Start Interactive Loop (Unchanged logic, AgentProps don't need provider info directly)
+  // 5. Start Interactive Loop (Logic updated for runtime provider selection)
   const rl = readline.createInterface({ input, output });
-  console.log('\nEnter your query or type "/bye" to exit.');
+  console.log('\nEnter "/bye" or "/exit" to quit.');
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const query = await rl.question('> ');
+    // --- Ask for Provider for this query using readline ---
+    let provider: ProviderChoice | null = null;
+    while (!provider) {
+      const providerInput = await rl.question(`Select provider (${AVAILABLE_PROVIDERS.join('/')}): `);
+      if (AVAILABLE_PROVIDERS.includes(providerInput as ProviderChoice)) {
+        provider = providerInput as ProviderChoice;
+      } else if (providerInput.toLowerCase() === '/bye' || providerInput.toLowerCase() === '/exit') {
+        // Allow exiting during provider selection
+        console.log('\nExiting session. Goodbye!');
+        rl.close();
+        unsubObservation();
+        if (unsubLlmStream) unsubLlmStream();
+        // Optionally add art.shutdown() if implemented
+        return; // Exit the runSession function
+      } else {
+        console.log(`Invalid provider. Please choose from: ${AVAILABLE_PROVIDERS.join(', ')}`);
+      }
+    }
+
+    // --- Prepare Runtime Provider Config ---
+    let apiKey: string | undefined;
+    if (provider === 'gemini') {
+      apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        console.error('Error: GEMINI_API_KEY not found in environment variables.');
+        continue; // Ask for provider again
+      }
+    } else if (provider === 'openai') {
+      apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        console.error('Error: OPENAI_API_KEY not found in environment variables.');
+        continue; // Ask for provider again
+      }
+    } else {
+      // Should not happen with inquirer list, but good practice
+      console.error(`Unsupported provider selected: ${provider}`);
+      continue;
+    }
+
+    const runtimeProviderConfig: RuntimeProviderConfig = {
+      providerName: provider,
+      modelId: provider === 'openai' ? 'gpt-4o' : 'gemini-1.5-flash-latest',
+      adapterOptions: { apiKey: apiKey }
+    };
+
+    // --- Set Full Thread Config for this query ---
+    const threadConfig: ThreadConfig = {
+      ...baseThreadConfig, // Combine base config with runtime provider
+      providerConfig: runtimeProviderConfig,
+    };
+
+    try {
+      await art.stateManager.setThreadConfig(threadId, threadConfig);
+      console.log(`Configuration updated for thread ${threadId} (Using ${provider})`);
+    } catch (configError) {
+      console.error(`Error setting thread config: ${configError}`);
+      continue; // Skip to next iteration
+    }
+
+    // --- Ask for User Query ---
+    const query = await rl.question(`> [${provider}] Enter query: `);
 
     if (query.toLowerCase() === '/bye' || query.toLowerCase() === '/exit') {
       break; // Exit loop
@@ -372,40 +383,34 @@ async function runSession() {
       continue; // Skip empty input
     }
 
+    // --- Process Query ---
     currentTraceId = `interactive-trace-${generateUUID()}`; // Set traceId for this query
     currentIntent = null; // Reset captures for the new query
     currentPlan = null;
-    console.log(`\nProcessing (Trace: ${currentTraceId.substring(0, 8)})...`);
+    console.log(`\nProcessing (Provider: ${provider}, Trace: ${currentTraceId.substring(0, 8)})...`);
 
-    // AgentProps now only needs query, threadId, traceId, and stream option.
-    // The provider configuration is retrieved by the AgentCore from ThreadConfig.
     const agentProps: AgentProps = {
       query: query,
       threadId: threadId,
       traceId: currentTraceId,
       options: { stream: stream },
-      // No need for configOverrides here as we set it in ThreadConfig
     };
 
     const startTime = Date.now();
     try {
-      // The art.process call remains the same. The internal AgentCore implementation
-      // will now use the ProviderManager and the RuntimeProviderConfig from ThreadConfig.
       const finalResponse: AgentFinalResponse = await art.process(agentProps);
       const duration = Date.now() - startTime;
-      // Pass captured data to display function
       displayFinalResponse(finalResponse, duration, stream, query, currentIntent, currentPlan);
     } catch (error) {
       console.error('\n--- An unexpected error occurred during processing ---');
       console.error(error);
-      // Continue the loop
     } finally {
         currentTraceId = null; // Clear traceId after processing
     }
-    console.log('\nEnter your query or type "/bye" to exit.'); // Prompt again
+    console.log('\nEnter "/bye" or "/exit" to quit.'); // Prompt again
   }
 
-  // 7. Cleanup (Unchanged logic)
+  // 6. Cleanup (Unchanged logic)
   console.log('\nExiting session. Goodbye!');
   rl.close();
   unsubObservation();
