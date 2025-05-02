@@ -1,7 +1,7 @@
 {
   "name": "art-framework",
-  "version": "0.2.4",
-  "description": "Agent Reasoning & Tooling (ART) Framework - A browser-first JavaScript/TypeScript framework for building LLM-powered intelligent agents",
+  "version": "0.2.5",
+  "description": "Agent Runtine (ART) Framework - A browser-first JavaScript/TypeScript framework for building LLM-powered intelligent agents",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
