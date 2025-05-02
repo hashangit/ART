@@ -3,24 +3,34 @@ import { ConversationSocket } from '../../ui/conversation-socket'; // Import the
 import { ConversationMessage, MessageOptions } from '../../../types';
 
 /**
- * Manages conversation history for different threads using an underlying repository.
+ * Manages the retrieval and addition of `ConversationMessage` objects for different threads,
+ * interacting with an underlying `IConversationRepository` for persistence and notifying
+ * the `ConversationSocket` of new messages.
  */
 export class ConversationManager implements IConversationManager {
     private repository: IConversationRepository;
     private conversationSocket: ConversationSocket; // Add socket property
 
+    /**
+     * Creates an instance of ConversationManager.
+     * @param conversationRepository - The repository responsible for persisting conversation messages.
+     * @param conversationSocket - The socket instance used to notify the UI of new messages.
+     */
     constructor(
         conversationRepository: IConversationRepository,
-        conversationSocket: ConversationSocket // Add socket to constructor
+        conversationSocket: ConversationSocket
     ) {
         this.repository = conversationRepository;
-        this.conversationSocket = conversationSocket; // Assign socket
+        this.conversationSocket = conversationSocket;
     }
 
     /**
-     * Adds one or more messages to a thread's history via the repository.
-     * @param threadId The ID of the thread.
-     * @param messages An array of messages to add.
+     * Adds one or more messages to a specific thread's history using the repository
+     * and notifies the `ConversationSocket` for each added message.
+     * @param threadId - The ID of the thread to add messages to. Must not be empty.
+     * @param messages - An array of `ConversationMessage` objects to add.
+     * @returns A promise that resolves when messages are saved and notifications are sent (or attempted).
+     * @throws {Error} If `threadId` is empty. Repository errors might also propagate.
      */
     async addMessages(threadId: string, messages: ConversationMessage[]): Promise<void> {
         // Basic validation or preprocessing could happen here if needed.
@@ -35,20 +45,23 @@ export class ConversationManager implements IConversationManager {
 
         // Notify socket for each added message
         messages.forEach(message => {
+            // Assuming ConversationSocket has a method like notifyMessage or just notify
+            // Use notify as per the TypedSocket interface
             try {
-                this.conversationSocket.notifyMessage(message);
+                 this.conversationSocket.notify(message, { targetThreadId: threadId });
             } catch (error) {
                 // Log error but don't let notification failure stop the flow
-                console.error(`ConversationManager: Failed to notify message ${message.messageId} via socket`, error);
+                console.error(`ConversationManager: Failed to notify message ${message.messageId} via socket for thread ${threadId}`, error);
             }
         });
     }
 
     /**
-     * Retrieves messages from a thread's history via the repository.
-     * @param threadId The ID of the thread.
-     * @param options Filtering and pagination options.
-     * @returns An array of conversation messages.
+     * Retrieves messages from a specific thread's history using the repository.
+     * @param threadId - The ID of the thread whose history is needed. Must not be empty.
+     * @param options - Optional parameters (`MessageOptions`) to control retrieval (e.g., limit, timestamp filters).
+     * @returns A promise resolving to an array of `ConversationMessage` objects, typically ordered newest first by the repository.
+     * @throws {Error} If `threadId` is empty. Repository errors might also propagate.
      */
     async getMessages(threadId: string, options?: MessageOptions): Promise<ConversationMessage[]> {
          if (!threadId) {

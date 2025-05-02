@@ -14,16 +14,30 @@ const parsedToolCallSchema = z.object({
 // Define Zod schema for an array of tool calls
 const toolCallsSchema = z.array(parsedToolCallSchema);
 
+/**
+ * Default implementation of the `OutputParser` interface.
+ * Responsible for extracting structured data (intent, plan, tool calls) from the planning phase
+ * LLM response and the final response content from the synthesis phase response.
+ * Includes robust parsing for tool call JSON arrays and Zod validation.
+ *
+ * @implements {IOutputParser}
+ */
 export class OutputParser implements IOutputParser {
   /**
-   * Parses the output of the planning LLM call.
-   * Expects format like:
-   * Intent: [intent description]
-   * Plan: [plan steps]
-   * Tool Calls: [JSON array of tool calls]
-   * @param output Raw LLM output string.
-   * @returns Structured planning data.
-   */
+   /**
+    * Parses the raw string output from the planning LLM call to extract structured information.
+    * It looks for sections explicitly marked with "Intent:", "Plan:", and "Tool Calls:".
+    * It attempts to find and parse a JSON array within the "Tool Calls:" section, handling
+    * potential markdown fences (```json ... ```) and validating the structure using Zod.
+    *
+    * @param output - The raw string response from the planning LLM call.
+    * @returns A promise resolving to an object containing optional `intent` (string), `plan` (string),
+    *          and `toolCalls` (array of `ParsedToolCall` objects). Fields will be `undefined` if
+    *          the corresponding section is not found or cannot be parsed correctly.
+    *          `toolCalls` will be an empty array `[]` if the "Tool Calls:" section is present but empty,
+    *          or if the JSON is invalid or fails structural validation. It remains `undefined` only
+    *          if the "Tool Calls:" section itself is missing.
+    */
   async parsePlanningOutput(output: string): Promise<{
     intent?: string;
     plan?: string;
@@ -117,11 +131,13 @@ export class OutputParser implements IOutputParser {
   }
 
   /**
-   * Parses the output of the synthesis LLM call.
-   * For v1.0, assumes the entire output is the final response content.
-   * @param output Raw LLM output string.
-   * @returns The final synthesized response content.
-   */
+   /**
+    * Parses the raw string output from the synthesis LLM call to extract the final, user-facing response content.
+    * This default implementation simply trims whitespace from the input string.
+    * More complex implementations could potentially remove specific tags or formatting if needed.
+    * @param output - The raw string response from the synthesis LLM call.
+    * @returns A promise resolving to the cleaned, final response string.
+    */
   async parseSynthesisOutput(output: string): Promise<string> {
     // Basic implementation: return the trimmed output.
     // Future versions might parse more complex structures if needed.

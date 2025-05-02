@@ -2,16 +2,24 @@ import { StorageAdapter } from '../../core/interfaces';
 import { FilterOptions } from '../../types';
 
 /**
- * An in-memory implementation of the StorageAdapter interface.
- * Useful for testing, development, or simple scenarios where persistence
- * across sessions is not required.
+ * An in-memory implementation of the `StorageAdapter` interface.
+ * Stores all data in JavaScript Maps within the current process memory.
+ * Data is **not persisted** and will be lost when the application session ends.
+ *
+ * Useful for:
+ * - Unit and integration testing (fast, no external dependencies).
+ * - Simple demos or examples where persistence isn't needed.
+ * - Ephemeral agents that don't require long-term memory.
+ *
+ * @implements {StorageAdapter}
  */
 export class InMemoryStorageAdapter implements StorageAdapter {
   private storage: Map<string, Map<string, any>> = new Map();
 
   /**
-   * Initializes the adapter (no-op for in-memory).
-   * @param _config Optional configuration (ignored).
+   * Initializes the adapter. This is a no-op for the in-memory adapter.
+   * @param _config - Optional configuration (ignored by this adapter).
+   * @returns A promise that resolves immediately.
    */
   async init(_config?: any): Promise<void> { // Renamed config to _config
     // No initialization needed for in-memory storage
@@ -19,10 +27,11 @@ export class InMemoryStorageAdapter implements StorageAdapter {
   }
 
   /**
-   * Retrieves a single item from a collection by its ID.
-   * @param collection The name of the data collection.
-   * @param id The unique ID of the item.
-   * @returns The item or null if not found.
+   * Retrieves a single item (as a deep copy) from a specified collection by its ID.
+   * @template T - The expected type of the retrieved item.
+   * @param collection - The name of the data collection (e.g., 'messages', 'observations').
+   * @param id - The unique ID of the item within the collection.
+   * @returns A promise resolving to a deep copy of the item if found, or `null` otherwise.
    */
   async get<T>(collection: string, id: string): Promise<T | null> {
     const collectionMap = this.storage.get(collection);
@@ -35,10 +44,13 @@ export class InMemoryStorageAdapter implements StorageAdapter {
   }
 
   /**
-   * Saves (creates or updates) an item in a collection.
-   * @param collection The name of the collection.
-   * @param id The unique ID of the item.
-   * @param data The data to save (will be deep copied).
+   * Saves (creates or updates) an item in a specified collection.
+   * Stores a deep copy of the provided data to prevent external mutations.
+   * @template T - The type of the data being saved.
+   * @param collection - The name of the collection.
+   * @param id - The unique ID for the item.
+   * @param data - The data object to save.
+   * @returns A promise that resolves when the data is saved in memory.
    */
   async set<T>(collection: string, id: string, data: T): Promise<void> {
     if (!this.storage.has(collection)) {
@@ -51,9 +63,11 @@ export class InMemoryStorageAdapter implements StorageAdapter {
   }
 
   /**
-   * Deletes an item from a collection by its ID.
-   * @param collection The name of the collection.
-   * @param id The unique ID of the item.
+   * Deletes an item from a specified collection using its ID.
+   * If the collection or item does not exist, the operation completes silently.
+   * @param collection - The name of the collection.
+   * @param id - The unique ID of the item to delete.
+   * @returns A promise that resolves when the deletion attempt is complete.
    */
   async delete(collection: string, id: string): Promise<void> {
     const collectionMap = this.storage.get(collection);
@@ -64,13 +78,15 @@ export class InMemoryStorageAdapter implements StorageAdapter {
   }
 
   /**
-   * Queries items in a collection based on simple filter options.
-   * Note: This is a basic implementation. It only supports exact matches
-   * on top-level properties defined in the filter object. It does not
-   * support complex queries, sorting, or deep filtering.
-   * @param collection The name of the collection.
-   * @param filterOptions Filtering options. Only `filter` is partially supported.
-   * @returns An array of matching items (deep copies).
+   * Queries items within a collection based on provided filter options.
+   * **Note:** This in-memory implementation provides basic filtering capabilities:
+   * - Supports exact matches on top-level properties specified in `filterOptions.filter`.
+   * - Supports limiting results via `filterOptions.limit`.
+   * - **Does not** support sorting (`filterOptions.sort`), skipping (`filterOptions.skip`), complex operators (like $gt, $in), or nested property filtering.
+   * @template T - The expected type of the items in the collection.
+   * @param collection - The name of the collection to query.
+   * @param filterOptions - Options for filtering and limiting the results.
+   * @returns A promise resolving to an array of deep copies of the matching items.
    */
   async query<T>(collection: string, filterOptions: FilterOptions): Promise<T[]> {
     const collectionMap = this.storage.get(collection);
@@ -106,8 +122,9 @@ export class InMemoryStorageAdapter implements StorageAdapter {
   }
 
   /**
-   * Clears all items from a specific collection.
-   * @param collection The name of the collection to clear.
+   * Removes all items from a specific collection within the in-memory store.
+   * @param collection - The name of the collection to clear.
+   * @returns A promise that resolves when the collection is cleared.
    */
   async clearCollection(collection: string): Promise<void> {
     this.storage.delete(collection);
@@ -115,7 +132,9 @@ export class InMemoryStorageAdapter implements StorageAdapter {
   }
 
   /**
-   * Clears all data managed by the adapter.
+   * Removes all collections and all data stored within the adapter instance.
+   * Use with caution, especially during testing.
+   * @returns A promise that resolves when all data is cleared.
    */
   async clearAll(): Promise<void> {
     this.storage.clear();

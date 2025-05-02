@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ConversationManager } from './ConversationManager';
 import { IConversationRepository } from '../../../core/interfaces';
+import { ConversationSocket } from '../../ui/conversation-socket'; // Import mock target
 import { ConversationMessage, MessageOptions, MessageRole } from '../../../types';
 
 // Helper to create messages
@@ -20,12 +21,18 @@ const createMockRepository = (): IConversationRepository => ({
 
 describe('ConversationManager', () => {
   let mockRepository: IConversationRepository;
+  let mockSocket: ConversationSocket; // Add mock socket variable
   let manager: ConversationManager;
   const threadId = 'conv-mgr-thread-1';
 
   beforeEach(() => {
     mockRepository = createMockRepository();
-    manager = new ConversationManager(mockRepository);
+    // Create a basic mock socket with a spy on the notify method
+    mockSocket = {
+      notify: vi.fn(),
+      // Add other methods if needed by tests, mocked similarly
+    } as unknown as ConversationSocket;
+    manager = new ConversationManager(mockRepository, mockSocket); // Pass mock socket
   });
 
   describe('addMessages', () => {
@@ -38,6 +45,10 @@ describe('ConversationManager', () => {
 
       expect(mockRepository.addMessages).toHaveBeenCalledOnce();
       expect(mockRepository.addMessages).toHaveBeenCalledWith(threadId, messages);
+      // Check if socket was notified for each message
+      expect(mockSocket.notify).toHaveBeenCalledTimes(messages.length);
+      expect(mockSocket.notify).toHaveBeenCalledWith(messages[0], { targetThreadId: threadId });
+      expect(mockSocket.notify).toHaveBeenCalledWith(messages[1], { targetThreadId: threadId });
     });
 
     it('should resolve successfully even if repository throws (depends on desired behavior - current impl lets repo handle errors)', async () => {
@@ -47,27 +58,34 @@ describe('ConversationManager', () => {
        const messages = [createMessage(1, threadId, Date.now(), MessageRole.USER, 'Test')];
 
        // The manager currently doesn't catch errors from the repository addMessages
+       // Even if repo fails, socket notification might still be attempted depending on order
+       // In current implementation, repo call is first, so if it rejects, socket won't be called.
        await expect(manager.addMessages(threadId, messages)).rejects.toThrow(repoError);
        expect(mockRepository.addMessages).toHaveBeenCalledWith(threadId, messages);
+       expect(mockSocket.notify).not.toHaveBeenCalled(); // Because repo call failed first
     });
 
 
-    it('should not call repository if messages array is empty', async () => {
+    it('should not call repository or socket if messages array is empty', async () => {
       await manager.addMessages(threadId, []);
       expect(mockRepository.addMessages).not.toHaveBeenCalled();
+      expect(mockSocket.notify).not.toHaveBeenCalled();
     });
 
-     it('should not call repository if messages array is null or undefined', async () => {
+     it('should not call repository or socket if messages array is null or undefined', async () => {
       await manager.addMessages(threadId, null as any);
       expect(mockRepository.addMessages).not.toHaveBeenCalled();
+      expect(mockSocket.notify).not.toHaveBeenCalled();
        await manager.addMessages(threadId, undefined as any);
        expect(mockRepository.addMessages).not.toHaveBeenCalled();
+       expect(mockSocket.notify).not.toHaveBeenCalled();
     });
 
-    it('should reject if threadId is empty', async () => {
+    it('should reject and not call repo/socket if threadId is empty', async () => {
       const messages = [createMessage(1, '', Date.now(), MessageRole.USER, 'Test')];
-      await expect(manager.addMessages('', messages)).rejects.toThrow('threadId cannot be empty');
+      await expect(manager.addMessages('', messages)).rejects.toThrow('ConversationManager: threadId cannot be empty.');
       expect(mockRepository.addMessages).not.toHaveBeenCalled();
+      expect(mockSocket.notify).not.toHaveBeenCalled();
     });
   });
 

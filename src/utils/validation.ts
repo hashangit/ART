@@ -10,14 +10,15 @@ const ajv = new Ajv({ allErrors: true });
 const compiledValidators: Map<string, ValidateFunction> = new Map();
 
 /**
- * Validates data against a given JSON schema using Ajv.
- * Caches compiled schemas for better performance.
+ * Validates data against a given JSON schema using the Ajv library.
+ * It caches compiled validation functions based on the schema's string representation
+ * to improve performance for repeated validations against the same schema.
  *
- * @param schema - The JSON schema object to validate against.
- * @param data - The data object to validate.
- * @returns An object containing:
- *          - `isValid`: boolean indicating if the data is valid.
- *          - `errors`: An array of Ajv validation errors if invalid, otherwise null.
+ * @param schema - The JSON schema object (`object` type assumed, adjust if other root types are needed) to validate against.
+ * @param data - The data object to be validated against the schema.
+ * @returns An object with two properties:
+ *          - `isValid`: A boolean indicating whether the `data` conforms to the `schema`.
+ *          - `errors`: If `isValid` is `false`, this contains an array of Ajv validation error objects (`ErrorObject[]`). If `isValid` is `true`, this is `null`. Returns a specific error object if schema compilation fails.
  */
 export function validateJsonSchema(schema: object, data: any): { isValid: boolean; errors: ValidateFunction['errors'] | null } {
   // Use a string representation of the schema as the cache key
@@ -58,7 +59,11 @@ export function validateJsonSchema(schema: object, data: any): { isValid: boolea
   }
 }
 
-// Optional: Function to clear the validator cache if needed (e.g., for testing)
+/**
+ * Clears the internal cache of compiled JSON schema validators.
+ * This might be useful in testing scenarios or if schemas are dynamically updated
+ * in a way that requires recompilation.
+ */
 export function clearJsonSchemaValidatorCache(): void {
     compiledValidators.clear();
     Logger.debug('Cleared JSON schema validator cache.');

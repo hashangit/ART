@@ -1,14 +1,31 @@
 // src/systems/tool/ToolRegistry.ts
-import { ToolRegistry as IToolRegistry, IToolExecutor } from '../../core/interfaces';
+import { ToolRegistry as IToolRegistry, IToolExecutor, StateManager } from '../../core/interfaces'; // Added StateManager import
 import { ToolSchema } from '../../types';
 import { Logger } from '../../utils/logger';
 
+/**
+ * A simple in-memory implementation of the `ToolRegistry` interface.
+ * Stores tool executors in a Map, keyed by the tool's unique name.
+ */
 export class ToolRegistry implements IToolRegistry {
   private executors: Map<string, IToolExecutor> = new Map();
+  private stateManager: StateManager | undefined; // Added stateManager property
 
   /**
-   * Registers a tool executor. Overwrites if a tool with the same name exists.
-   * @param executor The tool executor instance.
+   * Creates an instance of ToolRegistry.
+   * @param stateManager - Optional StateManager instance for advanced filtering.
+   */
+   constructor(stateManager?: StateManager) {
+       this.stateManager = stateManager;
+       Logger.debug(`ToolRegistry initialized ${stateManager ? 'with' : 'without'} StateManager.`);
+   }
+
+  /**
+   * Registers a tool executor instance, making it available for lookup via `getToolExecutor`.
+   * If a tool with the same name (from `executor.schema.name`) already exists, it will be overwritten, and a warning will be logged.
+   * @param executor - The instance of the class implementing `IToolExecutor`. Must have a valid schema with a name.
+   * @returns A promise that resolves when the tool is registered.
+   * @throws {Error} If the provided executor or its schema is invalid.
    */
   async registerTool(executor: IToolExecutor): Promise<void> {
     if (!executor || !executor.schema || !executor.schema.name) {
@@ -24,9 +41,9 @@ export class ToolRegistry implements IToolRegistry {
   }
 
   /**
-   * Retrieves a tool executor by its name.
-   * @param toolName The unique name of the tool.
-   * @returns The executor instance or undefined if not found.
+   * Retrieves a registered tool executor instance by its unique name.
+   * @param toolName - The `name` property defined in the tool's schema.
+   * @returns A promise resolving to the `IToolExecutor` instance, or `undefined` if no tool with that name is registered.
    */
   async getToolExecutor(toolName: string): Promise<IToolExecutor | undefined> {
     const executor = this.executors.get(toolName);
@@ -37,24 +54,53 @@ export class ToolRegistry implements IToolRegistry {
   }
 
   /**
-   * Retrieves the schemas of all registered tools.
-   * Note: The filter parameter is ignored in this basic in-memory implementation.
-   *       A more complex registry might use it (e.g., to check against StateManager).
-   * @param filter Optional criteria (ignored in this implementation).
-   * @returns An array of tool schemas.
+   * Retrieves the schemas of all currently registered tools.
+   * Retrieves the schemas of available tools, optionally filtering by those enabled for a specific thread.
+   * If `filter.enabledForThreadId` is provided and a `StateManager` was injected, it attempts to load the thread's configuration
+   * and return only the schemas for tools listed in `enabledTools`. Otherwise, it returns all registered tool schemas.
+   * @param filter - Optional filter criteria. `enabledForThreadId` triggers filtering based on thread config.
+   * @returns A promise resolving to an array containing the `ToolSchema` of the available tools based on the filter.
    */
-  async getAvailableTools(filter?: { enabledForThreadId?: string }): Promise<ToolSchema[]> {
-     if (filter?.enabledForThreadId) {
-        Logger.warn('ToolRegistry: Filtering by enabledForThreadId is not implemented in the basic ToolRegistry. Returning all tools.');
-        // In a real scenario, this might interact with StateManager
-     }
-    const schemas = Array.from(this.executors.values()).map(executor => executor.schema);
-    Logger.debug(`ToolRegistry: Returning ${schemas.length} available tool schemas.`);
-    return schemas;
+   async getAvailableTools(filter?: { enabledForThreadId?: string }): Promise<ToolSchema[]> {
+    const allExecutors = Array.from(this.executors.values());
+    const allSchemas = allExecutors.map(executor => executor.schema);
+
+    if (filter?.enabledForThreadId && this.stateManager) {
+      const threadId = filter.enabledForThreadId;
+      Logger.debug(`ToolRegistry: Attempting to filter tools for threadId: ${threadId}`);
+      try {
+        // Assuming loadThreadContext returns null/undefined if not found or lacks config
+        const threadContext = await this.stateManager.loadThreadContext(threadId);
+        const enabledToolNames = threadContext?.config?.enabledTools;
+
+        if (enabledToolNames && Array.isArray(enabledToolNames)) {
+          Logger.debug(`ToolRegistry: Found enabled tools for thread ${threadId}: ${enabledToolNames.join(', ')}`);
+          const enabledExecutors = allExecutors.filter(executor =>
+            enabledToolNames.includes(executor.schema.name)
+          );
+          const enabledSchemas = enabledExecutors.map(executor => executor.schema);
+          Logger.debug(`ToolRegistry: Returning ${enabledSchemas.length} enabled tool schemas for thread ${threadId}.`);
+          return enabledSchemas;
+        } else {
+          Logger.warn(`ToolRegistry: No specific enabledTools found for thread ${threadId} or config missing. Returning all tools.`);
+        }
+      } catch (error: any) {
+        Logger.error(`ToolRegistry: Error loading thread config for ${threadId}: ${error.message}. Returning all tools.`);
+        // Fallback to returning all tools in case of error loading config
+      }
+    } else if (filter?.enabledForThreadId && !this.stateManager) {
+        Logger.warn('ToolRegistry: Filtering by enabledForThreadId requested, but StateManager was not provided. Returning all tools.');
+    }
+
+    // Default: return all schemas if no filtering is applied or possible
+    Logger.debug(`ToolRegistry: Returning all ${allSchemas.length} registered tool schemas.`);
+    return allSchemas;
   }
 
   /**
-   * Clears all registered tools. Useful for testing.
+   * Removes all registered tool executors from the registry.
+   * Primarily useful for resetting state during testing or specific application scenarios.
+   * @returns A promise that resolves when all tools have been cleared.
    */
   async clearAllTools(): Promise<void> {
       this.executors.clear();

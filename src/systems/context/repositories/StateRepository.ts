@@ -5,23 +5,36 @@ import { ThreadContext, ThreadConfig, AgentState } from '../../../types';
 type StoredThreadContext = ThreadContext & { id: string };
 
 /**
- * Repository for managing ThreadContext (ThreadConfig and AgentState) using a StorageAdapter.
- * Stores one context object per threadId in the 'state' collection.
+ * Implements the `IStateRepository` interface, providing methods to manage
+ * `ThreadContext` (which includes `ThreadConfig` and `AgentState`) using an
+ * underlying `StorageAdapter`. It stores the entire context object for each thread
+ * under a key equal to the `threadId` within a designated collection (default: 'state').
+ *
+ * @implements {IStateRepository}
  */
 export class StateRepository implements IStateRepository {
   private adapter: StorageAdapter;
   private readonly collectionName = 'state'; // Define the collection name
 
+  /**
+   * Creates an instance of StateRepository.
+   * @param storageAdapter - The configured `StorageAdapter` instance used for persistence.
+   */
   constructor(storageAdapter: StorageAdapter) {
+     if (!storageAdapter) {
+      throw new Error("StateRepository requires a valid StorageAdapter instance.");
+    }
     this.adapter = storageAdapter;
-    // Adapter initialization should happen at application setup.
+    // Note: Adapter initialization (adapter.init()) should be handled externally.
   }
 
   /**
-   * Retrieves the full ThreadContext for a given threadId.
-   * @param threadId The ID of the thread.
-   * @returns The ThreadContext object or null if not found.
-   */
+   /**
+    * Retrieves the complete `ThreadContext` (config and state) for a specific thread ID.
+    * @param threadId - The unique identifier of the thread.
+    * @returns A promise resolving to the `ThreadContext` object if found, or `null` otherwise.
+    * @throws {Error} Propagates errors from the storage adapter's `get` method.
+    */
   async getThreadContext(threadId: string): Promise<ThreadContext | null> {
     const storedContext = await this.adapter.get<StoredThreadContext>(this.collectionName, threadId);
     if (!storedContext) {
@@ -35,10 +48,13 @@ export class StateRepository implements IStateRepository {
   }
 
   /**
-   * Saves the full ThreadContext for a given threadId.
-   * This will overwrite any existing context for the thread.
-   * @param threadId The ID of the thread.
-   * @param context The ThreadContext object to save.
+   /**
+    * Saves (or overwrites) the complete `ThreadContext` for a specific thread ID.
+    * Ensures the context object includes the `threadId` as the `id` property for storage.
+    * @param threadId - The unique identifier of the thread.
+   * @param context - The `ThreadContext` object to save. Must contain at least the `config` property.
+   * @returns A promise that resolves when the context is successfully saved.
+   * @throws {Error} If the context is missing the required `config` property or if the storage adapter fails.
    */
   async setThreadContext(threadId: string, context: ThreadContext): Promise<void> {
     if (!context || typeof context.config === 'undefined') {
@@ -53,22 +69,27 @@ export class StateRepository implements IStateRepository {
   }
 
   /**
-   * Retrieves only the ThreadConfig for a given threadId.
-   * @param threadId The ID of the thread.
-   * @returns The ThreadConfig object or null if not found.
-   */
+   /**
+    * Retrieves only the `ThreadConfig` part of the context for a specific thread ID.
+    * @param threadId - The unique identifier of the thread.
+    * @returns A promise resolving to the `ThreadConfig` object if found, or `null` otherwise.
+    * @throws {Error} Propagates errors from the underlying `getThreadContext` call.
+    */
   async getThreadConfig(threadId: string): Promise<ThreadConfig | null> {
     const context = await this.getThreadContext(threadId);
     return context?.config ?? null;
   }
 
   /**
-   * Saves only the ThreadConfig for a given threadId.
-   * Retrieves the existing context, updates the config part, and saves it back.
-   * If no context exists, creates a new one with the provided config and null state.
-   * @param threadId The ID of the thread.
-   * @param config The ThreadConfig object to save.
-   */
+   /**
+    * Sets or updates only the `ThreadConfig` part of the context for a specific thread ID.
+    * It fetches the existing context, replaces the `config` field, preserves the existing `state` (or sets it to null if none existed),
+    * and then saves the entire updated `ThreadContext` back to storage.
+    * @param threadId - The unique identifier of the thread.
+    * @param config - The `ThreadConfig` object to save.
+    * @returns A promise that resolves when the updated context is saved.
+    * @throws {Error} Propagates errors from the underlying `getThreadContext` or `setThreadContext` calls.
+    */
   async setThreadConfig(threadId: string, config: ThreadConfig): Promise<void> {
     const currentContext = await this.getThreadContext(threadId);
     const newContext: ThreadContext = {
@@ -79,22 +100,28 @@ export class StateRepository implements IStateRepository {
   }
 
   /**
-   * Retrieves only the AgentState for a given threadId.
-   * @param threadId The ID of the thread.
-   * @returns The AgentState object or null if not found or not set.
-   */
+   /**
+    * Retrieves only the `AgentState` part of the context for a specific thread ID.
+    * @param threadId - The unique identifier of the thread.
+    * @returns A promise resolving to the `AgentState` object if found and not null, or `null` otherwise.
+    * @throws {Error} Propagates errors from the underlying `getThreadContext` call.
+    */
   async getAgentState(threadId: string): Promise<AgentState | null> {
     const context = await this.getThreadContext(threadId);
     return context?.state ?? null;
   }
 
   /**
-   * Saves only the AgentState for a given threadId.
-   * Retrieves the existing context, updates the state part, and saves it back.
-   * Throws an error if no configuration context exists for the thread,
-   * as state typically depends on an existing configuration.
-   * @param threadId The ID of the thread.
-   * @param state The AgentState object to save.
+   /**
+    * Sets or updates only the `AgentState` part of the context for a specific thread ID.
+    * It fetches the existing context, replaces the `state` field, preserves the existing `config`,
+    * and then saves the entire updated `ThreadContext` back to storage.
+    * **Important:** This method requires that a `ThreadConfig` already exists for the thread.
+    * Attempting to set state for a thread without prior configuration will result in an error.
+    * @param threadId - The unique identifier of the thread.
+   * @param state - The `AgentState` object to save.
+   * @returns A promise that resolves when the updated context is saved.
+   * @throws {Error} If no `ThreadConfig` exists for the `threadId`, or if errors occur during context retrieval or saving.
    */
   async setAgentState(threadId: string, state: AgentState): Promise<void> {
     const currentContext = await this.getThreadContext(threadId);

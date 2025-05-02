@@ -1,84 +1,161 @@
 // src/systems/reasoning/ReasoningEngine.test.ts
 import { describe, it, expect, beforeEach, vi, Mock } from 'vitest'; // Import Mock type
 import { ReasoningEngine } from './ReasoningEngine';
-import { ProviderAdapter } from '../../core/interfaces';
+import {
+    IProviderManager,
+    ManagedAdapterAccessor,
+    ProviderAdapter,
+} from '../../types/providers'; // Import types from providers.ts
+import { FormattedPrompt, CallOptions, StreamEvent } from '../../types'; // Import types from ../../types
 import { Logger } from '../../utils/logger';
-import { FormattedPrompt, CallOptions } from '../../types';
 
 // Mock Logger
 vi.mock('../../utils/logger', () => ({
-  Logger: {
-    warn: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-    debug: vi.fn(),
-    configure: vi.fn(),
-  },
+    Logger: {
+        warn: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+        debug: vi.fn(),
+        configure: vi.fn(),
+    },
 }));
 
-// Create a mock ProviderAdapter
-const mockAdapter: ProviderAdapter = {
-  providerName: 'mock-adapter',
-  call: vi.fn(),
+// Mock ProviderAdapter for use within ManagedAdapterAccessor
+class MockProviderAdapter implements ProviderAdapter {
+    providerName: string = 'mock-adapter';
+    async call(_prompt: FormattedPrompt, _options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
+        // Simulate a stream
+        const stream: AsyncIterable<StreamEvent> = (async function*() {
+            yield { type: 'TOKEN', data: 'chunk1', threadId: _options.threadId, traceId: _options.traceId || 'mock-trace-id' };
+            yield { type: 'TOKEN', data: 'chunk2', threadId: _options.threadId, traceId: _options.traceId || 'mock-trace-id' };
+            yield { type: 'END', data: null, threadId: _options.threadId, traceId: _options.traceId || 'mock-trace-id' };
+        })();
+        return stream;
+    }
+    async shutdown(): Promise<void> {
+        // Mock shutdown
+    }
+}
+
+// Mock IProviderManager
+const mockProviderManager: IProviderManager = {
+    getAvailableProviders: vi.fn(),
+    getAdapter: vi.fn(),
+    // shutdown: vi.fn(), // Optional shutdown
 };
 
 describe('ReasoningEngine', () => {
-  let engine: ReasoningEngine;
-  const defaultCallOptions: CallOptions = { threadId: 't1' };
-  const defaultPrompt: FormattedPrompt = 'Test prompt';
+    let engine: ReasoningEngine;
+    const defaultCallOptions: CallOptions = { threadId: 't1', providerConfig: { providerName: 'mock', modelId: 'mock-model', adapterOptions: {} } };
+    const defaultPrompt: FormattedPrompt = [{ role: 'user', content: 'Test prompt' }];
 
-  beforeEach(() => {
-    // Reset mocks before each test
-    vi.clearAllMocks();
-    // Re-initialize engine with the mock adapter
-    engine = new ReasoningEngine(mockAdapter);
-  });
+    // Mock ManagedAdapterAccessor and its release function
+    const mockAdapter = new MockProviderAdapter();
+    const mockRelease = vi.fn();
+    const mockAccessor: ManagedAdapterAccessor = {
+        adapter: mockAdapter,
+        release: mockRelease,
+    };
 
-  it('should throw error if constructor is called without an adapter', () => {
-    expect(() => new ReasoningEngine(null as any)).toThrow('ReasoningEngine requires a valid ProviderAdapter.');
-    expect(() => new ReasoningEngine(undefined as any)).toThrow('ReasoningEngine requires a valid ProviderAdapter.');
-  });
+    beforeEach(() => {
+        // Reset mocks before each test
+        vi.clearAllMocks();
+        // Mock getAdapter to return the mock accessor
+        (mockProviderManager.getAdapter as Mock).mockResolvedValue(mockAccessor);
 
-  it('should initialize correctly and log info message', () => {
-    // This is implicitly tested by the beforeEach block, but we can assert the log
-    expect(Logger.info).toHaveBeenCalledOnce();
-    expect(Logger.info).toHaveBeenCalledWith('ReasoningEngine initialized with adapter: mock-adapter');
-  });
+        // Initialize engine with the mock ProviderManager
+        engine = new ReasoningEngine(mockProviderManager);
+    });
 
-  it('should delegate the call method to the adapter', async () => {
-    const expectedResult = 'Adapter response';
-    (mockAdapter.call as Mock).mockResolvedValueOnce(expectedResult); // Use Mock type directly
+    it('should be instantiated with a valid ProviderManager', () => {
+        expect(engine).toBeInstanceOf(ReasoningEngine);
+        expect(Logger.info).toHaveBeenCalledOnce();
+        expect(Logger.info).toHaveBeenCalledWith('ReasoningEngine initialized');
+    });
 
-    const result = await engine.call(defaultPrompt, defaultCallOptions);
+    it('should request an adapter from the ProviderManager for each call', async () => {
+        await engine.call(defaultPrompt, defaultCallOptions);
 
-    expect(result).toBe(expectedResult);
-    expect(mockAdapter.call).toHaveBeenCalledOnce();
-    expect(mockAdapter.call).toHaveBeenCalledWith(defaultPrompt, defaultCallOptions);
-    expect(Logger.debug).toHaveBeenCalledWith('ReasoningEngine delegating call to adapter: mock-adapter', expect.anything());
-    expect(Logger.error).not.toHaveBeenCalled();
-  });
+        expect(mockProviderManager.getAdapter).toHaveBeenCalledOnce();
+        expect(mockProviderManager.getAdapter).toHaveBeenCalledWith(defaultCallOptions.providerConfig); // Assuming providerConfig is in callOptions
+    });
 
-  it('should pass prompt and options correctly to the adapter', async () => {
-    const specificPrompt: FormattedPrompt = { complex: 'prompt' };
-    const specificOptions: CallOptions = { threadId: 't2', traceId: 'trace-123', temperature: 0.7 };
-    (mockAdapter.call as Mock).mockResolvedValueOnce('Success'); // Use Mock type directly
+    it('should use the adapter returned by the ProviderManager to make the LLM call', async () => {
+        const adapterCallSpy = vi.spyOn(mockAdapter, 'call');
 
-    await engine.call(specificPrompt, specificOptions);
+        await engine.call(defaultPrompt, defaultCallOptions);
 
-    expect(mockAdapter.call).toHaveBeenCalledWith(specificPrompt, specificOptions);
-  });
+        expect(adapterCallSpy).toHaveBeenCalledOnce();
+        expect(adapterCallSpy).toHaveBeenCalledWith(defaultPrompt, defaultCallOptions);
+    });
 
-  it('should catch errors from the adapter, log them, and re-throw', async () => {
-    const adapterError = new Error('Adapter failed');
-    (mockAdapter.call as Mock).mockRejectedValueOnce(adapterError); // Use Mock type directly
+    it('should return an async iterable from the adapter call', async () => {
+        const result = await engine.call(defaultPrompt, defaultCallOptions);
+        expect(typeof result[Symbol.asyncIterator]).toBe('function');
+    });
 
-    await expect(engine.call(defaultPrompt, defaultCallOptions)).rejects.toThrow('Adapter failed');
+    it('should call the release function after consuming the async iterable', async () => {
+        const resultStream = await engine.call(defaultPrompt, defaultCallOptions);
 
-    expect(mockAdapter.call).toHaveBeenCalledOnce();
-    expect(Logger.error).toHaveBeenCalledOnce();
-    expect(Logger.error).toHaveBeenCalledWith(
-      'ReasoningEngine encountered an error during adapter call: Adapter failed',
-      expect.objectContaining({ error: adapterError })
-    );
-  });
+        // Consume the stream
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        for await (const _event of resultStream) {
+            // Do nothing, just consume
+        }
+
+        expect(mockRelease).toHaveBeenCalledOnce();
+    });
+
+    it('should call the release function even if consuming the async iterable throws an error', async () => {
+        // Mock the adapter's call to return a stream that throws after the first chunk
+        const errorStream: AsyncIterable<StreamEvent> = (async function*() {
+            yield { type: 'TOKEN', data: 'chunk1', threadId: defaultCallOptions.threadId, traceId: defaultCallOptions.traceId || 'mock-trace-id' };
+            throw new Error('Stream error');
+        })();
+        const adapterCallSpy = vi.spyOn(mockAdapter, 'call').mockResolvedValueOnce(errorStream);
+
+        const resultStream = await engine.call(defaultPrompt, defaultCallOptions);
+
+        // Consume the stream and expect it to throw
+        await expect(async () => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            for await (const _event of resultStream) {
+                // Consume
+            }
+        }).rejects.toThrow('Stream error');
+
+        // The release function should still have been called
+        expect(mockRelease).toHaveBeenCalledOnce();
+        expect(adapterCallSpy).toHaveBeenCalledOnce();
+    });
+
+    it('should call the release function even if consuming the async iterable is cancelled (e.g., break)', async () => {
+        const resultStream = await engine.call(defaultPrompt, defaultCallOptions);
+
+        // Consume only the first chunk and break
+        for await (const event of resultStream) {
+            expect(event.type).toBe('TOKEN');
+            break; // Cancel consumption
+        }
+
+        // The release function should still have been called
+        expect(mockRelease).toHaveBeenCalledOnce();
+    });
+
+    it('should handle errors from getAdapter, log them, and re-throw', async () => {
+        const getAdapterError = new Error('Failed to get adapter');
+        (mockProviderManager.getAdapter as Mock).mockRejectedValueOnce(getAdapterError);
+
+        await expect(engine.call(defaultPrompt, defaultCallOptions)).rejects.toThrow('Failed to get adapter');
+
+        expect(mockProviderManager.getAdapter).toHaveBeenCalledOnce();
+        expect(Logger.error).toHaveBeenCalledOnce();
+        expect(Logger.error).toHaveBeenCalledWith(
+            'ReasoningEngine encountered an error getting adapter from ProviderManager:',
+            expect.objectContaining({ error: getAdapterError })
+        );
+        expect(mockRelease).not.toHaveBeenCalled(); // Release should not be called if adapter wasn't obtained
+    });
+
+    // TODO: Add tests for different StreamEvent types being handled/propagated correctly if needed by ReasoningEngine logic (currently it just passes the stream through)
 });

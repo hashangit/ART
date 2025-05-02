@@ -5,19 +5,31 @@ import { validateJsonSchema } from '../../utils/validation';
 import { Logger } from '../../utils/logger';
 // import { v4 as uuidv4 } from 'uuid'; // Removed unused import
 
+/**
+ * Implements the `ToolSystem` interface, responsible for orchestrating the execution
+ * of tool calls requested by the agent's plan. It handles verification, validation,
+ * execution via registered executors, and observation recording.
+ */
 export class ToolSystem implements IToolSystem {
   private toolRegistry: ToolRegistry;
   private stateManager: StateManager;
   private observationManager: ObservationManager; // Add when implementing observations
 
+  /**
+   * Creates an instance of the ToolSystem.
+   * @param toolRegistry - The registry used to look up tool executors.
+   * @param stateManager - The manager used to check if tools are enabled for a thread.
+   * @param observationManager - The manager used to record TOOL_EXECUTION observations.
+   * @throws {Error} If any of the required dependencies are missing.
+   */
   constructor(
     toolRegistry: ToolRegistry,
     stateManager: StateManager,
-    observationManager: ObservationManager // Add when implementing observations
+    observationManager: ObservationManager
   ) {
-    if (!toolRegistry) throw new Error('ToolSystem requires a ToolRegistry.');
-    if (!stateManager) throw new Error('ToolSystem requires a StateManager.');
-    if (!observationManager) throw new Error('ToolSystem requires an ObservationManager.');
+    if (!toolRegistry) throw new Error('ToolSystem constructor requires a ToolRegistry instance.');
+    if (!stateManager) throw new Error('ToolSystem constructor requires a StateManager instance.');
+    if (!observationManager) throw new Error('ToolSystem constructor requires an ObservationManager instance.');
 
     this.toolRegistry = toolRegistry;
     this.stateManager = stateManager;
@@ -26,12 +38,17 @@ export class ToolSystem implements IToolSystem {
   }
 
   /**
-   * Executes a list of parsed tool calls sequentially.
-   * @param toolCalls Array of tool calls requested by the LLM.
-   * @param threadId The current thread ID for context and permissions.
-   * @param traceId Optional trace ID for correlation.
-   * @returns A promise resolving to an array of tool results.
-   */
+   /**
+    * Executes a sequence of planned tool calls, handling verification, validation,
+    * execution, and observation recording for each call.
+    * Calls are typically executed sequentially in the order they appear in the `toolCalls` array.
+    * @param toolCalls - An array of `ParsedToolCall` objects generated during the planning phase.
+    * @param threadId - The ID of the current thread, used for context and checking tool permissions via `StateManager`.
+    * @param traceId - Optional trace ID for correlating observations.
+    * @returns A promise resolving to an array of `ToolResult` objects, one for each attempted tool call.
+    *          Each `ToolResult` indicates the success or failure of the individual call.
+    *          This method itself generally does not throw errors for individual tool failures, but logs them and includes them in the results. It might throw if a critical internal error occurs.
+    */
   async executeTools(
     toolCalls: ParsedToolCall[],
     threadId: string,

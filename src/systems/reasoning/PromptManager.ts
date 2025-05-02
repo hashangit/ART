@@ -1,143 +1,81 @@
 // src/systems/reasoning/PromptManager.ts
+import Mustache from 'mustache'; // Use default import (with esModuleInterop: true)
 import {
-  ConversationMessage,
-  FormattedPrompt,
-  MessageRole,
-  // ParsedToolCall, // Removed unused import
-  ThreadContext, // Added import
-  ToolResult,
-  ToolSchema,
-} from '../../types'; // Assuming types are exported from src/types/index.ts
-import { PromptManager as PromptManagerInterface } from '../../core/interfaces'; // Use interface name
+  ArtStandardPrompt,
+  PromptContext,
+  // Removed unused imports like ConversationMessage, ToolResult, ToolSchema, ThreadContext
+} from '../../types';
+import { PromptManager as PromptManagerInterface } from '../../core/interfaces';
+import { ARTError, ErrorCode } from '../../errors';
 
-// Basic templating function (can be replaced with a more robust library later)
-function simpleTemplate(template: string, data: Record<string, any>): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-    return data[key] !== undefined ? String(data[key]) : match;
-  });
-}
-
+/**
+ * Stateless implementation of the `PromptManager` interface using Mustache.js.
+ * Assembles a provider-agnostic `ArtStandardPrompt` based on a Mustache blueprint
+ * string and a `PromptContext` object provided by the agent logic.
+ *
+ * @implements {PromptManagerInterface}
+ * @see {PromptContext}
+ * @see {ArtStandardPrompt}
+ */
 export class PromptManager implements PromptManagerInterface {
-  // Default prompts - these should likely be configurable via ThreadConfig
-  private defaultSystemPrompt =
-    'You are a helpful AI assistant. Respond concisely and accurately.';
-  private defaultPlanningPromptTemplate = `System Prompt:
-{{systemPrompt}}
+  /**
+   * Assembles a standardized prompt using a Mustache blueprint and context data.
+   * The blueprint is expected to render directly into a JSON string representing
+   * the `ArtStandardPrompt` array structure.
+   *
+   * @param {string} blueprint - The Mustache template string. It should be designed to output a valid JSON array string conforming to the `ArtStandardPrompt` structure when rendered with the provided context.
+   * @param {PromptContext} context - An object containing the data to be injected into the Mustache blueprint.
+   * @returns {Promise<ArtStandardPrompt>} A promise resolving to the assembled `ArtStandardPrompt` (an array of message objects).
+   * @throws {ARTError} Throws an error with code `ErrorCode.PROMPT_ASSEMBLY_FAILED` if the Mustache rendering fails or if the rendered output cannot be parsed into a valid `ArtStandardPrompt` JSON array. The original rendering or parsing error is attached as `originalError`.
+   */
+  async assemblePrompt(
+    blueprint: string,
+    context: PromptContext,
+  ): Promise<ArtStandardPrompt> {
+    try {
+      // Render the blueprint using Mustache.
+      // Note: Mustache escapes HTML by default. If unescaped output is needed
+      // in the blueprint (e.g., for JSON strings within the JSON structure),
+      // use triple braces {{{variable}}} in the blueprint itself.
+      const renderedJsonString = Mustache.render(blueprint, context); // Use namespace.render again
 
-Conversation History:
-{{history}}
+      // Parse the rendered string into an ArtStandardPrompt object
+      try {
+        const potentialPrompt = JSON.parse(renderedJsonString);
 
-User Query:
-{{query}}
+        // Basic validation: Check if it's an array
+        if (!Array.isArray(potentialPrompt)) {
+          // Log the invalid output for debugging
+          console.error("Rendered blueprint did not produce a valid JSON array. Output:", renderedJsonString);
+          throw new Error('Rendered template did not produce a valid JSON array.');
+        }
 
-Available Tools:
-{{tools}}
+        // TODO: Add more robust validation against ArtStandardMessage structure if needed
+        // Example: Check if each item has 'role' and 'content' properties.
+        // potentialPrompt.forEach((msg, index) => {
+        //   if (typeof msg !== 'object' || msg === null || !msg.role || msg.content === undefined) {
+        //     throw new Error(`Invalid message structure at index ${index} in rendered prompt.`);
+        //   }
+        // });
 
-Based on the user query and conversation history, identify the user's intent and create a plan to fulfill it using the available tools if necessary.
-Respond in the following format:
-Intent: [Briefly describe the user's goal]
-Plan: [Provide a step-by-step plan. If tools are needed, list them clearly.]
-Tool Calls: [Output *only* the JSON array of tool calls required: [{"callId": "call_1", "toolName": "tool_name", "arguments": {"arg1": "value1"}}] or [] if no tools are needed. Do not add any other text in this section.]`;
-
-  private defaultSynthesisPromptTemplate = `System Prompt:
-{{systemPrompt}}
-
-Conversation History:
-{{history}}
-
-User Query:
-{{query}}
-
-Original Intent:
-{{intent}}
-
-Execution Plan:
-{{plan}}
-
-Tool Execution Results:
-{{toolResults}}
-
-Based on the user query, the plan, and the results of any tool executions, synthesize a final response to the user.
-If the tools failed or provided unexpected results, explain the issue and try to answer based on available information or ask for clarification.`;
-
-  async createPlanningPrompt( // Make async
-    query: string,
-    history: ConversationMessage[],
-    systemPrompt: string | undefined, // Correct order and type
-    availableTools: ToolSchema[],     // Correct order
-    _threadContext: ThreadContext     // Add threadContext (prefixed with _ for unused)
-  ): Promise<FormattedPrompt> {       // Return Promise
-    const historyString = history
-      .map(
-        (msg) =>
-          `${msg.role === MessageRole.USER ? 'User' : 'AI'}: ${msg.content}`,
-      )
-      .join('\n');
-
-    const toolsString =
-      availableTools.length > 0
-        ? availableTools
-            .map(
-              (tool) =>
-                `- ${tool.name}: ${
-                  tool.description
-                }\n  Input Schema: ${JSON.stringify(tool.inputSchema)}`,
-            )
-            .join('\n')
-        : 'No tools available.';
-
-    const promptData = {
-      systemPrompt: systemPrompt || this.defaultSystemPrompt,
-      history: historyString || 'No history yet.',
-      query: query,
-      tools: toolsString,
-    };
-
-    // For v1.0, we'll return a simple string. Adapters might format this further.
-    // TODO: Potentially use _threadContext.config.systemPrompt if available
-    return Promise.resolve(simpleTemplate(this.defaultPlanningPromptTemplate, promptData));
-  }
-
-  async createSynthesisPrompt( // Make async
-    query: string,
-    intent: string | undefined,       // Correct order and type
-    plan: string | undefined,         // Correct order and type
-    toolResults: ToolResult[],        // Correct order
-    history: ConversationMessage[],   // Correct order
-    systemPrompt: string | undefined, // Correct type
-    _threadContext: ThreadContext     // Add threadContext (prefixed with _ for unused)
-  ): Promise<FormattedPrompt> {       // Return Promise
-    const historyString = history
-      .map(
-        (msg) =>
-          `${msg.role === MessageRole.USER ? 'User' : 'AI'}: ${msg.content}`,
-      )
-      .join('\n');
-
-    const toolResultsString =
-      toolResults.length > 0
-        ? toolResults
-            .map((result) => {
-              const output =
-                result.status === 'success'
-                  ? `Output: ${JSON.stringify(result.output)}`
-                  : `Error: ${result.error}`;
-              return `- Tool: ${result.toolName} (Call ID: ${result.callId})\n  Status: ${result.status}\n  ${output}`;
-            })
-            .join('\n')
-        : 'No tools were executed.';
-
-    const promptData = {
-      systemPrompt: systemPrompt || this.defaultSystemPrompt,
-      history: historyString || 'No history yet.',
-      query: query,
-      intent: intent,
-      plan: plan,
-      toolResults: toolResultsString,
-    };
-
-    // For v1.0, we'll return a simple string. Adapters might format this further.
-    // TODO: Potentially use _threadContext.config.systemPrompt if available
-    return Promise.resolve(simpleTemplate(this.defaultSynthesisPromptTemplate, promptData)); // Wrap in Promise
+        return potentialPrompt as ArtStandardPrompt;
+      } catch (parseError: any) {
+        console.error("Failed to parse rendered prompt JSON:", renderedJsonString);
+        // Pass the original error object directly as the third argument
+        throw new ARTError(
+          `Failed to parse rendered blueprint into ArtStandardPrompt JSON. Error: ${parseError.message}`,
+          ErrorCode.PROMPT_ASSEMBLY_FAILED,
+          parseError // Pass the original error object
+        );
+      }
+    } catch (renderError: any) {
+      console.error("Failed to render prompt blueprint:", renderError);
+      // Pass the original error object directly as the third argument
+      throw new ARTError(
+        `Failed to render prompt blueprint using Mustache. Error: ${renderError.message}`,
+        ErrorCode.PROMPT_ASSEMBLY_FAILED,
+        renderError // Pass the original error object
+      );
+    }
   }
 }

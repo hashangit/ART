@@ -6,7 +6,11 @@ import { Logger } from '../utils/logger';
 import { evaluate, type Complex } from 'mathjs'; // Removed unused MathJsStatic, MathNode
 import * as math from 'mathjs'; // Import the full math object to access functions
 
-// Define the allowed functions from mathjs
+/**
+ * A restricted set of safe functions allowed from the mathjs library.
+ * Prevents access to potentially unsafe functions like `import`, `evaluate`, etc.
+ * @internal
+ */
 const allowedFunctions: Record<string, any> = {
   // Basic arithmetic & roots
   sqrt: math.sqrt,
@@ -30,25 +34,57 @@ const allowedFunctions: Record<string, any> = {
   floor: math.floor,
   ceil: math.ceil,
   mod: math.mod, // Note: % operator also works
+  // Statistical functions
+  mean: math.mean,
+  median: math.median,
+  std: math.std,
+  variance: math.variance,
+  max: math.max,
+  min: math.min,
+  // Additional mathematical functions
+  factorial: math.factorial,
+  gamma: math.gamma,
+  combinations: math.combinations,
+  permutations: math.permutations,
+  // Number formatting
+  format: math.format,
   // Constants (implicitly allowed via evaluate, but good to be aware)
   // pi: math.pi,
   // e: math.e,
 };
 
+/**
+ * An ART Framework tool that safely evaluates mathematical expressions using the mathjs library.
+ * It supports basic arithmetic, variables via a scope, complex numbers, and a predefined list of safe functions.
+ *
+ * @implements {IToolExecutor}
+ */
 export class CalculatorTool implements IToolExecutor {
+  /** The unique name identifier for this tool. */
   public static readonly toolName = "calculator";
+  
+  /** Store for previous calculation results by threadId */
+  private resultStore: Map<string, any> = new Map();
 
+  /**
+   * The schema definition for the CalculatorTool, conforming to the `ToolSchema` interface.
+   * It defines the tool's name, description, input parameters (expression and optional scope),
+   * and provides examples for the LLM.
+   */
+  // TODO: Consider renaming this property to `getSchema()` for better idiomatic consistency? (See sample-app feedback)
   readonly schema: ToolSchema = {
     name: CalculatorTool.toolName,
-    description: `Evaluates mathematical expressions using a sandboxed mathjs environment. IMPORTANT LIMITATIONS: Each expression is evaluated independently; there is no memory of previous results (e.g., no 'ans' variable). Only a specific list of functions is supported.
+    description: `Evaluates mathematical expressions using a sandboxed mathjs environment.
+You can reference previous calculation results using the 'ans' variable.
 Supports standard operators (+, -, *, /, %, ^), variables via 'scope', complex numbers, and the following allowed functions:
-sqrt, cbrt, abs, pow, exp, log, log10, log2, sin, cos, tan, asin, acos, atan, atan2, round, floor, ceil, mod.`,
+sqrt, cbrt, abs, pow, exp, log, log10, log2, sin, cos, tan, asin, acos, atan, atan2, round, floor, ceil, mod, 
+mean, median, std, variance, max, min, factorial, gamma, combinations, permutations, format.`,
     inputSchema: {
       type: 'object',
       properties: {
         expression: {
           type: 'string',
-          description: 'The mathematical expression to evaluate (e.g., "2 + 2", "sqrt(a)", "a * b", "sqrt(-4)").',
+          description: 'The mathematical expression to evaluate (e.g., "2 + 2", "sqrt(a)", "a * b", "sqrt(-4)", "factorial(5)", "ans + 10").',
         },
         scope: {
           type: 'object',
@@ -59,7 +95,8 @@ sqrt, cbrt, abs, pow, exp, log, log10, log2, sin, cos, tan, asin, acos, atan, at
       },
       required: ['expression'],
     },
-    // Removed outputSchema due to type conflicts with 'oneOf'. Output is { result: number | string }.
+    // Note: outputSchema is omitted as the result can be number or string (for complex numbers).
+    // A more complex schema using 'oneOf' could be defined if strict output validation is needed.
     examples: [
       { input: { expression: "2 + 2" }, output: { result: 4 }, description: "Simple addition" },
       { input: { expression: "12 % 5" }, output: { result: 2 }, description: "Modulo operation" },
@@ -69,18 +106,40 @@ sqrt, cbrt, abs, pow, exp, log, log10, log2, sin, cos, tan, asin, acos, atan, at
       { input: { expression: "sqrt(-4)" }, output: { result: "2i" }, description: "Square root of negative (complex result)" },
       { input: { expression: "pow(i, 2)" }, output: { result: -1 }, description: "Complex number calculation (i^2)" },
       { input: { expression: "log(10)" }, output: { result: 2.302585092994046 }, description: "Natural logarithm" },
-      // Example of a disallowed function (if factorial '!' were disallowed)
-      // { input: { expression: "5!" }, error: "Failed to evaluate expression: Function factorial is not allowed" },
+      { input: { expression: "factorial(5)" }, output: { result: 120 }, description: "Factorial function" },
+      { input: { expression: "ans + 10" }, output: { result: 130 }, description: "Using previous result with 'ans'" },
+      { input: { expression: "mean([1, 2, 3, 4, 5])" }, output: { result: 3 }, description: "Statistical function" },
+      // Example of how an error might be represented if a disallowed function were used:
+      // { input: { expression: "factorial(5)" }, error: "Failed to evaluate expression: Function factorial is not allowed" },
     ],
   };
 
-  // TODO: Enhance CalculatorTool:
-  // 1. Implement state management to allow referencing previous results within a single execution sequence (e.g., using 'ans' or similar).
-  // 2. Expand the library of allowed functions (e.g., add 'digits', factorial '!', statistical functions, etc.). Consider security implications.
+   /**
+   * Executes the calculator tool by evaluating the provided mathematical expression.
+   * It uses a restricted scope including only allowed mathjs functions and any variables
+   * passed in the `input.scope`. Handles basic number and complex number results.
+   *
+   * @param input - An object containing the `expression` (string) and optional `scope` (object). Must match `inputSchema`.
+   * @param context - The execution context containing `threadId`, `traceId`, etc.
+   * @returns A promise resolving to a `ToolResult` object.
+   *          On success, `status` is 'success' and `output` is `{ result: number | string }`.
+   *          On failure, `status` is 'error' and `error` contains the error message.
+   */
   async execute(input: any, context: ExecutionContext): Promise<ToolResult> {
     const expression = input.expression as string;
-    // Combine user scope with allowed functions. User scope takes precedence if names clash.
-    const executionScope = { ...allowedFunctions, ...(input.scope || {}) };
+    const threadId = context.threadId || 'default-thread';
+    
+    // Get previous result for this thread if available
+    const previousResult = this.resultStore.get(threadId);
+    
+    // Combine user scope with allowed functions and previous result. User scope takes precedence if names clash.
+    const executionScope = { 
+      ...allowedFunctions, 
+      ...(input.scope || {}),
+      // Add 'ans' variable referencing the previous result
+      ...(previousResult !== undefined ? { ans: previousResult } : {})
+    };
+    
     const callId = context.traceId || 'calculator-call';
 
     Logger.debug(`CalculatorTool executing with expression: "${expression}" and combined scope keys: ${Object.keys(executionScope).join(', ')}`, { callId, context });
@@ -104,6 +163,9 @@ sqrt, cbrt, abs, pow, exp, log, log10, log2, sin, cos, tan, asin, acos, atan, at
       else {
         throw new Error(`Evaluation resulted in an unsupported type: ${math.typeOf(resultValue)}`);
       }
+
+      // Store the result for future reference
+      this.resultStore.set(threadId, resultValue);
 
       Logger.info(`CalculatorTool evaluated "${expression}" to ${outputResult}`, { callId });
 

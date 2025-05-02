@@ -5,20 +5,35 @@ import { Observation, ObservationFilter } from '../../../types';
 // However, ensure the StorageAdapter expects 'id' as the keyPath for the 'observations' store.
 
 /**
- * Repository for managing Observations using a StorageAdapter.
+ * Implements the `IObservationRepository` interface, providing methods to
+ * manage `Observation` objects using an underlying `StorageAdapter`.
+ * Handles adding and retrieving observations for specific threads.
+ *
+ * @implements {IObservationRepository}
  */
 export class ObservationRepository implements IObservationRepository {
   private adapter: StorageAdapter;
   private readonly collectionName = 'observations'; // Define the collection name
 
+  /**
+   * Creates an instance of ObservationRepository.
+   * @param storageAdapter - The configured `StorageAdapter` instance that will be used for persistence.
+   */
   constructor(storageAdapter: StorageAdapter) {
+     if (!storageAdapter) {
+      throw new Error("ObservationRepository requires a valid StorageAdapter instance.");
+    }
     this.adapter = storageAdapter;
-    // Initialization of the adapter should ideally happen at application setup.
+    // Note: Initialization of the adapter (adapter.init()) should be handled
+    // at the application setup level (e.g., within AgentFactory or createArtInstance)
+    // before the repository is used.
   }
 
   /**
-   * Adds a single observation to the storage.
-   * @param observation The Observation object to add.
+   * Adds a single `Observation` object to the storage using its `id` as the key.
+   * @param observation - The `Observation` object to add. Must have a valid `id`.
+   * @returns A promise that resolves when the observation has been saved.
+   * @throws {Error} If the observation is missing an `id` or if the storage adapter fails.
    */
   async addObservation(observation: Observation): Promise<void> {
     // The observation object already has an 'id' property, which should match the keyPath.
@@ -29,11 +44,14 @@ export class ObservationRepository implements IObservationRepository {
   }
 
   /**
-   * Retrieves observations for a specific thread, with optional filtering.
-   * Note: Filtering by type and timestamp is currently handled client-side.
-   * @param threadId The ID of the thread to retrieve observations for.
-   * @param filter Optional filtering criteria like types and timestamps.
-   * @returns A promise resolving to an array of Observations.
+   * Retrieves observations for a specific thread from the storage adapter.
+   * This implementation fetches all observations for the thread and then applies
+   * client-side filtering (by type, timestamp) and sorting (by timestamp).
+   * For performance with many observations, adapter-level querying/indexing would be preferable.
+   * @param threadId - The ID of the thread whose observations are to be retrieved.
+   * @param filter - Optional `ObservationFilter` criteria (e.g., `types`, `beforeTimestamp`, `afterTimestamp`).
+   * @returns A promise resolving to an array of `Observation` objects matching the criteria, sorted chronologically (ascending timestamp).
+   * @throws {Error} Propagates errors from the storage adapter's `query` method.
    */
   async getObservations(threadId: string, filter?: ObservationFilter): Promise<Observation[]> {
     // Query the adapter for all observations matching the threadId

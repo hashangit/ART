@@ -13,12 +13,12 @@ export class StateManager implements IStateManager {
     }
 
     /**
-     * Loads the full context (config + state) for a given thread from the repository.
-     * Throws an error if the context is not found.
-     * @param threadId The ID of the thread.
-     * @param _userId Optional user ID (currently unused, for future access control).
-     * @returns The thread context.
-     * @throws {Error} If the thread context is not found.
+     * Loads the complete context (`ThreadConfig` and `AgentState`) for a specific thread
+     * by calling the underlying state repository.
+     * @param threadId - The unique identifier for the thread.
+     * @param _userId - Optional user identifier (currently unused in this implementation, intended for future access control).
+     * @returns A promise resolving to the `ThreadContext` object.
+     * @throws {Error} If `threadId` is empty or if the repository fails to find the context (e.g., `THREAD_NOT_FOUND` error).
      */
     // Changed return type to Promise<ThreadContext> to match interface
     async loadThreadContext(threadId: string, _userId?: string): Promise<ThreadContext> {
@@ -34,12 +34,11 @@ export class StateManager implements IStateManager {
     }
 
     /**
-     * Checks if a specific tool is enabled for the given thread based on its config.
-     * Loads the context first.
-     * @param threadId The ID of the thread.
-     * @param toolName The name of the tool.
-     * @returns True if the tool is enabled, false otherwise.
-     * @throws {Error} If the thread context cannot be loaded.
+     * Checks if a specific tool is permitted for use within a given thread.
+     * It loads the thread's context and checks the `enabledTools` array in the configuration.
+     * @param threadId - The ID of the thread.
+     * @param toolName - The name of the tool to check.
+     * @returns A promise resolving to `true` if the tool is listed in the thread's `enabledTools` config, `false` otherwise or if the context/config cannot be loaded.
      */
     async isToolEnabled(threadId: string, toolName: string): Promise<boolean> {
         // loadThreadContext now throws if not found, simplifying checks here
@@ -56,12 +55,12 @@ export class StateManager implements IStateManager {
     }
 
     /**
-     * Retrieves a specific configuration value for the thread.
-     * Loads the context first. Supports only top-level keys.
-     * @param threadId The ID of the thread.
-     * @param key The configuration key (e.g., 'historyLimit', 'systemPrompt').
-     * @returns The configuration value or undefined if not found.
-     * @throws {Error} If the thread context cannot be loaded.
+     * Retrieves a specific value from the thread's configuration (`ThreadConfig`).
+     * Loads the context first. Currently supports retrieving top-level keys only.
+     * @template T - The expected type of the configuration value.
+     * @param threadId - The ID of the thread.
+     * @param key - The top-level configuration key (e.g., 'historyLimit', 'systemPrompt', 'reasoning').
+     * @returns A promise resolving to the configuration value cast to type `T`, or `undefined` if the key doesn't exist, the config is missing, or the context fails to load.
      */
     // Changed key type to string to match interface
     async getThreadConfigValue<T>(threadId: string, key: string): Promise<T | undefined> {
@@ -84,9 +83,12 @@ export class StateManager implements IStateManager {
     }
 
     /**
-     * Saves the thread's state if it has been modified during execution.
-     * NOTE: For v1.0, this is a placeholder (no-op). State must be saved explicitly.
-     * @param threadId The ID of the thread.
+     * Persists the thread's `AgentState` *if* it has been modified.
+     * **Note:** In ART v0.2.4, this method is a **placeholder** and does not automatically track or save state changes.
+     * State modifications must be explicitly saved using repository methods if persistence is required.
+     * This method primarily serves as a point in the lifecycle where automatic state saving *could* occur in future versions.
+     * @param threadId - The ID of the thread whose state might need saving.
+     * @returns A promise that resolves immediately (as it's currently a no-op).
      */
     async saveStateIfModified(threadId: string): Promise<void> {
          if (!threadId) {
@@ -98,11 +100,14 @@ export class StateManager implements IStateManager {
       }
     
       /**
-       * Sets or updates the configuration for a specific thread.
-       * Delegates the call to the state repository.
-       * @param threadId The ID of the thread.
-       * @param config The complete configuration object to set.
-       */
+       /**
+        * Sets or completely replaces the configuration (`ThreadConfig`) for a specific thread
+        * by calling the underlying state repository.
+        * @param threadId - The ID of the thread whose configuration is being set.
+        * @param config - The complete `ThreadConfig` object to save.
+        * @returns A promise that resolves when the configuration has been saved by the repository.
+        * @throws {Error} If `threadId` or `config` is missing, or if the repository fails.
+        */
       async setThreadConfig(threadId: string, config: ThreadConfig): Promise<void> {
         if (!threadId || !config) {
           throw new Error("StateManager: threadId and config are required for setThreadConfig.");
