@@ -51,8 +51,8 @@ import {
         *   `StateManager`: Use `.loadThreadContext(threadId)` to get `ThreadConfig` and `AgentState`. Use `.saveStateIfModified(threadId)` to persist state changes. Use `.isToolEnabled(threadId, toolName)` for checks.
         *   `ConversationManager`: Use `.getMessages(threadId, options)` to retrieve history. Use `.addMessages(threadId, messages)` to save new user/assistant messages.
         *   `ToolRegistry`: Use `.getAvailableTools({ enabledForThreadId })` to get `ToolSchema[]` for prompting the LLM. Use `.getToolExecutor(toolName)` if needed (though `ToolSystem` is usually preferred).
-        *   `PromptManager`: Now a stateless assembler. Use `.assemblePrompt(blueprint, context)` with your custom blueprints and gathered `PromptContext` to create `ArtStandardPrompt` objects.
-+        *   `ReasoningEngine`: Use `.call(prompt, callOptions)` to interact with the LLM. The `callOptions` object (type `CallOptions`) must include the `RuntimeProviderConfig` (specifying provider name, model, API key, etc.) along with other parameters like `stream`, `threadId`, `traceId`. The `ReasoningEngine` uses this config to get the correct adapter instance from the `ProviderManager`. The method returns a `Promise<AsyncIterable<StreamEvent>>`, which your agent must consume.
+        *   `PromptManager`: Provides reusable text fragments and validation. Use `.getFragment(name, context)` to retrieve instruction blocks. Use `.validatePrompt(promptObject)` to ensure the `ArtStandardPrompt` object constructed by your agent logic is valid before sending it to the `ReasoningEngine`.
+        *   `ReasoningEngine`: Use `.call(prompt, callOptions)` to interact with the LLM, passing the *validated* `ArtStandardPrompt` object. The `callOptions` object (type `CallOptions`) must include the `RuntimeProviderConfig` (specifying provider name, model, API key, etc.) along with other parameters like `stream`, `threadId`, `traceId`. The `ReasoningEngine` uses this config to get the correct adapter instance from the `ProviderManager`. The method returns a `Promise<AsyncIterable<StreamEvent>>`, which your agent must consume.
         *   `OutputParser`: Use `.parsePlanningOutput(...)`, `.parseSynthesisOutput(...)` (for PES-like flows) or potentially define/use custom methods to extract structured data (like thoughts, actions, final answers) from the LLM's raw response content (assembled from the stream).
         *   `ObservationManager`: Use `.record(observationData)` frequently within your `process` logic to log key steps (start/end, LLM calls, tool calls, custom steps like 'thought' or 'action', and new `LLM_STREAM_...` events) for debugging and UI feedback via sockets.
         *   `ToolSystem`: Use `.executeTools(parsedToolCalls, threadId, traceId)` to run one or more tools identified by your agent's logic. It handles retrieving the executor, validating input against the schema, calling `execute`, and returning `ToolResult[]`.
@@ -124,9 +124,12 @@ export class ReActAgent implements IAgentCore {
     };
   }
 
-  // --- Custom Prompt Creation Logic (Example) ---
-  // In a real implementation, this might be more sophisticated or part of a custom PromptManager
-  private createReActPrompt(
+  // --- Custom Prompt Construction Logic (Example) ---
+  // Ideally, this logic would construct an ArtStandardPrompt *object* directly,
+  // potentially using promptManager.getFragment() for instruction blocks.
+  // This example simplifies by creating a single string, but demonstrates the
+  // agent's responsibility for assembling the prompt content.
+  private createReActPromptString( // Renamed for clarity
     query: string,
     history: ConversationMessage[],
     tools: ToolSchema[],
@@ -143,6 +146,8 @@ export class ReActAgent implements IAgentCore {
         prompt += `Action ${index + 1}: ${step.action}\nAction Input ${index + 1}: ${JSON.stringify(step.actionInput)}\nObservation ${index + 1}: ${step.observation}\n`;
       }
     });
+    // In a full ArtStandardPrompt object approach, the final thought/action/input structure
+    // would be added as the last message(s) in the array.
     prompt += `Thought: [Your current reasoning step]\nAction: [tool_name or Final Answer:]\nAction Input: [Arguments as JSON object if using a tool, otherwise the final answer content]\n`;
     return prompt;
   }
@@ -166,8 +171,15 @@ export class ReActAgent implements IAgentCore {
       step++;
       await this.deps.observationManager.record({ type: 'REACT_STEP' as ObservationType, threadId, traceId, content: { step } });
 
-      // 2. Create ReAct Prompt using custom logic
-      const currentPrompt = this.createReActPrompt(query, initialHistory, tools, reactSteps);
+      // 2. Create ReAct Prompt String (Simplified Example)
+      const currentPromptString = this.createReActPromptString(query, initialHistory, tools, reactSteps); // Use renamed function
+
+      // --- Validation Step (Conceptual) ---
+      // If 'currentPromptString' were an ArtStandardPrompt object constructed by the agent:
+      // const validatedPromptObject = this.deps.promptManager.validatePrompt(promptObject);
+      // You would then pass 'validatedPromptObject' to reasoningEngine.call below.
+      // Since this example uses a simple string, we skip validation for brevity.
+      // ------------------------------------
 
       // 3. Call LLM and process stream
       await this.deps.observationManager.record({ type: ObservationType.LLM_REQUEST, threadId, traceId, content: { phase: `react_step_${step}` } });
@@ -193,7 +205,8 @@ export class ReActAgent implements IAgentCore {
 +          callContext: 'AGENT_THOUGHT' // Provide context for the call
 +      };
 +
-+      const stream = await this.deps.reasoningEngine.call(currentPrompt, callOptions);
++      // Pass the prompt string (or validated object in a full implementation)
++      const stream = await this.deps.reasoningEngine.call(currentPromptString, callOptions); // Use updated variable
 
       let llmResponseBuffer = '';
       for await (const event of stream) {

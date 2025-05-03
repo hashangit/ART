@@ -117,8 +117,8 @@ import {
     *   **Developer Notes:** Concrete class implementing `IAgentCore`. Instantiated by `AgentFactory` if specified in `config.agentCore` or if `agentCore` is omitted. Receives dependencies (`StateManager`, `ReasoningEngine`, `ToolSystem`, `UISystem`, etc.) in its constructor. Its `process` method orchestrates the Plan-Execute-Synthesize flow, interacting with the injected dependencies and handling the consumption and processing of the `AsyncIterable<StreamEvent>` from the `ReasoningEngine`.
 
 *   **`PromptManager`**
-    This component is now a stateless assembler that takes a prompt "blueprint" (template) and a `PromptContext` object to generate a standardized `ArtStandardPrompt` (an array of messages). It no longer has hardcoded prompt logic tied to specific agent patterns.
-    *   **Developer Notes:** The `PromptManager` interface now has an `assemblePrompt(blueprint: string | object, context: PromptContext): Promise<ArtStandardPrompt>` method. Agent implementations are responsible for providing the appropriate blueprint and gathering the necessary data into the `PromptContext`.
+    Provides reusable prompt text fragments (like instructions or formatting rules) and validates the final prompt object constructed by the agent logic before it's sent to the LLM.
+    *   **Developer Notes:** The `PromptManager` interface provides `getFragment(name, context)` to retrieve text blocks and `validatePrompt(promptObject)` to check the structure and types of the `ArtStandardPrompt` object created by the agent. Agent implementations (like `PESAgent`) are responsible for constructing the prompt object, potentially using fragments, and then calling `validatePrompt`.
 
 *   **`ReasoningEngine`**
     This component is responsible for interacting with the configured `ProviderAdapter`. Its `call` method now returns a `Promise<AsyncIterable<StreamEvent>>`, allowing for real-time streaming of LLM responses.
@@ -425,8 +425,8 @@ When you call `art.process()` using the default Plan-Execute-Synthesize (PES) ag
     *   *In simple terms:* The agent looks up the recent messages exchanged in this specific chat thread to understand the context.
 5.  **Get Available Tools:** Fetch enabled `ToolSchema`s via `ToolRegistry` (using `StateManager` to check permissions).
     *   *In simple terms:* The agent checks which tools (like a calculator or weather lookup) it's allowed to use in this conversation.
-6.  **Create Planning Prompt:** Use `PromptManager` to combine query, history, system prompt (from `ThreadConfig`), and tool schemas into a prompt asking the LLM to plan and identify tool calls.
-    *   *In simple terms:* The agent prepares instructions for the AI brain (the LLM). It includes your query, the chat history, its available tools, and asks the AI to figure out a plan to answer your query, including whether any tools are needed.
+6.  **Construct Planning Prompt:** The agent logic (e.g., `PESAgent`) constructs the `ArtStandardPrompt` object for planning. It combines the query, history, system prompt (from `ThreadConfig`), and tool schemas. It might use `PromptManager.getFragment()` to retrieve standard instruction texts. It then calls `PromptManager.validatePrompt()` on the constructed object.
+    *   *In simple terms:* The agent builds the instructions for the AI brain (the LLM). It includes your query, the chat history, its available tools, and asks the AI to figure out a plan, including whether any tools are needed. It double-checks the instructions are formatted correctly.
 7.  **Execute Planning LLM Call:** Log `LLM_REQUEST`, call `ReasoningEngine.call()` (which uses the configured `ProviderAdapter`), and process the `AsyncIterable<StreamEvent>` response.
     *   *In simple terms:* The agent sends the planning instructions to the AI brain (e.g., OpenAI's GPT-4). It then starts receiving the response piece by piece.
     *   **Streaming Details:** The Agent Core consumes the `AsyncIterable`. For each `StreamEvent` received:
@@ -443,8 +443,8 @@ When you call `art.process()` using the default Plan-Execute-Synthesize (PES) ag
     *   `ToolSystem` iterates through calls: validates tool enablement (`StateManager`), gets executor (`ToolRegistry`), validates args, logs `TOOL_START`, calls `executor.execute()`, logs `TOOL_END` with result/error.
     *   Log `TOOL_EXECUTION_COMPLETE` observation.
     *   *In simple terms:* If the plan requires using tools, the agent now runs them one by one. For each tool, it checks if it's allowed, gets the tool ready, gives it the necessary information (e.g., the city for the weather tool), runs the tool, and records the result (or any errors).
-11. **Create Synthesis Prompt:** Use `PromptManager` to combine original query, plan, tool results, history, and the resolved system prompt into a prompt asking the LLM for the final user response.
-    *   *In simple terms:* The agent gathers everything – your original query, the AI's plan, the results from any tools used, and the chat history – and prepares new instructions for the AI brain. This time, it asks the AI to write the final answer you will see.
+11. **Construct Synthesis Prompt:** The agent logic constructs the `ArtStandardPrompt` object for synthesis. It combines the original query, plan, tool results, history, and the resolved system prompt. It might use `PromptManager.getFragment()` for instructions. It then calls `PromptManager.validatePrompt()` on the constructed object.
+    *   *In simple terms:* The agent gathers everything – your original query, the AI's plan, the results from any tools used, and the chat history – and builds the final instructions for the AI brain. This time, it asks the AI to write the answer you will see. It double-checks these instructions are formatted correctly.
 12. **Execute Synthesis LLM Call:**
     *   Determine `RuntimeProviderConfig` (e.g., from `AgentProps.configOverrides` or thread defaults - same as planning step).
     *   Create `CallOptions` including the `providerConfig`.

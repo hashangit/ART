@@ -16,7 +16,7 @@ flowchart LR
 
 *   **Node 2: ART Core Orchestration (The Framework's Brain)**
     *   **What it is:** This is the internal engine of ART, set up based on your configuration in Node 1. It manages the entire process of understanding a request, using tools, and generating a response.
-    *   **What it does:** Follows the chosen agent pattern (like "Plan-Execute-Synthesize" or "ReAct"), manages conversation history, keeps track of the agent's state, prepares instructions (prompts) for the AI model using blueprints and context, understands the AI's responses (including streaming tokens), coordinates tool usage, logs important events (observations), and broadcasts real-time updates to the UI.
+    *   **What it does:** Follows the chosen agent pattern (like "Plan-Execute-Synthesize" or "ReAct"), manages conversation history, keeps track of the agent's state, constructs instructions (prompt objects) for the AI model using context data and reusable text fragments (provided and validated by `PromptManager`), understands the AI's responses (including streaming tokens), coordinates tool usage, logs important events (observations), and broadcasts real-time updates to the UI.
     *   **Key ART parts involved:** The specific Agent Core implementation (`PESAgent`, `ReActAgent`), Managers (`StateManager`, `ConversationManager`, `ObservationManager`), Systems (`ToolSystem`, `UISystem`), Reasoning Components (`ReasoningEngine`, `PromptManager`, `OutputParser`). You usually don't interact with these directly after setup unless you're doing advanced customization or consuming UI sockets.
 
 *   **Node 3: External Dependencies & Interactions (The Outside World)**
