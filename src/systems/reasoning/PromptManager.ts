@@ -1,137 +1,88 @@
 // src/systems/reasoning/PromptManager.ts
-import Mustache from 'mustache';
-import { z } from 'zod';
-import {
-  ArtStandardPrompt,
-  PromptContext,
-} from '../../types';
 import { PromptManager as PromptManagerInterface } from '../../core/interfaces';
+import { ArtStandardPrompt } from '../../types';
+import { ArtStandardPromptSchema } from '../../types/schemas'; // Import Zod schema (Reverted - trying this path again)
 import { ARTError, ErrorCode } from '../../errors';
 import { Logger } from '../../utils/logger';
+import { ZodError } from 'zod'; // Import ZodError for type checking
 
-// Define Zod schemas for validation (same as before)
-const ArtStandardMessageSchema = z.object({
-  role: z.enum(["system", "user", "assistant", "tool"]),
-  content: z.string(),
-  name: z.string().optional(),
-  tool_calls: z.array(z.object({
-    id: z.string(),
-    type: z.literal('function'),
-    function: z.object({
-      name: z.string(),
-      arguments: z.string(),
-    }),
-  })).optional(),
-  tool_call_id: z.string().optional(),
-}).strict();
-
-const ArtStandardPromptSchema = z.array(ArtStandardMessageSchema);
+// --- Define Prompt Fragments ---
+// Store fragments in a simple object for now. Could be loaded from files later.
+const PROMPT_FRAGMENTS: Record<string, string> = {
+    // PES Agent Fragments
+    pes_system_default: `You are a helpful AI assistant. You need to understand a user's query, potentially use tools to gather information, and then synthesize a final response.`,
+    pes_planning_instructions: `Based on the user query and conversation history, identify the user's intent and create a plan to fulfill it using the available tools if necessary.`,
+    pes_tool_format_instructions: `Respond in the following format:\nIntent: [Briefly describe the user's goal]\nPlan: [Provide a step-by-step plan. If tools are needed, list them clearly.]\nTool Calls: [Output *only* the JSON array of tool calls required by the assistant, matching the ArtStandardMessage tool_calls format: [{\\"id\\": \\"call_abc123\\", \\"type\\": \\"function\\", \\"function\\": {\\"name\\": \\"tool_name\\", \\"arguments\\": \\"{\\\\\\"arg1\\\\\\": \\\\\\"value1\\\\\\"}\\"}}] or [] if no tools are needed. Do not add any other text in this section.]`,
+    pes_synthesis_instructions: `Based on the user query, the plan, and the results of any tool executions, synthesize a final response to the user.\nIf the tools failed or provided unexpected results, explain the issue and try to answer based on available information or ask for clarification.`,
+    // Add other common fragments as needed
+};
+// -----------------------------
 
 /**
- * Custom Mustache escape function for JSON strings.
- * Escapes backslashes and double quotes.
- * @param text The raw text to escape.
- * @returns The JSON-escaped string.
- */
-function escapeJsonString(text: any): string {
-    const str = String(text);
-    return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-}
-
-
-/**
- * Stateless implementation of the `PromptManager` interface using Mustache.js.
- * Assembles a provider-agnostic `ArtStandardPrompt` based on a Mustache blueprint
- * string and a `PromptContext` object provided by the agent logic.
- * Uses a custom JSON string escape function.
- *
- * @implements {PromptManagerInterface}
- * @see {PromptContext}
- * @see {ArtStandardPrompt}
+ * Implements the PromptManager interface for the hybrid approach.
+ * Provides named prompt fragments and validates prompt objects.
  */
 export class PromptManager implements PromptManagerInterface {
-  /**
-   * Assembles a standardized prompt using a Mustache blueprint and context data.
-   * The blueprint is expected to render directly into a JSON string representing
-   * the `ArtStandardPrompt` array structure. Assumes {{{ }}} is used for all
-   * string variable insertions within the JSON structure.
-   *
-   * @param {string} blueprint - The Mustache template string. Should use {{{variable}}} for string insertions.
-   * @param {PromptContext} context - An object containing the data to be injected into the Mustache blueprint.
-   * @returns {Promise<ArtStandardPrompt>} A promise resolving to the assembled `ArtStandardPrompt`.
-   * @throws {ARTError} If rendering or parsing fails.
-   */
-  async assemblePrompt(
-    blueprint: string,
-    context: PromptContext,
-  ): Promise<ArtStandardPrompt> {
-    try {
-      // Define render options with the custom escape function
-      const renderOptions = {
-        escape: escapeJsonString
-      };
 
-      // Render the blueprint using the custom JSON escape function via options
-      // This applies the escape function specifically to {{variable}} tags for this call only.
-      const renderedJsonString = Mustache.render(
-        blueprint,
-        context,
-        undefined, // No partials
-        renderOptions // Pass options with custom escape function
-      );
+    // No constructor needed for this simple implementation
 
-      // --- Rest of the function remains the same ---
+    /**
+     * Retrieves a named prompt fragment.
+     * Basic substitution using {{key}} is supported via context.
+     *
+     * @param name - The unique identifier for the fragment.
+     * @param context - Optional data for simple variable substitution.
+     * @returns The processed prompt fragment string.
+     * @throws {ARTError} If the fragment is not found.
+     */
+    getFragment(name: string, context?: Record<string, any>): string {
+        const fragment = PROMPT_FRAGMENTS[name];
+        if (fragment === undefined) {
+            Logger.error(`[PromptManager] Prompt fragment not found: ${name}`);
+            throw new ARTError(`Prompt fragment not found: ${name}`, ErrorCode.PROMPT_FRAGMENT_NOT_FOUND);
+        }
 
-      // Pre-Parsing Check
-      const trimmedRenderedJson = renderedJsonString.trim();
-      if (!trimmedRenderedJson.startsWith('{') && !trimmedRenderedJson.startsWith('[')) {
-          Logger.error("Rendered blueprint did not produce a string starting with '{' or '['.", {
-              output: trimmedRenderedJson.substring(0, 500) + (trimmedRenderedJson.length > 500 ? '...' : ''),
-              contextKeys: Object.keys(context)
-          });
-          throw new ARTError(
-              'Rendered template does not appear to be valid JSON.',
-              ErrorCode.PROMPT_ASSEMBLY_FAILED
-          );
-      }
+        // Basic substitution (replace {{key}} with context[key])
+        if (context) {
+            return fragment.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+                const trimmedKey = key.trim();
+                const value = context[trimmedKey];
+                // Return value if found, otherwise keep the original {{key}}
+                return value !== undefined ? String(value) : match;
+            });
+        }
 
-      // Parse and Validate
-      try {
-        const potentialPrompt = JSON.parse(trimmedRenderedJson);
-        const validatedPrompt = ArtStandardPromptSchema.parse(potentialPrompt);
-        return validatedPrompt;
-
-      } catch (validationOrParseError: any) {
-        const isZodError = validationOrParseError instanceof z.ZodError;
-        const errorMessage = isZodError
-          ? `Rendered prompt failed Zod validation: ${validationOrParseError.errors.map((e: z.ZodIssue) => `${e.path.join('.')}: ${e.message}`).join(', ')}`
-          : `Failed to parse rendered blueprint into JSON: ${validationOrParseError.message}`;
-
-        Logger.error("Failed to parse or validate rendered prompt JSON.", {
-            error: errorMessage,
-            isZodError: isZodError,
-            output: trimmedRenderedJson.substring(0, 500) + (trimmedRenderedJson.length > 500 ? '...' : ''),
-            contextKeys: Object.keys(context)
-        });
-
-        throw new ARTError(
-          errorMessage,
-          ErrorCode.PROMPT_ASSEMBLY_FAILED,
-          validationOrParseError
-        );
-      }
-    } catch (renderError: any) {
-      Logger.error("Failed to render prompt blueprint using Mustache.", {
-          error: renderError.message,
-          stack: renderError.stack,
-          contextKeys: Object.keys(context)
-      });
-      throw new ARTError(
-        `Failed to render prompt blueprint using Mustache. Error: ${renderError.message}`,
-        ErrorCode.PROMPT_ASSEMBLY_FAILED,
-        renderError
-      );
+        return fragment;
     }
-    // No finally block needed as we are not modifying global state
-  }
+
+    /**
+     * Validates a constructed prompt object against the standard schema.
+     *
+     * @param prompt - The ArtStandardPrompt object constructed by the agent.
+     * @returns The validated prompt object.
+     * @throws {ARTError} If validation fails.
+     */
+    validatePrompt(prompt: ArtStandardPrompt): ArtStandardPrompt {
+        try {
+            // Use parse, which throws on failure
+            const validatedPrompt = ArtStandardPromptSchema.parse(prompt);
+            return validatedPrompt;
+        } catch (error: any) {
+            if (error instanceof ZodError) {
+                Logger.error(`[PromptManager] Prompt validation failed:`, error.errors);
+                throw new ARTError(
+                    `Constructed prompt failed validation: ${error.message}`,
+                    ErrorCode.PROMPT_VALIDATION_FAILED,
+                    error // Include Zod error details
+                );
+            }
+            // Wrap unexpected errors
+            Logger.error(`[PromptManager] Unexpected error during prompt validation:`, error);
+            throw new ARTError(
+                `Unexpected error during prompt validation: ${error.message}`,
+                ErrorCode.PROMPT_VALIDATION_FAILED, // Use same code for now
+                error
+            );
+        }
+    }
 }

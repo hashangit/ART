@@ -20,7 +20,7 @@ import {
   AgentState,
   // --- Import new types (Refactor Phase 1) ---
   ArtStandardPrompt,
-  PromptContext,
+  // PromptContext, // Removed - No longer used by PromptManager interface
 } from '../types';
 
 /**
@@ -65,14 +65,29 @@ export interface ReasoningEngine {
  * to create a standardized prompt format (`ArtStandardPrompt`).
  */
 export interface PromptManager {
-  /**
-   * Assembles a standardized prompt using a blueprint and context data.
-   * @param blueprint - The template string (e.g., Mustache format) defining the prompt structure. Agent logic provides this.
-   * @param context - The `PromptContext` object containing all data needed to populate the blueprint (query, history, tools, system prompt, custom data, etc.). Agent logic gathers this.
-   * @returns A promise resolving to the assembled `ArtStandardPrompt` (an array of `ArtStandardMessage` objects).
-   * @throws {ARTError} If the assembly process fails (e.g., template parsing error, missing context variables), typically with code `PROMPT_ASSEMBLY_FAILED`.
-   */
-  assemblePrompt(blueprint: string, context: PromptContext): Promise<ArtStandardPrompt>;
+    /**
+     * Retrieves a named prompt fragment (e.g., a piece of instruction text).
+     * Optionally allows for simple variable substitution if the fragment is a basic template.
+     *
+     * @param name - The unique identifier for the fragment.
+     * @param context - Optional data for simple variable substitution within the fragment.
+     * @returns The processed prompt fragment string.
+     * @throws {ARTError} If the fragment is not found.
+     */
+    getFragment(name: string, context?: Record<string, any>): string; // Keep sync for now, assuming loaded at init
+
+    /**
+     * Validates a constructed prompt object against the standard schema.
+     *
+     * @param prompt - The ArtStandardPrompt object constructed by the agent.
+     * @returns The validated prompt object (potentially after normalization if the schema does that).
+     * @throws {ZodError} If validation fails (can be caught and wrapped in ARTError).
+     */
+    validatePrompt(prompt: ArtStandardPrompt): ArtStandardPrompt;
+
+    // Future methods could include:
+    // - loadFragmentsFromDir(directoryPath: string): Promise<void>;
+    // - registerFragment(name: string, content: string): void;
 }
 // --- END PromptManager Interface ---
 
