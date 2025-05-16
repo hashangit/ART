@@ -6,7 +6,7 @@
 
 # Interface: Observation
 
-Defined in: [types/index.ts:92](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/index.ts#L92)
+Defined in: [types/index.ts:92](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L92)
 
 Represents a recorded event during the agent's execution.
 
@@ -16,7 +16,7 @@ Represents a recorded event during the agent's execution.
 
 > **content**: `any`
 
-Defined in: [types/index.ts:106](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/index.ts#L106)
+Defined in: [types/index.ts:106](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L106)
 
 The main data payload of the observation, structure depends on the `type`.
 
@@ -26,7 +26,7 @@ The main data payload of the observation, structure depends on the `type`.
 
 > **id**: `string`
 
-Defined in: [types/index.ts:94](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/index.ts#L94)
+Defined in: [types/index.ts:94](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L94)
 
 A unique identifier for this specific observation record.
 
@@ -36,7 +36,7 @@ A unique identifier for this specific observation record.
 
 > `optional` **metadata**: `Record`\<`string`, `any`\>
 
-Defined in: [types/index.ts:108](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/index.ts#L108)
+Defined in: [types/index.ts:108](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L108)
 
 Optional metadata providing additional context (e.g., source phase, related IDs, status).
 
@@ -46,7 +46,7 @@ Optional metadata providing additional context (e.g., source phase, related IDs,
 
 > **threadId**: `string`
 
-Defined in: [types/index.ts:96](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/index.ts#L96)
+Defined in: [types/index.ts:96](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L96)
 
 The identifier of the conversation thread this observation relates to.
 
@@ -56,7 +56,7 @@ The identifier of the conversation thread this observation relates to.
 
 > **timestamp**: `number`
 
-Defined in: [types/index.ts:100](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/index.ts#L100)
+Defined in: [types/index.ts:100](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L100)
 
 A Unix timestamp (in milliseconds) indicating when the observation was recorded.
 
@@ -66,7 +66,7 @@ A Unix timestamp (in milliseconds) indicating when the observation was recorded.
 
 > **title**: `string`
 
-Defined in: [types/index.ts:104](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/index.ts#L104)
+Defined in: [types/index.ts:104](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L104)
 
 A concise, human-readable title summarizing the observation (often generated based on type/metadata).
 
@@ -76,7 +76,7 @@ A concise, human-readable title summarizing the observation (often generated bas
 
 > `optional` **traceId**: `string`
 
-Defined in: [types/index.ts:98](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/index.ts#L98)
+Defined in: [types/index.ts:98](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L98)
 
 An optional identifier for tracing a request across multiple systems or components.
 
@@ -86,6 +86,6 @@ An optional identifier for tracing a request across multiple systems or componen
 
 > **type**: [`ObservationType`](../enumerations/ObservationType.md)
 
-Defined in: [types/index.ts:102](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/index.ts#L102)
+Defined in: [types/index.ts:102](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L102)
 
 The category of the event being observed (e.g., PLAN, THOUGHTS, TOOL_EXECUTION).

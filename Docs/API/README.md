@@ -20,9 +20,12 @@
 - [IndexedDBStorageAdapter](classes/IndexedDBStorageAdapter.md)
 - [InMemoryStorageAdapter](classes/InMemoryStorageAdapter.md)
 - [Logger](classes/Logger.md)
+- [OllamaAdapter](classes/OllamaAdapter.md)
 - [OpenAIAdapter](classes/OpenAIAdapter.md)
 - [OpenRouterAdapter](classes/OpenRouterAdapter.md)
+- [OutputParser](classes/OutputParser.md)
 - [PESAgent](classes/PESAgent.md)
+- [XmlMatcher](classes/XmlMatcher.md)
 
 ## Interfaces
 
@@ -54,7 +57,7 @@
 - [ObservationFilter](interfaces/ObservationFilter.md)
 - [ObservationManager](interfaces/ObservationManager.md)
 - [ObservationSocket](interfaces/ObservationSocket.md)
-- [OutputParser](interfaces/OutputParser.md)
+- [OllamaAdapterOptions](interfaces/OllamaAdapterOptions.md)
 - [ParsedToolCall](interfaces/ParsedToolCall.md)
 - [PromptContext](interfaces/PromptContext.md)
 - [PromptManager](interfaces/PromptManager.md)
@@ -73,6 +76,7 @@
 - [ToolSystem](interfaces/ToolSystem.md)
 - [TypedSocket](interfaces/TypedSocket.md)
 - [UISystem](interfaces/UISystem.md)
+- [XmlMatcherChunk](interfaces/XmlMatcherChunk.md)
 
 ## Type Aliases
 

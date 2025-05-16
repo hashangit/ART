@@ -6,7 +6,7 @@
 
 # Enumeration: MessageRole
 
-Defined in: [types/index.ts:16](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/index.ts#L16)
+Defined in: [types/index.ts:16](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L16)
 
 Represents the role of a message sender in a conversation.
 
@@ -16,7 +16,7 @@ Represents the role of a message sender in a conversation.
 
 > **AI**: `"AI"`
 
-Defined in: [types/index.ts:18](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/index.ts#L18)
+Defined in: [types/index.ts:18](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L18)
 
 ***
 
@@ -24,7 +24,7 @@ Defined in: [types/index.ts:18](https://github.com/hashangit/ART/blob/0d5679913e
 
 > **SYSTEM**: `"SYSTEM"`
 
-Defined in: [types/index.ts:19](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/index.ts#L19)
+Defined in: [types/index.ts:19](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L19)
 
 ***
 
@@ -32,7 +32,7 @@ Defined in: [types/index.ts:19](https://github.com/hashangit/ART/blob/0d5679913e
 
 > **TOOL**: `"TOOL"`
 
-Defined in: [types/index.ts:20](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/index.ts#L20)
+Defined in: [types/index.ts:20](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L20)
 
 ***
 
@@ -40,4 +40,4 @@ Defined in: [types/index.ts:20](https://github.com/hashangit/ART/blob/0d5679913e
 
 > **USER**: `"USER"`
 
-Defined in: [types/index.ts:17](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/index.ts#L17)
+Defined in: [types/index.ts:17](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L17)

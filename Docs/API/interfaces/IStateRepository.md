@@ -6,7 +6,7 @@
 
 # Interface: IStateRepository
 
-Defined in: [core/interfaces.ts:453](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L453)
+Defined in: [core/interfaces.ts:453](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L453)
 
 Repository for managing ThreadConfig and AgentState.
 
@@ -16,7 +16,7 @@ Repository for managing ThreadConfig and AgentState.
 
 > **getAgentState**(`threadId`): `Promise`\<`null` \| [`AgentState`](AgentState.md)\>
 
-Defined in: [core/interfaces.ts:456](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L456)
+Defined in: [core/interfaces.ts:456](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L456)
 
 #### Parameters
 
@@ -34,7 +34,7 @@ Defined in: [core/interfaces.ts:456](https://github.com/hashangit/ART/blob/0d567
 
 > **getThreadConfig**(`threadId`): `Promise`\<`null` \| [`ThreadConfig`](ThreadConfig.md)\>
 
-Defined in: [core/interfaces.ts:454](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L454)
+Defined in: [core/interfaces.ts:454](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L454)
 
 #### Parameters
 
@@ -52,7 +52,7 @@ Defined in: [core/interfaces.ts:454](https://github.com/hashangit/ART/blob/0d567
 
 > **getThreadContext**(`threadId`): `Promise`\<`null` \| [`ThreadContext`](ThreadContext.md)\>
 
-Defined in: [core/interfaces.ts:459](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L459)
+Defined in: [core/interfaces.ts:459](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L459)
 
 #### Parameters
 
@@ -70,7 +70,7 @@ Defined in: [core/interfaces.ts:459](https://github.com/hashangit/ART/blob/0d567
 
 > **setAgentState**(`threadId`, `state`): `Promise`\<`void`\>
 
-Defined in: [core/interfaces.ts:457](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L457)
+Defined in: [core/interfaces.ts:457](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L457)
 
 #### Parameters
 
@@ -92,7 +92,7 @@ Defined in: [core/interfaces.ts:457](https://github.com/hashangit/ART/blob/0d567
 
 > **setThreadConfig**(`threadId`, `config`): `Promise`\<`void`\>
 
-Defined in: [core/interfaces.ts:455](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L455)
+Defined in: [core/interfaces.ts:455](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L455)
 
 #### Parameters
 
@@ -114,7 +114,7 @@ Defined in: [core/interfaces.ts:455](https://github.com/hashangit/ART/blob/0d567
 
 > **setThreadContext**(`threadId`, `context`): `Promise`\<`void`\>
 
-Defined in: [core/interfaces.ts:460](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L460)
+Defined in: [core/interfaces.ts:460](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L460)
 
 #### Parameters
 

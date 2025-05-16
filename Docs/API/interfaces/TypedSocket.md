@@ -6,7 +6,7 @@
 
 # Interface: TypedSocket\<DataType, FilterType\>
 
-Defined in: [core/interfaces.ts:327](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L327)
+Defined in: [core/interfaces.ts:327](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L327)
 
 Generic interface for a typed publish/subscribe socket.
 
@@ -31,7 +31,7 @@ Generic interface for a typed publish/subscribe socket.
 
 > `optional` **getHistory**(`filter`?, `options`?): `Promise`\<`DataType`[]\>
 
-Defined in: [core/interfaces.ts:356](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L356)
+Defined in: [core/interfaces.ts:356](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L356)
 
 Optional method to retrieve historical data from the socket's source.
 
@@ -65,7 +65,7 @@ Optional configuration like threadId and limit.
 
 > **notify**(`data`, `options`?): `void`
 
-Defined in: [core/interfaces.ts:346](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L346)
+Defined in: [core/interfaces.ts:346](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L346)
 
 Notifies subscribers of new data.
 
@@ -99,7 +99,7 @@ Optional targeting information (e.g., specific thread).
 
 > **subscribe**(`callback`, `filter`?, `options`?): () => `void`
 
-Defined in: [core/interfaces.ts:335](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L335)
+Defined in: [core/interfaces.ts:335](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L335)
 
 Subscribes a callback function to receive data updates.
 
