@@ -6,13 +6,13 @@
 
 # Class: DeepSeekAdapter
 
-Defined in: [adapters/reasoning/deepseek.ts:59](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/deepseek.ts#L59)
+Defined in: [adapters/reasoning/deepseek.ts:87](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/adapters/reasoning/deepseek.ts#L87)
 
 Implements the `ProviderAdapter` interface for interacting with the DeepSeek API,
 which uses an OpenAI-compatible Chat Completions endpoint.
 
 Handles formatting requests and parsing responses for DeepSeek models.
-Note: This basic version does not implement streaming or the `onThought` callback.
+Note: Streaming is **not yet implemented** for this adapter. Calls requesting streaming will yield an error and end.
 
 ## Implements
 
@@ -26,7 +26,7 @@ Note: This basic version does not implement streaming or the `onThought` callbac
 
 > **new DeepSeekAdapter**(`options`): `DeepSeekAdapter`
 
-Defined in: [adapters/reasoning/deepseek.ts:70](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/deepseek.ts#L70)
+Defined in: [adapters/reasoning/deepseek.ts:98](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/adapters/reasoning/deepseek.ts#L98)
 
 Creates an instance of the DeepSeekAdapter.
 
@@ -52,7 +52,7 @@ If the API key is missing.
 
 > `readonly` **providerName**: `"deepseek"` = `'deepseek'`
 
-Defined in: [adapters/reasoning/deepseek.ts:60](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/deepseek.ts#L60)
+Defined in: [adapters/reasoning/deepseek.ts:88](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/adapters/reasoning/deepseek.ts#L88)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -64,46 +64,34 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 ### call()
 
-> **call**(`prompt`, `options`): `Promise`\<`string`\>
+> **call**(`prompt`, `options`): `Promise`\<`AsyncIterable`\<[`StreamEvent`](../interfaces/StreamEvent.md), `any`, `any`\>\>
 
-Defined in: [adapters/reasoning/deepseek.ts:94](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/deepseek.ts#L94)
+Defined in: [adapters/reasoning/deepseek.ts:118](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/adapters/reasoning/deepseek.ts#L118)
 
-/**
- * Sends a request to the DeepSeek Chat Completions API endpoint.
- * Uses an OpenAI-compatible payload structure.
- *
- * **Note:** This is a basic implementation.
- * - It currently assumes `prompt` is the primary user message content (string). It does not yet parse complex `FormattedPrompt` objects containing history or system roles directly. These would need to be handled by the `PromptManager`.
- * - Streaming and the `onThought` callback are **not implemented** in this version.
- *
- *
+Sends a request to the DeepSeek Chat Completions API endpoint.
+Translates `ArtStandardPrompt` to the OpenAI-compatible format.
+
+**Note:** Streaming is **not yet implemented**.
 
 #### Parameters
 
 ##### prompt
 
-[`FormattedPrompt`](../type-aliases/FormattedPrompt.md)
+[`ArtStandardPrompt`](../type-aliases/ArtStandardPrompt.md)
 
-The prompt content, treated as the user message in this basic implementation.
- *
+The standardized prompt messages.
 
 ##### options
 
 [`CallOptions`](../interfaces/CallOptions.md)
 
-Call options, including `threadId`, `traceId`, and any OpenAI-compatible generation parameters (like `temperature`, `max_tokens`, `stop`).
- *
+Call options, including `threadId`, `traceId`, `stream`, and any OpenAI-compatible generation parameters.
 
 #### Returns
 
-`Promise`\<`string`\>
+`Promise`\<`AsyncIterable`\<[`StreamEvent`](../interfaces/StreamEvent.md), `any`, `any`\>\>
 
-A promise resolving to the content string of the assistant's response.
- *
-
-#### Throws
-
-If the API request fails (network error, invalid API key, bad request, etc.).
+A promise resolving to an AsyncIterable of StreamEvent objects. If streaming is requested, it yields an error event and ends.
 
 #### Implementation of
 

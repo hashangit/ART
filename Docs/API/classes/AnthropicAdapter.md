@@ -6,13 +6,12 @@
 
 # Class: AnthropicAdapter
 
-Defined in: [adapters/reasoning/anthropic.ts:59](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/anthropic.ts#L59)
+Defined in: [adapters/reasoning/anthropic.ts:55](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/adapters/reasoning/anthropic.ts#L55)
 
 Implements the `ProviderAdapter` interface for interacting with Anthropic's
-Messages API (Claude models).
+Messages API (Claude models) using the official SDK.
 
-Handles formatting requests and parsing responses for Anthropic.
-Note: This basic version does not implement streaming or the `onThought` callback.
+Handles formatting requests, parsing responses, streaming, and tool use.
 
 ## Implements
 
@@ -26,7 +25,7 @@ Note: This basic version does not implement streaming or the `onThought` callbac
 
 > **new AnthropicAdapter**(`options`): `AnthropicAdapter`
 
-Defined in: [adapters/reasoning/anthropic.ts:74](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/anthropic.ts#L74)
+Defined in: [adapters/reasoning/anthropic.ts:67](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/adapters/reasoning/anthropic.ts#L67)
 
 Creates an instance of the AnthropicAdapter.
 
@@ -36,7 +35,7 @@ Creates an instance of the AnthropicAdapter.
 
 `AnthropicAdapterOptions`
 
-Configuration options including the API key and optional model/apiVersion/baseURL overrides.
+Configuration options including the API key and optional model/baseURL/defaults.
 
 #### Returns
 
@@ -52,7 +51,7 @@ If the API key is missing.
 
 > `readonly` **providerName**: `"anthropic"` = `'anthropic'`
 
-Defined in: [adapters/reasoning/anthropic.ts:60](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/anthropic.ts#L60)
+Defined in: [adapters/reasoning/anthropic.ts:56](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/adapters/reasoning/anthropic.ts#L56)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -64,47 +63,34 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 ### call()
 
-> **call**(`prompt`, `options`): `Promise`\<`string`\>
+> **call**(`prompt`, `options`): `Promise`\<`AsyncIterable`\<[`StreamEvent`](../interfaces/StreamEvent.md), `any`, `any`\>\>
 
-Defined in: [adapters/reasoning/anthropic.ts:101](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/anthropic.ts#L101)
+Defined in: [adapters/reasoning/anthropic.ts:94](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/adapters/reasoning/anthropic.ts#L94)
 
-/**
- * Sends a request to the Anthropic Messages API.
- *
- * **Note:** This is a basic implementation.
- * - It currently assumes `prompt` is the primary user message content (string) and places it in the `messages` array. It does not yet parse complex `FormattedPrompt` objects containing history or specific roles. These would need to be handled by the `PromptManager`.
- * - It supports passing a `system` prompt via `options.system` or `options.system_prompt`.
- * - Streaming and the `onThought` callback are **not implemented** in this version.
- * - Requires `max_tokens` (or alias) in the options, as it's mandatory for the Anthropic API.
- *
- *
+Sends a request to the Anthropic Messages API.
+Translates `ArtStandardPrompt` to the Anthropic format and handles streaming and tool use.
 
 #### Parameters
 
 ##### prompt
 
-[`FormattedPrompt`](../type-aliases/FormattedPrompt.md)
+[`ArtStandardPrompt`](../type-aliases/ArtStandardPrompt.md)
 
-The prompt content, treated as the user message in this basic implementation.
- *
+The standardized prompt messages.
 
 ##### options
 
 [`CallOptions`](../interfaces/CallOptions.md)
 
-Call options, including `threadId`, `traceId`, `system` prompt, and any Anthropic-specific generation parameters (like `temperature`, `max_tokens`, `top_p`, `top_k`).
- *
+Call options, including `threadId`, `traceId`, `stream`, `callContext`,
+                               `model` (override), `tools` (available tools), and Anthropic-specific
+                               generation parameters from `providerConfig.adapterOptions`.
 
 #### Returns
 
-`Promise`\<`string`\>
+`Promise`\<`AsyncIterable`\<[`StreamEvent`](../interfaces/StreamEvent.md), `any`, `any`\>\>
 
-A promise resolving to the text content from the assistant's response.
- *
-
-#### Throws
-
-If the API request fails (network error, invalid API key, bad request, etc.) or if `max_tokens` is missing.
+A promise resolving to an AsyncIterable of StreamEvent objects.
 
 #### Implementation of
 

@@ -6,7 +6,7 @@
 
 # Interface: UISystem
 
-Defined in: [core/interfaces.ts:355](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L355)
+Defined in: [core/interfaces.ts:381](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L381)
 
 Interface for the system providing access to UI communication sockets.
 
@@ -16,7 +16,7 @@ Interface for the system providing access to UI communication sockets.
 
 > **getConversationSocket**(): `ConversationSocket`
 
-Defined in: [core/interfaces.ts:359](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L359)
+Defined in: [core/interfaces.ts:385](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L385)
 
 Returns the singleton instance of the ConversationSocket.
 
@@ -26,11 +26,25 @@ Returns the singleton instance of the ConversationSocket.
 
 ***
 
+### getLLMStreamSocket()
+
+> **getLLMStreamSocket**(): `LLMStreamSocket`
+
+Defined in: [core/interfaces.ts:387](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L387)
+
+Returns the singleton instance of the LLMStreamSocket.
+
+#### Returns
+
+`LLMStreamSocket`
+
+***
+
 ### getObservationSocket()
 
 > **getObservationSocket**(): `ObservationSocket`
 
-Defined in: [core/interfaces.ts:357](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L357)
+Defined in: [core/interfaces.ts:383](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L383)
 
 Returns the singleton instance of the ObservationSocket.
 

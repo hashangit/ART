@@ -1,471 +1,587 @@
 // src/adapters/reasoning/anthropic.ts
-import { ProviderAdapter } from '../../core/interfaces';
+import { Anthropic } from '@anthropic-ai/sdk';
+// AnthropicStream and CacheControlEphemeral are not directly used, SDK handles stream types.
+
+import { ProviderAdapter, ToolSchema } from '../../core/interfaces';
 import {
-  ArtStandardPrompt, // Use the new standard type
-  ArtStandardMessage, // Keep for translation function type hint
+  ArtStandardPrompt,
+  ArtStandardMessage,
   CallOptions,
   StreamEvent,
   LLMMetadata,
+  // Assuming ArtToolCall and ArtToolResult types exist or are part of ArtStandardMessage
 } from '../../types';
 import { Logger } from '../../utils/logger';
-import { ARTError, ErrorCode } from '../../errors'; // Import ARTError and ErrorCode
+import { ARTError, ErrorCode } from '../../errors';
 
-// TODO: Implement streaming support for Anthropic.
-// TODO: Consider using the official Anthropic SDK (@anthropic-ai/sdk).
+// Default model if not specified
+const ANTHROPIC_DEFAULT_MODEL_ID = 'claude-3-7-sonnet-20250219';
+const ANTHROPIC_DEFAULT_MAX_TOKENS = 4096; // Anthropic's default for Claude 3 models if not specified by user
+// const ANTHROPIC_API_VERSION = '2023-06-01'; // SDK handles versioning
 
-// Define expected options for the Anthropic adapter constructor
 /**
  * Configuration options required for the `AnthropicAdapter`.
  */
 export interface AnthropicAdapterOptions {
   /** Your Anthropic API key. Handle securely. */
   apiKey: string;
-  /** The default Anthropic model ID to use (e.g., 'claude-3-opus-20240229', 'claude-3-5-sonnet-20240620'). Defaults to 'claude-3-haiku-20240307' if not provided. */
+  /** The default Anthropic model ID to use (e.g., 'claude-3-opus-20240229', 'claude-3-5-sonnet-20240620'). */
   model?: string;
-  /** Optional: The Anthropic API version to target (e.g., '2023-06-01'). Defaults to '2023-06-01'. */
-  apiVersion?: string;
   /** Optional: Override the base URL for the Anthropic API. */
   apiBaseUrl?: string;
+  /** Optional: Default maximum tokens for responses. */
+  defaultMaxTokens?: number;
+  /** Optional: Default temperature for responses. */
+  defaultTemperature?: number;
 }
 
-// Define the structure expected by the Anthropic Messages API
-// Based on https://docs.anthropic.com/claude/reference/messages_post
-// And tool use: https://docs.anthropic.com/claude/docs/tool-use
-interface AnthropicMessage {
-  role: 'user' | 'assistant';
-  content: string | AnthropicContentBlock[];
-}
+// Types for Anthropic API interaction using the SDK
+type AnthropicSDKMessageParam = Anthropic.Messages.MessageParam;
+// Use *BlockParam types for constructing content, ContentBlock is for received content.
+type AnthropicSDKContentBlockParam = Anthropic.Messages.TextBlockParam | Anthropic.Messages.ImageBlockParam | Anthropic.Messages.ToolUseBlockParam | Anthropic.Messages.ToolResultBlockParam;
+type AnthropicSDKTool = Anthropic.Tool;
+type AnthropicSDKToolUseBlock = Anthropic.ToolUseBlock; // This is a received block
+// AnthropicSDKToolResultBlockParam removed as Anthropic.ToolResultBlockParam is used directly.
 
-type AnthropicContentBlock =
-  | { type: 'text'; text: string }
-  | { type: 'tool_use'; id: string; name: string; input: object } // Assistant requests tool use
-  | { type: 'tool_result'; tool_use_id: string; content: string | { type: 'text', text: string }[]; is_error?: boolean }; // User provides tool result
-
-interface AnthropicMessagesPayload {
-  model: string;
-  messages: AnthropicMessage[];
-  system?: string; // System prompt is top-level
-  max_tokens: number; // Required
-  temperature?: number;
-  top_p?: number;
-  top_k?: number;
-  stop_sequences?: string[];
-  stream?: boolean;
-  // TODO: Add 'tools' parameter if needed for defining available tools
-}
-
-interface AnthropicMessagesResponse {
-  id: string;
-  type: 'message';
-  role: 'assistant';
-  model: string;
-  content: AnthropicContentBlock[]; // Content is an array of blocks
-  stop_reason: 'end_turn' | 'max_tokens' | 'stop_sequence' | 'tool_use' | null;
-  stop_sequence: string | null;
-  usage: {
-    input_tokens: number;
-    output_tokens: number;
-  };
-}
 
 /**
  * Implements the `ProviderAdapter` interface for interacting with Anthropic's
- * Messages API (Claude models).
+ * Messages API (Claude models) using the official SDK.
  *
- * Handles formatting requests and parsing responses for Anthropic.
- * Note: Streaming is **not yet implemented** for this adapter. Calls requesting streaming will yield an error and end.
+ * Handles formatting requests, parsing responses, streaming, and tool use.
  *
  * @implements {ProviderAdapter}
  */
 export class AnthropicAdapter implements ProviderAdapter {
   readonly providerName = 'anthropic';
-  private apiKey: string;
-  private model: string;
-  private apiVersion: string;
-  private apiBaseUrl: string;
-
-  // Default max tokens if not provided in options, as Anthropic requires it
-  private defaultMaxTokens = 1024;
+  private client: Anthropic;
+  private defaultModel: string;
+  private defaultMaxTokens: number;
+  private defaultTemperature?: number;
 
   /**
    * Creates an instance of the AnthropicAdapter.
-   * @param options - Configuration options including the API key and optional model/apiVersion/baseURL overrides.
-   * @throws {Error} If the API key is missing.
+   * @param options - Configuration options including the API key and optional model/baseURL/defaults.
+   * @throws {ARTError} If the API key is missing.
    */
   constructor(options: AnthropicAdapterOptions) {
     if (!options.apiKey) {
-      throw new Error('AnthropicAdapter requires an apiKey in options.');
+      throw new ARTError('AnthropicAdapter requires an apiKey in options.', ErrorCode.INVALID_CONFIG);
     }
-    this.apiKey = options.apiKey;
-    // Common default model, user should override if needed
-    this.model = options.model || 'claude-3-haiku-20240307';
-    this.apiVersion = options.apiVersion || '2023-06-01';
-    this.apiBaseUrl = options.apiBaseUrl || 'https://api.anthropic.com/v1';
-    Logger.debug(`AnthropicAdapter initialized with model: ${this.model}, version: ${this.apiVersion}`);
+
+    this.client = new Anthropic({
+      apiKey: options.apiKey,
+      baseURL: options.apiBaseUrl || undefined,
+    });
+
+    this.defaultModel = options.model || ANTHROPIC_DEFAULT_MODEL_ID;
+    this.defaultMaxTokens = options.defaultMaxTokens || ANTHROPIC_DEFAULT_MAX_TOKENS;
+    this.defaultTemperature = options.defaultTemperature;
+
+    Logger.debug(`AnthropicAdapter initialized with model: ${this.defaultModel}`);
   }
 
   /**
    * Sends a request to the Anthropic Messages API.
-   * Translates `ArtStandardPrompt` to the Anthropic format.
-   *
-   * **Note:** Streaming is **not yet implemented**.
+   * Translates `ArtStandardPrompt` to the Anthropic format and handles streaming and tool use.
    *
    * @param {ArtStandardPrompt} prompt - The standardized prompt messages.
-   * @param {CallOptions} options - Call options, including `threadId`, `traceId`, `stream`, and any Anthropic-specific generation parameters.
-   * @returns {Promise<AsyncIterable<StreamEvent>>} A promise resolving to an AsyncIterable of StreamEvent objects. If streaming is requested, it yields an error event and ends.
-   * @throws {ARTError} If `max_tokens` is missing in options (required by Anthropic).
+   * @param {CallOptions} options - Call options, including `threadId`, `traceId`, `stream`, `callContext`,
+   *                                `model` (override), `tools` (available tools), and Anthropic-specific
+   *                                generation parameters from `providerConfig.adapterOptions`.
+   * @returns {Promise<AsyncIterable<StreamEvent>>} A promise resolving to an AsyncIterable of StreamEvent objects.
    */
   async call(prompt: ArtStandardPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
-    const { threadId, traceId = `anthropic-trace-${Date.now()}`, sessionId, stream, callContext, model: modelOverride } = options;
-    const modelToUse = modelOverride || this.model;
+    const {
+      threadId,
+      traceId = `anthropic-trace-${Date.now()}`,
+      sessionId,
+      stream = false, // Default to false if not specified
+      callContext,
+      model: modelOverride,
+      tools: availableArtTools, // Tools from ART framework
+      providerConfig, // Contains runtime provider config, including adapterOptions
+    } = options;
 
-    // --- Placeholder for Streaming ---
-    // TODO: Implement streaming for Anthropic
-    if (stream) {
-        Logger.warn(`AnthropicAdapter: Streaming requested but not implemented. Returning error stream.`, { threadId, traceId });
-        const errorGenerator = async function*(): AsyncIterable<StreamEvent> {
-            const err = new ARTError("Streaming is not yet implemented for the AnthropicAdapter.", ErrorCode.LLM_PROVIDER_ERROR);
-            yield { type: 'ERROR', data: err, threadId: threadId ?? '', traceId: traceId ?? '', sessionId };
-            yield { type: 'END', data: null, threadId: threadId ?? '', traceId: traceId ?? '', sessionId };
-        };
-        return errorGenerator();
-    }
+    const modelToUse = providerConfig?.modelId || modelOverride || this.defaultModel;
 
-    // --- Non-Streaming Logic ---
+    // Extract Anthropic specific parameters from providerConfig.adapterOptions or options
+    const anthropicApiParams = providerConfig?.adapterOptions || {};
+    const maxTokens = anthropicApiParams.max_tokens || anthropicApiParams.maxTokens || options.max_tokens || options.maxOutputTokens || this.defaultMaxTokens;
+    const temperature = anthropicApiParams.temperature ?? options.temperature ?? this.defaultTemperature;
+    const topP = anthropicApiParams.top_p || anthropicApiParams.topP || options.top_p || options.topP;
+    const topK = anthropicApiParams.top_k || anthropicApiParams.topK || options.top_k || options.topK;
+    const stopSequences = anthropicApiParams.stop_sequences || anthropicApiParams.stopSequences || options.stop || options.stop_sequences || options.stopSequences;
 
-    // Anthropic requires max_tokens
-    const maxTokens = options.max_tokens || options.maxOutputTokens || options.max_tokens_to_sample || this.defaultMaxTokens;
+
     if (!maxTokens) {
-        const err = new ARTError("Anthropic API requires 'max_tokens' or equivalent ('maxOutputTokens', 'max_tokens_to_sample') in call options.", ErrorCode.INVALID_CONFIG);
-        const errorGenerator = async function*(): AsyncIterable<StreamEvent> {
-            yield { type: 'ERROR', data: err, threadId, traceId, sessionId };
-            yield { type: 'END', data: null, threadId, traceId, sessionId };
-        };
-        return errorGenerator();
+      // This should ideally be caught by a validation step before calling the adapter,
+      // but as a safeguard:
+      const err = new ARTError("Anthropic API requires 'max_tokens'.", ErrorCode.INVALID_CONFIG);
+      const errorGenerator = async function* (): AsyncIterable<StreamEvent> {
+        yield { type: 'ERROR', data: err, threadId, traceId, sessionId };
+        yield { type: 'END', data: null, threadId, traceId, sessionId };
+      };
+      return errorGenerator();
     }
 
-    // --- Translate Prompt ---
     let systemPrompt: string | undefined;
-    let anthropicMessages: AnthropicMessage[];
+    let anthropicMessages: AnthropicSDKMessageParam[];
     try {
-      const translationResult = this.translateToAnthropic(prompt);
+      const translationResult = this.translateToAnthropicSdk(prompt);
       systemPrompt = translationResult.systemPrompt;
       anthropicMessages = translationResult.messages;
     } catch (error: any) {
-      Logger.error(`Error translating ArtStandardPrompt to Anthropic format: ${error.message}`, { error, threadId, traceId });
-      const generator = async function*(): AsyncIterable<StreamEvent> {
-          const err = error instanceof ARTError ? error : new ARTError(`Prompt translation failed: ${error.message}`, ErrorCode.PROMPT_TRANSLATION_FAILED, error);
-          yield { type: 'ERROR', data: err, threadId, traceId, sessionId };
-          yield { type: 'END', data: null, threadId, traceId, sessionId };
-      }
-      return generator();
+      Logger.error(`Error translating ArtStandardPrompt to Anthropic SDK format: ${error.message}`, { error, threadId, traceId });
+      const artError = error instanceof ARTError ? error : new ARTError(`Prompt translation failed: ${error.message}`, ErrorCode.PROMPT_TRANSLATION_FAILED, error);
+      const errorGenerator = async function* (): AsyncIterable<StreamEvent> {
+        yield { type: 'ERROR', data: artError, threadId, traceId, sessionId };
+        yield { type: 'END', data: null, threadId, traceId, sessionId };
+      };
+      return errorGenerator();
     }
-    // --- End Translate Prompt ---
 
-    const apiUrl = `${this.apiBaseUrl}/messages`;
+    const anthropicTools: AnthropicSDKTool[] | undefined = availableArtTools
+      ? this.translateArtToolsToAnthropic(availableArtTools)
+      : undefined;
 
-    const payload: AnthropicMessagesPayload = {
+    const requestBody: Anthropic.Messages.MessageCreateParams = {
       model: modelToUse,
       messages: anthropicMessages,
-      system: systemPrompt, // Use translated system prompt
       max_tokens: maxTokens,
-      temperature: options.temperature,
-      top_p: options.top_p || options.topP,
-      top_k: options.top_k || options.topK,
-      stop_sequences: options.stop || options.stop_sequences || options.stopSequences,
-      stream: false, // Explicitly false
-      // TODO: Add 'tools' parameter if needed
+      system: systemPrompt,
+      temperature: temperature,
+      top_p: topP,
+      top_k: topK,
+      stop_sequences: stopSequences,
+      stream: stream,
+      tools: anthropicTools,
     };
 
-    // Remove undefined keys, except for max_tokens which is required
-    Object.keys(payload).forEach(key => {
-         const K = key as keyof AnthropicMessagesPayload;
-         if (K !== 'max_tokens' && payload[K] === undefined) {
-             delete payload[K];
-         }
-     });
-   
-     Logger.debug(`Calling Anthropic API (non-streaming): ${apiUrl} with model ${this.model}`, { threadId, traceId });
-     // Capture required instance properties to avoid aliasing `this`
-     const apiKey = this.apiKey;
-     const apiVersion = this.apiVersion;
+    // Remove undefined keys from the request body, Anthropic SDK handles this well but good practice.
+    Object.keys(requestBody).forEach(key => {
+      const K = key as keyof Anthropic.Messages.MessageCreateParams;
+      if (requestBody[K] === undefined) {
+        delete requestBody[K];
+      }
+    });
 
-     // Use an async generator function without aliasing `this`
-     const generator = async function*(): AsyncIterable<StreamEvent> {
-         try {
-             const response = await fetch(apiUrl, {
-                 method: 'POST',
-                 headers: {
-                     'Content-Type': 'application/json',
-                     'x-api-key': apiKey,
-                     'anthropic-version': apiVersion,
-                 },
-                 body: JSON.stringify(payload),
-             });
-   
-             if (!response.ok) {
-                 const errorBody = await response.text();
-                 let errorMessage = errorBody;
-                 try {
-                     const parsedError = JSON.parse(errorBody);
-                     if (parsedError?.error?.message) errorMessage = parsedError.error.message;
-                 } catch (e) { /* Ignore */ }
-                 const err = new ARTError(
-                    `Anthropic API request failed: ${response.status} ${response.statusText} - ${errorMessage}`,
-                    ErrorCode.LLM_PROVIDER_ERROR,
-                    new Error(errorBody)
-                 );
-                 yield { type: 'ERROR', data: err, threadId, traceId, sessionId };
-                 yield { type: 'END', data: null, threadId, traceId, sessionId };
-                 return; // Stop generator
-             }
+    Logger.debug(`Calling Anthropic API with model ${modelToUse}`, { stream, tools: !!anthropicTools, threadId, traceId });
 
-             const data = await response.json() as AnthropicMessagesResponse;
-             // Extract text content, handling potential lack of text blocks
-             const textContentBlocks = data.content?.filter(c => c.type === 'text') as { type: 'text', text: string }[] | undefined;
-             const responseText = textContentBlocks?.map(c => c.text).join('\n') ?? ''; // Join multiple text blocks if present
+    // Use an async generator function
+    const generator = async function* (this: AnthropicAdapter): AsyncIterable<StreamEvent> {
+      // TRY block for the entire generator function
+      try {
+        if (stream) {
+          const streamInstance = await this.client.messages.create(
+            requestBody as Anthropic.Messages.MessageCreateParamsStreaming, // Cast for streaming
+            this.getRequestOptions(modelToUse) // Get headers for beta features
+          );
 
-             // Check for tool use requests in the response
-             const toolUseBlocks = data.content?.filter(c => c.type === 'tool_use') as { type: 'tool_use', id: string, name: string, input: object }[] | undefined;
-             if (toolUseBlocks && toolUseBlocks.length > 0) {
-                 Logger.debug("Anthropic response included tool use requests", { toolUseBlocks, threadId, traceId });
-                 // The agent (e.g., PESAgent) needs to handle these based on the raw response or structured output.
-                 // The adapter primarily yields the text content.
-             }
+          let accumulatedText = "";
+          const accumulatedToolUses: AnthropicSDKToolUseBlock[] = []; // Changed to const as it's not directly populated in the loop now
+          let currentInputTokens: number | undefined;
+          let currentOutputTokens: number | undefined;
+          let finalStopReason: string | null = null;
+          const finalUsage: Partial<Anthropic.Messages.Usage> = { // Changed to const
+            input_tokens: undefined, // Will be set by message_start
+            output_tokens: undefined // Will be updated
+          };
 
-             // Check if response is valid (might have only tool_use, which is valid)
-             if (data.stop_reason !== 'tool_use' && responseText === '' && (!toolUseBlocks || toolUseBlocks.length === 0)) {
-                 // Only error if stop reason isn't tool_use and there's no text content
-                 const err = new ARTError('Invalid response structure from Anthropic API: No text content found and stop reason is not tool_use.', ErrorCode.LLM_PROVIDER_ERROR, new Error(JSON.stringify(data)));
-                 yield { type: 'ERROR', data: err, threadId, traceId, sessionId };
-                 yield { type: 'END', data: null, threadId, traceId, sessionId };
-                 return; // Stop generator
-             }
+          let initialMetadata: LLMMetadata | undefined;
+          let deltaMetadata: LLMMetadata | undefined;
 
-             Logger.debug(`Anthropic API call successful. Stop Reason: ${data.stop_reason}`, { threadId, traceId });
+          for await (const event of streamInstance) {
+            switch (event.type) {
+              case 'message_start':
+                Logger.debug('Anthropic stream: message_start', { usage: event.message.usage, threadId, traceId });
+                finalUsage.input_tokens = event.message.usage.input_tokens;
+                finalUsage.output_tokens = event.message.usage.output_tokens;
+                currentInputTokens = finalUsage.input_tokens;
+                currentOutputTokens = finalUsage.output_tokens;
 
-             // Yield TOKEN
-             const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'FINAL_SYNTHESIS_LLM_RESPONSE';
-             yield { type: 'TOKEN', data: responseText.trim(), threadId, traceId, sessionId, tokenType };
+                initialMetadata = {
+                    inputTokens: currentInputTokens,
+                    outputTokens: currentOutputTokens,
+                    providerRawUsage: { usage: { ...event.message.usage } },
+                    traceId: traceId,
+                };
+                yield { type: 'METADATA', data: initialMetadata, threadId, traceId, sessionId };
+                break;
 
-             // Yield METADATA
-             const metadata: LLMMetadata = {
-                 inputTokens: data.usage?.input_tokens,
-                 outputTokens: data.usage?.output_tokens,
-                 stopReason: data.stop_reason ?? undefined, // Convert null to undefined
-                 providerRawUsage: { usage: data.usage, stop_reason: data.stop_reason, stop_sequence: data.stop_sequence },
-                 traceId: traceId,
-             };
-             yield { type: 'METADATA', data: metadata, threadId, traceId, sessionId };
+              case 'content_block_start':
+                Logger.debug('Anthropic stream: content_block_start', { index: event.index, block: event.content_block, threadId, traceId });
+                // No specific action needed here for now.
+                // If Anthropic sends distinct 'thinking' blocks via content_block_start,
+                // handling could be added here to map to a specific StreamEvent.tokenType.
+                break;
 
-             // Yield END
-             yield { type: 'END', data: null, threadId, traceId, sessionId };
+              case 'content_block_delta':
+                Logger.debug('Anthropic stream: content_block_delta', { index: event.index, delta: event.delta, threadId, traceId });
+                if (event.delta.type === 'text_delta') {
+                  const textDelta = event.delta.text;
+                  accumulatedText += textDelta;
+                  const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'FINAL_SYNTHESIS_LLM_RESPONSE';
+                  yield { type: 'TOKEN', data: textDelta, threadId, traceId, sessionId, tokenType };
+                }
+                // input_json_delta for tool arguments will be part of the final tool_use block
+                // captured at message_stop via getFinalMessage().
+                // Explicit "thinking_delta" handling (as in user example) could be added here if needed.
+                break;
 
-         } catch (error: any) {
-             Logger.error(`Error during Anthropic API call: ${error.message}`, { error, threadId, traceId });
-             const artError = error instanceof ARTError ? error : new ARTError(error.message, ErrorCode.LLM_PROVIDER_ERROR, error);
-             yield { type: 'ERROR', data: artError, threadId, traceId, sessionId };
-             yield { type: 'END', data: null, threadId, traceId, sessionId }; // Ensure END is yielded on error
-         }
-     };
+              case 'content_block_stop':
+                Logger.debug('Anthropic stream: content_block_stop', { index: event.index, threadId, traceId });
+                // This event indicates a content block (e.g. a tool_use block) has finished streaming its deltas.
+                // The full block will be available in finalMessage.content.
+                break;
 
-     return generator();
-   }
+              case 'message_delta':
+                Logger.debug('Anthropic stream: message_delta', { delta: event.delta, usage: event.usage, threadId, traceId });
+                finalStopReason = event.delta.stop_reason ?? finalStopReason;
+                // event.usage in message_delta contains cumulative output_tokens for the message.
+                if (event.usage.output_tokens !== undefined && event.usage.output_tokens !== null) {
+                    finalUsage.output_tokens = event.usage.output_tokens;
+                }
+                currentOutputTokens = finalUsage.output_tokens;
+
+                deltaMetadata = {
+                    inputTokens: currentInputTokens,
+                    outputTokens: currentOutputTokens,
+                    stopReason: event.delta.stop_reason ?? undefined,
+                    providerRawUsage: {
+                        usage: {
+                            input_tokens: currentInputTokens, // Should not change after start
+                            output_tokens: event.usage.output_tokens ?? undefined, // from delta
+                            // other usage fields from delta if available and needed
+                        },
+                        delta: event.delta
+                    },
+                    traceId: traceId,
+                };
+                yield { type: 'METADATA', data: deltaMetadata, threadId, traceId, sessionId };
+                break;
+
+              case 'message_stop': {
+                Logger.debug('Anthropic stream: message_stop. Using accumulated data.', { threadId, traceId });
+                // finalStopReason, finalUsage.input_tokens, finalUsage.output_tokens should be set by previous events (message_start, message_delta)
+                // accumulatedText and accumulatedToolUses are built during content_block_delta and potentially content_block_stop.
+
+                // It's possible that the final content (especially tool_uses) might only be fully formed
+                // after all deltas. If the SDK guarantees `message_delta` or `content_block_stop` provides complete
+                // tool_use blocks, then `getFinalMessage()` might not be strictly necessary.
+                // For now, we rely on accumulated data.
+
+                // If finalMessage.content was used previously, ensure accumulatedText and accumulatedToolUses are up-to-date.
+                // If not using getFinalMessage(), these accumulators are our source of truth.
+
+                if (finalStopReason === 'tool_use' && accumulatedToolUses.length > 0) {
+                  const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'FINAL_SYNTHESIS_LLM_RESPONSE';
+                  const toolData = accumulatedToolUses.map(tu => ({
+                      type: 'tool_use', // ART specific marker
+                      id: tu.id,
+                      name: tu.name,
+                      input: tu.input,
+                  }));
+                  if (accumulatedText.trim()) {
+                    yield { type: 'TOKEN', data: [{type: 'text', text: accumulatedText.trim()}, ...toolData], threadId, traceId, sessionId, tokenType };
+                  } else {
+                    yield { type: 'TOKEN', data: toolData, threadId, traceId, sessionId, tokenType };
+                  }
+                } else if (accumulatedText.trim()) {
+                  const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'FINAL_SYNTHESIS_LLM_RESPONSE';
+                  yield { type: 'TOKEN', data: accumulatedText.trim(), threadId, traceId, sessionId, tokenType };
+                }
+                // else: No text and no tool use (e.g. max_tokens reached before any content) - no final TOKEN event.
+
+                const finalMetadataReport: LLMMetadata = {
+                    inputTokens: finalUsage.input_tokens ?? undefined,
+                    outputTokens: finalUsage.output_tokens ?? undefined,
+                    stopReason: finalStopReason ?? undefined,
+                    providerRawUsage: {
+                        usage: {
+                            input_tokens: finalUsage.input_tokens ?? undefined,
+                            output_tokens: finalUsage.output_tokens ?? undefined,
+                            // cache_creation_input_tokens and cache_read_input_tokens might not be available without getFinalMessage() or specific events
+                        },
+                        stop_reason: finalStopReason,
+                        // stop_sequence might not be available without getFinalMessage()
+                    },
+                    traceId: traceId,
+                };
+                yield { type: 'METADATA', data: finalMetadataReport, threadId, traceId, sessionId };
+                break;
+              }
+              default: {
+                // The 'event' here is one of the specific types from Anthropic.Messages.RawMessageStreamEvent.
+                // If an event type is not explicitly handled above, it will fall here.
+                // Errors that break the stream are caught by the outer try/catch.
+                // Ping events are not typically part of RawMessageStreamEvent for client.messages.stream().
+                Logger.warn('Anthropic stream: unhandled raw stream event type', { eventType: (event as any).type, event, threadId, traceId });
+                break; // Explicitly break
+              }
+            } // end switch
+          } // end for-await
+        } else { // Non-streaming logic starts here
+          const response = await this.client.messages.create(
+            requestBody as Anthropic.Messages.MessageCreateParamsNonStreaming,
+            this.getRequestOptions(modelToUse)
+          );
+
+          Logger.debug(`Anthropic API call successful (non-streaming). Stop Reason: ${response.stop_reason}`, { threadId, traceId });
+
+          let responseText = "";
+          const toolUseBlocks: AnthropicSDKToolUseBlock[] = [];
+
+          response.content.forEach((block: Anthropic.Messages.ContentBlock) => {
+            if (block.type === 'text') {
+              responseText += block.text;
+            } else if (block.type === 'tool_use') {
+              toolUseBlocks.push(block);
+            }
+          });
+          responseText = responseText.trim();
+
+          const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'FINAL_SYNTHESIS_LLM_RESPONSE';
+
+          if (response.stop_reason === 'tool_use' && toolUseBlocks.length > 0) {
+            const toolData = toolUseBlocks.map(tu => ({
+                type: 'tool_use',
+                id: tu.id,
+                name: tu.name,
+                input: tu.input,
+            }));
+            if (responseText) {
+                 yield { type: 'TOKEN', data: [{type: 'text', text: responseText}, ...toolData], threadId, traceId, sessionId, tokenType };
+            } else {
+                yield { type: 'TOKEN', data: toolData, threadId, traceId, sessionId, tokenType };
+            }
+          } else if (responseText) {
+            yield { type: 'TOKEN', data: responseText, threadId, traceId, sessionId, tokenType };
+          } else if (response.stop_reason !== 'tool_use') {
+             Logger.warn('Anthropic API (non-streaming): Empty response text and not a tool_use stop_reason.', { response, threadId, traceId });
+          }
+
+          if (response.usage) {
+            const metadata: LLMMetadata = {
+              inputTokens: response.usage.input_tokens,
+              outputTokens: response.usage.output_tokens,
+              stopReason: response.stop_reason ?? undefined,
+              providerRawUsage: { usage: response.usage, stop_reason: response.stop_reason, stop_sequence: response.stop_sequence },
+              traceId: traceId,
+            };
+            yield { type: 'METADATA', data: metadata, threadId, traceId, sessionId };
+          }
+        } // End of if (stream) / else (non-streaming)
+
+        // Yield END signal for both streaming and non-streaming, now inside the main try block
+        yield { type: 'END', data: null, threadId, traceId, sessionId };
+
+      } catch (error: any) { // Catch for the entire generator function
+        Logger.error(`Error during Anthropic API call: ${error.message}`, { error, threadId, traceId });
+        const artError = error instanceof ARTError ? error :
+          (error instanceof Anthropic.APIError ? new ARTError(`Anthropic API Error (${error.status}): ${error.message}`, ErrorCode.LLM_PROVIDER_ERROR, error) :
+            new ARTError(error.message || 'Unknown Anthropic adapter error', ErrorCode.LLM_PROVIDER_ERROR, error));
+        yield { type: 'ERROR', data: artError, threadId, traceId, sessionId };
+        yield { type: 'END', data: null, threadId, traceId, sessionId }; // Ensure END is yielded on error
+      }
+    }.bind(this); // Bind the generator function to the class instance
+
+    return generator();
+  }
+
+  /**
+   * Prepares request options. Currently a placeholder for potential future additions
+   * like Anthropic beta headers for specific models or features (e.g., prompt caching).
+   * The user's example code shows more advanced beta header logic.
+   */
+  private getRequestOptions(modelId: string): Anthropic.RequestOptions {
+    const betas: string[] = [];
+    // Example: Add logic to push beta flags based on modelId or features.
+    // const cacheableModels = [
+    //     "claude-3-5-sonnet-20240620",
+    // ];
+    // if (cacheableModels.includes(modelId)) {
+    //     betas.push("prompt-caching-2024-07-31"); // Replace with actual beta flag
+    // }
+
+    // Suppress unused variable warning for modelId if no logic uses it yet.
+    if (modelId) {
+      // This block can be removed if modelId is used in beta header logic.
+    }
+
+
+    if (betas.length > 0) {
+        return { headers: { "anthropic-beta": betas.join(",") } };
+    }
+    return {};
+  }
 
 
   /**
-   * Translates the provider-agnostic `ArtStandardPrompt` into the Anthropic Messages API format.
+   * Translates the provider-agnostic `ArtStandardPrompt` into the Anthropic SDK Messages format.
    *
    * @private
    * @param {ArtStandardPrompt} artPrompt - The input `ArtStandardPrompt` array.
-   * @returns {{ systemPrompt?: string; messages: AnthropicMessage[] }} The system prompt string and the `AnthropicMessage[]` array.
-   * @throws {ARTError} If translation encounters an issue (ErrorCode.PROMPT_TRANSLATION_FAILED).
+   * @returns {{ systemPrompt?: string; messages: AnthropicSDKMessageParam[] }}
+   * @throws {ARTError} If translation encounters an issue.
    */
-  private translateToAnthropic(artPrompt: ArtStandardPrompt): { systemPrompt?: string; messages: AnthropicMessage[] } {
+  private translateToAnthropicSdk(artPrompt: ArtStandardPrompt): { systemPrompt?: string; messages: Anthropic.Messages.MessageParam[] } {
     let systemPrompt: string | undefined;
-    const messages: AnthropicMessage[] = [];
-    let currentRole: 'user' | 'assistant' | null = null;
+    const messages: Anthropic.Messages.MessageParam[] = [];
+    let currentRoleInternal: 'user' | 'assistant' | null = null;
 
-    for (let i = 0; i < artPrompt.length; i++) {
-      const message = artPrompt[i];
-
-      // Extract system prompt (only the first one is used by Anthropic)
-      if (message.role === 'system' && !systemPrompt) {
-        if (typeof message.content !== 'string') {
-          Logger.warn(`AnthropicAdapter: System message content is not a string. Stringifying.`, { content: message.content });
-          systemPrompt = String(message.content);
+    for (const artMsg of artPrompt) {
+      if (artMsg.role === 'system') {
+        const systemText = (typeof artMsg.content === 'string') ? artMsg.content : String(artMsg.content);
+        if (!systemPrompt) {
+          systemPrompt = systemText;
         } else {
-          systemPrompt = message.content;
+          Logger.warn(`AnthropicAdapter: Multiple system messages found. Appending to existing system prompt.`);
+          systemPrompt += `\n${systemText}`;
         }
-        continue; // Skip adding system message to the main messages array
-      }
-      if (message.role === 'system' && systemPrompt) {
-          Logger.warn(`AnthropicAdapter: Multiple system messages found. Only the first one is used by Anthropic. Skipping subsequent ones.`);
-          continue;
+        continue;
       }
 
+      const translatedContent = this.mapArtMessageToAnthropicContent(artMsg);
+      const messageRoleToPush: 'user' | 'assistant' = (artMsg.role === 'user' || artMsg.role === 'tool_result') ? 'user' : 'assistant';
 
-      // --- Handle User Messages ---
-      if (message.role === 'user') {
-        if (currentRole === 'user') {
-          // Merge consecutive user messages (Anthropic requires alternating roles)
-          const lastMessage = messages[messages.length - 1];
-          if (lastMessage && lastMessage.role === 'user') {
-             const existingContent = typeof lastMessage.content === 'string' ? [{ type: 'text', text: lastMessage.content }] : lastMessage.content as AnthropicContentBlock[];
-             const newContent = typeof message.content === 'string' ? [{ type: 'text', text: message.content }] : this.mapArtContentToAnthropicBlocks(message.content, message.role);
-             // Explicitly cast the merged array
-             lastMessage.content = [...existingContent, ...newContent] as AnthropicContentBlock[];
-             Logger.debug("AnthropicAdapter: Merged consecutive user messages.");
-             continue;
-          }
+      if (currentRoleInternal === messageRoleToPush && messages.length > 0) {
+        const lastMessage = messages[messages.length - 1];
+        
+        let currentLastMessageContentArray: Anthropic.Messages.ContentBlockParam[];
+        if (typeof lastMessage.content === 'string') {
+          currentLastMessageContentArray = [{ type: 'text', text: lastMessage.content } as Anthropic.Messages.TextBlockParam];
+        } else {
+          // lastMessage.content should be Anthropic.Messages.ContentBlockParam[]
+          currentLastMessageContentArray = lastMessage.content;
         }
-        messages.push({
-          role: 'user',
-          content: typeof message.content === 'string' ? message.content : this.mapArtContentToAnthropicBlocks(message.content, message.role)
-        });
-        currentRole = 'user';
-      }
-      // --- Handle Assistant Messages ---
-      else if (message.role === 'assistant') {
-         if (currentRole === 'assistant') {
-             // Merge consecutive assistant messages
-             const lastMessage = messages[messages.length - 1];
-             if (lastMessage && lastMessage.role === 'assistant') {
-                 const existingContent = typeof lastMessage.content === 'string' ? [{ type: 'text', text: lastMessage.content }] : lastMessage.content as AnthropicContentBlock[];
-                 const newContent = typeof message.content === 'string' ? [{ type: 'text', text: message.content }] : this.mapArtContentToAnthropicBlocks(message.content, message.role, message.tool_calls);
-                 // Explicitly cast the merged array
-                 lastMessage.content = [...existingContent, ...newContent] as AnthropicContentBlock[];
-                 Logger.debug("AnthropicAdapter: Merged consecutive assistant messages.");
-                 continue;
-             }
-         }
-        messages.push({
-          role: 'assistant',
-          content: typeof message.content === 'string' ? message.content : this.mapArtContentToAnthropicBlocks(message.content, message.role, message.tool_calls)
-        });
-        currentRole = 'assistant';
-      }
-      // --- Handle Tool Result Messages (map to user role with tool_result content) ---
-      else if (message.role === 'tool_result') {
-          if (!message.tool_call_id) {
-              throw new ARTError(`AnthropicAdapter: 'tool_result' message missing required 'tool_call_id'.`, ErrorCode.PROMPT_TRANSLATION_FAILED);
-          }
-          const toolResultBlock: AnthropicContentBlock = {
-              type: 'tool_result',
-              tool_use_id: message.tool_call_id,
-              content: String(message.content), // Ensure content is string for basic case
-              // TODO: Handle potential 'is_error' flag if added to ArtStandardMessage
-          };
 
-          // Tool results must follow an assistant message and be wrapped in a user message
-          if (currentRole === 'user') {
-              // If the last message was user, append tool result to it
-              const lastMessage = messages[messages.length - 1];
-              if (lastMessage && lastMessage.role === 'user') {
-                  const existingContent = typeof lastMessage.content === 'string' ? [{ type: 'text', text: lastMessage.content }] : lastMessage.content as AnthropicContentBlock[];
-                  // Explicitly cast the merged array
-                  lastMessage.content = [...existingContent, toolResultBlock] as AnthropicContentBlock[];
-              } else {
-                   // Should not happen if logic is correct, but handle defensively
-                   messages.push({ role: 'user', content: [toolResultBlock] });
-                   currentRole = 'user';
-              }
-          } else {
-              // If last message was assistant or null, start a new user message
-              messages.push({ role: 'user', content: [toolResultBlock] });
-              currentRole = 'user';
-          }
+        const contentToMergeArray: Anthropic.Messages.ContentBlockParam[] =
+          typeof translatedContent === 'string'
+            ? [{ type: 'text', text: translatedContent } as Anthropic.Messages.TextBlockParam]
+            : translatedContent; // translatedContent is already AnthropicSDKContentBlockParam[]
+
+        // Ensure all elements are of the correct *BlockParam types
+        const mergedContent: Anthropic.Messages.ContentBlockParam[] = [...currentLastMessageContentArray, ...contentToMergeArray];
+        lastMessage.content = mergedContent;
+        Logger.debug(`AnthropicAdapter: Merged consecutive ${messageRoleToPush} messages.`);
+      } else {
+        messages.push({ role: messageRoleToPush, content: translatedContent });
+        currentRoleInternal = messageRoleToPush;
       }
-      // --- Handle Tool Request (Should not happen, throw error) ---
-      else if (message.role === 'tool_request') {
-           throw new ARTError(
-              `AnthropicAdapter: Unexpected 'tool_request' role encountered during translation. These should be part of an 'assistant' message's tool_calls.`,
-              ErrorCode.PROMPT_TRANSLATION_FAILED
-            );
-      }
-       // --- Handle Unknown Role (Should not happen) ---
-       else {
-            throw new ARTError(
-               `AnthropicAdapter: Unknown message role '${(message as any).role}' encountered during translation.`,
-               ErrorCode.PROMPT_TRANSLATION_FAILED
-             );
-       }
     }
 
-    // Final validation: Must end with a user message if the last standard message was assistant requesting tools
-    const lastStandardMessage = artPrompt[artPrompt.length - 1];
-    const lastTranslatedMessage = messages[messages.length - 1];
-    if (lastStandardMessage?.role === 'assistant' && lastStandardMessage.tool_calls && lastTranslatedMessage?.role !== 'user') {
-        // This indicates tool results were expected but not provided or translated correctly.
-        // However, the API call might still be valid if the LLM is expected to respond without results yet.
-        // Let's just log a debug message for now.
-        Logger.debug("AnthropicAdapter: Prompt ends with assistant tool calls, but last translated message is not 'user'. This might be expected if waiting for tool execution.");
+    // Anthropic requires the first message to be 'user' if messages exist and no system prompt.
+    // The SDK might handle this, but good to be aware.
+    if (!systemPrompt && messages.length > 0 && messages[0].role !== 'user') {
+      // This case should be rare due to the merging logic ensuring alternation starting with user if possible.
+      // If it occurs, it implies an ART prompt that starts with assistant and has no system message.
+      // Prepending an empty user message is a common workaround for some APIs.
+      Logger.warn("AnthropicAdapter: Prompt does not start with user message and has no system prompt. Prepending an empty user message for compatibility.");
+      messages.unshift({ role: 'user', content: '(Previous turn context)'});
     }
-     // Anthropic requires the first message to be 'user' if no system prompt is present
-     if (!systemPrompt && messages.length > 0 && messages[0].role !== 'user') {
-         throw new ARTError(
-             `AnthropicAdapter: First message must be 'user' if no system prompt is provided.`,
-             ErrorCode.PROMPT_TRANSLATION_FAILED
-         );
-     }
+     // Ensure conversation doesn't end on an assistant message if expecting tool results (though API handles this by stop_reason)
+    const lastArtMsg = artPrompt[artPrompt.length -1];
+    if (lastArtMsg?.role === 'assistant' && lastArtMsg.tool_calls && lastArtMsg.tool_calls.length > 0) {
+        // This is fine, Anthropic will respond with stop_reason: 'tool_use'
+        Logger.debug("AnthropicAdapter: Prompt ends with assistant requesting tool calls.");
+    }
 
 
     return { systemPrompt, messages };
   }
 
   /**
-   * Helper to map ArtStandardMessage content/tool_calls to Anthropic Content Blocks.
-   * @private
+   * Maps a single ArtStandardMessage to Anthropic SDK's content format (string or AnthropicSDKContentBlockParam[]).
    */
-  private mapArtContentToAnthropicBlocks(
-      content: string | object | null,
-      role: 'user' | 'assistant',
-      tool_calls?: ArtStandardMessage['tool_calls']
-  ): AnthropicContentBlock[] {
-      const blocks: AnthropicContentBlock[] = [];
+  private mapArtMessageToAnthropicContent(artMsg: ArtStandardMessage): string | AnthropicSDKContentBlockParam[] {
+    const blocks: AnthropicSDKContentBlockParam[] = [];
 
-      // Add text content if present
-      if (typeof content === 'string' && content.trim() !== '') {
-          blocks.push({ type: 'text', text: content });
-      } else if (content !== null && typeof content !== 'string') {
-          // If content is an object, stringify it as text for now
-          // TODO: Handle complex content types like images if needed later
-          Logger.warn(`AnthropicAdapter: Non-string, non-null content found for ${role} message. Stringifying.`, { content });
-          blocks.push({ type: 'text', text: JSON.stringify(content) });
+    // Handle text content
+    if (artMsg.content && typeof artMsg.content === 'string' && artMsg.content.trim() !== '') {
+      blocks.push({ type: 'text', text: artMsg.content });
+    } else if (artMsg.content && typeof artMsg.content !== 'string' && artMsg.role !== 'tool_result' && (!artMsg.tool_calls || artMsg.tool_calls.length === 0) ) {
+      // For non-string content (e.g. if ART supports structured content like images later)
+      // Stringify if it's an object and not a tool_result (handled below) or an assistant message that only contains tool_calls.
+      Logger.warn(`AnthropicAdapter: Non-string, non-tool_result, non-tool_call-only content for role ${artMsg.role}, stringifying.`, { content: artMsg.content });
+      blocks.push({ type: 'text', text: JSON.stringify(artMsg.content) });
+    }
+
+    // Handle tool_calls for assistant messages (these become 'tool_use' blocks)
+    if (artMsg.role === 'assistant' && artMsg.tool_calls && artMsg.tool_calls.length > 0) {
+      artMsg.tool_calls.forEach(tc => {
+        if (tc.type === 'function') {
+          try {
+            blocks.push({
+              type: 'tool_use',
+              id: tc.id,
+              name: tc.function.name,
+              input: JSON.parse(tc.function.arguments || '{}'), // Anthropic expects input as an object
+            });
+          } catch (e: any) {
+            throw new ARTError(
+              `AnthropicAdapter: Failed to parse tool call arguments for tool ${tc.function.name} (ID: ${tc.id}). Arguments must be valid JSON. Error: ${e.message}`,
+              ErrorCode.PROMPT_TRANSLATION_FAILED, e
+            );
+          }
+        } else {
+          Logger.warn(`AnthropicAdapter: Skipping non-function tool_call type: ${tc.type}`);
+        }
+      });
+    }
+
+    // Handle tool_result messages (these become 'tool_result' blocks)
+    if (artMsg.role === 'tool_result') {
+      if (!artMsg.tool_call_id) {
+        throw new ARTError("AnthropicAdapter: 'tool_result' message missing required 'tool_call_id'.", ErrorCode.PROMPT_TRANSLATION_FAILED);
       }
+      const toolResultBlock: Anthropic.ToolResultBlockParam = { // Explicitly use the SDK type
+        type: 'tool_result',
+        tool_use_id: artMsg.tool_call_id,
+      };
 
-      // Add tool calls for assistant messages
-      if (role === 'assistant' && tool_calls && tool_calls.length > 0) {
-          tool_calls.forEach(tc => {
-              if (tc.type !== 'function') {
-                  Logger.warn(`AnthropicAdapter: Skipping non-function tool call type: ${tc.type}`);
-                  return;
-              }
-              try {
-                  blocks.push({
-                      type: 'tool_use',
-                      id: tc.id,
-                      name: tc.function.name,
-                      input: JSON.parse(tc.function.arguments || '{}'), // Arguments must be parsed back to object for Anthropic
-                  });
-              } catch (e) {
-                   throw new ARTError(
-                      `AnthropicAdapter: Failed to parse tool call arguments for tool ${tc.function.name} (ID: ${tc.id}). Arguments must be valid JSON. Error: ${(e as Error).message}`,
-                      ErrorCode.PROMPT_TRANSLATION_FAILED,
-                      e as Error
-                  );
-              }
-          });
+      if (typeof artMsg.content === 'string') {
+        toolResultBlock.content = artMsg.content;
+      } else if (Array.isArray(artMsg.content) && artMsg.content.every(c => typeof c === 'object' && c.type === 'text' && typeof c.text === 'string')) {
+        // If ART provides content as [{type: 'text', text: '...'}] for tool results
+        toolResultBlock.content = artMsg.content.map(c => ({type: 'text', text: (c as any).text}));
+      } else if (artMsg.content !== null && artMsg.content !== undefined) {
+        // Otherwise, stringify complex content for tool_result
+        toolResultBlock.content = JSON.stringify(artMsg.content);
       }
+      // is_error can be added if artMsg supports it:
+      // if (artMsg.is_error) toolResultBlock.is_error = true;
 
-      // If no blocks were added (e.g., assistant message with null content and no tool calls),
-      // Anthropic might still require a content array, potentially empty or with an empty text block.
-      // Let's return an empty array for now, assuming the API handles it. If not, adjust here.
-      // if (blocks.length === 0 && role === 'assistant') {
-      //     blocks.push({ type: 'text', text: '' }); // Or return [] ? Test API behavior.
-      // }
+      blocks.push(toolResultBlock);
+    }
 
-      return blocks;
+    // If only one text block and no other block types, Anthropic SDK allows content to be a simple string.
+    if (blocks.length === 1 && blocks[0].type === 'text') {
+      return (blocks[0] as Anthropic.TextBlockParam).text;
+    }
+    // If blocks is empty (e.g. assistant message with only tool_calls that were filtered, or empty user message)
+    // Anthropic expects an empty string or valid content block array.
+    // An empty message like {role: 'user', content: ''} is valid.
+    if (blocks.length === 0) {
+        return ""; // Return empty string for empty content, which is valid for Anthropic
+    }
+
+    return blocks; // Return array of ContentBlockParam
   }
 
+  /**
+   * Translates ART ToolSchema array to Anthropic's tool format.
+   */
+  private translateArtToolsToAnthropic(artTools: ToolSchema[]): AnthropicSDKTool[] {
+    return artTools.map(artTool => {
+      if (!artTool.inputSchema || typeof artTool.inputSchema !== 'object') { // Changed 'parameters' to 'inputSchema'
+        throw new ARTError(`Invalid inputSchema definition for tool '${artTool.name}'. Expected a JSON schema object.`, ErrorCode.INVALID_CONFIG);
+      }
+      return {
+        name: artTool.name,
+        description: artTool.description,
+        input_schema: artTool.inputSchema as Anthropic.Tool.InputSchema, // Changed 'parameters' to 'inputSchema'
+      };
+    });
+  }
 }

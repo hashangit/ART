@@ -17,7 +17,9 @@ export enum ErrorCode {
     LLM_PROVIDER_ERROR = 'LLM_PROVIDER_ERROR',
     PROMPT_GENERATION_FAILED = 'PROMPT_GENERATION_FAILED',
     OUTPUT_PARSING_FAILED = 'OUTPUT_PARSING_FAILED',
-    PROMPT_ASSEMBLY_FAILED = 'PROMPT_ASSEMBLY_FAILED', // Added for PromptManager refactor
+    PROMPT_ASSEMBLY_FAILED = 'PROMPT_ASSEMBLY_FAILED', // Error during prompt template rendering or initial structure creation (legacy, might be removed)
+    PROMPT_FRAGMENT_NOT_FOUND = 'PROMPT_FRAGMENT_NOT_FOUND', // Requested prompt fragment does not exist
+    PROMPT_VALIDATION_FAILED = 'PROMPT_VALIDATION_FAILED', // Constructed prompt object failed schema validation
     PROMPT_TRANSLATION_FAILED = 'PROMPT_TRANSLATION_FAILED', // Added for Adapter translation
 
     // Tool Errors

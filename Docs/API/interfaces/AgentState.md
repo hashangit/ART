@@ -6,7 +6,7 @@
 
 # Interface: AgentState
 
-Defined in: [types/index.ts:194](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L194)
+Defined in: [types/index.ts:270](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/index.ts#L270)
 
 Represents non-configuration state associated with an agent or thread.
 Could include user preferences, accumulated knowledge, etc. (Less defined for v1.0)

@@ -6,116 +6,71 @@
 
 # Interface: PromptManager
 
-Defined in: [core/interfaces.ts:55](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L55)
+Defined in: [core/interfaces.ts:92](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L92)
 
-Interface for managing and constructing prompts for the LLM.
+Interface for the stateless prompt assembler.
+Uses a blueprint (template) and context provided by Agent Logic
+to create a standardized prompt format (`ArtStandardPrompt`).
 
 ## Methods
 
-### createPlanningPrompt()
+### getFragment()
 
-> **createPlanningPrompt**(`query`, `history`, `systemPrompt`, `availableTools`, `threadContext`): `Promise`\<[`FormattedPrompt`](../type-aliases/FormattedPrompt.md)\>
+> **getFragment**(`name`, `context`?): `string`
 
-Defined in: [core/interfaces.ts:66](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L66)
+Defined in: [core/interfaces.ts:102](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L102)
 
-Constructs the prompt specifically for the planning phase of an agent's execution cycle (e.g., in PES).
-This prompt typically instructs the LLM to understand the query, form a plan, and identify necessary tool calls.
+Retrieves a named prompt fragment (e.g., a piece of instruction text).
+Optionally allows for simple variable substitution if the fragment is a basic template.
 
 #### Parameters
 
-##### query
+##### name
 
 `string`
 
-The user's original query.
+The unique identifier for the fragment.
 
-##### history
+##### context?
 
-[`ConversationMessage`](ConversationMessage.md)[]
+`Record`\<`string`, `any`\>
 
-Recent conversation history relevant to the current context.
-
-##### systemPrompt
-
-The base system instructions for the agent in this thread.
-
-`undefined` | `string`
-
-##### availableTools
-
-[`ToolSchema`](ToolSchema.md)[]
-
-An array of schemas for tools that are enabled and available for use in this thread.
-
-##### threadContext
-
-[`ThreadContext`](ThreadContext.md)
-
-The full context (config and state) for the current thread.
+Optional data for simple variable substitution within the fragment.
 
 #### Returns
 
-`Promise`\<[`FormattedPrompt`](../type-aliases/FormattedPrompt.md)\>
+`string`
 
-A promise resolving to the formatted prompt (string or provider-specific object) ready for the `ReasoningEngine`.
+The processed prompt fragment string.
+
+#### Throws
+
+If the fragment is not found.
 
 ***
 
-### createSynthesisPrompt()
+### validatePrompt()
 
-> **createSynthesisPrompt**(`query`, `intent`, `plan`, `toolResults`, `history`, `systemPrompt`, `threadContext`): `Promise`\<[`FormattedPrompt`](../type-aliases/FormattedPrompt.md)\>
+> **validatePrompt**(`prompt`): [`ArtStandardPrompt`](../type-aliases/ArtStandardPrompt.md)
 
-Defined in: [core/interfaces.ts:86](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L86)
+Defined in: [core/interfaces.ts:111](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L111)
 
-Constructs the prompt specifically for the synthesis phase of an agent's execution cycle (e.g., in PES).
-This prompt typically provides the LLM with the original query, the plan, tool results, and history, asking it to generate the final user-facing response.
+Validates a constructed prompt object against the standard schema.
 
 #### Parameters
 
-##### query
+##### prompt
 
-`string`
+[`ArtStandardPrompt`](../type-aliases/ArtStandardPrompt.md)
 
-The user's original query.
-
-##### intent
-
-The intent extracted during the planning phase.
-
-`undefined` | `string`
-
-##### plan
-
-The plan generated during the planning phase.
-
-`undefined` | `string`
-
-##### toolResults
-
-[`ToolResult`](ToolResult.md)[]
-
-An array of results obtained from executing the tools specified in the plan.
-
-##### history
-
-[`ConversationMessage`](ConversationMessage.md)[]
-
-Recent conversation history.
-
-##### systemPrompt
-
-The base system instructions for the agent.
-
-`undefined` | `string`
-
-##### threadContext
-
-[`ThreadContext`](ThreadContext.md)
-
-The full context (config and state) for the current thread.
+The ArtStandardPrompt object constructed by the agent.
 
 #### Returns
 
-`Promise`\<[`FormattedPrompt`](../type-aliases/FormattedPrompt.md)\>
+[`ArtStandardPrompt`](../type-aliases/ArtStandardPrompt.md)
 
-A promise resolving to the formatted prompt (string or provider-specific object) ready for the `ReasoningEngine`.
+The validated prompt object (potentially after normalization if the schema does that).
+
+#### Throws
+
+If validation fails (can be caught and wrapped in ARTError).
