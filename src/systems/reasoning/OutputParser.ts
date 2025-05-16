@@ -3,6 +3,7 @@ import * as z from 'zod'; // Import Zod
 import { OutputParser as IOutputParser } from '../../core/interfaces';
 import { ParsedToolCall } from '../../types';
 import { Logger } from '../../utils/logger'; // Import the Logger class
+import { XmlMatcher } from '../../utils/xml-matcher'; // Import XmlMatcher
 
 // Define Zod schema for a single tool call
 const parsedToolCallSchema = z.object({
@@ -24,40 +25,75 @@ const toolCallsSchema = z.array(parsedToolCallSchema);
  */
 export class OutputParser implements IOutputParser {
   /**
-   /**
-    * Parses the raw string output from the planning LLM call to extract structured information.
-    * It looks for sections explicitly marked with "Intent:", "Plan:", and "Tool Calls:".
-    * It attempts to find and parse a JSON array within the "Tool Calls:" section, handling
-    * potential markdown fences (```json ... ```) and validating the structure using Zod.
-    *
-    * @param output - The raw string response from the planning LLM call.
-    * @returns A promise resolving to an object containing optional `intent` (string), `plan` (string),
-    *          and `toolCalls` (array of `ParsedToolCall` objects). Fields will be `undefined` if
-    *          the corresponding section is not found or cannot be parsed correctly.
-    *          `toolCalls` will be an empty array `[]` if the "Tool Calls:" section is present but empty,
-    *          or if the JSON is invalid or fails structural validation. It remains `undefined` only
-    *          if the "Tool Calls:" section itself is missing.
-    */
+   * Parses the raw string output from the planning LLM call to extract structured information.
+   *
+   * This method performs the following steps:
+   * 1. Uses `XmlMatcher` to identify and extract content within `<think>...</think>` tags.
+   *    This extracted content is aggregated into the `thoughts` field of the result.
+   * 2. The remaining content (outside of `<think>` tags) is then parsed for sections
+   *    explicitly marked with "Intent:", "Plan:", and "Tool Calls:".
+   * 3. It attempts to find and parse a JSON array within the "Tool Calls:" section, handling
+   *    potential markdown fences (e.g., \`\`\`json ... \`\`\`) and validating the structure using Zod.
+   *
+   * @param output - The raw string response from the planning LLM call, which may include
+   *                 text, `<think>` tags, and sections for Intent, Plan, and Tool Calls.
+   * @returns A promise resolving to an object containing:
+   *          - `thoughts?`: An optional string aggregating content from all `<think>` tags, separated by "\\n\\n---\\n\\n".
+   *          - `intent?`: An optional string for the parsed intent.
+   *          - `plan?`: An optional string for the parsed plan.
+   *          - `toolCalls?`: An optional array of `ParsedToolCall` objects. This will be an empty array `[]`
+   *                        if the "Tool Calls:" section is present in the non-thinking content but is empty,
+   *                        or if the JSON is invalid/fails validation. It remains `undefined` if the
+   *                        "Tool Calls:" section itself is missing from the non-thinking content.
+   *          Fields will be `undefined` if the corresponding section is not found or cannot be parsed correctly.
+   */
   async parsePlanningOutput(output: string): Promise<{
     intent?: string;
     plan?: string;
     toolCalls?: ParsedToolCall[];
+    thoughts?: string; // Add thoughts to the return type
   }> {
-    const result: {
-      intent?: string;
-      plan?: string;
-      toolCalls?: ParsedToolCall[];
-    } = {};
+   const result: {
+     intent?: string;
+     plan?: string;
+     toolCalls?: ParsedToolCall[];
+     thoughts?: string;
+   } = {};
 
-    // Robustly extract sections, handling potential variations in spacing/newlines
-    const intentMatch = output.match(/Intent:\s*([\s\S]*?)(Plan:|Tool Calls:|$)/i);
-    result.intent = intentMatch?.[1]?.trim();
+   let processedOutput = output;
+   const thoughtsList: string[] = [];
 
-    const planMatch = output.match(/Plan:\s*([\s\S]*?)(Tool Calls:|$)/i);
-    result.plan = planMatch?.[1]?.trim();
+   // Use XmlMatcher to extract <think> tags first
+   // The XmlMatcher will process the entire `output` string.
+   // We assume `output` is the full aggregated string from the LLM's planning phase.
+   const xmlMatcher = new XmlMatcher('think');
+   const chunks = xmlMatcher.final(output); // Process the whole string at once
 
-    const toolCallsMatch = output.match(/Tool Calls:\s*([\s\S]*?)$/i);
-    const toolCallsString = toolCallsMatch?.[1]?.trim();
+   let nonThinkingContent = "";
+   chunks.forEach(chunk => {
+     if (chunk.matched) {
+       thoughtsList.push(chunk.data.trim());
+     } else {
+       nonThinkingContent += chunk.data;
+     }
+   });
+
+   if (thoughtsList.length > 0) {
+     result.thoughts = thoughtsList.join("\n\n---\n\n"); // Join multiple thoughts
+   }
+
+   // Now parse Intent, Plan, Tool Calls from the non-thinking content
+   processedOutput = nonThinkingContent;
+
+   // Robustly extract sections from the processedOutput (non-thinking part)
+   const intentMatch = processedOutput.match(/Intent:\s*([\s\S]*?)(Plan:|Tool Calls:|$)/i);
+   result.intent = intentMatch?.[1]?.trim();
+
+   const planMatch = processedOutput.match(/Plan:\s*([\s\S]*?)(Tool Calls:|$)/i);
+   result.plan = planMatch?.[1]?.trim();
+
+   const toolCallsMatch = processedOutput.match(/Tool Calls:\s*([\s\S]*?)$/i);
+   const toolCallsString = toolCallsMatch?.[1]?.trim();
 
     // Initialize toolCalls to indicate no valid calls found yet
     result.toolCalls = undefined;
@@ -119,11 +155,22 @@ export class OutputParser implements IOutputParser {
         // If the "Tool Calls:" section doesn't exist at all, toolCalls remains undefined
     }
 
-     // Handle cases where sections might be missing entirely
-     if (!result.intent && !result.plan && !result.toolCalls) { // Fix logical AND operator
-        Logger.warn(`OutputParser: Could not parse any structured data (Intent, Plan, Tool Calls) from planning output: ${output}`); // Use static method
-        // Consider returning the raw output as plan or intent if no structure found?
-        // For now, return potentially empty fields.
+     // Handle cases where sections might be missing entirely from the non-thinking content
+     if (!result.intent && !result.plan && (result.toolCalls === undefined || result.toolCalls.length === 0) && !result.thoughts) {
+        Logger.warn(`OutputParser: Could not parse any structured data (Intent, Plan, Tool Calls, Thoughts) from planning output. Original output: ${output}`);
+        // If nothing structured is found, but there were thoughts, that's still a partial parse.
+        // If no thoughts AND no other structure, then it's a more complete failure to parse structure.
+        // If the original output was just thoughts, result.thoughts would be populated.
+        // If original output had thoughts and other text that wasn't parsable, result.thoughts would be populated.
+        // This warning triggers if even thoughts couldn't be extracted AND other sections are also missing.
+        // If only thoughts were present, result.thoughts would exist, and this condition might not be met.
+        // Let's refine the condition: if no standard sections (intent, plan, toolCalls) are found in `processedOutput`
+        if (!result.intent && !result.plan && (result.toolCalls === undefined || result.toolCalls.length === 0)) {
+           Logger.debug(`OutputParser: No Intent, Plan, or Tool Calls found in non-thinking content part: ${processedOutput}`);
+        }
+     } else if (!result.intent && !result.plan && !result.toolCalls && !result.thoughts) {
+        // This case means absolutely nothing was parsed, not even thoughts.
+        Logger.warn(`OutputParser: Complete failure to parse any structured data or thoughts from planning output: ${output}`);
      }
 
 
