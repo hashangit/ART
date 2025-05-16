@@ -41,8 +41,9 @@ This allows you to connect ART to virtually any LLM provider by writing a single
     *   If streaming, parse the provider's stream chunks and yield `StreamEvent` objects (`TOKEN`, `METADATA`, `ERROR`, `END`), ensuring correct `tokenType` based on `callContext` and provider markers.
     *   If not streaming, make the call, parse the full response, and yield a minimal sequence of `StreamEvent`s.
     *   Extract and include `LLMMetadata` in `METADATA` events.
-+    *   The constructor will receive options (like API keys, base URLs) when the `ProviderManager` instantiates the adapter at runtime, based on the `RuntimeProviderConfig`.
-+4.  **Import and Register in `createArtInstance`:** In the file where you initialize ART, import your custom adapter class. In the configuration object passed to `createArtInstance`, include your adapter class in the `providers.availableProviders` array within the `ProviderManagerConfig`:
+    *   The constructor will receive options (like API keys, base URLs) when the `ProviderManager` instantiates the adapter at runtime, based on the `RuntimeProviderConfig`.
+    *   **Implement `async shutdown(): Promise<void>` (Optional but Recommended for Local Providers):** If your adapter manages persistent connections or significant resources (especially true for local providers that might load models into memory/VRAM), implement this optional method. The `ProviderManager` will call `shutdown()` when an instance is evicted (e.g., an idle local provider being replaced by a new one, or an API provider timing out). This method is your adapter's opportunity to gracefully release those resources (e.g., tell a local LLM server to unload a model, close database connections). Without a proper `shutdown()` implementation, resources might not be cleaned up effectively when an adapter instance is discarded by the `ProviderManager`.
+4.  **Import and Register in `createArtInstance`:** In the file where you initialize ART, import your custom adapter class. In the configuration object passed to `createArtInstance`, include your adapter class in the `providers.availableProviders` array within the `ProviderManagerConfig`:
 
     ```typescript
     import { createArtInstance, IndexedDBStorageAdapter } from 'art-framework';

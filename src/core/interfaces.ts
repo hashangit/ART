@@ -16,12 +16,37 @@ import {
   ThreadConfig,
   ThreadContext,
   ToolResult,
-  ToolSchema,
+  ToolSchema, // Removed erroneous 'export type'
   AgentState,
   // --- Import new types (Refactor Phase 1) ---
   ArtStandardPrompt,
   // PromptContext, // Removed - No longer used by PromptManager interface
 } from '../types';
+
+// Re-export types that might be needed by implementers of these core interfaces
+export type {
+  AgentFinalResponse,
+  AgentProps,
+  CallOptions,
+  ConversationMessage,
+  ExecutionContext,
+  FilterOptions,
+  MessageOptions,
+  MessageRole,
+  Observation,
+  ObservationFilter,
+  ObservationType,
+  ParsedToolCall,
+  ThreadConfig,
+  ThreadContext,
+  ToolResult,
+  ToolSchema, // Ensure ToolSchema is re-exported
+  AgentState,
+  ArtStandardPrompt,
+  StreamEvent, // Also re-export StreamEvent as it's used in ReasoningEngine
+  LLMMetadata  // Also re-export LLMMetadata
+} from '../types';
+
 
 /**
  * Interface for the central agent orchestrator.

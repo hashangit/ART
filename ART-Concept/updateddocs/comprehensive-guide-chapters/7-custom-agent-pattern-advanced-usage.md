@@ -42,7 +42,7 @@ import {
 *   **`IAgentCore`**
     The main blueprint for creating a new "thinking style" or reasoning process for the agent. If you want the agent to think differently than the default "Plan -> Use Tools -> Answer" style, you implement this.
     *   **Developer Notes:** The core interface for custom agent logic. Your class must implement `IAgentCore`. Key requirements:
-        *   Implement `async process(props: AgentProps): Promise<AgentFinalResponse>`: This method *is* your agent's brain. It receives the `AgentProps` (query, threadId, etc.) and must orchestrate all steps (loading data, calling LLMs, calling tools, saving data, handling streaming responses) according to your custom logic (e.g., a ReAct loop, or something else entirely) and return the final response.
+        *   Implement `async process(props: AgentProps): Promise<AgentFinalResponse>`: This method *is* your agent's brain. It receives the `AgentProps` (query, threadId, etc.) and must orchestrate all steps (loading data, calling LLMs, calling tools, saving data, handling streaming responses) according to your custom logic (e.g., a ReAct loop, or something else entirely) and return the final `AgentFinalResponse` object (containing the `response: ConversationMessage` and `metadata: ExecutionMetadata`).
         *   Define a `constructor` that accepts a single argument: an object containing instances of the necessary ART subsystems (dependencies) defined by the interfaces below (e.g., `constructor(private deps: { stateManager: StateManager, reasoningEngine: ReasoningEngine, uiSystem: UISystem, ... })`). The `AgentFactory` will automatically provide (inject) these dependencies when it instantiates your custom agent core based on the `config.agentCore` setting.
 
 *   **Dependency Interfaces (`StateManager`, `ConversationManager`, `ToolRegistry`, `PromptManager`, `ReasoningEngine`, `OutputParser`, `ObservationManager`, `ToolSystem`, `UISystem`)**
@@ -153,7 +153,7 @@ export class ReActAgent implements IAgentCore {
   }
 
 
-  async process(props: AgentProps): Promise<AgentFinalResponse> {
+  async process(props: AgentProps): Promise<AgentFinalResponse> { // Returns { response: ConversationMessage, metadata: ExecutionMetadata }
     const { query, threadId, traceId = `react-trace-${Date.now()}` } = props;
     await this.deps.observationManager.record({ type: ObservationType.PROCESS_START, threadId, traceId, content: { agentType: 'ReAct', query } });
 
@@ -253,8 +253,7 @@ export class ReActAgent implements IAgentCore {
         // TODO: Save history (user query + final answer)
         // await this.deps.conversationManager.addMessages(...)
         await this.deps.stateManager.saveStateIfModified(threadId);
-        return { responseId: `react-final-${Date.now()}`, responseText: parsedOutput.finalAnswer, traceId, metadata: { llmMetadata: aggregatedMetadata } };
-      }
+        return { response: { role: MessageRole.ASSISTANT, content: parsedOutput.finalAnswer, responseId: `react-final-${Date.now()}` }, metadata: { traceId, llmMetadata: aggregatedMetadata } };       }
 
       // 6. Execute Action (if any)
       let observationResult = "No action taken in this step.";
@@ -287,7 +286,7 @@ export class ReActAgent implements IAgentCore {
     await this.deps.observationManager.record({ type: ObservationType.PROCESS_END, threadId, traceId, content: { status: 'max_steps_reached' } });
     // TODO: Save history
     await this.deps.stateManager.saveStateIfModified(threadId);
-    return { responseId: `react-maxstep-${Date.now()}`, responseText: finalResponseText, traceId, metadata: { llmMetadata: aggregatedMetadata } };
+    return { response: { role: MessageRole.ASSISTANT, content: finalResponseText, responseId: `react-maxstep-${Date.now()}` }, metadata: { traceId, llmMetadata: aggregatedMetadata } };
   }
 }
 ```

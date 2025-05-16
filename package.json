@@ -1,6 +1,6 @@
 {
   "name": "art-framework",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Agent Reasoning & Tooling (ART) Framework - A browser-first JavaScript/TypeScript framework for building LLM-powered intelligent agents",
   "type": "module",
   "main": "./dist/index.js",
@@ -60,6 +60,7 @@
     "ws": "^8.18.1"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.51.0",
     "@google/genai": "^0.10.0",
     "@types/mathjs": "^9.4.1",
     "@types/mustache": "^4.2.5",
