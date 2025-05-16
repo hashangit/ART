@@ -6,7 +6,7 @@
 
 # Interface: AvailableProviderEntry
 
-Defined in: [types/providers.ts:6](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/providers.ts#L6)
+Defined in: [types/providers.ts:6](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/providers.ts#L6)
 
 Entry defining an available provider adapter
 
@@ -16,7 +16,7 @@ Entry defining an available provider adapter
 
 > **adapter**: (`options`) => [`ProviderAdapter`](ProviderAdapter.md)
 
-Defined in: [types/providers.ts:8](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/providers.ts#L8)
+Defined in: [types/providers.ts:8](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/providers.ts#L8)
 
 #### Parameters
 
@@ -34,7 +34,7 @@ Defined in: [types/providers.ts:8](https://github.com/hashangit/ART/blob/d99cb32
 
 > `optional` **baseOptions**: `any`
 
-Defined in: [types/providers.ts:9](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/providers.ts#L9)
+Defined in: [types/providers.ts:9](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/providers.ts#L9)
 
 ***
 
@@ -42,7 +42,7 @@ Defined in: [types/providers.ts:9](https://github.com/hashangit/ART/blob/d99cb32
 
 > `optional` **isLocal**: `boolean`
 
-Defined in: [types/providers.ts:10](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/providers.ts#L10)
+Defined in: [types/providers.ts:10](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/providers.ts#L10)
 
 ***
 
@@ -50,4 +50,4 @@ Defined in: [types/providers.ts:10](https://github.com/hashangit/ART/blob/d99cb3
 
 > **name**: `string`
 
-Defined in: [types/providers.ts:7](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/providers.ts#L7)
+Defined in: [types/providers.ts:7](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/types/providers.ts#L7)

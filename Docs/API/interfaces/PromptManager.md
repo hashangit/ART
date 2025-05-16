@@ -6,7 +6,7 @@
 
 # Interface: PromptManager
 
-Defined in: [core/interfaces.ts:92](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L92)
+Defined in: [core/interfaces.ts:92](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L92)
 
 Interface for the stateless prompt assembler.
 Uses a blueprint (template) and context provided by Agent Logic
@@ -18,7 +18,7 @@ to create a standardized prompt format (`ArtStandardPrompt`).
 
 > **getFragment**(`name`, `context`?): `string`
 
-Defined in: [core/interfaces.ts:102](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L102)
+Defined in: [core/interfaces.ts:102](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L102)
 
 Retrieves a named prompt fragment (e.g., a piece of instruction text).
 Optionally allows for simple variable substitution if the fragment is a basic template.
@@ -53,7 +53,7 @@ If the fragment is not found.
 
 > **validatePrompt**(`prompt`): [`ArtStandardPrompt`](../type-aliases/ArtStandardPrompt.md)
 
-Defined in: [core/interfaces.ts:111](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L111)
+Defined in: [core/interfaces.ts:111](https://github.com/hashangit/ART/blob/0d5679913e70f07ec60f00c1f87b53a5f0bf6ddf/src/core/interfaces.ts#L111)
 
 Validates a constructed prompt object against the standard schema.
 
