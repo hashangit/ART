@@ -6,7 +6,7 @@
 
 # Class: GeminiAdapter
 
-Defined in: [adapters/reasoning/gemini.ts:33](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/adapters/reasoning/gemini.ts#L33)
+Defined in: [adapters/reasoning/gemini.ts:33](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/adapters/reasoning/gemini.ts#L33)
 
 Base interface for LLM Provider Adapters, extending the core ReasoningEngine.
 Implementations will handle provider-specific API calls, authentication, etc.
@@ -21,7 +21,7 @@ Implementations will handle provider-specific API calls, authentication, etc.
 
 > **new GeminiAdapter**(`options`): `GeminiAdapter`
 
-Defined in: [adapters/reasoning/gemini.ts:44](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/adapters/reasoning/gemini.ts#L44)
+Defined in: [adapters/reasoning/gemini.ts:44](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/adapters/reasoning/gemini.ts#L44)
 
 Creates an instance of GeminiAdapter.
 
@@ -47,7 +47,7 @@ If `apiKey` is missing in the options.
 
 > `readonly` **providerName**: `"gemini"` = `'gemini'`
 
-Defined in: [adapters/reasoning/gemini.ts:34](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/adapters/reasoning/gemini.ts#L34)
+Defined in: [adapters/reasoning/gemini.ts:34](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/adapters/reasoning/gemini.ts#L34)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -61,7 +61,7 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 > **call**(`prompt`, `options`): `Promise`\<`AsyncIterable`\<[`StreamEvent`](../interfaces/StreamEvent.md), `any`, `any`\>\>
 
-Defined in: [adapters/reasoning/gemini.ts:78](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/adapters/reasoning/gemini.ts#L78)
+Defined in: [adapters/reasoning/gemini.ts:78](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/adapters/reasoning/gemini.ts#L78)
 
 Makes a call to the configured Gemini model.
 Translates the `ArtStandardPrompt` into the Gemini API format, sends the request

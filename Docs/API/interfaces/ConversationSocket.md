@@ -6,7 +6,7 @@
 
 # Interface: ConversationSocket
 
-Defined in: [core/interfaces.ts:372](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/core/interfaces.ts#L372)
+Defined in: [core/interfaces.ts:372](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L372)
 
 TypedSocket specifically for ConversationMessage data.
 FilterType is MessageRole or array of MessageRole.
@@ -21,7 +21,7 @@ FilterType is MessageRole or array of MessageRole.
 
 > `optional` **getHistory**(`filter`?, `options`?): `Promise`\<[`ConversationMessage`](ConversationMessage.md)[]\>
 
-Defined in: [core/interfaces.ts:356](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/core/interfaces.ts#L356)
+Defined in: [core/interfaces.ts:356](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L356)
 
 Optional method to retrieve historical data from the socket's source.
 
@@ -59,7 +59,7 @@ Optional configuration like threadId and limit.
 
 > **notify**(`data`, `options`?): `void`
 
-Defined in: [core/interfaces.ts:346](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/core/interfaces.ts#L346)
+Defined in: [core/interfaces.ts:346](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L346)
 
 Notifies subscribers of new data.
 
@@ -97,7 +97,7 @@ Optional targeting information (e.g., specific thread).
 
 > **subscribe**(`callback`, `filter`?, `options`?): () => `void`
 
-Defined in: [core/interfaces.ts:335](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/core/interfaces.ts#L335)
+Defined in: [core/interfaces.ts:335](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L335)
 
 Subscribes a callback function to receive data updates.
 

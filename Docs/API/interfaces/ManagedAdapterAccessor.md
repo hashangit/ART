@@ -6,7 +6,7 @@
 
 # Interface: ManagedAdapterAccessor
 
-Defined in: [types/providers.ts:28](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/types/providers.ts#L28)
+Defined in: [types/providers.ts:28](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/providers.ts#L28)
 
 Object returned by ProviderManager granting access to an adapter instance
 
@@ -16,7 +16,7 @@ Object returned by ProviderManager granting access to an adapter instance
 
 > **adapter**: [`ProviderAdapter`](ProviderAdapter.md)
 
-Defined in: [types/providers.ts:29](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/types/providers.ts#L29)
+Defined in: [types/providers.ts:29](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/providers.ts#L29)
 
 ***
 
@@ -24,7 +24,7 @@ Defined in: [types/providers.ts:29](https://github.com/hashangit/ART/blob/0c4f50
 
 > **release**: () => `void`
 
-Defined in: [types/providers.ts:31](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/types/providers.ts#L31)
+Defined in: [types/providers.ts:31](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/providers.ts#L31)
 
 Signals that the current call using this adapter instance is finished.
 

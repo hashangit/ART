@@ -6,7 +6,7 @@
 
 # Interface: AgentOptions
 
-Defined in: [types/index.ts:308](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/types/index.ts#L308)
+Defined in: [types/index.ts:308](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L308)
 
 Options to override agent behavior at runtime.
 
@@ -16,7 +16,7 @@ Options to override agent behavior at runtime.
 
 > `optional` **forceTools**: `string`[]
 
-Defined in: [types/index.ts:314](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/types/index.ts#L314)
+Defined in: [types/index.ts:314](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L314)
 
 Force the use of specific tools, potentially overriding the thread's `enabledTools` for this call (use with caution).
 
@@ -26,7 +26,7 @@ Force the use of specific tools, potentially overriding the thread's `enabledToo
 
 > `optional` **llmParams**: `Record`\<`string`, `any`\>
 
-Defined in: [types/index.ts:310](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/types/index.ts#L310)
+Defined in: [types/index.ts:310](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L310)
 
 Override specific LLM parameters (e.g., temperature, max_tokens) for this call only.
 
@@ -36,7 +36,7 @@ Override specific LLM parameters (e.g., temperature, max_tokens) for this call o
 
 > `optional` **overrideModel**: `object`
 
-Defined in: [types/index.ts:316](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/types/index.ts#L316)
+Defined in: [types/index.ts:316](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L316)
 
 Specify a particular reasoning model to use for this call, overriding the thread's default.
 
@@ -54,7 +54,7 @@ Specify a particular reasoning model to use for this call, overriding the thread
 
 > `optional` **promptTemplateId**: `string`
 
-Defined in: [types/index.ts:320](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/types/index.ts#L320)
+Defined in: [types/index.ts:320](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L320)
 
 Override the prompt template used for this specific call.
 
@@ -64,7 +64,7 @@ Override the prompt template used for this specific call.
 
 > `optional` **providerConfig**: [`RuntimeProviderConfig`](RuntimeProviderConfig.md)
 
-Defined in: [types/index.ts:312](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/types/index.ts#L312)
+Defined in: [types/index.ts:312](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L312)
 
 Override provider configuration for this specific call.
 
@@ -74,6 +74,6 @@ Override provider configuration for this specific call.
 
 > `optional` **stream**: `boolean`
 
-Defined in: [types/index.ts:318](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/types/index.ts#L318)
+Defined in: [types/index.ts:318](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L318)
 
 Request a streaming response for this specific agent process call.

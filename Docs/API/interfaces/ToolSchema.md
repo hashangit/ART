@@ -6,7 +6,7 @@
 
 # Interface: ToolSchema
 
-Defined in: [types/index.ts:211](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/types/index.ts#L211)
+Defined in: [types/index.ts:211](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L211)
 
 Defines the schema for a tool, including its input parameters.
 Uses JSON Schema format for inputSchema.
@@ -17,7 +17,7 @@ Uses JSON Schema format for inputSchema.
 
 > **description**: `string`
 
-Defined in: [types/index.ts:215](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/types/index.ts#L215)
+Defined in: [types/index.ts:215](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L215)
 
 A clear description of what the tool does, intended for the LLM to understand its purpose and usage.
 
@@ -27,7 +27,7 @@ A clear description of what the tool does, intended for the LLM to understand it
 
 > `optional` **examples**: `object`[]
 
-Defined in: [types/index.ts:221](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/types/index.ts#L221)
+Defined in: [types/index.ts:221](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L221)
 
 Optional array of examples demonstrating how to use the tool, useful for few-shot prompting of the LLM.
 
@@ -49,7 +49,7 @@ Optional array of examples demonstrating how to use the tool, useful for few-sho
 
 > **inputSchema**: [`JsonSchema`](../type-aliases/JsonSchema.md)
 
-Defined in: [types/index.ts:217](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/types/index.ts#L217)
+Defined in: [types/index.ts:217](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L217)
 
 A JSON Schema object defining the structure, types, and requirements of the input arguments the tool expects.
 
@@ -59,7 +59,7 @@ A JSON Schema object defining the structure, types, and requirements of the inpu
 
 > **name**: `string`
 
-Defined in: [types/index.ts:213](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/types/index.ts#L213)
+Defined in: [types/index.ts:213](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L213)
 
 A unique name identifying the tool (used in LLM prompts and registry lookups). Must be unique.
 
@@ -69,6 +69,6 @@ A unique name identifying the tool (used in LLM prompts and registry lookups). M
 
 > `optional` **outputSchema**: [`JsonSchema`](../type-aliases/JsonSchema.md)
 
-Defined in: [types/index.ts:219](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/types/index.ts#L219)
+Defined in: [types/index.ts:219](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L219)
 
 An optional JSON Schema object defining the expected structure of the data returned in the `output` field of a successful `ToolResult`.

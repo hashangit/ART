@@ -6,7 +6,7 @@
 
 # Class: OpenRouterAdapter
 
-Defined in: [adapters/reasoning/openrouter.ts:93](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/adapters/reasoning/openrouter.ts#L93)
+Defined in: [adapters/reasoning/openrouter.ts:93](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/adapters/reasoning/openrouter.ts#L93)
 
 Implements the `ProviderAdapter` interface for interacting with the OpenRouter API,
 which provides access to various LLMs through an OpenAI-compatible interface.
@@ -27,7 +27,7 @@ Note: Streaming is **not yet implemented** for this adapter. Calls requesting st
 
 > **new OpenRouterAdapter**(`options`): `OpenRouterAdapter`
 
-Defined in: [adapters/reasoning/openrouter.ts:106](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/adapters/reasoning/openrouter.ts#L106)
+Defined in: [adapters/reasoning/openrouter.ts:106](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/adapters/reasoning/openrouter.ts#L106)
 
 Creates an instance of the OpenRouterAdapter.
 
@@ -53,7 +53,7 @@ If the API key or model identifier is missing.
 
 > `readonly` **providerName**: `"openrouter"` = `'openrouter'`
 
-Defined in: [adapters/reasoning/openrouter.ts:94](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/adapters/reasoning/openrouter.ts#L94)
+Defined in: [adapters/reasoning/openrouter.ts:94](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/adapters/reasoning/openrouter.ts#L94)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -67,7 +67,7 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 > **call**(`prompt`, `options`): `Promise`\<`AsyncIterable`\<[`StreamEvent`](../interfaces/StreamEvent.md), `any`, `any`\>\>
 
-Defined in: [adapters/reasoning/openrouter.ts:131](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/adapters/reasoning/openrouter.ts#L131)
+Defined in: [adapters/reasoning/openrouter.ts:131](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/adapters/reasoning/openrouter.ts#L131)
 
 Sends a request to the OpenRouter Chat Completions API endpoint.
 Translates `ArtStandardPrompt` to the OpenAI-compatible format.
