@@ -4,7 +4,7 @@ import {
     StateManager,
     ConversationManager,
     ToolRegistry,
-    PromptManager,
+    // PromptManager, // Removed - PESAgent will construct prompt object directly
     ReasoningEngine,
     OutputParser,
     ObservationManager,
@@ -26,7 +26,7 @@ import {
     LLMMetadata,
     ArtStandardPrompt, // Import new types
     ArtStandardMessageRole,
-    PromptContext,
+    // PromptContext, // Removed unused import after refactoring prompt construction
     // ThreadConfig, // Removed unused import (config accessed via ThreadContext)
     // ToolSchema, // Removed unused import
     // ThreadContext, // Removed unused import
@@ -47,8 +47,8 @@ interface PESAgentDependencies {
     conversationManager: ConversationManager;
     /** Registry for available tools. */
     toolRegistry: ToolRegistry;
-    /** Constructs prompts for LLM calls. */
-    promptManager: PromptManager;
+    // /** Constructs prompts for LLM calls. */ // Removed
+    // promptManager: PromptManager; // Removed
     /** Handles interaction with the LLM provider. */
     reasoningEngine: ReasoningEngine;
     /** Parses LLM responses. */
@@ -61,50 +61,10 @@ interface PESAgentDependencies {
     uiSystem: UISystem; // Added UISystem dependency
 }
 
-// --- Default PES Blueprints (Mustache Templates targeting ArtStandardPrompt JSON structure) ---
-
+// Default system prompt remains
 const DEFAULT_PES_SYSTEM_PROMPT = `You are a helpful AI assistant. You need to understand a user's query, potentially use tools to gather information, and then synthesize a final response.`;
 
-// Note: Blueprints render to a JSON string representing ArtStandardPrompt.
-// Use {{{ }}} for variables that have been pre-escaped for JSON string embedding
-// (like description, inputSchemaJson) to insert them raw.
-const DEFAULT_PLANNING_BLUEPRINT = `[
-  {
-    "role": "system",
-    "content": "{{systemPrompt}}"
-  },
-  {{#history}}
-  {
-    "role": "{{role}}",
-    "content": "{{content}}"
-  }{{^last}},{{/last}}
-  {{/history}}
-  {{#history.length}},{{/history.length}}
-  {
-    "role": "user",
-    "content": "User Query: {{query}}\\n\\nAvailable Tools:\\n{{#availableTools}}- {{name}}: {{{description}}}\\n  Input Schema: {{{inputSchemaJson}}}{{/availableTools}}{{^availableTools}}No tools available.{{/availableTools}}\\n\\nBased on the user query and conversation history, identify the user's intent and create a plan to fulfill it using the available tools if necessary.\\nRespond in the following format:\\nIntent: [Briefly describe the user's goal]\\nPlan: [Provide a step-by-step plan. If tools are needed, list them clearly.]\\nTool Calls: [Output *only* the JSON array of tool calls required by the assistant, matching the ArtStandardMessage tool_calls format: [{\\"id\\": \\"call_abc123\\", \\"type\\": \\"function\\", \\"function\\": {\\"name\\": \\"tool_name\\", \\"arguments\\": \\"{\\\\\\"arg1\\\\\\": \\\\\\"value1\\\\\\"}\\"}}] or [] if no tools are needed. Do not add any other text in this section.]"
-  }
-]`;
-
-// Use {{{ }}} for pre-escaped outputJson and error strings.
-const DEFAULT_SYNTHESIS_BLUEPRINT = `[
-  {
-    "role": "system",
-    "content": "{{systemPrompt}}"
-  },
-  {{#history}}
-  {
-    "role": "{{role}}",
-    "content": "{{content}}"
-  }{{^last}},{{/last}}
-  {{/history}}
-  {{#history.length}},{{/history.length}}
-  {
-    "role": "user",
-    "content": "User Query: {{query}}\\n\\nOriginal Intent: {{intent}}\\nExecution Plan: {{plan}}\\n\\nTool Execution Results:\\n{{#toolResults}}- Tool: {{toolName}} (Call ID: {{callId}})\\n  Status: {{status}}\\n  {{#output}}Output: {{{outputJson}}}{{/output}}\\n  {{#error}}Error: {{{error}}}{{/error}}\\n{{/toolResults}}{{^toolResults}}No tools were executed.{{/toolResults}}\\n\\nBased on the user query, the plan, and the results of any tool executions, synthesize a final response to the user.\\nIf the tools failed or provided unexpected results, explain the issue and try to answer based on available information or ask for clarification."
-  }
-]`;
-
+// Removed DEFAULT_PLANNING_BLUEPRINT and DEFAULT_SYNTHESIS_BLUEPRINT
 
 /**
  * Implements the Plan-Execute-Synthesize (PES) agent orchestration logic.
@@ -113,11 +73,11 @@ const DEFAULT_SYNTHESIS_BLUEPRINT = `[
  * 2.  **Execute:** Run any necessary tools identified in the planning phase.
  * 3.  **Synthesize:** Generate a final response based on the query, plan, and tool results.
  *
- * It utilizes a stateless `PromptManager` with Mustache blueprints to construct standardized prompts (`ArtStandardPrompt`)
+ * It constructs standardized prompts (`ArtStandardPrompt`) directly as JavaScript objects
  * for the `ReasoningEngine`. It processes the `StreamEvent` output from the reasoning engine for both planning and synthesis.
  *
  * @implements {IAgentCore}
- * @see {PromptManager}
+ * // @see {PromptManager} // Removed
  * @see {ReasoningEngine}
  * @see {ArtStandardPrompt}
  * @see {StreamEvent}
@@ -125,8 +85,7 @@ const DEFAULT_SYNTHESIS_BLUEPRINT = `[
 export class PESAgent implements IAgentCore {
     private readonly deps: PESAgentDependencies;
     private readonly defaultSystemPrompt: string = DEFAULT_PES_SYSTEM_PROMPT;
-    private readonly planningBlueprint: string = DEFAULT_PLANNING_BLUEPRINT;
-    private readonly synthesisBlueprint: string = DEFAULT_SYNTHESIS_BLUEPRINT;
+    // Removed blueprint properties
 
     /**
      * Creates an instance of the PESAgent.
@@ -141,18 +100,18 @@ export class PESAgent implements IAgentCore {
      *
      * **Workflow:**
      * 1.  **Initiation & Config:** Loads thread configuration and system prompt.
-     * 2.  **Planning Context Assembly:** Gathers history, available tools, and formats them into a `PromptContext`.
-     * 3.  **Planning Prompt Assembly:** Uses `promptManager.assemblePrompt` with the planning blueprint and context to create an `ArtStandardPrompt`.
-     * 4.  **Planning LLM Call:** Sends the planning prompt to the `reasoningEngine` (requesting streaming). Consumes the `StreamEvent` stream, buffers the output text, and handles potential errors.
+     * 2.  **Data Gathering:** Gathers history, available tools, system prompt, and query.
+     * 3.  **Planning Prompt Construction:** Directly constructs the `ArtStandardPrompt` object/array for planning.
+     * 4.  **Planning LLM Call:** Sends the planning prompt object to the `reasoningEngine` (requesting streaming). Consumes the `StreamEvent` stream, buffers the output text, and handles potential errors.
      * 5.  **Planning Output Parsing:** Parses the buffered planning output text to extract intent, plan, and tool calls using `outputParser.parsePlanningOutput`.
      * 6.  **Tool Execution:** Executes identified tool calls via the `toolSystem`.
-     * 7.  **Synthesis Context Assembly:** Gathers the original query, plan, tool results, history, etc., into a `PromptContext`.
-     * 8.  **Synthesis Prompt Assembly:** Uses `promptManager.assemblePrompt` with the synthesis blueprint and context to create an `ArtStandardPrompt`.
-     * 9.  **Synthesis LLM Call:** Sends the synthesis prompt to the `reasoningEngine` (requesting streaming). Consumes the `StreamEvent` stream, buffers the final response text, and handles potential errors.
+     * 7.  **Data Gathering (Synthesis):** Gathers the original query, plan, tool results, history, etc.
+     * 8.  **Synthesis Prompt Construction:** Directly constructs the `ArtStandardPrompt` object/array for synthesis.
+     * 9.  **Synthesis LLM Call:** Sends the synthesis prompt object to the `reasoningEngine` (requesting streaming). Consumes the `StreamEvent` stream, buffers the final response text, and handles potential errors.
      * 10. **Finalization:** Saves the final AI message, updates state if needed, records observations, and returns the result.
      *
      * **Error Handling:**
-     * - Errors during prompt assembly or critical phases (planning LLM call) will throw an `ARTError`.
+     * - Errors during critical phases (planning/synthesis LLM call) will throw an `ARTError`. Prompt construction errors are less likely but possible if data is malformed.
      * - Errors during tool execution or synthesis LLM call might result in a 'partial' success status, potentially using the error message as the final response content.
      *
      * @param {AgentProps} props - The input properties containing the user query, threadId, userId, traceId, etc.
@@ -160,7 +119,7 @@ export class PESAgent implements IAgentCore {
      * @throws {ARTError} If a critical error occurs that prevents the agent from completing the process (e.g., config loading, planning failure).
      * @see {AgentProps}
      * @see {AgentFinalResponse}
-     * @see {PromptContext}
+     * // @see {PromptContext} // Removed - context is implicit in object construction
      * @see {ArtStandardPrompt}
      * @see {StreamEvent}
      */
@@ -202,30 +161,36 @@ export class PESAgent implements IAgentCore {
             const rawHistory = await this.deps.conversationManager.getMessages(props.threadId, historyOptions);
             const availableTools = await this.deps.toolRegistry.getAvailableTools({ enabledForThreadId: props.threadId });
 
-            // Prepare context for planning blueprint
-            const planningContext: PromptContext = {
-                query: props.query,
-                systemPrompt: systemPrompt,
-                history: this.formatHistoryForBlueprint(rawHistory),
-                availableTools: availableTools.map(tool => {
-                    const schemaString = JSON.stringify(tool.inputSchema);
-                    return {
-                        ...tool,
-                        // Use JSON.stringify for robust escaping, then remove outer quotes
-                        description: JSON.stringify(tool.description).slice(1, -1),
-                        inputSchemaJson: JSON.stringify(schemaString).slice(1, -1) // Stringify the stringified schema
-                    };
-                }),
-                // Add any other custom data the planning blueprint might need
-            };
+            // Format history for direct inclusion
+            const formattedHistory = this.formatHistoryForPrompt(rawHistory);
 
-            // --- Stage 3: Planning Call ---
-            Logger.debug(`[${traceId}] Stage 3: Planning Call`);
-            // Assemble prompt using the stateless manager and blueprint
-            const planningPrompt: ArtStandardPrompt = await this.deps.promptManager.assemblePrompt(
-                this.planningBlueprint, planningContext
-            );
+            // --- Stage 3: Planning Prompt Construction ---
+            Logger.debug(`[${traceId}] Stage 3: Planning Prompt Construction`);
+            let planningPrompt: ArtStandardPrompt;
+            try {
+                planningPrompt = [
+                    { role: 'system', content: systemPrompt },
+                    ...formattedHistory, // Spread the formatted history messages
+                    {
+                        role: 'user',
+                        // Construct the user content string directly
+                        content: `User Query: ${props.query}\n\nAvailable Tools:\n${
+                            availableTools.length > 0
+                            ? availableTools.map(tool => `- ${tool.name}: ${tool.description}\n  Input Schema: ${JSON.stringify(tool.inputSchema)}`).join('\n')
+                            : 'No tools available.'
+                        }\n\nBased on the user query and conversation history, identify the user's intent and create a plan to fulfill it using the available tools if necessary.\nRespond in the following format:\nIntent: [Briefly describe the user's goal]\nPlan: [Provide a step-by-step plan. If tools are needed, list them clearly.]\nTool Calls: [Output *only* the JSON array of tool calls required by the assistant, matching the ArtStandardMessage tool_calls format: [{\\"id\\": \\"call_abc123\\", \\"type\\": \\"function\\", \\"function\\": {\\"name\\": \\"tool_name\\", \\"arguments\\": \\"{\\\\\\"arg1\\\\\\": \\\\\\"value1\\\\\\"}\\"}}] or [] if no tools are needed. Do not add any other text in this section.]`
+                    }
+                ];
+                // Optional: Validate the constructed prompt object if needed
+                // ArtStandardPromptSchema.parse(planningPrompt);
+            } catch (err: any) {
+                 Logger.error(`[${traceId}] Failed to construct planning prompt object:`, err);
+                 throw new ARTError(`Failed to construct planning prompt object: ${err.message}`, ErrorCode.PROMPT_ASSEMBLY_FAILED, err);
+            }
 
+
+            // --- Stage 3b: Planning LLM Call ---
+            Logger.debug(`[${traceId}] Stage 3b: Planning LLM Call`);
             const planningOptions: CallOptions = {
                 threadId: props.threadId,
                 traceId: traceId,
@@ -252,6 +217,7 @@ export class PESAgent implements IAgentCore {
                 }).catch(err => Logger.error(`[${traceId}] Failed to record PLAN observation:`, err));
 
                 llmCalls++;
+                // Pass the constructed prompt object directly
                 const planningStream = await this.deps.reasoningEngine.call(planningPrompt, planningOptions);
 
                 // Record stream start
@@ -360,31 +326,32 @@ export class PESAgent implements IAgentCore {
                 threadId: props.threadId, traceId: traceId, type: ObservationType.SYNTHESIS, content: { message: "Preparing for synthesis LLM call." }, metadata: { timestamp: Date.now() }
             }).catch(err => Logger.error(`[${traceId}] Failed to record SYNTHESIS observation:`, err));
 
-            // Prepare context for synthesis blueprint
-            const synthesisContext: PromptContext = {
-                query: props.query,
-                systemPrompt: systemPrompt,
-                history: this.formatHistoryForBlueprint(rawHistory), // Use the same formatted history
-                intent: parsedPlanningOutput.intent,
-                plan: parsedPlanningOutput.plan,
-                toolResults: toolResults.map(result => {
-                    const outputString = result.status === 'success' ? JSON.stringify(result.output) : undefined;
-                    const errorString = result.status === 'error' ? (result.error ?? 'Unknown error') : undefined;
-                    return {
-                        ...result,
-                        // Use JSON.stringify for robust escaping, then remove outer quotes
-                        outputJson: outputString ? JSON.stringify(outputString).slice(1, -1) : undefined,
-                        error: errorString ? JSON.stringify(errorString).slice(1, -1) : undefined,
-                    };
-                }),
-                // Add any other custom data the synthesis blueprint might need
-            };
+            // --- Stage 5: Synthesis Prompt Construction ---
+            Logger.debug(`[${traceId}] Stage 5: Synthesis Prompt Construction`);
+            let synthesisPrompt: ArtStandardPrompt;
+            try {
+                 synthesisPrompt = [
+                    { role: 'system', content: systemPrompt },
+                    ...formattedHistory, // Reuse formatted history
+                    {
+                        role: 'user',
+                        // Construct the user content string directly
+                        content: `User Query: ${props.query}\n\nOriginal Intent: ${parsedPlanningOutput.intent ?? ''}\nExecution Plan: ${parsedPlanningOutput.plan ?? ''}\n\nTool Execution Results:\n${
+                            toolResults.length > 0
+                            ? toolResults.map(result => `- Tool: ${result.toolName} (Call ID: ${result.callId})\n  Status: ${result.status}\n  ${result.status === 'success' ? `Output: ${JSON.stringify(result.output)}` : ''}\n  ${result.status === 'error' ? `Error: ${result.error ?? 'Unknown error'}` : ''}`).join('\n')
+                            : 'No tools were executed.'
+                        }\n\nBased on the user query, the plan, and the results of any tool executions, synthesize a final response to the user.\nIf the tools failed or provided unexpected results, explain the issue and try to answer based on available information or ask for clarification.`
+                    }
+                ];
+                 // Optional: Validate the constructed prompt object if needed
+                 // ArtStandardPromptSchema.parse(synthesisPrompt);
+            } catch (err: any) {
+                 Logger.error(`[${traceId}] Failed to construct synthesis prompt object:`, err);
+                 throw new ARTError(`Failed to construct synthesis prompt object: ${err.message}`, ErrorCode.PROMPT_ASSEMBLY_FAILED, err);
+            }
 
-           // Assemble prompt using the stateless manager and blueprint
-           const synthesisPrompt: ArtStandardPrompt = await this.deps.promptManager.assemblePrompt(
-               this.synthesisBlueprint, synthesisContext
-           );
-
+            // --- Stage 5b: Synthesis LLM Call ---
+            Logger.debug(`[${traceId}] Stage 5b: Synthesis LLM Call`);
             const synthesisOptions: CallOptions = {
                 threadId: props.threadId,
                 traceId: traceId,
@@ -405,6 +372,7 @@ export class PESAgent implements IAgentCore {
 
             try {
                 llmCalls++;
+                 // Pass the constructed prompt object directly
                 const synthesisStream = await this.deps.reasoningEngine.call(synthesisPrompt, synthesisOptions);
 
                 // Record stream start
@@ -569,33 +537,38 @@ export class PESAgent implements IAgentCore {
     }
 
     /**
-     * Formats conversation history messages for inclusion in LLM prompts.
-     * Converts internal MessageRole to ArtStandardMessageRole and adds 'last' flag.
+     * Formats conversation history messages for direct inclusion in ArtStandardPrompt.
+     * Converts internal MessageRole to ArtStandardMessageRole.
      * @param history - Array of ConversationMessage objects.
-     * @returns Formatted array of messages.
+     * @returns Array of messages suitable for ArtStandardPrompt.
      */
-    private formatHistoryForBlueprint(history: ConversationMessage[]): Array<{ role: ArtStandardMessageRole; content: string; last?: boolean }> {
-        return history.map((msg, index) => {
+    private formatHistoryForPrompt(history: ConversationMessage[]): ArtStandardPrompt { // Renamed function and updated return type
+        return history.map((msg) => { // Removed unused 'index' parameter
             let role: ArtStandardMessageRole;
             switch (msg.role) {
-                case MessageRole.USER: // Changed from User to USER
-                    role = 'user';
+                case MessageRole.USER:
+                    role = 'user'; // Assign string literal
                     break;
                 case MessageRole.AI:
-                    role = 'assistant';
+                    role = 'assistant'; // Assign string literal
                     break;
-                case MessageRole.TOOL: // Changed from Tool to TOOL
-                    role = 'tool';
+                case MessageRole.SYSTEM: // Add mapping for SYSTEM role
+                    role = 'system'; // Assign string literal
+                    break;
+                case MessageRole.TOOL:
+                    role = 'tool'; // Assign string literal
                     break;
                 default:
-                    // Handle other potential roles or default to 'user' or 'system' if appropriate
-                    role = 'user'; // Defaulting to user for unknown roles
+                    // Log a warning for unhandled roles but default to user
+                    Logger.warn(`Unhandled message role '${msg.role}' in formatHistoryForPrompt. Defaulting to 'user'.`); // Updated function name in log
+                    role = 'user'; // Assign string literal
             }
+            // Return the object structure expected by ArtStandardPrompt
             return {
                 role: role,
-                content: msg.content,
-                last: index === history.length - 1 ? true : undefined, // Add 'last' flag for the last message
+                content: msg.content, // Use raw content
+                // Add other fields like 'name' or 'tool_call_id' if necessary based on msg structure
             };
-        });
+        }).filter(msg => msg.content); // Example: Filter out messages with no content if needed
     }
 }

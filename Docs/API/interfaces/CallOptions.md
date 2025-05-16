@@ -6,35 +6,37 @@
 
 # Interface: CallOptions
 
-Defined in: [types/index.ts:293](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L293)
+Defined in: [types/index.ts:377](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L377)
 
-Options for configuring an LLM call.
+Options for configuring an LLM call, including streaming and context information.
 
 ## Indexable
 
 \[`key`: `string`\]: `any`
 
-Additional key-value pairs representing provider-specific parameters (e.g., `temperature`, `max_tokens`, `model`). These often override defaults set in `ThreadConfig`.
+Additional key-value pairs representing provider-specific parameters (e.g., `temperature`, `max_tokens`, `top_p`). These often override defaults set in `ThreadConfig`.
 
 ## Properties
 
-### onThought()?
+### callContext?
 
-> `optional` **onThought**: (`thought`) => `void`
+> `optional` **callContext**: `string`
 
-Defined in: [types/index.ts:303](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L303)
+Defined in: [types/index.ts:396](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L396)
 
-An optional callback function invoked when the LLM streams intermediate 'thoughts' or reasoning steps.
+Provides context for the LLM call, allowing adapters to differentiate
+between agent-level thoughts and final synthesis calls for token typing.
+Agent Core MUST provide this.
 
-#### Parameters
+***
 
-##### thought
+### providerConfig
 
-`string`
+> **providerConfig**: [`RuntimeProviderConfig`](RuntimeProviderConfig.md)
 
-#### Returns
+Defined in: [types/index.ts:402](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L402)
 
-`void`
+Carries the specific target provider and configuration for this call.
 
 ***
 
@@ -42,9 +44,20 @@ An optional callback function invoked when the LLM streams intermediate 'thought
 
 > `optional` **sessionId**: `string`
 
-Defined in: [types/index.ts:301](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L301)
+Defined in: [types/index.ts:385](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L385)
 
 Optional session ID.
+
+***
+
+### stream?
+
+> `optional` **stream**: `boolean`
+
+Defined in: [types/index.ts:390](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L390)
+
+Request a streaming response from the LLM provider.
+Adapters MUST check this flag.
 
 ***
 
@@ -52,7 +65,7 @@ Optional session ID.
 
 > **threadId**: `string`
 
-Defined in: [types/index.ts:295](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L295)
+Defined in: [types/index.ts:379](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L379)
 
 The mandatory thread ID, used by the ReasoningEngine to fetch thread-specific configuration (e.g., model, params) via StateManager.
 
@@ -62,7 +75,7 @@ The mandatory thread ID, used by the ReasoningEngine to fetch thread-specific co
 
 > `optional` **traceId**: `string`
 
-Defined in: [types/index.ts:297](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L297)
+Defined in: [types/index.ts:381](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L381)
 
 Optional trace ID for correlation.
 
@@ -72,6 +85,6 @@ Optional trace ID for correlation.
 
 > `optional` **userId**: `string`
 
-Defined in: [types/index.ts:299](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L299)
+Defined in: [types/index.ts:383](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L383)
 
 Optional user ID.

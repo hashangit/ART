@@ -6,7 +6,7 @@
 
 # Interface: ArtInstance
 
-Defined in: [core/interfaces.ts:440](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L440)
+Defined in: [core/interfaces.ts:468](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L468)
 
 Represents the fully initialized and configured ART Framework client instance.
 This object is the main entry point for interacting with the framework after setup.
@@ -18,7 +18,7 @@ It provides access to the core processing method and key subsystems.
 
 > `readonly` **conversationManager**: [`ConversationManager`](ConversationManager.md)
 
-Defined in: [core/interfaces.ts:448](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L448)
+Defined in: [core/interfaces.ts:476](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L476)
 
 Accessor for the Conversation Manager, used for managing message history.
 
@@ -28,7 +28,7 @@ Accessor for the Conversation Manager, used for managing message history.
 
 > `readonly` **observationManager**: [`ObservationManager`](ObservationManager.md)
 
-Defined in: [core/interfaces.ts:452](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L452)
+Defined in: [core/interfaces.ts:480](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L480)
 
 Accessor for the Observation Manager, used for recording and retrieving observations.
 
@@ -38,7 +38,7 @@ Accessor for the Observation Manager, used for recording and retrieving observat
 
 > `readonly` **process**: (`props`) => `Promise`\<[`AgentFinalResponse`](AgentFinalResponse.md)\>
 
-Defined in: [core/interfaces.ts:442](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L442)
+Defined in: [core/interfaces.ts:470](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L470)
 
 The main method to process a user query using the configured Agent Core.
 
@@ -69,7 +69,7 @@ If a critical error occurs during orchestration that prevents completion.
 
 > `readonly` **stateManager**: [`StateManager`](StateManager.md)
 
-Defined in: [core/interfaces.ts:446](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L446)
+Defined in: [core/interfaces.ts:474](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L474)
 
 Accessor for the State Manager, used for managing thread configuration and state.
 
@@ -79,7 +79,7 @@ Accessor for the State Manager, used for managing thread configuration and state
 
 > `readonly` **toolRegistry**: [`ToolRegistry`](ToolRegistry.md)
 
-Defined in: [core/interfaces.ts:450](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L450)
+Defined in: [core/interfaces.ts:478](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L478)
 
 Accessor for the Tool Registry, used for managing available tools.
 
@@ -89,6 +89,6 @@ Accessor for the Tool Registry, used for managing available tools.
 
 > `readonly` **uiSystem**: [`UISystem`](UISystem.md)
 
-Defined in: [core/interfaces.ts:444](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L444)
+Defined in: [core/interfaces.ts:472](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L472)
 
 Accessor for the UI System, used to get sockets for subscriptions.

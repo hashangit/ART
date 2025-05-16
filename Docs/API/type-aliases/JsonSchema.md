@@ -8,4 +8,4 @@
 
 > **JsonSchema** = [`JsonObjectSchema`](../interfaces/JsonObjectSchema.md) \| \{[`key`: `string`]: `any`; `type`: `"string"` \| `"number"` \| `"boolean"` \| `"array"`; \}
 
-Defined in: [types/index.ts:117](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L117)
+Defined in: [types/index.ts:182](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L182)

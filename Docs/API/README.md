@@ -31,6 +31,8 @@
 - [AgentProps](interfaces/AgentProps.md)
 - [AgentState](interfaces/AgentState.md)
 - [ArtInstance](interfaces/ArtInstance.md)
+- [ArtStandardMessage](interfaces/ArtStandardMessage.md)
+- [AvailableProviderEntry](interfaces/AvailableProviderEntry.md)
 - [CallOptions](interfaces/CallOptions.md)
 - [ConversationManager](interfaces/ConversationManager.md)
 - [ConversationMessage](interfaces/ConversationMessage.md)
@@ -41,9 +43,12 @@
 - [IAgentCore](interfaces/IAgentCore.md)
 - [IConversationRepository](interfaces/IConversationRepository.md)
 - [IObservationRepository](interfaces/IObservationRepository.md)
+- [IProviderManager](interfaces/IProviderManager.md)
 - [IStateRepository](interfaces/IStateRepository.md)
 - [IToolExecutor](interfaces/IToolExecutor.md)
 - [JsonObjectSchema](interfaces/JsonObjectSchema.md)
+- [LLMMetadata](interfaces/LLMMetadata.md)
+- [ManagedAdapterAccessor](interfaces/ManagedAdapterAccessor.md)
 - [MessageOptions](interfaces/MessageOptions.md)
 - [Observation](interfaces/Observation.md)
 - [ObservationFilter](interfaces/ObservationFilter.md)
@@ -51,11 +56,15 @@
 - [ObservationSocket](interfaces/ObservationSocket.md)
 - [OutputParser](interfaces/OutputParser.md)
 - [ParsedToolCall](interfaces/ParsedToolCall.md)
+- [PromptContext](interfaces/PromptContext.md)
 - [PromptManager](interfaces/PromptManager.md)
 - [ProviderAdapter](interfaces/ProviderAdapter.md)
+- [ProviderManagerConfig](interfaces/ProviderManagerConfig.md)
 - [ReasoningEngine](interfaces/ReasoningEngine.md)
+- [RuntimeProviderConfig](interfaces/RuntimeProviderConfig.md)
 - [StateManager](interfaces/StateManager.md)
 - [StorageAdapter](interfaces/StorageAdapter.md)
+- [StreamEvent](interfaces/StreamEvent.md)
 - [ThreadConfig](interfaces/ThreadConfig.md)
 - [ThreadContext](interfaces/ThreadContext.md)
 - [ToolRegistry](interfaces/ToolRegistry.md)
@@ -67,7 +76,9 @@
 
 ## Type Aliases
 
-- [FormattedPrompt](type-aliases/FormattedPrompt.md)
+- [ArtStandardMessageRole](type-aliases/ArtStandardMessageRole.md)
+- [ArtStandardPrompt](type-aliases/ArtStandardPrompt.md)
+- [~~FormattedPrompt~~](type-aliases/FormattedPrompt.md)
 - [JsonSchema](type-aliases/JsonSchema.md)
 
 ## Variables

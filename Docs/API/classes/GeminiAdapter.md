@@ -6,15 +6,10 @@
 
 # Class: GeminiAdapter
 
-Defined in: [adapters/reasoning/gemini.ts:68](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/gemini.ts#L68)
+Defined in: [adapters/reasoning/gemini.ts:33](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/adapters/reasoning/gemini.ts#L33)
 
-Implements the `ProviderAdapter` interface for interacting with Google's
-Generative AI API (Gemini models).
-
-Handles formatting requests for the `generateContent` endpoint and parsing responses.
-Note: This basic version does not implement streaming or the `onThought` callback.
-
-## Implements
+Base interface for LLM Provider Adapters, extending the core ReasoningEngine.
+Implementations will handle provider-specific API calls, authentication, etc.
 
 ## Implements
 
@@ -26,9 +21,9 @@ Note: This basic version does not implement streaming or the `onThought` callbac
 
 > **new GeminiAdapter**(`options`): `GeminiAdapter`
 
-Defined in: [adapters/reasoning/gemini.ts:80](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/gemini.ts#L80)
+Defined in: [adapters/reasoning/gemini.ts:44](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/adapters/reasoning/gemini.ts#L44)
 
-Creates an instance of the GeminiAdapter.
+Creates an instance of GeminiAdapter.
 
 #### Parameters
 
@@ -36,7 +31,7 @@ Creates an instance of the GeminiAdapter.
 
 `GeminiAdapterOptions`
 
-Configuration options including the API key and optional model/baseURL/apiVersion overrides.
+Configuration options for the adapter.
 
 #### Returns
 
@@ -44,7 +39,7 @@ Configuration options including the API key and optional model/baseURL/apiVersio
 
 #### Throws
 
-If the API key is missing.
+If `apiKey` is missing in the options.
 
 ## Properties
 
@@ -52,7 +47,7 @@ If the API key is missing.
 
 > `readonly` **providerName**: `"gemini"` = `'gemini'`
 
-Defined in: [adapters/reasoning/gemini.ts:69](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/gemini.ts#L69)
+Defined in: [adapters/reasoning/gemini.ts:34](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/adapters/reasoning/gemini.ts#L34)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -64,46 +59,47 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 ### call()
 
-> **call**(`prompt`, `options`): `Promise`\<`string`\>
+> **call**(`prompt`, `options`): `Promise`\<`AsyncIterable`\<[`StreamEvent`](../interfaces/StreamEvent.md), `any`, `any`\>\>
 
-Defined in: [adapters/reasoning/gemini.ts:105](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/gemini.ts#L105)
+Defined in: [adapters/reasoning/gemini.ts:78](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/adapters/reasoning/gemini.ts#L78)
 
-/**
- * Sends a request to the Google Generative AI API (`generateContent` endpoint).
- *
- * **Note:** This is a basic implementation.
- * - It currently assumes `prompt` is the primary user message content (string) and places it in the `contents` array. It does not yet parse complex `FormattedPrompt` objects containing history or specific roles. These would need to be handled by the `PromptManager`.
- * - Streaming and the `onThought` callback are **not implemented** in this version.
- * - Error handling is basic; specific Gemini error reasons (e.g., safety blocks) are not parsed in detail but are logged.
- *
- *
+Makes a call to the configured Gemini model.
+Translates the `ArtStandardPrompt` into the Gemini API format, sends the request
+using the `@google/genai` SDK, and yields `StreamEvent` objects representing
+the response (tokens, metadata, errors, end signal).
+
+Handles both streaming and non-streaming requests based on `options.stream`.
 
 #### Parameters
 
 ##### prompt
 
-[`FormattedPrompt`](../type-aliases/FormattedPrompt.md)
+[`ArtStandardPrompt`](../type-aliases/ArtStandardPrompt.md)
 
-The prompt content, treated as the user message in this basic implementation.
- *
+The standardized prompt messages.
 
 ##### options
 
 [`CallOptions`](../interfaces/CallOptions.md)
 
-Call options, including `threadId`, `traceId`, and any Gemini-specific generation parameters (like `temperature`, `maxOutputTokens`, `topP`, `topK`) passed through.
- *
+Options for the LLM call, including streaming preference, model override, and execution context.
 
 #### Returns
 
-`Promise`\<`string`\>
+`Promise`\<`AsyncIterable`\<[`StreamEvent`](../interfaces/StreamEvent.md), `any`, `any`\>\>
 
-A promise resolving to the combined text content from the first candidate's response parts.
- *
+An async iterable that yields `StreamEvent` objects.
+  - `TOKEN`: Contains a chunk of the response text. `tokenType` indicates if it's part of agent thought or final synthesis.
+  - `METADATA`: Contains information like stop reason, token counts, and timing, yielded once at the end.
+  - `ERROR`: Contains any error encountered during translation, SDK call, or response processing.
+  - `END`: Signals the completion of the stream.
 
-#### Throws
+#### See
 
-If the API request fails (network error, invalid API key, bad request, blocked content, etc.).
+ - 
+ - 
+ - 
+ - 
 
 #### Implementation of
 

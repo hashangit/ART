@@ -6,7 +6,7 @@
 
 # Interface: ToolResult
 
-Defined in: [types/index.ts:140](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L140)
+Defined in: [types/index.ts:226](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L226)
 
 Represents the structured result of a tool execution.
 
@@ -16,7 +16,7 @@ Represents the structured result of a tool execution.
 
 > **callId**: `string`
 
-Defined in: [types/index.ts:142](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L142)
+Defined in: [types/index.ts:228](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L228)
 
 The unique identifier of the corresponding `ParsedToolCall` that initiated this execution attempt.
 
@@ -26,7 +26,7 @@ The unique identifier of the corresponding `ParsedToolCall` that initiated this 
 
 > `optional` **error**: `string`
 
-Defined in: [types/index.ts:150](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L150)
+Defined in: [types/index.ts:236](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L236)
 
 A descriptive error message if the execution failed (`status` is 'error').
 
@@ -36,7 +36,7 @@ A descriptive error message if the execution failed (`status` is 'error').
 
 > `optional` **metadata**: `Record`\<`string`, `any`\>
 
-Defined in: [types/index.ts:152](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L152)
+Defined in: [types/index.ts:238](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L238)
 
 Optional metadata about the execution (e.g., duration, cost, logs).
 
@@ -46,7 +46,7 @@ Optional metadata about the execution (e.g., duration, cost, logs).
 
 > `optional` **output**: `any`
 
-Defined in: [types/index.ts:148](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L148)
+Defined in: [types/index.ts:234](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L234)
 
 The data returned by the tool upon successful execution. Structure may be validated against `outputSchema`.
 
@@ -56,7 +56,7 @@ The data returned by the tool upon successful execution. Structure may be valida
 
 > **status**: `"success"` \| `"error"`
 
-Defined in: [types/index.ts:146](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L146)
+Defined in: [types/index.ts:232](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L232)
 
 Indicates whether the tool execution succeeded or failed.
 
@@ -66,6 +66,6 @@ Indicates whether the tool execution succeeded or failed.
 
 > **toolName**: `string`
 
-Defined in: [types/index.ts:144](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L144)
+Defined in: [types/index.ts:230](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L230)
 
 The name of the tool that was executed.

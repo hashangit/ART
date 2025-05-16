@@ -8,7 +8,7 @@
 
 > **generateUUID**(): `string`
 
-Defined in: [utils/uuid.ts:8](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/utils/uuid.ts#L8)
+Defined in: [utils/uuid.ts:8](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/utils/uuid.ts#L8)
 
 Generates a unique Version 4 UUID (Universally Unique Identifier) string.
 Uses the underlying 'uuid' library's v4 implementation.

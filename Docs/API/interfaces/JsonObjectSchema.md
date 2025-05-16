@@ -6,7 +6,7 @@
 
 # Interface: JsonObjectSchema
 
-Defined in: [types/index.ts:98](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L98)
+Defined in: [types/index.ts:163](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L163)
 
 Represents a basic JSON Schema definition, focusing on object types commonly used for tool inputs/outputs.
 This is a simplified representation and doesn't cover all JSON Schema features.
@@ -17,7 +17,7 @@ This is a simplified representation and doesn't cover all JSON Schema features.
 
 > `optional` **additionalProperties**: `boolean`
 
-Defined in: [types/index.ts:113](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L113)
+Defined in: [types/index.ts:178](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L178)
 
 ***
 
@@ -25,7 +25,7 @@ Defined in: [types/index.ts:113](https://github.com/hashangit/ART/blob/f2c01fe8f
 
 > **properties**: `object`
 
-Defined in: [types/index.ts:100](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L100)
+Defined in: [types/index.ts:165](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L165)
 
 #### Index Signature
 
@@ -37,7 +37,7 @@ Defined in: [types/index.ts:100](https://github.com/hashangit/ART/blob/f2c01fe8f
 
 > `optional` **required**: `string`[]
 
-Defined in: [types/index.ts:112](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L112)
+Defined in: [types/index.ts:177](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L177)
 
 ***
 
@@ -45,4 +45,4 @@ Defined in: [types/index.ts:112](https://github.com/hashangit/ART/blob/f2c01fe8f
 
 > **type**: `"object"`
 
-Defined in: [types/index.ts:99](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/types/index.ts#L99)
+Defined in: [types/index.ts:164](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L164)
