@@ -1,6 +1,6 @@
 {
   "name": "art-framework",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Agent Runtine (ART) Framework - A browser-first JavaScript/TypeScript framework for building LLM-powered intelligent agents",
   "type": "module",
   "main": "./dist/index.js",
