@@ -269,6 +269,18 @@ export interface StateManager {
    */
   setThreadConfig(threadId: string, config: ThreadConfig): Promise<void>;
 
+  /**
+   * Sets or updates the AgentState for a specific thread.
+   * This method allows an agent to explicitly persist its internal state.
+   * It requires that a ThreadConfig already exists for the thread, which is typically
+   * ensured by the application calling setThreadConfig() prior to agent execution.
+   * @param threadId - The unique identifier of the thread.
+   * @param state - The AgentState object to save.
+   * @returns A promise that resolves when the state is saved.
+   * @throws {ARTError} If no ThreadConfig exists for the threadId, or if the repository fails.
+   */
+  setAgentState(threadId: string, state: AgentState): Promise<void>;
+
   // Potentially add methods to update config/state if needed during runtime,
   // though v0.2.4 focuses on loading existing config.
   // updateAgentState(threadId: string, updates: Partial<AgentState>): Promise<void>;

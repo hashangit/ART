@@ -9,7 +9,8 @@ import {
     StateManager,
     ObservationManager,
     ToolRegistry,
-    IToolExecutor,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    type IToolExecutor, // type-only import
     PromptManager,
     // ProviderAdapter, // Removed direct ProviderAdapter interface import
     ReasoningEngine,
@@ -18,7 +19,14 @@ import {
     UISystem
     // Removed ObservationSocket, ConversationSocket interface imports
 } from './interfaces';
-import { IProviderManager, ProviderManagerConfig } from '../types/providers'; // Corrected path and added ProviderManagerConfig
+import { IProviderManager } from '../types/providers'; // Corrected path
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { ProviderManagerConfig } from '../types/providers'; // type-only import
+// Import ArtInstanceConfig and StateSavingStrategy
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { ArtInstanceConfig } from '../types'; // type-only import
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { StateSavingStrategy } from '../types'; // type-only import
 import { ProviderManagerImpl } from '../providers/ProviderManagerImpl'; // Corrected path
 import { PESAgent } from './agents/pes-agent';
 
@@ -46,7 +54,9 @@ import { OutputParser as OutputParserImpl } from '../systems/reasoning/OutputPar
 import { UISystem as UISystemImpl } from '../systems/ui/ui-system'; // Correct path
 // Removed direct imports of concrete socket classes - they will be accessed via UISystem instance
 // Removed unused type imports: Observation, ConversationMessage, ObservationType, MessageRole
-import { LogLevel, Logger } from '../utils/logger'; // Import LogLevel and Logger
+import { Logger } from '../utils/logger'; // Import Logger
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { LogLevel } from '../utils/logger'; // type-only import
 
 
 /**
@@ -83,20 +93,21 @@ export interface ReasoningConfig {
 
 /**
  * Configuration object required by the AgentFactory and createArtInstance function.
+ * This will now use ArtInstanceConfig from types.ts which includes stateSavingStrategy.
  */
-export interface AgentFactoryConfig {
-    /** Configuration for the storage adapter. */
-    storage: StorageConfig;
-    /** Configuration for the Provider Manager, defining available adapters and rules. */
-    providers: ProviderManagerConfig; // Changed from reasoning: ReasoningConfig
-    /** Optional array of tool executor instances to register at initialization. */
-    tools?: IToolExecutor[];
-    /** Optional: Specify a different Agent Core implementation class (defaults to PESAgent). */
-    agentCore?: new (dependencies: any) => IAgentCore;
-    /** Optional: Configuration for the logger. */
-    logger?: { level?: LogLevel }; // Assuming LogLevel enum exists
-    // TODO: Add other potential global configurations (e.g., default ThreadConfig, UI system options)
-}
+// export interface AgentFactoryConfig { // Commented out, will use ArtInstanceConfig
+//     /** Configuration for the storage adapter. */
+//     storage: StorageConfig;
+//     /** Configuration for the Provider Manager, defining available adapters and rules. */
+//     providers: ProviderManagerConfig; // Changed from reasoning: ReasoningConfig
+//     /** Optional array of tool executor instances to register at initialization. */
+//     tools?: IToolExecutor[];
+//     /** Optional: Specify a different Agent Core implementation class (defaults to PESAgent). */
+//     agentCore?: new (dependencies: any) => IAgentCore;
+//     /** Optional: Configuration for the logger. */
+//     logger?: { level?: LogLevel }; // Assuming LogLevel enum exists
+//     // TODO: Add other potential global configurations (e.g., default ThreadConfig, UI system options)
+// }
 
 /**
  * Handles the instantiation and wiring of all core ART framework components based on provided configuration.
@@ -104,7 +115,7 @@ export interface AgentFactoryConfig {
  * It's typically used internally by the `createArtInstance` function.
  */
 export class AgentFactory {
-    private config: AgentFactoryConfig;
+    private config: ArtInstanceConfig; // Changed to ArtInstanceConfig
     private storageAdapter: StorageAdapter | null = null;
     private uiSystem: UISystem | null = null;
     private conversationRepository: IConversationRepository | null = null;
@@ -126,11 +137,11 @@ export class AgentFactory {
      * Creates a new AgentFactory instance.
      * @param config - The configuration specifying which adapters and components to use.
      */
-    constructor(config: AgentFactoryConfig) {
+    constructor(config: ArtInstanceConfig) { // Changed to ArtInstanceConfig
         this.config = config;
         // Basic validation
-        if (!config.storage) throw new Error("AgentFactoryConfig requires 'storage' configuration.");
-        if (!config.providers) throw new Error("AgentFactoryConfig requires 'providers' configuration."); // Changed from reasoning
+        if (!config.storage) throw new Error("ArtInstanceConfig requires 'storage' configuration.");
+        if (!config.providers) throw new Error("ArtInstanceConfig requires 'providers' configuration.");
     }
 
     /**
@@ -143,18 +154,22 @@ export class AgentFactory {
      */
     async initialize(): Promise<void> {
         // --- Initialize Storage ---
-        switch (this.config.storage.type) {
-            case 'indexedDB':
-                // Assuming constructor expects { dbName: string, objectStores: string[] }
-                this.storageAdapter = new IndexedDBStorageAdapter({
-                    dbName: this.config.storage.dbName || 'ARTDB',
-                    objectStores: ['conversations', 'observations', 'state'] // Define required stores
-                });
-                break;
-            case 'memory':
-            default:
-                this.storageAdapter = new InMemoryStorageAdapter();
-                break;
+        if ('type' in this.config.storage) { // Type guard for storage config object
+            const storageConfig = this.config.storage; // storageConfig is now { type: 'memory' | 'indexedDB', ... }
+            switch (storageConfig.type) {
+                case 'indexedDB':
+                    this.storageAdapter = new IndexedDBStorageAdapter({
+                        dbName: storageConfig.dbName || 'ARTDB',
+                        objectStores: storageConfig.objectStores || ['conversations', 'observations', 'state']
+                    });
+                    break;
+                case 'memory':
+                default:
+                    this.storageAdapter = new InMemoryStorageAdapter();
+                    break;
+            }
+        } else { // It's a pre-configured StorageAdapter instance
+            this.storageAdapter = this.config.storage;
         }
         await this.storageAdapter!.init?.(); // Add non-null assertion
 
@@ -171,7 +186,9 @@ export class AgentFactory {
         // --- Initialize Managers ---
         // Pass the actual socket instances obtained from the initialized uiSystem
         this.conversationManager = new ConversationManagerImpl(this.conversationRepository!, this.uiSystem.getConversationSocket());
-        this.stateManager = new StateManagerImpl(this.stateRepository!);
+        // Pass the stateSavingStrategy to StateManagerImpl constructor
+        const strategy = this.config.stateSavingStrategy || 'explicit'; // Default to 'explicit'
+        this.stateManager = new StateManagerImpl(this.stateRepository!, strategy);
         this.observationManager = new ObservationManagerImpl(this.observationRepository!, this.uiSystem.getObservationSocket());
 
         // --- Initialize Tool Registry & Register Tools ---
@@ -272,7 +289,7 @@ import { ArtInstance } from './interfaces'; // Import the new interface
  * });
  * const response = await art.process({ query: "Calculate 5*5", threadId: "thread1" });
  */
-export async function createArtInstance(config: AgentFactoryConfig): Promise<ArtInstance> {
+export async function createArtInstance(config: ArtInstanceConfig): Promise<ArtInstance> { // Changed to ArtInstanceConfig
     const factory = new AgentFactory(config);
     await factory.initialize();
     const agentCore = factory.createAgent();
