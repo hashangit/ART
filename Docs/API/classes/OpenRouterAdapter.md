@@ -6,13 +6,14 @@
 
 # Class: OpenRouterAdapter
 
-Defined in: [adapters/reasoning/openrouter.ts:65](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/openrouter.ts#L65)
+Defined in: [adapters/reasoning/openrouter.ts:93](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/adapters/reasoning/openrouter.ts#L93)
 
 Implements the `ProviderAdapter` interface for interacting with the OpenRouter API,
 which provides access to various LLMs through an OpenAI-compatible interface.
 
 Handles formatting requests and parsing responses for OpenRouter's chat completions endpoint.
-Note: This basic version does not implement streaming or the `onThought` callback.
+Handles formatting requests and parsing responses for OpenRouter's chat completions endpoint.
+Note: Streaming is **not yet implemented** for this adapter. Calls requesting streaming will yield an error and end.
 
 ## Implements
 
@@ -26,7 +27,7 @@ Note: This basic version does not implement streaming or the `onThought` callbac
 
 > **new OpenRouterAdapter**(`options`): `OpenRouterAdapter`
 
-Defined in: [adapters/reasoning/openrouter.ts:78](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/openrouter.ts#L78)
+Defined in: [adapters/reasoning/openrouter.ts:106](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/adapters/reasoning/openrouter.ts#L106)
 
 Creates an instance of the OpenRouterAdapter.
 
@@ -52,7 +53,7 @@ If the API key or model identifier is missing.
 
 > `readonly` **providerName**: `"openrouter"` = `'openrouter'`
 
-Defined in: [adapters/reasoning/openrouter.ts:66](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/openrouter.ts#L66)
+Defined in: [adapters/reasoning/openrouter.ts:94](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/adapters/reasoning/openrouter.ts#L94)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -64,47 +65,34 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 ### call()
 
-> **call**(`prompt`, `options`): `Promise`\<`string`\>
+> **call**(`prompt`, `options`): `Promise`\<`AsyncIterable`\<[`StreamEvent`](../interfaces/StreamEvent.md), `any`, `any`\>\>
 
-Defined in: [adapters/reasoning/openrouter.ts:108](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/adapters/reasoning/openrouter.ts#L108)
+Defined in: [adapters/reasoning/openrouter.ts:131](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/adapters/reasoning/openrouter.ts#L131)
 
-/**
- * Sends a request to the OpenRouter Chat Completions API endpoint.
- * Uses an OpenAI-compatible payload structure.
- *
- * **Note:** This is a basic implementation.
- * - It currently assumes `prompt` is the primary user message content (string). It does not yet parse complex `FormattedPrompt` objects containing history or system roles directly. These would need to be handled by the `PromptManager`.
- * - Streaming and the `onThought` callback are **not implemented** in this version.
- * - Includes recommended OpenRouter headers (`HTTP-Referer`, `X-Title`) if configured.
- *
- *
+Sends a request to the OpenRouter Chat Completions API endpoint.
+Translates `ArtStandardPrompt` to the OpenAI-compatible format.
+
+**Note:** Streaming is **not yet implemented**.
 
 #### Parameters
 
 ##### prompt
 
-[`FormattedPrompt`](../type-aliases/FormattedPrompt.md)
+[`ArtStandardPrompt`](../type-aliases/ArtStandardPrompt.md)
 
-The prompt content, treated as the user message in this basic implementation.
- *
+The standardized prompt messages.
 
 ##### options
 
 [`CallOptions`](../interfaces/CallOptions.md)
 
-Call options, including `threadId`, `traceId`, and any OpenAI-compatible generation parameters (like `temperature`, `max_tokens`, `stop`).
- *
+Call options, including `threadId`, `traceId`, `stream`, and any OpenAI-compatible generation parameters.
 
 #### Returns
 
-`Promise`\<`string`\>
+`Promise`\<`AsyncIterable`\<[`StreamEvent`](../interfaces/StreamEvent.md), `any`, `any`\>\>
 
-A promise resolving to the content string of the assistant's response.
- *
-
-#### Throws
-
-If the API request fails (network error, invalid API key, bad request, etc.).
+A promise resolving to an AsyncIterable of StreamEvent objects. If streaming is requested, it yields an error event and ends.
 
 #### Implementation of
 

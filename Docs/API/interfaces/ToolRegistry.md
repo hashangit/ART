@@ -6,7 +6,7 @@
 
 # Interface: ToolRegistry
 
-Defined in: [core/interfaces.ts:154](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L154)
+Defined in: [core/interfaces.ts:180](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/core/interfaces.ts#L180)
 
 Interface for managing the registration and retrieval of tools.
 
@@ -16,7 +16,7 @@ Interface for managing the registration and retrieval of tools.
 
 > **getAvailableTools**(`filter`?): `Promise`\<[`ToolSchema`](ToolSchema.md)[]\>
 
-Defined in: [core/interfaces.ts:174](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L174)
+Defined in: [core/interfaces.ts:200](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/core/interfaces.ts#L200)
 
 Retrieves the schemas of available tools. Can be filtered, e.g., to get only tools enabled for a specific thread.
 
@@ -42,7 +42,7 @@ A promise resolving to an array of `ToolSchema` objects.
 
 > **getToolExecutor**(`toolName`): `Promise`\<`undefined` \| [`IToolExecutor`](IToolExecutor.md)\>
 
-Defined in: [core/interfaces.ts:167](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L167)
+Defined in: [core/interfaces.ts:193](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/core/interfaces.ts#L193)
 
 Retrieves a registered tool executor instance by its unique name.
 
@@ -66,7 +66,7 @@ A promise resolving to the executor instance, or `undefined` if no tool with tha
 
 > **registerTool**(`executor`): `Promise`\<`void`\>
 
-Defined in: [core/interfaces.ts:160](https://github.com/hashangit/ART/blob/f2c01fe8faa76ca4df3209539d95509aac02e476/src/core/interfaces.ts#L160)
+Defined in: [core/interfaces.ts:186](https://github.com/hashangit/ART/blob/0c4f5068c86b5500db1290baa4792d44ebae7f9e/src/core/interfaces.ts#L186)
 
 Registers a tool executor instance, making it available for use.
 
