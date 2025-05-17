@@ -6,7 +6,7 @@
 
 # Interface: ObservationSocket
 
-Defined in: [core/interfaces.ts:366](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L366)
+Defined in: [core/interfaces.ts:378](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/core/interfaces.ts#L378)
 
 TypedSocket specifically for Observation data.
 FilterType is ObservationType or array of ObservationType.
@@ -21,7 +21,7 @@ FilterType is ObservationType or array of ObservationType.
 
 > `optional` **getHistory**(`filter`?, `options`?): `Promise`\<[`Observation`](Observation.md)[]\>
 
-Defined in: [core/interfaces.ts:356](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L356)
+Defined in: [core/interfaces.ts:368](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/core/interfaces.ts#L368)
 
 Optional method to retrieve historical data from the socket's source.
 
@@ -59,7 +59,7 @@ Optional configuration like threadId and limit.
 
 > **notify**(`data`, `options`?): `void`
 
-Defined in: [core/interfaces.ts:346](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L346)
+Defined in: [core/interfaces.ts:358](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/core/interfaces.ts#L358)
 
 Notifies subscribers of new data.
 
@@ -97,7 +97,7 @@ Optional targeting information (e.g., specific thread).
 
 > **subscribe**(`callback`, `filter`?, `options`?): () => `void`
 
-Defined in: [core/interfaces.ts:335](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L335)
+Defined in: [core/interfaces.ts:347](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/core/interfaces.ts#L347)
 
 Subscribes a callback function to receive data updates.
 

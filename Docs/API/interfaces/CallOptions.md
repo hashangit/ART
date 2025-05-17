@@ -6,7 +6,7 @@
 
 # Interface: CallOptions
 
-Defined in: [types/index.ts:377](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L377)
+Defined in: [types/index.ts:385](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L385)
 
 Options for configuring an LLM call, including streaming and context information.
 
@@ -22,7 +22,7 @@ Additional key-value pairs representing provider-specific parameters (e.g., `tem
 
 > `optional` **callContext**: `string`
 
-Defined in: [types/index.ts:396](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L396)
+Defined in: [types/index.ts:404](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L404)
 
 Provides context for the LLM call, allowing adapters to differentiate
 between agent-level thoughts and final synthesis calls for token typing.
@@ -34,7 +34,7 @@ Agent Core MUST provide this.
 
 > **providerConfig**: [`RuntimeProviderConfig`](RuntimeProviderConfig.md)
 
-Defined in: [types/index.ts:402](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L402)
+Defined in: [types/index.ts:410](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L410)
 
 Carries the specific target provider and configuration for this call.
 
@@ -44,7 +44,7 @@ Carries the specific target provider and configuration for this call.
 
 > `optional` **sessionId**: `string`
 
-Defined in: [types/index.ts:385](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L385)
+Defined in: [types/index.ts:393](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L393)
 
 Optional session ID.
 
@@ -54,7 +54,7 @@ Optional session ID.
 
 > `optional` **stream**: `boolean`
 
-Defined in: [types/index.ts:390](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L390)
+Defined in: [types/index.ts:398](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L398)
 
 Request a streaming response from the LLM provider.
 Adapters MUST check this flag.
@@ -65,7 +65,7 @@ Adapters MUST check this flag.
 
 > **threadId**: `string`
 
-Defined in: [types/index.ts:379](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L379)
+Defined in: [types/index.ts:387](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L387)
 
 The mandatory thread ID, used by the ReasoningEngine to fetch thread-specific configuration (e.g., model, params) via StateManager.
 
@@ -75,7 +75,7 @@ The mandatory thread ID, used by the ReasoningEngine to fetch thread-specific co
 
 > `optional` **traceId**: `string`
 
-Defined in: [types/index.ts:381](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L381)
+Defined in: [types/index.ts:389](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L389)
 
 Optional trace ID for correlation.
 
@@ -85,6 +85,6 @@ Optional trace ID for correlation.
 
 > `optional` **userId**: `string`
 
-Defined in: [types/index.ts:383](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L383)
+Defined in: [types/index.ts:391](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L391)
 
 Optional user ID.

@@ -31,6 +31,7 @@
 - [AgentProps](interfaces/AgentProps.md)
 - [AgentState](interfaces/AgentState.md)
 - [ArtInstance](interfaces/ArtInstance.md)
+- [ArtInstanceConfig](interfaces/ArtInstanceConfig.md)
 - [ArtStandardMessage](interfaces/ArtStandardMessage.md)
 - [AvailableProviderEntry](interfaces/AvailableProviderEntry.md)
 - [CallOptions](interfaces/CallOptions.md)
@@ -80,6 +81,7 @@
 - [ArtStandardPrompt](type-aliases/ArtStandardPrompt.md)
 - [~~FormattedPrompt~~](type-aliases/FormattedPrompt.md)
 - [JsonSchema](type-aliases/JsonSchema.md)
+- [StateSavingStrategy](type-aliases/StateSavingStrategy.md)
 
 ## Variables
 
