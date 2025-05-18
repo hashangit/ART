@@ -8,7 +8,7 @@
 
 > **ArtStandardPrompt** = [`ArtStandardMessage`](../interfaces/ArtStandardMessage.md)[]
 
-Defined in: [types/index.ts:472](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L472)
+Defined in: [src/types/index.ts:498](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L498)
 
 Represents the entire prompt as an array of standardized messages (`ArtStandardMessage`).
 This is the standard format produced by `PromptManager.assemblePrompt` and consumed

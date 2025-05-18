@@ -6,8 +6,8 @@
 
 # Variable: VERSION
 
-> `const` **VERSION**: `"0.2.4"` = `'0.2.4'`
+> `const` **VERSION**: `"0.2.7"` = `'0.2.7'`
 
-Defined in: [index.ts:74](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/index.ts#L74)
+Defined in: [src/index.ts:72](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/index.ts#L72)
 
 The current version of the ART Framework package.

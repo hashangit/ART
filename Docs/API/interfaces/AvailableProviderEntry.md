@@ -6,7 +6,7 @@
 
 # Interface: AvailableProviderEntry
 
-Defined in: [types/providers.ts:6](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/providers.ts#L6)
+Defined in: [src/types/providers.ts:6](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/providers.ts#L6)
 
 Entry defining an available provider adapter
 
@@ -16,7 +16,7 @@ Entry defining an available provider adapter
 
 > **adapter**: (`options`) => [`ProviderAdapter`](ProviderAdapter.md)
 
-Defined in: [types/providers.ts:8](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/providers.ts#L8)
+Defined in: [src/types/providers.ts:8](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/providers.ts#L8)
 
 #### Parameters
 
@@ -34,7 +34,7 @@ Defined in: [types/providers.ts:8](https://github.com/hashangit/ART/blob/3153790
 
 > `optional` **baseOptions**: `any`
 
-Defined in: [types/providers.ts:9](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/providers.ts#L9)
+Defined in: [src/types/providers.ts:9](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/providers.ts#L9)
 
 ***
 
@@ -42,7 +42,7 @@ Defined in: [types/providers.ts:9](https://github.com/hashangit/ART/blob/3153790
 
 > `optional` **isLocal**: `boolean`
 
-Defined in: [types/providers.ts:10](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/providers.ts#L10)
+Defined in: [src/types/providers.ts:10](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/providers.ts#L10)
 
 ***
 
@@ -50,4 +50,4 @@ Defined in: [types/providers.ts:10](https://github.com/hashangit/ART/blob/315379
 
 > **name**: `string`
 
-Defined in: [types/providers.ts:7](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/providers.ts#L7)
+Defined in: [src/types/providers.ts:7](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/providers.ts#L7)

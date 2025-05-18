@@ -269,6 +269,18 @@ export interface StateManager {
    */
   setThreadConfig(threadId: string, config: ThreadConfig): Promise<void>;
 
+  /**
+   * Sets or updates the AgentState for a specific thread.
+   * This method allows an agent to explicitly persist its internal state.
+   * It requires that a ThreadConfig already exists for the thread, which is typically
+   * ensured by the application calling setThreadConfig() prior to agent execution.
+   * @param threadId - The unique identifier of the thread.
+   * @param state - The AgentState object to save.
+   * @returns A promise that resolves when the state is saved.
+   * @throws {ARTError} If no ThreadConfig exists for the threadId, or if the repository fails.
+   */
+  setAgentState(threadId: string, state: AgentState): Promise<void>;
+
   // Potentially add methods to update config/state if needed during runtime,
   // though v0.2.4 focuses on loading existing config.
   // updateAgentState(threadId: string, updates: Partial<AgentState>): Promise<void>;
@@ -324,7 +336,7 @@ export interface ObservationManager {
 /**
  * Generic interface for a typed publish/subscribe socket.
  */
-export interface TypedSocket<DataType, FilterType = any> {
+export interface ITypedSocket<DataType, FilterType = any> {
   /**
    * Subscribes a callback function to receive data updates.
    * @param callback The function to call with new data.
@@ -363,13 +375,13 @@ export interface TypedSocket<DataType, FilterType = any> {
  * TypedSocket specifically for Observation data.
  * FilterType is ObservationType or array of ObservationType.
  */
-export interface ObservationSocket extends TypedSocket<Observation, ObservationType | ObservationType[]> {}
+export interface ObservationSocket extends ITypedSocket<Observation, ObservationType | ObservationType[]> {}
 
 /**
  * TypedSocket specifically for ConversationMessage data.
  * FilterType is MessageRole or array of MessageRole.
  */
-export interface ConversationSocket extends TypedSocket<ConversationMessage, MessageRole | MessageRole[]> {}
+export interface ConversationSocket extends ITypedSocket<ConversationMessage, MessageRole | MessageRole[]> {}
 
 // Import concrete socket classes for use in the UISystem interface return types
 import { ObservationSocket as ObservationSocketImpl } from '../systems/ui/observation-socket';

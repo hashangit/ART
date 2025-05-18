@@ -6,7 +6,7 @@
 
 # Interface: UISystem
 
-Defined in: [core/interfaces.ts:381](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L381)
+Defined in: [src/core/interfaces.ts:393](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L393)
 
 Interface for the system providing access to UI communication sockets.
 
@@ -16,7 +16,7 @@ Interface for the system providing access to UI communication sockets.
 
 > **getConversationSocket**(): `ConversationSocket`
 
-Defined in: [core/interfaces.ts:385](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L385)
+Defined in: [src/core/interfaces.ts:397](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L397)
 
 Returns the singleton instance of the ConversationSocket.
 
@@ -28,15 +28,15 @@ Returns the singleton instance of the ConversationSocket.
 
 ### getLLMStreamSocket()
 
-> **getLLMStreamSocket**(): `LLMStreamSocket`
+> **getLLMStreamSocket**(): [`LLMStreamSocket`](../classes/LLMStreamSocket.md)
 
-Defined in: [core/interfaces.ts:387](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L387)
+Defined in: [src/core/interfaces.ts:399](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L399)
 
 Returns the singleton instance of the LLMStreamSocket.
 
 #### Returns
 
-`LLMStreamSocket`
+[`LLMStreamSocket`](../classes/LLMStreamSocket.md)
 
 ***
 
@@ -44,7 +44,7 @@ Returns the singleton instance of the LLMStreamSocket.
 
 > **getObservationSocket**(): `ObservationSocket`
 
-Defined in: [core/interfaces.ts:383](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L383)
+Defined in: [src/core/interfaces.ts:395](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L395)
 
 Returns the singleton instance of the ObservationSocket.
 

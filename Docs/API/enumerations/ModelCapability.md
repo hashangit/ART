@@ -6,7 +6,7 @@
 
 # Enumeration: ModelCapability
 
-Defined in: [types/index.ts:77](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L77)
+Defined in: [src/types/index.ts:99](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L99)
 
 Represents the different capabilities a model might possess.
 Used for model selection and validation.
@@ -17,7 +17,7 @@ Used for model selection and validation.
 
 > **CODE**: `"code"`
 
-Defined in: [types/index.ts:83](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L83)
+Defined in: [src/types/index.ts:105](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L105)
 
 ***
 
@@ -25,7 +25,7 @@ Defined in: [types/index.ts:83](https://github.com/hashangit/ART/blob/3153790647
 
 > **RAG**: `"rag"`
 
-Defined in: [types/index.ts:82](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L82)
+Defined in: [src/types/index.ts:104](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L104)
 
 ***
 
@@ -33,7 +33,7 @@ Defined in: [types/index.ts:82](https://github.com/hashangit/ART/blob/3153790647
 
 > **REASONING**: `"reasoning"`
 
-Defined in: [types/index.ts:84](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L84)
+Defined in: [src/types/index.ts:106](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L106)
 
 ***
 
@@ -41,7 +41,7 @@ Defined in: [types/index.ts:84](https://github.com/hashangit/ART/blob/3153790647
 
 > **STREAMING**: `"streaming"`
 
-Defined in: [types/index.ts:80](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L80)
+Defined in: [src/types/index.ts:102](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L102)
 
 ***
 
@@ -49,7 +49,7 @@ Defined in: [types/index.ts:80](https://github.com/hashangit/ART/blob/3153790647
 
 > **TEXT**: `"text"`
 
-Defined in: [types/index.ts:78](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L78)
+Defined in: [src/types/index.ts:100](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L100)
 
 ***
 
@@ -57,7 +57,7 @@ Defined in: [types/index.ts:78](https://github.com/hashangit/ART/blob/3153790647
 
 > **TOOL\_USE**: `"tool_use"`
 
-Defined in: [types/index.ts:81](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L81)
+Defined in: [src/types/index.ts:103](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L103)
 
 ***
 
@@ -65,4 +65,4 @@ Defined in: [types/index.ts:81](https://github.com/hashangit/ART/blob/3153790647
 
 > **VISION**: `"vision"`
 
-Defined in: [types/index.ts:79](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/types/index.ts#L79)
+Defined in: [src/types/index.ts:101](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L101)

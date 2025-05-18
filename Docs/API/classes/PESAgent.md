@@ -6,7 +6,7 @@
 
 # Class: PESAgent
 
-Defined in: [core/agents/pes-agent.ts:85](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/agents/pes-agent.ts#L85)
+Defined in: [src/core/agents/pes-agent.ts:85](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/agents/pes-agent.ts#L85)
 
 Implements the Plan-Execute-Synthesize (PES) agent orchestration logic.
 This agent follows a structured approach:
@@ -38,7 +38,7 @@ for the `ReasoningEngine`. It processes the `StreamEvent` output from the reason
 
 > **new PESAgent**(`dependencies`): `PESAgent`
 
-Defined in: [core/agents/pes-agent.ts:94](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/agents/pes-agent.ts#L94)
+Defined in: [src/core/agents/pes-agent.ts:94](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/agents/pes-agent.ts#L94)
 
 Creates an instance of the PESAgent.
 
@@ -60,7 +60,7 @@ An object containing instances of all required subsystems (managers, registries,
 
 > **process**(`props`): `Promise`\<[`AgentFinalResponse`](../interfaces/AgentFinalResponse.md)\>
 
-Defined in: [core/agents/pes-agent.ts:126](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/agents/pes-agent.ts#L126)
+Defined in: [src/core/agents/pes-agent.ts:126](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/agents/pes-agent.ts#L126)
 
 Executes the full Plan-Execute-Synthesize cycle for a given user query.
 

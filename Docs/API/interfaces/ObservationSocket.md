@@ -6,14 +6,14 @@
 
 # Interface: ObservationSocket
 
-Defined in: [core/interfaces.ts:366](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L366)
+Defined in: [src/core/interfaces.ts:378](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L378)
 
 TypedSocket specifically for Observation data.
 FilterType is ObservationType or array of ObservationType.
 
 ## Extends
 
-- [`TypedSocket`](TypedSocket.md)\<[`Observation`](Observation.md), [`ObservationType`](../enumerations/ObservationType.md) \| [`ObservationType`](../enumerations/ObservationType.md)[]\>
+- [`ITypedSocket`](ITypedSocket.md)\<[`Observation`](Observation.md), [`ObservationType`](../enumerations/ObservationType.md) \| [`ObservationType`](../enumerations/ObservationType.md)[]\>
 
 ## Methods
 
@@ -21,7 +21,7 @@ FilterType is ObservationType or array of ObservationType.
 
 > `optional` **getHistory**(`filter`?, `options`?): `Promise`\<[`Observation`](Observation.md)[]\>
 
-Defined in: [core/interfaces.ts:356](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L356)
+Defined in: [src/core/interfaces.ts:368](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L368)
 
 Optional method to retrieve historical data from the socket's source.
 
@@ -51,7 +51,7 @@ Optional configuration like threadId and limit.
 
 #### Inherited from
 
-[`TypedSocket`](TypedSocket.md).[`getHistory`](TypedSocket.md#gethistory)
+[`ITypedSocket`](ITypedSocket.md).[`getHistory`](ITypedSocket.md#gethistory)
 
 ***
 
@@ -59,7 +59,7 @@ Optional configuration like threadId and limit.
 
 > **notify**(`data`, `options`?): `void`
 
-Defined in: [core/interfaces.ts:346](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L346)
+Defined in: [src/core/interfaces.ts:358](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L358)
 
 Notifies subscribers of new data.
 
@@ -89,7 +89,7 @@ Optional targeting information (e.g., specific thread).
 
 #### Inherited from
 
-[`TypedSocket`](TypedSocket.md).[`notify`](TypedSocket.md#notify)
+[`ITypedSocket`](ITypedSocket.md).[`notify`](ITypedSocket.md#notify)
 
 ***
 
@@ -97,7 +97,7 @@ Optional targeting information (e.g., specific thread).
 
 > **subscribe**(`callback`, `filter`?, `options`?): () => `void`
 
-Defined in: [core/interfaces.ts:335](https://github.com/hashangit/ART/blob/3153790647102134b487bb6168bd208568e6a8ad/src/core/interfaces.ts#L335)
+Defined in: [src/core/interfaces.ts:347](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L347)
 
 Subscribes a callback function to receive data updates.
 
@@ -135,4 +135,4 @@ An unsubscribe function.
 
 #### Inherited from
 
-[`TypedSocket`](TypedSocket.md).[`subscribe`](TypedSocket.md#subscribe)
+[`ITypedSocket`](ITypedSocket.md).[`subscribe`](ITypedSocket.md#subscribe)
