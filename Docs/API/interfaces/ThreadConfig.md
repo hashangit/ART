@@ -6,7 +6,7 @@
 
 # Interface: ThreadConfig
 
-Defined in: [src/types/index.ts:278](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L278)
+Defined in: [src/types/index.ts:278](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L278)
 
 Configuration specific to a conversation thread.
 
@@ -16,7 +16,7 @@ Configuration specific to a conversation thread.
 
 > **enabledTools**: `string`[]
 
-Defined in: [src/types/index.ts:282](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L282)
+Defined in: [src/types/index.ts:282](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L282)
 
 An array of tool names (matching `ToolSchema.name`) that are permitted for use within this thread.
 
@@ -26,7 +26,7 @@ An array of tool names (matching `ToolSchema.name`) that are permitted for use w
 
 > **historyLimit**: `number`
 
-Defined in: [src/types/index.ts:284](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L284)
+Defined in: [src/types/index.ts:284](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L284)
 
 The maximum number of past messages (`ConversationMessage` objects) to retrieve for context.
 
@@ -36,6 +36,16 @@ The maximum number of past messages (`ConversationMessage` objects) to retrieve 
 
 > **providerConfig**: [`RuntimeProviderConfig`](RuntimeProviderConfig.md)
 
-Defined in: [src/types/index.ts:280](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L280)
+Defined in: [src/types/index.ts:280](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L280)
 
 Default provider configuration for this thread.
+
+***
+
+### systemPrompt?
+
+> `optional` **systemPrompt**: `string`
+
+Defined in: [src/types/index.ts:286](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L286)
+
+Optional system prompt string to be used for this thread, overriding instance or agent defaults.

@@ -43,6 +43,12 @@ import { Logger } from '../../utils/logger'; // Added Logger import
 interface PESAgentDependencies {
     /** Manages thread configuration and state. */
     stateManager: StateManager;
+    /**
+     * Optional default system prompt string provided at the ART instance level.
+     * This serves as a custom prompt part if no thread-specific or call-specific
+     * system prompt is provided. It's appended to the agent's base system prompt.
+     */
+    instanceDefaultCustomSystemPrompt?: string;
     /** Manages conversation history. */
     conversationManager: ConversationManager;
     /** Registry for available tools. */
@@ -84,7 +90,13 @@ const DEFAULT_PES_SYSTEM_PROMPT = `You are a helpful AI assistant. You need to u
  */
 export class PESAgent implements IAgentCore {
     private readonly deps: PESAgentDependencies;
-    private readonly defaultSystemPrompt: string = DEFAULT_PES_SYSTEM_PROMPT;
+    /** The base system prompt inherent to this agent. */
+    private readonly defaultSystemPrompt: string = DEFAULT_PES_SYSTEM_PROMPT; // This is the AGENT BASE
+    /**
+     * Stores the instance-level default custom system prompt, passed during construction.
+     * Used in the system prompt hierarchy if no thread or call-level prompt is specified.
+     */
+    private readonly instanceDefaultCustomSystemPrompt?: string;
     // Removed blueprint properties
 
     /**
@@ -93,14 +105,18 @@ export class PESAgent implements IAgentCore {
      */
     constructor(dependencies: PESAgentDependencies) {
         this.deps = dependencies;
+        this.instanceDefaultCustomSystemPrompt = dependencies.instanceDefaultCustomSystemPrompt;
     }
 
     /**
      * Executes the full Plan-Execute-Synthesize cycle for a given user query.
      *
      * **Workflow:**
-     * 1.  **Initiation & Config:** Loads thread configuration and system prompt.
-     * 2.  **Data Gathering:** Gathers history, available tools, system prompt, and query.
+     * 1.  **Initiation & Config:** Loads thread configuration. Resolves the final system prompt based on a hierarchy:
+     *     Call-level (`AgentProps.options.systemPrompt`) > Thread-level (`ThreadConfig.systemPrompt`) >
+     *     Instance-level (`ArtInstanceConfig.defaultSystemPrompt` via constructor) > Agent's base prompt.
+     *     The resolved custom part is appended to the agent's base prompt.
+     * 2.  **Data Gathering:** Gathers history, available tools, the resolved system prompt, and query.
      * 3.  **Planning Prompt Construction:** Directly constructs the `ArtStandardPrompt` object/array for planning.
      * 4.  **Planning LLM Call:** Sends the planning prompt object to the `reasoningEngine` (requesting streaming). Consumes the `StreamEvent` stream, buffers the output text, and handles potential errors.
      * 5.  **Planning Output Parsing:** Parses the buffered planning output text to extract intent, plan, and tool calls using `outputParser.parsePlanningOutput`.
@@ -140,10 +156,37 @@ export class PESAgent implements IAgentCore {
             if (!threadContext) {
                 throw new ARTError(`Thread context not found for threadId: ${props.threadId}`, ErrorCode.THREAD_NOT_FOUND);
             }
-            // Resolve system prompt: Use config value (via StateManager) or internal default
-            const systemPrompt = await this.deps.stateManager.getThreadConfigValue<string>(props.threadId, 'systemPrompt')
-                                  // || threadContext.config.systemPrompt // Removed: systemPrompt field removed from ThreadConfig interface
-                                  || this.defaultSystemPrompt; // Final fallback to agent's internal default
+            // Resolve system prompt based on the new hierarchy
+            const agentInternalBaseSystemPrompt = this.defaultSystemPrompt;
+            let customSystemPromptPart: string | undefined = undefined;
+
+            // Check Call-level (AgentProps.options.systemPrompt)
+            if (props.options?.systemPrompt) {
+                customSystemPromptPart = props.options.systemPrompt;
+                Logger.debug(`[${traceId}] Using Call-level custom system prompt.`);
+            }
+            // Else, check Thread-level (ThreadConfig.systemPrompt from types/index.ts)
+            else {
+                const threadSystemPrompt = await this.deps.stateManager.getThreadConfigValue<string>(props.threadId, 'systemPrompt');
+                if (threadSystemPrompt) {
+                    customSystemPromptPart = threadSystemPrompt;
+                    Logger.debug(`[${traceId}] Using Thread-level custom system prompt.`);
+                }
+                // Else, check Instance-level (this.instanceDefaultCustomSystemPrompt)
+                else if (this.instanceDefaultCustomSystemPrompt) {
+                    customSystemPromptPart = this.instanceDefaultCustomSystemPrompt;
+                    Logger.debug(`[${traceId}] Using Instance-level custom system prompt.`);
+                }
+            }
+
+            let finalSystemPrompt = agentInternalBaseSystemPrompt;
+            if (customSystemPromptPart) {
+                finalSystemPrompt = `${agentInternalBaseSystemPrompt}\n\n${customSystemPromptPart}`;
+                Logger.debug(`[${traceId}] Custom system prompt part applied: "${customSystemPromptPart.substring(0, 100)}..."`);
+            } else {
+                Logger.debug(`[${traceId}] No custom system prompt part found. Using agent internal base prompt only.`);
+            }
+            const systemPrompt = finalSystemPrompt; // Use this variable name for minimal changes below
 
             // Determine RuntimeProviderConfig (Checklist item 17)
             // This config specifies the provider/model/adapterOptions for the LLM call

@@ -282,6 +282,8 @@ export interface ParsedToolCall {
    enabledTools: string[];
    /** The maximum number of past messages (`ConversationMessage` objects) to retrieve for context. */
    historyLimit: number;
+   /** Optional system prompt string to be used for this thread, overriding instance or agent defaults. */
+   systemPrompt?: string;
    // TODO: Add other potential thread-specific settings (e.g., RAG configuration, default timeouts)
  }
 
@@ -344,7 +346,9 @@ export interface AgentProps {
    stream?: boolean;
    /** Override the prompt template used for this specific call. */
    promptTemplateId?: string;
-   // TODO: Add other potential runtime overrides (e.g., specific system prompt, history length).
+   /** Optional system prompt string to override thread, instance, or agent defaults for this specific call. */
+   systemPrompt?: string;
+   // TODO: Add other potential runtime overrides (e.g., history length).
  }
 
 /**
@@ -635,6 +639,11 @@ export interface ArtInstanceConfig {
     /** Minimum log level to output. Defaults to 'info'. */
     level?: LogLevel;
   };
+  /**
+   * Optional default system prompt string to be used for the entire ART instance.
+   * This can be overridden at the thread level or at the individual call level.
+   */
+  defaultSystemPrompt?: string;
   // Add other top-level configuration properties as needed, e.g.:
   // defaultThreadConfig?: Partial<ThreadConfig>;
 }
