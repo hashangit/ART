@@ -6,7 +6,7 @@
 
 # Class: UnknownProviderError
 
-Defined in: [src/errors.ts:79](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L79)
+Defined in: [src/errors.ts:79](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L79)
 
 Custom error class for ART framework specific errors.
 
@@ -20,7 +20,7 @@ Custom error class for ART framework specific errors.
 
 > **new UnknownProviderError**(`providerName`): `UnknownProviderError`
 
-Defined in: [src/errors.ts:80](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L80)
+Defined in: [src/errors.ts:80](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L80)
 
 #### Parameters
 
@@ -42,7 +42,7 @@ Defined in: [src/errors.ts:80](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > `readonly` **code**: [`ErrorCode`](../enumerations/ErrorCode.md)
 
-Defined in: [src/errors.ts:54](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L54)
+Defined in: [src/errors.ts:54](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L54)
 
 #### Inherited from
 
@@ -54,7 +54,7 @@ Defined in: [src/errors.ts:54](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > `readonly` `optional` **originalError**: `Error`
 
-Defined in: [src/errors.ts:55](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L55)
+Defined in: [src/errors.ts:55](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L55)
 
 #### Inherited from
 
@@ -66,7 +66,7 @@ Defined in: [src/errors.ts:55](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **toString**(): `string`
 
-Defined in: [src/errors.ts:69](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L69)
+Defined in: [src/errors.ts:69](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L69)
 
 Returns a string representation of an object.
 

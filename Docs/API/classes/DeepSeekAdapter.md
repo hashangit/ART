@@ -6,7 +6,7 @@
 
 # Class: DeepSeekAdapter
 
-Defined in: [src/adapters/reasoning/deepseek.ts:87](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/adapters/reasoning/deepseek.ts#L87)
+Defined in: [src/adapters/reasoning/deepseek.ts:87](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/adapters/reasoning/deepseek.ts#L87)
 
 Implements the `ProviderAdapter` interface for interacting with the DeepSeek API,
 which uses an OpenAI-compatible Chat Completions endpoint.
@@ -26,7 +26,7 @@ Note: Streaming is **not yet implemented** for this adapter. Calls requesting st
 
 > **new DeepSeekAdapter**(`options`): `DeepSeekAdapter`
 
-Defined in: [src/adapters/reasoning/deepseek.ts:98](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/adapters/reasoning/deepseek.ts#L98)
+Defined in: [src/adapters/reasoning/deepseek.ts:98](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/adapters/reasoning/deepseek.ts#L98)
 
 Creates an instance of the DeepSeekAdapter.
 
@@ -52,7 +52,7 @@ If the API key is missing.
 
 > `readonly` **providerName**: `"deepseek"` = `'deepseek'`
 
-Defined in: [src/adapters/reasoning/deepseek.ts:88](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/adapters/reasoning/deepseek.ts#L88)
+Defined in: [src/adapters/reasoning/deepseek.ts:88](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/adapters/reasoning/deepseek.ts#L88)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -66,7 +66,7 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 > **call**(`prompt`, `options`): `Promise`\<`AsyncIterable`\<[`StreamEvent`](../interfaces/StreamEvent.md), `any`, `any`\>\>
 
-Defined in: [src/adapters/reasoning/deepseek.ts:118](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/adapters/reasoning/deepseek.ts#L118)
+Defined in: [src/adapters/reasoning/deepseek.ts:118](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/adapters/reasoning/deepseek.ts#L118)
 
 Sends a request to the DeepSeek Chat Completions API endpoint.
 Translates `ArtStandardPrompt` to the OpenAI-compatible format.

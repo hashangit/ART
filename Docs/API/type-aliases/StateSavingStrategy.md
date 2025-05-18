@@ -8,7 +8,7 @@
 
 > **StateSavingStrategy** = `"explicit"` \| `"implicit"`
 
-Defined in: [src/types/index.ts:598](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L598)
+Defined in: [src/types/index.ts:602](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L602)
 
 Defines the strategy for saving AgentState.
 - 'explicit': AgentState is only saved when `StateManager.setAgentState()` is explicitly called by the agent.

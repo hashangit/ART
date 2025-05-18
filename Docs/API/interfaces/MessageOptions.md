@@ -6,7 +6,7 @@
 
 # Interface: MessageOptions
 
-Defined in: [src/types/index.ts:562](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L562)
+Defined in: [src/types/index.ts:566](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L566)
 
 Options for retrieving conversation messages.
 
@@ -16,7 +16,7 @@ Options for retrieving conversation messages.
 
 > `optional` **afterTimestamp**: `number`
 
-Defined in: [src/types/index.ts:568](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L568)
+Defined in: [src/types/index.ts:572](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L572)
 
 Retrieve messages created after this Unix timestamp (milliseconds).
 
@@ -26,7 +26,7 @@ Retrieve messages created after this Unix timestamp (milliseconds).
 
 > `optional` **beforeTimestamp**: `number`
 
-Defined in: [src/types/index.ts:566](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L566)
+Defined in: [src/types/index.ts:570](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L570)
 
 Retrieve messages created before this Unix timestamp (milliseconds).
 
@@ -36,7 +36,7 @@ Retrieve messages created before this Unix timestamp (milliseconds).
 
 > `optional` **limit**: `number`
 
-Defined in: [src/types/index.ts:564](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L564)
+Defined in: [src/types/index.ts:568](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L568)
 
 The maximum number of messages to retrieve.
 
@@ -46,6 +46,6 @@ The maximum number of messages to retrieve.
 
 > `optional` **roles**: [`MessageRole`](../enumerations/MessageRole.md)[]
 
-Defined in: [src/types/index.ts:570](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L570)
+Defined in: [src/types/index.ts:574](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L574)
 
 Optionally filter messages by role (e.g., retrieve only 'AI' messages).

@@ -6,7 +6,7 @@
 
 # Enumeration: ErrorCode
 
-Defined in: [src/errors.ts:6](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L6)
+Defined in: [src/errors.ts:6](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L6)
 
 Defines standard error codes for the ART framework.
 
@@ -16,7 +16,7 @@ Defines standard error codes for the ART framework.
 
 > **ADAPTER\_INSTANTIATION\_ERROR**: `"ADAPTER_INSTANTIATION_ERROR"`
 
-Defined in: [src/errors.ts:47](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L47)
+Defined in: [src/errors.ts:47](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L47)
 
 ***
 
@@ -24,7 +24,7 @@ Defined in: [src/errors.ts:47](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **AGENT\_PROCESSING\_ERROR**: `"AGENT_PROCESSING_ERROR"`
 
-Defined in: [src/errors.ts:35](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L35)
+Defined in: [src/errors.ts:35](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L35)
 
 ***
 
@@ -32,7 +32,7 @@ Defined in: [src/errors.ts:35](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **API\_QUEUE\_TIMEOUT**: `"API_QUEUE_TIMEOUT"`
 
-Defined in: [src/errors.ts:46](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L46)
+Defined in: [src/errors.ts:46](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L46)
 
 ***
 
@@ -40,7 +40,7 @@ Defined in: [src/errors.ts:46](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **INVALID\_CONFIG**: `"INVALID_CONFIG"`
 
-Defined in: [src/errors.ts:8](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L8)
+Defined in: [src/errors.ts:8](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L8)
 
 ***
 
@@ -48,7 +48,7 @@ Defined in: [src/errors.ts:8](https://github.com/hashangit/ART/blob/13d06b82b833
 
 > **LLM\_PROVIDER\_ERROR**: `"LLM_PROVIDER_ERROR"`
 
-Defined in: [src/errors.ts:17](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L17)
+Defined in: [src/errors.ts:17](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L17)
 
 ***
 
@@ -56,7 +56,7 @@ Defined in: [src/errors.ts:17](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **LOCAL\_INSTANCE\_BUSY**: `"LOCAL_INSTANCE_BUSY"`
 
-Defined in: [src/errors.ts:45](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L45)
+Defined in: [src/errors.ts:45](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L45)
 
 ***
 
@@ -64,7 +64,7 @@ Defined in: [src/errors.ts:45](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **LOCAL\_PROVIDER\_CONFLICT**: `"LOCAL_PROVIDER_CONFLICT"`
 
-Defined in: [src/errors.ts:44](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L44)
+Defined in: [src/errors.ts:44](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L44)
 
 ***
 
@@ -72,7 +72,7 @@ Defined in: [src/errors.ts:44](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **MISSING\_API\_KEY**: `"MISSING_API_KEY"`
 
-Defined in: [src/errors.ts:9](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L9)
+Defined in: [src/errors.ts:9](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L9)
 
 ***
 
@@ -80,7 +80,7 @@ Defined in: [src/errors.ts:9](https://github.com/hashangit/ART/blob/13d06b82b833
 
 > **NETWORK\_ERROR**: `"NETWORK_ERROR"`
 
-Defined in: [src/errors.ts:38](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L38)
+Defined in: [src/errors.ts:38](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L38)
 
 ***
 
@@ -88,7 +88,7 @@ Defined in: [src/errors.ts:38](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **OUTPUT\_PARSING\_FAILED**: `"OUTPUT_PARSING_FAILED"`
 
-Defined in: [src/errors.ts:19](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L19)
+Defined in: [src/errors.ts:19](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L19)
 
 ***
 
@@ -96,7 +96,7 @@ Defined in: [src/errors.ts:19](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **PLANNING\_FAILED**: `"PLANNING_FAILED"`
 
-Defined in: [src/errors.ts:32](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L32)
+Defined in: [src/errors.ts:32](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L32)
 
 ***
 
@@ -104,7 +104,7 @@ Defined in: [src/errors.ts:32](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **PROMPT\_ASSEMBLY\_FAILED**: `"PROMPT_ASSEMBLY_FAILED"`
 
-Defined in: [src/errors.ts:20](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L20)
+Defined in: [src/errors.ts:20](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L20)
 
 ***
 
@@ -112,7 +112,7 @@ Defined in: [src/errors.ts:20](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **PROMPT\_FRAGMENT\_NOT\_FOUND**: `"PROMPT_FRAGMENT_NOT_FOUND"`
 
-Defined in: [src/errors.ts:21](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L21)
+Defined in: [src/errors.ts:21](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L21)
 
 ***
 
@@ -120,7 +120,7 @@ Defined in: [src/errors.ts:21](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **PROMPT\_GENERATION\_FAILED**: `"PROMPT_GENERATION_FAILED"`
 
-Defined in: [src/errors.ts:18](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L18)
+Defined in: [src/errors.ts:18](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L18)
 
 ***
 
@@ -128,7 +128,7 @@ Defined in: [src/errors.ts:18](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **PROMPT\_TRANSLATION\_FAILED**: `"PROMPT_TRANSLATION_FAILED"`
 
-Defined in: [src/errors.ts:23](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L23)
+Defined in: [src/errors.ts:23](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L23)
 
 ***
 
@@ -136,7 +136,7 @@ Defined in: [src/errors.ts:23](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **PROMPT\_VALIDATION\_FAILED**: `"PROMPT_VALIDATION_FAILED"`
 
-Defined in: [src/errors.ts:22](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L22)
+Defined in: [src/errors.ts:22](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L22)
 
 ***
 
@@ -144,7 +144,7 @@ Defined in: [src/errors.ts:22](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **SAVE\_FAILED**: `"SAVE_FAILED"`
 
-Defined in: [src/errors.ts:14](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L14)
+Defined in: [src/errors.ts:14](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L14)
 
 ***
 
@@ -152,7 +152,7 @@ Defined in: [src/errors.ts:14](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **STORAGE\_ERROR**: `"STORAGE_ERROR"`
 
-Defined in: [src/errors.ts:12](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L12)
+Defined in: [src/errors.ts:12](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L12)
 
 ***
 
@@ -160,7 +160,7 @@ Defined in: [src/errors.ts:12](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **SYNTHESIS\_FAILED**: `"SYNTHESIS_FAILED"`
 
-Defined in: [src/errors.ts:34](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L34)
+Defined in: [src/errors.ts:34](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L34)
 
 ***
 
@@ -168,7 +168,7 @@ Defined in: [src/errors.ts:34](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **THREAD\_NOT\_FOUND**: `"THREAD_NOT_FOUND"`
 
-Defined in: [src/errors.ts:13](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L13)
+Defined in: [src/errors.ts:13](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L13)
 
 ***
 
@@ -176,7 +176,7 @@ Defined in: [src/errors.ts:13](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **TIMEOUT\_ERROR**: `"TIMEOUT_ERROR"`
 
-Defined in: [src/errors.ts:39](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L39)
+Defined in: [src/errors.ts:39](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L39)
 
 ***
 
@@ -184,7 +184,7 @@ Defined in: [src/errors.ts:39](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **TOOL\_DISABLED**: `"TOOL_DISABLED"`
 
-Defined in: [src/errors.ts:29](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L29)
+Defined in: [src/errors.ts:29](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L29)
 
 ***
 
@@ -192,7 +192,7 @@ Defined in: [src/errors.ts:29](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **TOOL\_EXECUTION\_ERROR**: `"TOOL_EXECUTION_ERROR"`
 
-Defined in: [src/errors.ts:28](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L28)
+Defined in: [src/errors.ts:28](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L28)
 
 ***
 
@@ -200,7 +200,7 @@ Defined in: [src/errors.ts:28](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **TOOL\_EXECUTION\_FAILED**: `"TOOL_EXECUTION_FAILED"`
 
-Defined in: [src/errors.ts:33](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L33)
+Defined in: [src/errors.ts:33](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L33)
 
 ***
 
@@ -208,7 +208,7 @@ Defined in: [src/errors.ts:33](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **TOOL\_NOT\_FOUND**: `"TOOL_NOT_FOUND"`
 
-Defined in: [src/errors.ts:26](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L26)
+Defined in: [src/errors.ts:26](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L26)
 
 ***
 
@@ -216,7 +216,7 @@ Defined in: [src/errors.ts:26](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **TOOL\_SCHEMA\_VALIDATION\_FAILED**: `"TOOL_SCHEMA_VALIDATION_FAILED"`
 
-Defined in: [src/errors.ts:27](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L27)
+Defined in: [src/errors.ts:27](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L27)
 
 ***
 
@@ -224,7 +224,7 @@ Defined in: [src/errors.ts:27](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **UNKNOWN\_ERROR**: `"UNKNOWN_ERROR"`
 
-Defined in: [src/errors.ts:40](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L40)
+Defined in: [src/errors.ts:40](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L40)
 
 ***
 
@@ -232,4 +232,4 @@ Defined in: [src/errors.ts:40](https://github.com/hashangit/ART/blob/13d06b82b83
 
 > **UNKNOWN\_PROVIDER**: `"UNKNOWN_PROVIDER"`
 
-Defined in: [src/errors.ts:43](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/errors.ts#L43)
+Defined in: [src/errors.ts:43](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/errors.ts#L43)

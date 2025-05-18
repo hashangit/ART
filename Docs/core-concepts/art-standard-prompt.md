@@ -58,8 +58,14 @@ The `PESAgent` (Plan-Execute-Synthesize Agent) is responsible for constructing `
 ```typescript
 // Inside PESAgent.process() during planning:
 
-// 1. Get system prompt
-const systemPromptContent = await this.deps.stateManager.getThreadConfigValue<string>(props.threadId, 'systemPrompt') || this.defaultSystemPrompt;
+// 1. Get system prompt (Conceptual - actual logic is more detailed)
+//    The PESAgent resolves the system prompt using a hierarchy:
+//    Call-level (props.options.systemPrompt) > Thread-level (ThreadConfig.systemPrompt) >
+//    Instance-level (ArtInstanceConfig.defaultSystemPrompt) > Agent's base prompt.
+//    The resolved custom part is appended to the agent's base prompt.
+//    Let's assume 'finalResolvedSystemPrompt' holds this combined string.
+const finalResolvedSystemPrompt = "/* Resolved system prompt based on hierarchy */"; // Placeholder for conceptual example
+const systemPromptContent = finalResolvedSystemPrompt;
 
 // 2. Get formatted history
 const formattedHistory = this.formatHistoryForPrompt(rawHistory); // Converts ConversationMessage[]

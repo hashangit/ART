@@ -6,7 +6,7 @@
 
 # Interface: LLMMetadata
 
-Defined in: [src/types/index.ts:210](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L210)
+Defined in: [src/types/index.ts:210](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L210)
 
 Structure for holding metadata about an LLM call, typically received via a `METADATA` `StreamEvent`
 or parsed from a non-streaming response. Fields are optional as availability varies by provider and stream state.
@@ -17,7 +17,7 @@ or parsed from a non-streaming response. Fields are optional as availability var
 
 > `optional` **inputTokens**: `number`
 
-Defined in: [src/types/index.ts:212](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L212)
+Defined in: [src/types/index.ts:212](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L212)
 
 The number of tokens in the input prompt, if available.
 
@@ -27,7 +27,7 @@ The number of tokens in the input prompt, if available.
 
 > `optional` **outputTokens**: `number`
 
-Defined in: [src/types/index.ts:214](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L214)
+Defined in: [src/types/index.ts:214](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L214)
 
 The number of tokens generated in the output response, if available.
 
@@ -37,7 +37,7 @@ The number of tokens generated in the output response, if available.
 
 > `optional` **providerRawUsage**: `any`
 
-Defined in: [src/types/index.ts:224](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L224)
+Defined in: [src/types/index.ts:224](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L224)
 
 Optional raw usage data provided directly by the LLM provider for extensibility (structure depends on provider).
 
@@ -47,7 +47,7 @@ Optional raw usage data provided directly by the LLM provider for extensibility 
 
 > `optional` **stopReason**: `string`
 
-Defined in: [src/types/index.ts:222](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L222)
+Defined in: [src/types/index.ts:222](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L222)
 
 The reason the LLM stopped generating tokens (e.g., 'stop_sequence', 'max_tokens', 'tool_calls'), if available.
 
@@ -57,7 +57,7 @@ The reason the LLM stopped generating tokens (e.g., 'stop_sequence', 'max_tokens
 
 > `optional` **thinkingTokens**: `number`
 
-Defined in: [src/types/index.ts:216](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L216)
+Defined in: [src/types/index.ts:216](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L216)
 
 The number of tokens identified as part of the LLM's internal thinking process (if available from provider).
 
@@ -67,7 +67,7 @@ The number of tokens identified as part of the LLM's internal thinking process (
 
 > `optional` **timeToFirstTokenMs**: `number`
 
-Defined in: [src/types/index.ts:218](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L218)
+Defined in: [src/types/index.ts:218](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L218)
 
 The time elapsed (in milliseconds) until the first token was generated in a streaming response, if applicable and available.
 
@@ -77,7 +77,7 @@ The time elapsed (in milliseconds) until the first token was generated in a stre
 
 > `optional` **totalGenerationTimeMs**: `number`
 
-Defined in: [src/types/index.ts:220](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L220)
+Defined in: [src/types/index.ts:220](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L220)
 
 The total time elapsed (in milliseconds) for the entire generation process, if available.
 
@@ -87,6 +87,6 @@ The total time elapsed (in milliseconds) for the entire generation process, if a
 
 > `optional` **traceId**: `string`
 
-Defined in: [src/types/index.ts:226](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L226)
+Defined in: [src/types/index.ts:226](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L226)
 
 The trace ID associated with the LLM call, useful for correlating metadata with the specific request.
