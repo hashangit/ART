@@ -6,7 +6,7 @@
 
 # Interface: ObservationFilter
 
-Defined in: [types/index.ts:550](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L550)
+Defined in: [src/types/index.ts:576](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L576)
 
 Options for filtering observations.
 
@@ -16,7 +16,7 @@ Options for filtering observations.
 
 > `optional` **afterTimestamp**: `number`
 
-Defined in: [types/index.ts:556](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L556)
+Defined in: [src/types/index.ts:582](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L582)
 
 Retrieve observations recorded after this Unix timestamp (milliseconds).
 
@@ -26,7 +26,7 @@ Retrieve observations recorded after this Unix timestamp (milliseconds).
 
 > `optional` **beforeTimestamp**: `number`
 
-Defined in: [types/index.ts:554](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L554)
+Defined in: [src/types/index.ts:580](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L580)
 
 Retrieve observations recorded before this Unix timestamp (milliseconds).
 
@@ -36,6 +36,6 @@ Retrieve observations recorded before this Unix timestamp (milliseconds).
 
 > `optional` **types**: [`ObservationType`](../enumerations/ObservationType.md)[]
 
-Defined in: [types/index.ts:552](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/types/index.ts#L552)
+Defined in: [src/types/index.ts:578](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L578)
 
 An array of `ObservationType` enums to filter by. If provided, only observations matching these types are returned.

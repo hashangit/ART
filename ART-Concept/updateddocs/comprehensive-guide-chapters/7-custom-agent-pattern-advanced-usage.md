@@ -48,7 +48,14 @@ import {
 *   **Dependency Interfaces (`StateManager`, `ConversationManager`, `ToolRegistry`, `PromptManager`, `ReasoningEngine`, `OutputParser`, `ObservationManager`, `ToolSystem`, `UISystem`)**
     These are the built-in helpers and managers that ART gives to your custom agent brain so it doesn't have to reinvent everything (like how to talk to the LLM, use tools, remember history, log events, or broadcast UI updates). Your custom `process` method will use these helpers.
     *   **Developer Notes:** These interfaces define the contracts for the core ART subsystems injected into your `IAgentCore` constructor. You'll use their methods within your `process` implementation:
-        *   `StateManager`: Use `.loadThreadContext(threadId)` to get `ThreadConfig` and `AgentState`. Use `.saveStateIfModified(threadId)` to persist state changes. Use `.isToolEnabled(threadId, toolName)` for checks.
+        *   `StateManager`: Manages `ThreadConfig` and `AgentState`. Its behavior for `AgentState` persistence depends on the `stateSavingStrategy` ('explicit' or 'implicit') set during `ArtInstance` creation.
+            *   `.loadThreadContext(threadId)`: Loads `ThreadContext`. In 'implicit' mode, `StateManager` caches this context and a snapshot of `AgentState` for later comparison by `saveStateIfModified`.
+            *   `.setAgentState(threadId, state)`: Explicitly saves `AgentState`. In 'implicit' mode, this also updates the internal cache and snapshot. This is the **recommended method for saving `AgentState` in both modes**, especially for initial state or critical updates.
+            *   `.saveStateIfModified(threadId)`:
+                *   In **'explicit' mode (default)**: This is a **no-op** for `AgentState` persistence. It logs a warning.
+                *   In **'implicit' mode**: Compares the current (potentially mutated) `AgentState` in the cached `ThreadContext` with the initial snapshot. If different, it saves the state to the repository and updates the snapshot.
+            *   `.isToolEnabled(threadId, toolName)`: Checks tool permissions.
+            *   `.setThreadConfig(threadId, config)`: Sets/updates `ThreadConfig`. Typically called by the application for new threads.
         *   `ConversationManager`: Use `.getMessages(threadId, options)` to retrieve history. Use `.addMessages(threadId, messages)` to save new user/assistant messages.
         *   `ToolRegistry`: Use `.getAvailableTools({ enabledForThreadId })` to get `ToolSchema[]` for prompting the LLM. Use `.getToolExecutor(toolName)` if needed (though `ToolSystem` is usually preferred).
         *   `PromptManager`: Provides reusable text fragments and validation. Use `.getFragment(name, context)` to retrieve instruction blocks. Use `.validatePrompt(promptObject)` to ensure the `ArtStandardPrompt` object constructed by your agent logic is valid before sending it to the `ReasoningEngine`.
@@ -251,9 +258,36 @@ export class ReActAgent implements IAgentCore {
       if (parsedOutput.finalAnswer) {
         await this.deps.observationManager.record({ type: ObservationType.PROCESS_END, threadId, traceId, content: { status: 'success', finalAnswer: parsedOutput.finalAnswer } });
         // TODO: Save history (user query + final answer)
-        // await this.deps.conversationManager.addMessages(...)
+        // await this.deps.conversationManager.addMessages(threadId, [
+        //   { role: MessageRole.USER, content: query, responseId: `react-user-${Date.now()}` },
+        //   { role: MessageRole.ASSISTANT, content: parsedOutput.finalAnswer, responseId: `react-final-${Date.now()}` }
+        // ]);
+
+        // --- AgentState Persistence ---
+        // The ReActAgent, as written, doesn't deeply manage a complex AgentState beyond what's in ThreadConfig.
+        // If it did (e.g., persisting 'reactSteps' itself as part of AgentState.data):
+        //
+        // If 'explicit' stateSavingStrategy:
+        //   const agentStateToSave: AgentState = { data: { reactHistory: reactSteps }, version: (context.state?.version || 0) + 1 };
+        //   await this.deps.stateManager.setAgentState(threadId, agentStateToSave);
+        //   context.state = agentStateToSave; // Keep in-memory context up-to-date
+        //
+        // If 'implicit' stateSavingStrategy:
+        //   // Ensure context.state.data is updated if it's being managed.
+        //   // For example, if reactSteps were part of AgentState:
+        //   // if (!context.state) context.state = { data: {}, version: 0 }; // Initialize if null
+        //   // context.state.data.reactHistory = reactSteps;
+        //   // context.state.version = (context.state.version || 0) + 1;
+        //   // Then, saveStateIfModified would compare and save if changes were made to context.state.
+        //
+        // For this simplified example, we'll just call saveStateIfModified.
+        // Its behavior depends on the configured strategy:
+        // - 'explicit': No-op for AgentState.
+        // - 'implicit': Would save if context.state was loaded, cached, and then mutated.
         await this.deps.stateManager.saveStateIfModified(threadId);
-        return { response: { role: MessageRole.ASSISTANT, content: parsedOutput.finalAnswer, responseId: `react-final-${Date.now()}` }, metadata: { traceId, llmMetadata: aggregatedMetadata } };       }
+
+        return { response: { role: MessageRole.ASSISTANT, content: parsedOutput.finalAnswer, responseId: `react-final-${Date.now()}` }, metadata: { traceId, llmMetadata: aggregatedMetadata } };
+      }
 
       // 6. Execute Action (if any)
       let observationResult = "No action taken in this step.";
@@ -285,7 +319,24 @@ export class ReActAgent implements IAgentCore {
     const finalResponseText = "Reached maximum thinking steps without a final answer.";
     await this.deps.observationManager.record({ type: ObservationType.PROCESS_END, threadId, traceId, content: { status: 'max_steps_reached' } });
     // TODO: Save history
+    // await this.deps.conversationManager.addMessages(...)
+
+    // --- AgentState Persistence (Max Steps Reached) ---
+    // Similar logic as above for final answer.
+    // If 'explicit' strategy and managing AgentState:
+    //   const finalAgentState: AgentState = { data: { reactHistory: reactSteps, status: 'max_steps' }, version: (context.state?.version || 0) + 1 };
+    //   await this.deps.stateManager.setAgentState(threadId, finalAgentState);
+    //   context.state = finalAgentState;
+    //
+    // If 'implicit' strategy and managing AgentState:
+    //   // if (!context.state) context.state = { data: {}, version: 0 };
+    //   // context.state.data.reactHistory = reactSteps;
+    //   // context.state.data.status = 'max_steps';
+    //   // context.state.version = (context.state.version || 0) + 1;
+    //
+    // Call saveStateIfModified, its behavior depends on the configured strategy.
     await this.deps.stateManager.saveStateIfModified(threadId);
+
     return { response: { role: MessageRole.ASSISTANT, content: finalResponseText, responseId: `react-maxstep-${Date.now()}` }, metadata: { traceId, llmMetadata: aggregatedMetadata } };
   }
 }
@@ -308,7 +359,13 @@ export class ReActAgent implements IAgentCore {
         *   Records the tool's output as the "Observation".
         *   Repeats the loop with the new observation.
     *   Handles reaching max steps.
-    *   Saves history/state.
+    *   **State and History Persistence:**
+        *   **`AgentState` (Custom Agent Data):**
+            *   The example `ReActAgent` doesn't deeply manage its own `AgentState` (e.g., it doesn't try to save the `reactSteps` array into `context.state.data` for persistence across calls).
+            *   If it *did* need to persist such custom state:
+                *   With **`'explicit'` strategy (default):** The agent *must* construct an `AgentState` object (e.g., `{ data: { myCustomReActData: ... }, version: ... }`) and explicitly call `await this.deps.stateManager.setAgentState(threadId, newState);`. The `saveStateIfModified()` calls in the example would be no-ops for `AgentState`.
+                *   With **`'implicit'` strategy:** The agent would directly modify `context.state.data` (after ensuring `context.state` itself is not null). For instance, `context.state.data.reactHistory = reactSteps; context.state.version++;`. Then, the `await this.deps.stateManager.saveStateIfModified(threadId);` calls at the end of the ReAct paths would trigger the `StateManager` to compare the mutated `context.state` with its initial snapshot and save if different.
+        *   **Conversation History:** User queries and final assistant responses should be saved using `this.deps.conversationManager.addMessages(...)`. The example has TODO comments for this.
     *   Returns the final response.
 4.  **Custom Logic:** Note the placeholders/examples for `createReActPrompt` and `parseReActOutput`. A robust implementation would likely involve more sophisticated prompt engineering and parsing, potentially within custom `PromptManager` and `OutputParser` classes if the framework allows injecting those (or handled internally within the agent).
 
@@ -354,24 +411,28 @@ const ArtChatbot: React.FC = () => {
       try {
         const AgentCoreClass = selectedAgent === 'react' ? ReActAgent : PESAgent;
 
-        const config = {
-          storage: { type: 'indexedDB', dbName: `artWebChatHistory-${selectedAgent}` }, // Separate DB per agent? Or shared?
-+          providers: { // New ProviderManager configuration
-+            availableProviders: [
-+              {
-+                name: 'openai', // Identifier for this provider setup
-+                adapter: OpenAIAdapter, // Pass the adapter CLASS
-+                // Default options (like model) could be set here, but API keys
-+                // are better handled at runtime via RuntimeProviderConfig.
-+                // adapterOptions: { model: 'gpt-4o' }
-+              }
-+            ]
-+          },
-          agentCore: AgentCoreClass, // Dynamically set the agent core
+        // Assuming ArtInstanceConfig is imported from 'art-framework'
+        // and OpenAIAdapter, CalculatorTool, CurrentInfoTool are also imported.
+        const config: ArtInstanceConfig = { // Use ArtInstanceConfig type
+          storage: { type: 'indexedDB', dbName: `artWebChatHistory-${selectedAgent}` },
+          providers: {
+            availableProviders: [
+              {
+                name: 'openai',
+                adapter: OpenAIAdapter,
+              }
+            ]
+          },
+          agentCore: AgentCoreClass,
           tools: [
               new CalculatorTool(),
-              new CurrentInfoTool() // Include custom tool for both agents
-          ]
+              new CurrentInfoTool()
+          ],
+          // Add stateSavingStrategy to the config
+          // This is typically set once at app startup, not usually switched dynamically with the agent.
+          // For demonstration, we could tie it to a UI element or keep it fixed.
+          // Default is 'explicit' if not specified.
+          stateSavingStrategy: 'explicit', // Or 'implicit', or make this configurable
         };
 
         const instance = await createArtInstance(config);

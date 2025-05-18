@@ -1,5 +1,27 @@
 // src/types/index.ts
 import type { RuntimeProviderConfig } from './providers'; // Import for use within this file
+import type { IToolExecutor, IAgentCore } from '../core/interfaces'; // For ArtInstanceConfig
+import type { LogLevel } from '../utils/logger'; // For ArtInstanceConfig
+import type { StorageAdapter } from '../core/interfaces'; // For ArtInstanceConfig (storage property)
+// --- ART Error Types ---
+export {
+    ErrorCode,
+    ARTError,
+    UnknownProviderError,
+    LocalProviderConflictError,
+    LocalInstanceBusyError,
+    ApiQueueTimeoutError,
+    AdapterInstantiationError
+} from '../errors';
+
+// --- UI Socket Related Types ---
+export { LLMStreamSocket } from '../systems/ui/llm-stream-socket';
+export { TypedSocket } from '../systems/ui/typed-socket';
+export type { UnsubscribeFunction } from '../systems/ui/typed-socket';
+
+// --- Zod Schemas for Validation ---
+export { ArtStandardPromptSchema, ArtStandardMessageSchema } from './schemas';
+
 
 // Re-export necessary types from submodules
 export type {
@@ -268,7 +290,11 @@ export interface ParsedToolCall {
  * Could include user preferences, accumulated knowledge, etc. (Less defined for v1.0)
  */
 export interface AgentState {
-  /** A flexible object to store persistent, non-configuration data associated with a thread or user (e.g., preferences, summaries, intermediate results). Structure is application-defined. */
+  /** The primary data payload of the agent's state. Structure is application-defined. */
+  data: any;
+  /** An optional version number for the agent's state, useful for migrations or tracking changes. */
+  version?: number;
+  /** Allows for other arbitrary properties to be stored in the agent's state. */
   [key: string]: any;
 }
 
@@ -559,3 +585,56 @@ export interface ObservationFilter {
 
 // Removed duplicate TypedSocket interface definition.
 // The primary definition is in src/core/interfaces.ts
+
+/**
+ * Defines the strategy for saving AgentState.
+ * - 'explicit': AgentState is only saved when `StateManager.setAgentState()` is explicitly called by the agent.
+ *               `StateManager.saveStateIfModified()` will be a no-op for AgentState persistence.
+ * - 'implicit': AgentState is loaded by `StateManager.loadThreadContext()`, and if modified by the agent,
+ *               `StateManager.saveStateIfModified()` will attempt to automatically persist these changes
+ *               by comparing the current state with a snapshot taken at load time.
+ *               `StateManager.setAgentState()` will still work for explicit saves.
+ */
+export type StateSavingStrategy = 'explicit' | 'implicit';
+
+// Explicitly import ProviderManagerConfig here for ArtInstanceConfig
+import type { ProviderManagerConfig as PMConfig } from './providers';
+
+/**
+ * Configuration for creating an ART instance.
+ */
+export interface ArtInstanceConfig {
+  /**
+   * Configuration for the storage adapter.
+   * Can be a pre-configured `StorageAdapter` instance,
+   * or an object specifying the type and options for a built-in adapter.
+   * Example: `{ type: 'indexedDB', dbName: 'MyArtDB' }`
+   */
+  storage: StorageAdapter | { type: 'memory' | 'indexedDB', dbName?: string, version?: number, objectStores?: any[] };
+  /** Configuration for the ProviderManager, defining available LLM provider adapters. */
+  providers: PMConfig; // Use the aliased import
+  /**
+   * The agent core implementation class to use.
+   * Defaults to `PESAgent` if not provided.
+   * Example: `MyCustomAgentClass`
+   */
+  agentCore?: new (dependencies: any) => IAgentCore; // Constructor type for an IAgentCore implementation
+  /** An optional array of tool executor instances to register at initialization. */
+  tools?: IToolExecutor[];
+  /**
+   * Defines the strategy for saving `AgentState`. Defaults to 'explicit'.
+   * - 'explicit': `AgentState` is only saved when `StateManager.setAgentState()` is explicitly called by the agent.
+   *               `StateManager.saveStateIfModified()` will be a no-op for `AgentState` persistence.
+   * - 'implicit': `AgentState` is loaded by `StateManager.loadThreadContext()`. If modified by the agent,
+   *               `StateManager.saveStateIfModified()` will attempt to automatically persist these changes.
+   *               `StateManager.setAgentState()` will still work for explicit saves in this mode.
+   */
+  stateSavingStrategy?: StateSavingStrategy;
+  /** Optional configuration for the framework's logger. */
+  logger?: {
+    /** Minimum log level to output. Defaults to 'info'. */
+    level?: LogLevel;
+  };
+  // Add other top-level configuration properties as needed, e.g.:
+  // defaultThreadConfig?: Partial<ThreadConfig>;
+}

@@ -6,7 +6,7 @@
 
 # Interface: ProviderAdapter
 
-Defined in: [core/interfaces.ts:151](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L151)
+Defined in: [src/core/interfaces.ts:151](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L151)
 
 Base interface for LLM Provider Adapters, extending the core ReasoningEngine.
 Implementations will handle provider-specific API calls, authentication, etc.
@@ -21,7 +21,7 @@ Implementations will handle provider-specific API calls, authentication, etc.
 
 > `readonly` **providerName**: `string`
 
-Defined in: [core/interfaces.ts:155](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L155)
+Defined in: [src/core/interfaces.ts:155](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L155)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -31,7 +31,7 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 > **call**(`prompt`, `options`): `Promise`\<`AsyncIterable`\<[`StreamEvent`](StreamEvent.md), `any`, `any`\>\>
 
-Defined in: [core/interfaces.ts:83](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L83)
+Defined in: [src/core/interfaces.ts:83](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L83)
 
 Executes a call to the configured Large Language Model (LLM).
 This method is typically implemented by a specific `ProviderAdapter`.
@@ -75,7 +75,7 @@ If a critical error occurs during the initial call setup or if the stream itself
 
 > `optional` **shutdown**(): `Promise`\<`void`\>
 
-Defined in: [core/interfaces.ts:158](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L158)
+Defined in: [src/core/interfaces.ts:158](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L158)
 
 Optional: Method for graceful shutdown
 

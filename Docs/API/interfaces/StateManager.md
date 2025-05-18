@@ -6,7 +6,7 @@
 
 # Interface: StateManager
 
-Defined in: [core/interfaces.ts:225](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L225)
+Defined in: [src/core/interfaces.ts:225](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L225)
 
 Interface for managing thread-specific configuration and state.
 
@@ -16,7 +16,7 @@ Interface for managing thread-specific configuration and state.
 
 > **getThreadConfigValue**\<`T`\>(`threadId`, `key`): `Promise`\<`undefined` \| `T`\>
 
-Defined in: [core/interfaces.ts:253](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L253)
+Defined in: [src/core/interfaces.ts:253](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L253)
 
 Retrieves a specific value from the thread's configuration (`ThreadConfig`).
 Supports accessing nested properties using dot notation (e.g., 'reasoning.model').
@@ -55,7 +55,7 @@ A promise resolving to the configuration value, or `undefined` if the key doesn'
 
 > **isToolEnabled**(`threadId`, `toolName`): `Promise`\<`boolean`\>
 
-Defined in: [core/interfaces.ts:243](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L243)
+Defined in: [src/core/interfaces.ts:243](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L243)
 
 Verifies if a specific tool is permitted for use within a given thread.
 Checks against the `enabledTools` array in the thread's loaded `ThreadConfig`.
@@ -86,7 +86,7 @@ A promise resolving to `true` if the tool is enabled for the thread, `false` oth
 
 > **loadThreadContext**(`threadId`, `userId`?): `Promise`\<[`ThreadContext`](ThreadContext.md)\>
 
-Defined in: [core/interfaces.ts:234](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L234)
+Defined in: [src/core/interfaces.ts:234](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L234)
 
 Loads the complete context (`ThreadConfig` and `AgentState`) for a specific thread.
 This is typically called at the beginning of an agent execution cycle.
@@ -121,7 +121,7 @@ If the context for the thread cannot be loaded (e.g., code `THREAD_NOT_FOUND`).
 
 > **saveStateIfModified**(`threadId`): `Promise`\<`void`\>
 
-Defined in: [core/interfaces.ts:261](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L261)
+Defined in: [src/core/interfaces.ts:261](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L261)
 
 Persists the `AgentState` for the thread, but only if it has been marked as modified during the current execution cycle.
 This prevents unnecessary writes to the storage layer.
@@ -142,11 +142,48 @@ A promise that resolves when the save operation is complete (or skipped).
 
 ***
 
+### setAgentState()
+
+> **setAgentState**(`threadId`, `state`): `Promise`\<`void`\>
+
+Defined in: [src/core/interfaces.ts:282](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L282)
+
+Sets or updates the AgentState for a specific thread.
+This method allows an agent to explicitly persist its internal state.
+It requires that a ThreadConfig already exists for the thread, which is typically
+ensured by the application calling setThreadConfig() prior to agent execution.
+
+#### Parameters
+
+##### threadId
+
+`string`
+
+The unique identifier of the thread.
+
+##### state
+
+[`AgentState`](AgentState.md)
+
+The AgentState object to save.
+
+#### Returns
+
+`Promise`\<`void`\>
+
+A promise that resolves when the state is saved.
+
+#### Throws
+
+If no ThreadConfig exists for the threadId, or if the repository fails.
+
+***
+
 ### setThreadConfig()
 
 > **setThreadConfig**(`threadId`, `config`): `Promise`\<`void`\>
 
-Defined in: [core/interfaces.ts:270](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L270)
+Defined in: [src/core/interfaces.ts:270](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L270)
 
 Sets or completely replaces the configuration (`ThreadConfig`) for a specific thread.
 Use with caution, as this overwrites the existing configuration. Consider methods for partial updates if needed.

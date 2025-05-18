@@ -37,6 +37,9 @@ export { AnthropicAdapter } from './adapters/reasoning/anthropic';
 export { OpenRouterAdapter } from './adapters/reasoning/openrouter';
 /** Adapter for DeepSeek models. */
 export { DeepSeekAdapter } from './adapters/reasoning/deepseek';
+/** Adapter for Ollama models. */
+export { OllamaAdapter } from './adapters/reasoning/ollama';
+export type { OllamaAdapterOptions } from './adapters/reasoning/ollama';
 
 // --- Built-in Tools (Implementations of `IToolExecutor`) ---
 /** A basic tool for evaluating mathematical expressions. */
@@ -46,6 +49,7 @@ export { CalculatorTool } from './tools/CalculatorTool';
 // --- Core Types & Interfaces ---
 /** Export all core data structures and type definitions. @see {@link ./types/index.ts} */
 export * from './types';
+export type { ArtInstanceConfig } from './types'; // Explicit export for clarity
 /** Export all core system interfaces. @see {@link ./core/interfaces.ts} */
 export * from './core/interfaces';
 // Explicitly export Provider types from their source file
@@ -65,4 +69,4 @@ export { generateUUID } from './utils/uuid';
 
 // --- Framework Version ---
 /** The current version of the ART Framework package. */
-export const VERSION = '0.2.4';
+export const VERSION = '0.2.7';

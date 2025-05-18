@@ -6,7 +6,7 @@
 
 # Interface: OutputParser
 
-Defined in: [core/interfaces.ts:123](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L123)
+Defined in: [src/core/interfaces.ts:123](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L123)
 
 Interface for parsing structured output from LLM responses.
 
@@ -16,7 +16,7 @@ Interface for parsing structured output from LLM responses.
 
 > **parsePlanningOutput**(`output`): `Promise`\<\{ `intent`: `string`; `plan`: `string`; `toolCalls`: [`ParsedToolCall`](ParsedToolCall.md)[]; \}\>
 
-Defined in: [core/interfaces.ts:131](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L131)
+Defined in: [src/core/interfaces.ts:131](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L131)
 
 Parses the raw string output from the planning LLM call to extract structured information.
 Implementations should be robust to variations in LLM output formatting.
@@ -45,7 +45,7 @@ If the output cannot be parsed into the expected structure (typically code `OUTP
 
 > **parseSynthesisOutput**(`output`): `Promise`\<`string`\>
 
-Defined in: [core/interfaces.ts:144](https://github.com/hashangit/ART/blob/d99cb328093f6dec701b3289d82d5abbf64a3736/src/core/interfaces.ts#L144)
+Defined in: [src/core/interfaces.ts:144](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L144)
 
 Parses the raw string output from the synthesis LLM call to extract the final, user-facing response content.
 This might involve removing extraneous tags or formatting.
