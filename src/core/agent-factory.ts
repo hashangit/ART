@@ -236,6 +236,7 @@ export class AgentFactory {
         }
 
         // Pass dependencies to the agent constructor
+        // This object's structure should align with what the Agent Core implementation expects (e.g., PESAgentDependencies)
         const dependencies = {
             stateManager: this.stateManager,
             conversationManager: this.conversationManager,
@@ -246,6 +247,7 @@ export class AgentFactory {
             observationManager: this.observationManager,
             toolSystem: this.toolSystem,
             uiSystem: this.uiSystem!, // Include the UI System (non-null assertion)
+            instanceDefaultCustomSystemPrompt: this.config.defaultSystemPrompt, // Pass instance-level default system prompt from ArtInstanceConfig
             // Note: providerAdapter is used by reasoningEngine, not directly by agent core usually
         };
 

@@ -35,8 +35,12 @@ When `PESAgent.process(props: AgentProps)` is called, it orchestrates the follow
 -->
 
 1.  **Stage 1: Initiation & Configuration Loading**
-    *   Loads the `ThreadContext` (which includes `ThreadConfig` and `AgentState`) for the current `props.threadId` using the injected `StateManager`. This provides thread-specific settings like enabled tools, LLM provider preferences for the thread, history limits, and any persistent agent state.
-    *   Retrieves the `systemPrompt` from the `ThreadConfig` or falls back to an internal default system prompt (`DEFAULT_PES_SYSTEM_PROMPT`).
+    *   Loads the `ThreadContext` (which includes `ThreadConfig` and `AgentState`) for the current `props.threadId` using the injected `StateManager`.
+    *   **Resolves the System Prompt**: The `PESAgent` determines the final system prompt by checking the following sources in order of precedence. The first custom prompt found is appended to the agent's internal base prompt (`DEFAULT_PES_SYSTEM_PROMPT`):
+        1.  **Call-Level**: `props.options.systemPrompt` (from the current `agent.process()` call).
+        2.  **Thread-Level**: `ThreadConfig.systemPrompt` (retrieved via `StateManager.getThreadConfigValue()`).
+        3.  **Instance-Level**: `ArtInstanceConfig.defaultSystemPrompt` (passed to `PESAgent` constructor via `AgentFactory` as `instanceDefaultCustomSystemPrompt`).
+        4.  **Agent Base Prompt**: If no custom prompt is found at any of the above levels, only the agent's internal `DEFAULT_PES_SYSTEM_PROMPT` is used.
     *   Determines the `RuntimeProviderConfig` to be used for LLM calls, prioritizing `props.options.providerConfig` if present, otherwise using `threadContext.config.providerConfig`.
 
 2.  **Stage 2: Planning Context Assembly**

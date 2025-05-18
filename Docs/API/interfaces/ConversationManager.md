@@ -6,7 +6,7 @@
 
 # Interface: ConversationManager
 
-Defined in: [src/core/interfaces.ts:292](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L292)
+Defined in: [src/core/interfaces.ts:292](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/core/interfaces.ts#L292)
 
 Interface for managing conversation history.
 
@@ -16,7 +16,7 @@ Interface for managing conversation history.
 
 > **addMessages**(`threadId`, `messages`): `Promise`\<`void`\>
 
-Defined in: [src/core/interfaces.ts:300](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L300)
+Defined in: [src/core/interfaces.ts:300](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/core/interfaces.ts#L300)
 
 Appends one or more `ConversationMessage` objects to the history of a specific thread.
 Typically called at the end of an execution cycle to save the user query and the final AI response.
@@ -47,7 +47,7 @@ A promise that resolves when the messages have been successfully added to storag
 
 > **getMessages**(`threadId`, `options`?): `Promise`\<[`ConversationMessage`](ConversationMessage.md)[]\>
 
-Defined in: [src/core/interfaces.ts:308](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L308)
+Defined in: [src/core/interfaces.ts:308](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/core/interfaces.ts#L308)
 
 Retrieves messages from a specific thread's history, usually in reverse chronological order.
 

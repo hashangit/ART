@@ -6,7 +6,7 @@
 
 # Class: PESAgent
 
-Defined in: [src/core/agents/pes-agent.ts:85](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/agents/pes-agent.ts#L85)
+Defined in: [src/core/agents/pes-agent.ts:91](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/core/agents/pes-agent.ts#L91)
 
 Implements the Plan-Execute-Synthesize (PES) agent orchestration logic.
 This agent follows a structured approach:
@@ -38,7 +38,7 @@ for the `ReasoningEngine`. It processes the `StreamEvent` output from the reason
 
 > **new PESAgent**(`dependencies`): `PESAgent`
 
-Defined in: [src/core/agents/pes-agent.ts:94](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/agents/pes-agent.ts#L94)
+Defined in: [src/core/agents/pes-agent.ts:106](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/core/agents/pes-agent.ts#L106)
 
 Creates an instance of the PESAgent.
 
@@ -60,13 +60,16 @@ An object containing instances of all required subsystems (managers, registries,
 
 > **process**(`props`): `Promise`\<[`AgentFinalResponse`](../interfaces/AgentFinalResponse.md)\>
 
-Defined in: [src/core/agents/pes-agent.ts:126](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/agents/pes-agent.ts#L126)
+Defined in: [src/core/agents/pes-agent.ts:142](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/core/agents/pes-agent.ts#L142)
 
 Executes the full Plan-Execute-Synthesize cycle for a given user query.
 
 **Workflow:**
-1.  **Initiation & Config:** Loads thread configuration and system prompt.
-2.  **Data Gathering:** Gathers history, available tools, system prompt, and query.
+1.  **Initiation & Config:** Loads thread configuration. Resolves the final system prompt based on a hierarchy:
+    Call-level (`AgentProps.options.systemPrompt`) > Thread-level (`ThreadConfig.systemPrompt`) >
+    Instance-level (`ArtInstanceConfig.defaultSystemPrompt` via constructor) > Agent's base prompt.
+    The resolved custom part is appended to the agent's base prompt.
+2.  **Data Gathering:** Gathers history, available tools, the resolved system prompt, and query.
 3.  **Planning Prompt Construction:** Directly constructs the `ArtStandardPrompt` object/array for planning.
 4.  **Planning LLM Call:** Sends the planning prompt object to the `reasoningEngine` (requesting streaming). Consumes the `StreamEvent` stream, buffers the output text, and handles potential errors.
 5.  **Planning Output Parsing:** Parses the buffered planning output text to extract intent, plan, and tool calls using `outputParser.parsePlanningOutput`.
