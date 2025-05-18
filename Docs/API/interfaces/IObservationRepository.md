@@ -6,7 +6,7 @@
 
 # Interface: IObservationRepository
 
-Defined in: [core/interfaces.ts:459](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/core/interfaces.ts#L459)
+Defined in: [src/core/interfaces.ts:459](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L459)
 
 Repository for managing Observations.
 
@@ -16,7 +16,7 @@ Repository for managing Observations.
 
 > **addObservation**(`observation`): `Promise`\<`void`\>
 
-Defined in: [core/interfaces.ts:460](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/core/interfaces.ts#L460)
+Defined in: [src/core/interfaces.ts:460](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L460)
 
 #### Parameters
 
@@ -34,7 +34,7 @@ Defined in: [core/interfaces.ts:460](https://github.com/hashangit/ART/blob/9aeff
 
 > **getObservations**(`threadId`, `filter`?): `Promise`\<[`Observation`](Observation.md)[]\>
 
-Defined in: [core/interfaces.ts:461](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/core/interfaces.ts#L461)
+Defined in: [src/core/interfaces.ts:461](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/interfaces.ts#L461)
 
 #### Parameters
 

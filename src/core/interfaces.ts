@@ -336,7 +336,7 @@ export interface ObservationManager {
 /**
  * Generic interface for a typed publish/subscribe socket.
  */
-export interface TypedSocket<DataType, FilterType = any> {
+export interface ITypedSocket<DataType, FilterType = any> {
   /**
    * Subscribes a callback function to receive data updates.
    * @param callback The function to call with new data.
@@ -375,13 +375,13 @@ export interface TypedSocket<DataType, FilterType = any> {
  * TypedSocket specifically for Observation data.
  * FilterType is ObservationType or array of ObservationType.
  */
-export interface ObservationSocket extends TypedSocket<Observation, ObservationType | ObservationType[]> {}
+export interface ObservationSocket extends ITypedSocket<Observation, ObservationType | ObservationType[]> {}
 
 /**
  * TypedSocket specifically for ConversationMessage data.
  * FilterType is MessageRole or array of MessageRole.
  */
-export interface ConversationSocket extends TypedSocket<ConversationMessage, MessageRole | MessageRole[]> {}
+export interface ConversationSocket extends ITypedSocket<ConversationMessage, MessageRole | MessageRole[]> {}
 
 // Import concrete socket classes for use in the UISystem interface return types
 import { ObservationSocket as ObservationSocketImpl } from '../systems/ui/observation-socket';

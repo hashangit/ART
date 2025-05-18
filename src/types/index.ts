@@ -3,6 +3,24 @@ import type { RuntimeProviderConfig } from './providers'; // Import for use with
 import type { IToolExecutor, IAgentCore } from '../core/interfaces'; // For ArtInstanceConfig
 import type { LogLevel } from '../utils/logger'; // For ArtInstanceConfig
 import type { StorageAdapter } from '../core/interfaces'; // For ArtInstanceConfig (storage property)
+// --- ART Error Types ---
+export {
+    ErrorCode,
+    ARTError,
+    UnknownProviderError,
+    LocalProviderConflictError,
+    LocalInstanceBusyError,
+    ApiQueueTimeoutError,
+    AdapterInstantiationError
+} from '../errors';
+
+// --- UI Socket Related Types ---
+export { LLMStreamSocket } from '../systems/ui/llm-stream-socket';
+export { TypedSocket } from '../systems/ui/typed-socket';
+export type { UnsubscribeFunction } from '../systems/ui/typed-socket';
+
+// --- Zod Schemas for Validation ---
+export { ArtStandardPromptSchema, ArtStandardMessageSchema } from './schemas';
 
 
 // Re-export necessary types from submodules

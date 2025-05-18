@@ -8,7 +8,7 @@
 
 > **createArtInstance**(`config`): `Promise`\<[`ArtInstance`](../interfaces/ArtInstance.md)\>
 
-Defined in: [core/agent-factory.ts:292](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/core/agent-factory.ts#L292)
+Defined in: [src/core/agent-factory.ts:292](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/core/agent-factory.ts#L292)
 
 High-level factory function to create and initialize a complete ART framework instance.
 This simplifies the setup process by handling the instantiation and wiring of all

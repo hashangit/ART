@@ -8,7 +8,7 @@
 
 > **ArtStandardMessageRole** = `"system"` \| `"user"` \| `"assistant"` \| `"tool_request"` \| `"tool_result"` \| `"tool"`
 
-Defined in: [types/index.ts:429](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L429)
+Defined in: [src/types/index.ts:447](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L447)
 
 Defines the standard roles for messages within the `ArtStandardPrompt` format.
 These roles are chosen for broad compatibility across major LLM providers (like OpenAI, Anthropic, Gemini).

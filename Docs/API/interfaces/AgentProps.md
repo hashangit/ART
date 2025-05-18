@@ -6,7 +6,7 @@
 
 # Interface: AgentProps
 
-Defined in: [types/index.ts:296](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L296)
+Defined in: [src/types/index.ts:314](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L314)
 
 Properties required to initiate an agent processing cycle.
 
@@ -16,7 +16,7 @@ Properties required to initiate an agent processing cycle.
 
 > `optional` **options**: [`AgentOptions`](AgentOptions.md)
 
-Defined in: [types/index.ts:308](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L308)
+Defined in: [src/types/index.ts:326](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L326)
 
 Optional runtime options that can override default behaviors for this specific `process` call.
 
@@ -26,7 +26,7 @@ Optional runtime options that can override default behaviors for this specific `
 
 > **query**: `string`
 
-Defined in: [types/index.ts:298](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L298)
+Defined in: [src/types/index.ts:316](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L316)
 
 The user's input query or request to the agent.
 
@@ -36,7 +36,7 @@ The user's input query or request to the agent.
 
 > `optional` **sessionId**: `string`
 
-Defined in: [types/index.ts:302](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L302)
+Defined in: [src/types/index.ts:320](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L320)
 
 An optional identifier for the specific UI session, useful for targeting UI updates.
 
@@ -46,7 +46,7 @@ An optional identifier for the specific UI session, useful for targeting UI upda
 
 > **threadId**: `string`
 
-Defined in: [types/index.ts:300](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L300)
+Defined in: [src/types/index.ts:318](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L318)
 
 The mandatory identifier for the conversation thread. All context is scoped to this ID.
 
@@ -56,7 +56,7 @@ The mandatory identifier for the conversation thread. All context is scoped to t
 
 > `optional` **traceId**: `string`
 
-Defined in: [types/index.ts:306](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L306)
+Defined in: [src/types/index.ts:324](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L324)
 
 An optional identifier used for tracing a request across multiple systems or services.
 
@@ -66,6 +66,6 @@ An optional identifier used for tracing a request across multiple systems or ser
 
 > `optional` **userId**: `string`
 
-Defined in: [types/index.ts:304](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L304)
+Defined in: [src/types/index.ts:322](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L322)
 
 An optional identifier for the user interacting with the agent.

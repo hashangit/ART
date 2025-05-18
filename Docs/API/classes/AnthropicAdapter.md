@@ -6,7 +6,7 @@
 
 # Class: AnthropicAdapter
 
-Defined in: [adapters/reasoning/anthropic.ts:55](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/adapters/reasoning/anthropic.ts#L55)
+Defined in: [src/adapters/reasoning/anthropic.ts:55](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/adapters/reasoning/anthropic.ts#L55)
 
 Implements the `ProviderAdapter` interface for interacting with Anthropic's
 Messages API (Claude models) using the official SDK.
@@ -25,7 +25,7 @@ Handles formatting requests, parsing responses, streaming, and tool use.
 
 > **new AnthropicAdapter**(`options`): `AnthropicAdapter`
 
-Defined in: [adapters/reasoning/anthropic.ts:67](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/adapters/reasoning/anthropic.ts#L67)
+Defined in: [src/adapters/reasoning/anthropic.ts:67](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/adapters/reasoning/anthropic.ts#L67)
 
 Creates an instance of the AnthropicAdapter.
 
@@ -51,7 +51,7 @@ If the API key is missing.
 
 > `readonly` **providerName**: `"anthropic"` = `'anthropic'`
 
-Defined in: [adapters/reasoning/anthropic.ts:56](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/adapters/reasoning/anthropic.ts#L56)
+Defined in: [src/adapters/reasoning/anthropic.ts:56](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/adapters/reasoning/anthropic.ts#L56)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -65,7 +65,7 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 > **call**(`prompt`, `options`): `Promise`\<`AsyncIterable`\<[`StreamEvent`](../interfaces/StreamEvent.md), `any`, `any`\>\>
 
-Defined in: [adapters/reasoning/anthropic.ts:94](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/adapters/reasoning/anthropic.ts#L94)
+Defined in: [src/adapters/reasoning/anthropic.ts:94](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/adapters/reasoning/anthropic.ts#L94)
 
 Sends a request to the Anthropic Messages API.
 Translates `ArtStandardPrompt` to the Anthropic format and handles streaming and tool use.

@@ -6,7 +6,7 @@
 
 # Interface: ConversationMessage
 
-Defined in: [types/index.ts:30](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L30)
+Defined in: [src/types/index.ts:48](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L48)
 
 Represents a single message within a conversation thread.
 
@@ -16,7 +16,7 @@ Represents a single message within a conversation thread.
 
 > **content**: `string`
 
-Defined in: [types/index.ts:38](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L38)
+Defined in: [src/types/index.ts:56](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L56)
 
 The textual content of the message.
 
@@ -26,7 +26,7 @@ The textual content of the message.
 
 > **messageId**: `string`
 
-Defined in: [types/index.ts:32](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L32)
+Defined in: [src/types/index.ts:50](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L50)
 
 A unique identifier for this specific message.
 
@@ -36,7 +36,7 @@ A unique identifier for this specific message.
 
 > `optional` **metadata**: `Record`\<`string`, `any`\>
 
-Defined in: [types/index.ts:42](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L42)
+Defined in: [src/types/index.ts:60](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L60)
 
 Optional metadata associated with the message (e.g., related observation IDs, tool call info, UI state).
 
@@ -46,7 +46,7 @@ Optional metadata associated with the message (e.g., related observation IDs, to
 
 > **role**: [`MessageRole`](../enumerations/MessageRole.md)
 
-Defined in: [types/index.ts:36](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L36)
+Defined in: [src/types/index.ts:54](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L54)
 
 The role of the sender (User, AI, System, or Tool).
 
@@ -56,7 +56,7 @@ The role of the sender (User, AI, System, or Tool).
 
 > **threadId**: `string`
 
-Defined in: [types/index.ts:34](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L34)
+Defined in: [src/types/index.ts:52](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L52)
 
 The identifier of the conversation thread this message belongs to.
 
@@ -66,6 +66,6 @@ The identifier of the conversation thread this message belongs to.
 
 > **timestamp**: `number`
 
-Defined in: [types/index.ts:40](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L40)
+Defined in: [src/types/index.ts:58](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L58)
 
 A Unix timestamp (in milliseconds) indicating when the message was created.

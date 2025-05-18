@@ -6,7 +6,7 @@
 
 # Interface: ThreadConfig
 
-Defined in: [types/index.ts:260](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L260)
+Defined in: [src/types/index.ts:278](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L278)
 
 Configuration specific to a conversation thread.
 
@@ -16,7 +16,7 @@ Configuration specific to a conversation thread.
 
 > **enabledTools**: `string`[]
 
-Defined in: [types/index.ts:264](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L264)
+Defined in: [src/types/index.ts:282](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L282)
 
 An array of tool names (matching `ToolSchema.name`) that are permitted for use within this thread.
 
@@ -26,7 +26,7 @@ An array of tool names (matching `ToolSchema.name`) that are permitted for use w
 
 > **historyLimit**: `number`
 
-Defined in: [types/index.ts:266](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L266)
+Defined in: [src/types/index.ts:284](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L284)
 
 The maximum number of past messages (`ConversationMessage` objects) to retrieve for context.
 
@@ -36,6 +36,6 @@ The maximum number of past messages (`ConversationMessage` objects) to retrieve 
 
 > **providerConfig**: [`RuntimeProviderConfig`](RuntimeProviderConfig.md)
 
-Defined in: [types/index.ts:262](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/index.ts#L262)
+Defined in: [src/types/index.ts:280](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/index.ts#L280)
 
 Default provider configuration for this thread.

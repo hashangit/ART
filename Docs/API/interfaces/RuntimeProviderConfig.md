@@ -6,7 +6,7 @@
 
 # Interface: RuntimeProviderConfig
 
-Defined in: [types/providers.ts:21](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/providers.ts#L21)
+Defined in: [src/types/providers.ts:21](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/providers.ts#L21)
 
 Configuration passed AT RUNTIME for a specific LLM call
 
@@ -16,7 +16,7 @@ Configuration passed AT RUNTIME for a specific LLM call
 
 > **adapterOptions**: `any`
 
-Defined in: [types/providers.ts:24](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/providers.ts#L24)
+Defined in: [src/types/providers.ts:24](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/providers.ts#L24)
 
 ***
 
@@ -24,7 +24,7 @@ Defined in: [types/providers.ts:24](https://github.com/hashangit/ART/blob/9aeffd
 
 > **modelId**: `string`
 
-Defined in: [types/providers.ts:23](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/providers.ts#L23)
+Defined in: [src/types/providers.ts:23](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/providers.ts#L23)
 
 ***
 
@@ -32,4 +32,4 @@ Defined in: [types/providers.ts:23](https://github.com/hashangit/ART/blob/9aeffd
 
 > **providerName**: `string`
 
-Defined in: [types/providers.ts:22](https://github.com/hashangit/ART/blob/9aeffde50e4be3211a0a8aa9df0277bb227606b0/src/types/providers.ts#L22)
+Defined in: [src/types/providers.ts:22](https://github.com/hashangit/ART/blob/13d06b82b833201787abcae252aaec8212ec73f7/src/types/providers.ts#L22)
