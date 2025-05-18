@@ -69,4 +69,4 @@ export { generateUUID } from './utils/uuid';
 
 // --- Framework Version ---
 /** The current version of the ART Framework package. */
-export const VERSION = '0.2.7';
+export const VERSION = '0.2.8';
