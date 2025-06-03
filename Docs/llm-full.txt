@@ -1,0 +1,703 @@
+# ART (Agent-Reasoning-Tooling) Framework - Comprehensive Documentation
+
+This document provides a highly detailed overview of the ART (Agent Runtime) Framework, a comprehensive TypeScript library designed to simplify the development of sophisticated AI agents. It covers the framework's architecture, core components, key concepts, API reference, and practical usage examples.
+
+## 1. Introduction to ART Framework
+
+The ART Framework is a modular, extensible, and robust TypeScript library for building advanced AI agents. It aims to address common challenges in AI agent development by offering:
+
+- **Flexible Orchestration:** Decouples the agent's orchestration logic from its core functionalities (reasoning, tools, context), allowing custom agent core implementations.
+- **Structured Yet Adaptable:** Provides patterns like Plan-Execute-Synthesize (`PESAgent`) while allowing diverse agent architectures.
+- **Modularity:** Decoupled systems for reasoning, context management, tool usage, observation, and UI communication.
+- **Provider Agnosticism:** Seamlessly switch between different LLM providers (OpenAI, Anthropic, Gemini, Ollama, etc.) via a flexible `ProviderManager` and adapter system.
+- **Standardized Primitives:** Core abstractions like `ArtStandardPrompt` for LLM interactions and `StreamEvent` for real-time responses.
+- **Robust Tool Integration:** A powerful `ToolSystem` and `ToolRegistry` for defining, registering, and executing custom capabilities.
+- **Configurable State Management:** Built-in support for managing conversation history and agent state with explicit or implicit saving strategies.
+- **Comprehensive Observability:** A dedicated `ObservationSystem` to track key events and data points for debugging and analysis.
+- **Developer-Friendly API:** Intuitive design with clear interfaces and conventions.
+
+## 2. Core Philosophy & Design Principles
+
+- **Separation of Concerns:** Each component has a well-defined, single responsibility.
+- **Extensibility:** Interfaces are designed to be implemented and extended, allowing developers to plug in custom components.
+- **Developer Experience:** Focus on clear APIs, good documentation, and tools that make agent development faster and more reliable.
+- **Standardization:** Promote common patterns and data structures (like `ArtStandardPrompt`) to reduce boilerplate and improve interoperability.
+
+## 3. High-Level Architecture
+
+The ART Framework is composed of several interconnected subsystems:
+
+```mermaid
+flowchart TD
+
+%% Main Components
+
+User([User Input/External Triggers]) --> ArtInstance["ArtInstance\n(process method)"]
+
+%% Agent Core as the central orchestrator
+
+ArtInstance --> AgentCore["Agent Core (IAgentCore)\n(Swappable Component)\n(e.g., PESAgent)"]
+
+%% Major Subsystems
+
+subgraph ReasoningSystem ["Reasoning System"]
+
+ReasoningEngine["ReasoningEngine"]
+
+ProviderManager["ProviderManager"]
+
+ProviderAdapters["ProviderAdapters\n(OpenAI, Anthropic, Ollama)"]
+
+PromptManager["PromptManager\n(fragments/validation)"]
+
+OutputParser["OutputParser"]
+
+ExternalLLM["External LLM APIs"]
+
+ReasoningEngine --> ProviderManager
+
+ProviderManager --> ProviderAdapters
+
+ProviderAdapters <--> ExternalLLM
+
+PromptManager -.-> ReasoningEngine
+
+ReasoningEngine -.-> OutputParser
+
+end
+
+subgraph ToolSystem ["Tool System"]
+
+ToolSystemMain["ToolSystem"]
+
+ToolRegistry["ToolRegistry"]
+
+ToolExecutor["IToolExecutor\n(specific tools)"]
+
+ToolSystemMain --> ToolRegistry
+
+ToolSystemMain --> ToolExecutor
+
+end
+
+subgraph ContextSystem ["Context System"]
+
+StateManager["StateManager\n(ThreadConfig, AgentState)"]
+
+ConversationManager["ConversationManager\n(message history)"]
+
+ContextProvider["ContextProvider\n(future: RAG)"]
+
+StateRepository["StateRepository"]
+
+ConversationRepository["ConversationRepository"]
+
+StateManager --> StateRepository
+
+ConversationManager --> ConversationRepository
+
+ContextProvider -.-> AgentCore
+
+end
+
+subgraph ObservationSystem ["Observation System"]
+
+ObservationManager["ObservationManager"]
+
+ObservationRepository["ObservationRepository"]
+
+ObservationManager --> ObservationRepository
+
+end
+
+subgraph StorageSystem ["Storage System"]
+
+StorageAdapter["StorageAdapter\n(InMemory, IndexedDB, etc.)"]
+
+StateRepository --> StorageAdapter
+
+ConversationRepository --> StorageAdapter
+
+ObservationRepository --> StorageAdapter
+
+end
+
+subgraph UISystem ["UI System"]
+
+UISystemMain["UISystem"]
+
+LLMStreamSocket["LLMStreamSocket"]
+
+ObservationSocket["ObservationSocket"]
+
+ConversationSocket["ConversationSocket"]
+
+ExternalUI["External UI/Subscribers"]
+
+UISystemMain --> LLMStreamSocket
+UISystemMain --> ObservationSocket
+UISystemMain --> ConversationSocket
+
+LLMStreamSocket --> ExternalUI
+ObservationSocket --> ExternalUI
+ConversationSocket --> ExternalUI
+
+end
+
+%% Connections between Agent Core and Subsystems
+
+AgentCore --> ReasoningEngine
+AgentCore --> ToolSystemMain
+AgentCore --> StateManager
+AgentCore --> ConversationManager
+
+%% Cross-system connections
+
+ReasoningEngine --> LLMStreamSocket
+ToolSystemMain --> ObservationManager
+ToolSystemMain <--> StateManager
+ObservationManager --> ObservationSocket
+ConversationManager --> ConversationSocket
+AgentCore --> ObservationManager
+
+%% Key Data Flow Items
+
+ArtStandardPrompt["ArtStandardPrompt"] -.-> ReasoningEngine
+StreamEvent["StreamEvent"] -.-> LLMStreamSocket
+ToolResult["ToolResult"] -.-> AgentCore
+Observation["Observation"] -.-> ObservationManager
+ConversationMessage["ConversationMessage"] -.-> ConversationManager
+
+%% Configuration
+
+ArtInstanceConfig["ArtInstanceConfig"] -.-> ArtInstance
+
+%% Style
+
+classDef system fill:#f9f9f9,stroke:#999,stroke-width:1px
+classDef core fill:#ffebcd,stroke:#ff8c00,stroke-width:2px
+classDef component fill:#e6f7ff,stroke:#1890ff,stroke-width:1px
+classDef external fill:#f0f0f0,stroke:#d9d9d9,stroke-width:1px
+classDef dataitem fill:#f6ffed,stroke:#52c41a,stroke-width:1px,stroke-dasharray: 5 5
+
+class ReasoningSystem,ToolSystem,ContextSystem,ObservationSystem,StorageSystem,UISystem system
+class AgentCore core
+class ReasoningEngine,ProviderManager,ProviderAdapters,PromptManager,OutputParser,ToolSystemMain,ToolRegistry,ToolExecutor,StateManager,ConversationManager,ContextProvider,ObservationManager,UISystemMain,LLMStreamSocket,ObservationSocket,ConversationSocket,StateRepository,ConversationRepository,ObservationRepository,StorageAdapter component
+class User,ExternalLLM,ExternalUI external
+class ArtStandardPrompt,StreamEvent,ToolResult,Observation,ConversationMessage,ArtInstanceConfig dataitem
+```
+
+## 4. Detailed Subsystems and Their Roles
+
+### 4.1. Agent Core (`IAgentCore`)
+
+- **Role:** The central brain and orchestrator. It defines the high-level logic for processing user queries and coordinating other systems.
+- **Interface:** [`IAgentCore`](src/core/interfaces.ts:54)
+    - `process(props: AgentProps): Promise<AgentFinalResponse>`: Main entry point to run the agent's reasoning cycle.
+- **Default Implementation:** [`PESAgent`](src/core/agents/pes-agent.ts:91) (Plan-Execute-Synthesize Agent).
+    - **Workflow:**
+        1. **Initiation & Config:** Loads thread configuration using [`StateManager.loadThreadContext()`](src/systems/context/managers/StateManager.ts:57), resolves system prompt hierarchy (Call-level > Thread-level > Instance-level > Agent Base Prompt).
+        2. **Planning Context Assembly:** Fetches conversation history using [`ConversationManager.getMessages()`](src/systems/context/managers/ConversationManager.ts:66) and available tools using [`ToolRegistry.getAvailableTools()`](src/systems/tool/ToolRegistry.ts:64).
+        3. **Planning Prompt Construction & LLM Call:** Constructs [`ArtStandardPrompt`](src/types/index.ts:502) for planning, calls [`ReasoningEngine.call()`](src/systems/reasoning/ReasoningEngine.ts:38), consumes [`StreamEvent`](src/types/index.ts:138)s, and uses [`OutputParser.parsePlanningOutput()`](src/systems/reasoning/OutputParser.ts:50) to extract intent, plan, and tool calls. Records `INTENT`, `PLAN`, `TOOL_CALL` observations via [`ObservationManager.record()`](src/systems/observation/observation-manager.ts:34).
+        4. **Tool Execution:** If tool calls exist, passes them to [`ToolSystem.executeTools()`](src/systems/tool/ToolSystem.ts:52). Records `TOOL_EXECUTION` observations.
+        5. **Synthesis Prompt Construction & LLM Call:** Constructs [`ArtStandardPrompt`](src/types/index.ts:502) for synthesis (including tool results), calls [`ReasoningEngine.call()`](src/systems/reasoning/ReasoningEngine.ts:38), consumes [`StreamEvent`](src/types/index.ts:138)s to form the final response. Records `SYNTHESIS` observations.
+        6. **Finalization:** Saves final AI message to history using [`ConversationManager.addMessages()`](src/systems/context/managers/ConversationManager.ts:35), updates state (based on `StateSavingStrategy`) via [`StateManager.saveStateIfModified()`](src/systems/context/managers/StateManager.ts:135), records `FINAL_RESPONSE` observation, and returns [`AgentFinalResponse`](src/types/index.ts:357).
+
+### 4.2. Reasoning System
+
+- **Role:** Handles all aspects of interaction with Large Language Models (LLMs).
+- **Components:**
+    - [`ReasoningEngine`](src/systems/reasoning/ReasoningEngine.ts:17):
+        - **Interface:** [`ReasoningEngine`](src/core/interfaces.ts:68)
+        - **Implementation:** `ReasoningEngineImpl`
+        - **Method:** `call(prompt: ArtStandardPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>>`
+        - Delegates LLM calls to `ProviderAdapter`s via `ProviderManager`. Ensures adapter release using `ManagedAdapterAccessor.release()` in a `finally` block.
+    - [`ProviderManager`](src/providers/ProviderManagerImpl.ts:35):
+        - **Interface:** [`IProviderManager`](src/types/providers.ts:34)
+        - **Implementation:** `ProviderManagerImpl`
+        - **Responsibilities:** Centralized adapter access, lifecycle management (creation, caching, eviction), configuration handling (`ProviderManagerConfig`, `RuntimeProviderConfig`), and constraint enforcement (concurrency limits, local provider singletons).
+        - **Key Method:** `getAdapter(config: RuntimeProviderConfig): Promise<ManagedAdapterAccessor>`: Manages `ManagedInstance` objects (containing `adapter`, `configSignature`, `state: 'idle' | 'active'`, `lastUsedTimestamp`, `idleTimer`) and a `requestQueue` for concurrent requests.
+    - [`ProviderAdapter`](src/core/interfaces.ts:151)s:
+        - **Interface:** [`ProviderAdapter`](src/core/interfaces.ts:151) (extends `ReasoningEngine`)
+        - **Responsibilities:**
+            - `providerName: string` (readonly): Unique identifier.
+            - `call(prompt: ArtStandardPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>>`: Translates `ArtStandardPrompt` to provider-specific API requests, makes API calls, and converts responses into `StreamEvent`s.
+            - `shutdown?(): Promise<void>`: Optional method for graceful cleanup, called by `ProviderManager` during eviction.
+        - **Built-in Adapters:**
+            - [`AnthropicAdapter`](src/adapters/reasoning/anthropic.ts:55): Uses `@anthropic-ai/sdk`. Handles `system` prompt, message merging (alternating `user`/`assistant` roles), `tool_use` blocks, and `tool_result` blocks.
+            - [`DeepSeekAdapter`](src/adapters/reasoning/deepseek.ts:87): Uses raw `fetch` with OpenAI-compatible API. **Streaming not yet implemented**. Translates `ArtStandardPrompt` to OpenAI format.
+            - [`GeminiAdapter`](src/adapters/reasoning/gemini.ts:33): Uses `@google/genai` SDK. `system` prompt content is prepended to the first `user` message. `tool_result` maps to `user` role with `functionResponse` part. Ensures conversation doesn't start with `model` role.
+            - [`OllamaAdapter`](src/adapters/reasoning/ollama.ts:67): Uses `openai` SDK to interact with Ollama's OpenAI-compatible API. Supports R1-style message merging for specific models (e.g., `deepseek-r1`). Full tool support (translation of `ToolSchema`, `tool_calls`, `tool_result`).
+            - [`OpenAIAdapter`](src/adapters/reasoning/openai.ts:91): Uses raw `fetch` (as of v0.2.7). Translates `ArtStandardPrompt` to OpenAI format. Basic aggregation for streamed `tool_calls` deltas.
+            - [`OpenRouterAdapter`](src/adapters/reasoning/openrouter.ts:93): Uses raw `fetch` with OpenAI-compatible API. **Streaming not yet implemented**. Supports `HTTP-Referer` and `X-Title` headers.
+    - [`PromptManager`](src/systems/reasoning/PromptManager.ts:25):
+        - **Interface:** [`PromptManager`](src/core/interfaces.ts:92)
+        - **Implementation:** `PromptManagerImpl`
+        - **Methods:**
+            - `getFragment(name: string, context?: Record<string, any>): string`: Retrieves reusable, named prompt fragments from an internal `PROMPT_FRAGMENTS` object with simple `{{key}}` substitution. Throws `PROMPT_FRAGMENT_NOT_FOUND` if not found.
+            - `validatePrompt(prompt: ArtStandardPrompt): ArtStandardPrompt`: Validates a constructed `ArtStandardPrompt` against `ArtStandardPromptSchema` using Zod. Throws `PROMPT_VALIDATION_FAILED` on failure.
+    - [`OutputParser`](src/systems/reasoning/OutputParser.ts:26):
+        - **Interface:** [`OutputParser`](src/core/interfaces.ts:123)
+        - **Implementation:** `OutputParserImpl`
+        - **Methods:**
+            - `parsePlanningOutput(output: string): Promise<{ intent?: string; plan?: string; toolCalls?: ParsedToolCall[]; thoughts?: string; }>`: Extracts structured information (Intent, Plan, Tool Calls) and content from `<think>...</think>` tags using [`XmlMatcher`](src/utils/xml-matcher.ts:25). Parses JSON arrays for tool calls and validates with Zod schema (`toolCallsSchema`).
+            - `parseSynthesisOutput(output: string): Promise<string>`: Cleans up raw synthesis output by trimming whitespace.
+
+### 4.3. Tool System
+
+- **Role:** Enables the agent to use external capabilities or "tools."
+- **Components:**
+    - [`IToolExecutor`](src/core/interfaces.ts:164):
+        - **Interface:** [`IToolExecutor`](src/core/interfaces.ts:164)
+        - **Properties:** `schema: ToolSchema` (readonly)
+        - **Method:** `execute(input: any, context: ExecutionContext): Promise<ToolResult>`: Contains the tool's actual logic.
+    - [`ToolSchema`](src/types/index.ts:233):
+        - **Interface:** [`ToolSchema`](src/types/index.ts:233)
+        - Defines tool metadata: `name`, `description`, `inputSchema` (JSON Schema), `outputSchema?`, `examples?`.
+    - [`ToolRegistry`](src/systems/tool/ToolRegistry.ts:10):
+        - **Interface:** [`ToolRegistry`](src/core/interfaces.ts:180)
+        - **Implementation:** `ToolRegistryImpl`
+        - **Methods:** `registerTool(executor: IToolExecutor)`, `getToolExecutor(toolName: string)`, `getAvailableTools(filter?: { enabledForThreadId?: string })`.
+        - Manages registration and retrieval of `IToolExecutor` instances. Can filter tools based on `ThreadConfig.enabledTools` by interacting with `StateManager`.
+    - [`ToolSystem`](src/systems/tool/ToolSystem.ts:13):
+        - **Interface:** [`ToolSystem`](src/core/interfaces.ts:206)
+        - **Implementation:** `ToolSystemImpl`
+        - **Method:** `executeTools(toolCalls: ParsedToolCall[], threadId: string, traceId?: string): Promise<ToolResult[]>`
+        - Orchestrates tool execution: verifies enablement via [`StateManager.isToolEnabled()`](src/systems/context/managers/StateManager.ts:95), retrieves executor from `ToolRegistry`, validates inputs using [`validateJsonSchema()`](src/utils/validation.ts:23), executes tool, and records `TOOL_EXECUTION` observations via [`ObservationManager.record()`](src/systems/observation/observation-manager.ts:34). Executes calls sequentially.
+- **Built-in Tool:** [`CalculatorTool`](src/tools/CalculatorTool.ts:62): Safely evaluates mathematical expressions using `mathjs` in a sandboxed environment. Supports `ans` variable (stores last result per `threadId`) for chained calculations.
+
+### 4.4. Context System
+
+- **Role:** Manages all contextual information necessary for the agent's operation within a conversation thread.
+- **Components:**
+    - [`StateManager`](src/systems/context/managers/StateManager.ts:34):
+        - **Interface:** [`StateManager`](src/core/interfaces.ts:225)
+        - **Implementation:** `StateManagerImpl`
+        - **Methods:** `loadThreadContext(threadId, userId?)`, `isToolEnabled(threadId, toolName)`, `getThreadConfigValue(threadId, key)`, `saveStateIfModified(threadId)`, `setAgentState(threadId, state)`, `setThreadConfig(threadId, config)`.
+        - Manages [`ThreadConfig`](src/types/index.ts:278) and [`AgentState`](src/types/index.ts:294). Its behavior is influenced by `StateSavingStrategy`. Uses `deepClone` for caching in `implicit` mode.
+    - [`ConversationManager`](src/systems/context/managers/ConversationManager.ts:10):
+        - **Interface:** [`ConversationManager`](src/core/interfaces.ts:292)
+        - **Implementation:** `ConversationManagerImpl`
+        - **Methods:** `addMessages(threadId, messages)`, `getMessages(threadId, options?)`.
+        - Manages the history of [`ConversationMessage`](src/types/index.ts:48)s. Notifies `ConversationSocket` on new messages.
+    - `ContextProvider`:
+        - **Source:** [`src/systems/context/ContextProvider.ts`](src/systems/context/ContextProvider.ts:17)
+        - **Role:** Placeholder for future Retrieval-Augmented Generation (RAG) capabilities. Currently returns empty context and logs a warning.
+    - Repositories:
+        - [`IStateRepository`](src/core/interfaces.ts:465): For `ThreadContext` (config and state). Implemented by [`StateRepository`](src/systems/context/repositories/StateRepository.ts:15). Stores `ThreadContext` as `StoredThreadContext` (adds `id` field) and removes it on retrieval.
+        - [`IConversationRepository`](src/core/interfaces.ts:452): For `ConversationMessage`s. Implemented by [`ConversationRepository`](src/systems/context/repositories/ConversationRepository.ts:14). Stores `ConversationMessage` as `StoredConversationMessage` (adds `id` field) and removes it on retrieval. Performs client-side sorting and filtering by timestamp.
+        - [`IObservationRepository`](src/core/interfaces.ts:459): For `Observation`s. Implemented by [`ObservationRepository`](src/systems/context/repositories/ObservationRepository.ts:14). Stores `Observation` directly using its `id`. Performs client-side sorting by timestamp and filtering by `ObservationType`.
+
+### 4.5. Observation System
+
+- **Role:** Provides observability into the agent's internal workings by recording significant events.
+- **Components:**
+    - [`ObservationManager`](src/systems/observation/observation-manager.ts:12):
+        - **Interface:** [`ObservationManager`](src/core/interfaces.ts:317)
+        - **Implementation:** `ObservationManagerImpl`
+        - **Methods:** `record(observationData)`, `getObservations(threadId, filter?)`.
+        - Central service for creating, persisting, and broadcasting [`Observation`](src/types/index.ts:114) records. Automatically generates unique `id` (using [`generateUUID()`](src/utils/uuid.ts:8)), `timestamp`, and a default `title`. Notifies `ObservationSocket`.
+    - [`Observation`](src/types/index.ts:114):
+        - **Interface:** [`Observation`](src/types/index.ts:114)
+        - Defines the structure of a single observation record: `id`, `threadId`, `traceId?`, `timestamp`, `type`, `title`, `content`, `metadata?`.
+    - [`ObservationType`](src/types/index.ts:66):
+        - **Enum:** [`ObservationType`](src/types/index.ts:66)
+        - Categorizes events: `INTENT`, `PLAN`, `THOUGHTS`, `TOOL_CALL`, `TOOL_EXECUTION`, `SYNTHESIS`, `ERROR`, `FINAL_RESPONSE`, `STATE_UPDATE`, `LLM_STREAM_START/METADATA/ERROR/END`.
+
+### 4.6. Storage System
+
+- **Role:** Provides a generic persistence layer for all framework data.
+- **Components:**
+    - [`StorageAdapter`](src/core/interfaces.ts:406):
+        - **Interface:** [`StorageAdapter`](src/core/interfaces.ts:406)
+        - **Methods:** `init?`, `get`, `set`, `delete`, `query`, `clearCollection?`, `clearAll?`.
+        - Abstracts data storage operations.
+    - Concrete Adapters:
+        - [`InMemoryStorageAdapter`](src/adapters/storage/inMemory.ts:16): Stores data in JavaScript Maps in memory. Non-persistent. Uses `JSON.parse(JSON.stringify(item))` for deep copies. Basic client-side filtering/limiting.
+        - [`IndexedDBStorageAdapter`](src/adapters/storage/indexedDB.ts:33): Uses browser's IndexedDB. Requires `init()` to be called. Configurable `dbName`, `dbVersion`, `objectStores`. Uses `structuredClone` for deep copies. Performs client-side filtering/sorting/limiting after `getAll()`.
+
+### 4.7. UI System
+
+- **Role:** Facilitates real-time communication from the agent's backend to user interfaces or other subscribed services.
+- **Components:**
+    - [`UISystem`](src/systems/ui/ui-system.ts:16):
+        - **Interface:** [`UISystem`](src/core/interfaces.ts:393)
+        - **Implementation:** `UISystemImpl`
+        - **Methods:** `getObservationSocket()`, `getConversationSocket()`, `getLLMStreamSocket()`.
+        - Central service that instantiates and provides access to specialized sockets.
+    - [`TypedSocket`](src/systems/ui/typed-socket.ts:18):
+        - **Class:** [`TypedSocket`](src/systems/ui/typed-socket.ts:18)
+        - Generic base class for publish/subscribe with filtering.
+        - **Methods:** `subscribe(callback, filter?, options?)`, `notify(data, options?, filterCheck?)`, `clearAllSubscriptions()`, `getHistory?()`. Uses `uuidv4()` for subscription IDs.
+    - Specialized Sockets (extend `TypedSocket`):
+        - [`ConversationSocket`](src/systems/ui/conversation-socket.ts:12): For broadcasting new [`ConversationMessage`](src/types/index.ts:48) objects. Can fetch history via `IConversationRepository`.
+        - [`LLMStreamSocket`](src/systems/ui/llm-stream-socket.ts:13): For broadcasting [`StreamEvent`](src/types/index.ts:138) objects from LLM calls. Does not implement `getHistory` as stream events are transient.
+        - [`ObservationSocket`](src/systems/ui/observation-socket.ts:12): For broadcasting [`Observation`](src/types/index.ts:114) objects. Can fetch history via `IObservationRepository`.
+
+## 5. Key Concepts in Detail
+
+### 5.1. `ArtInstanceConfig`
+
+- **Interface:** [`ArtInstanceConfig`](src/types/index.ts:610)
+- The single configuration object passed to [`createArtInstance`](src/core/agent-factory.ts:294) to initialize the entire framework.
+- **Properties:**
+    - `storage`: Defines the storage adapter (e.g., `{ type: 'memory' }` or `{ type: 'indexedDB', dbName: 'MyDb', objectStores: ['conversations'] }`). Can also be a pre-instantiated `StorageAdapter`.
+    - `providers`: [`ProviderManagerConfig`](src/types/providers.ts:13) for LLM providers.
+    - `agentCore?`: Custom [`IAgentCore`](src/core/interfaces.ts:54) implementation class (defaults to `PESAgent`).
+    - `tools?`: Array of [`IToolExecutor`](src/core/interfaces.ts:164) instances to register.
+    - `stateSavingStrategy?`: [`StateSavingStrategy`](src/types/index.ts:602) (`'explicit'` or `'implicit'`).
+    - `logger?`: `{ level?: LogLevel }` for logging verbosity.
+    - `defaultSystemPrompt?`: Instance-level custom system prompt.
+
+### 5.2. `ArtStandardPrompt` and `ArtStandardMessage`
+
+- **`ArtStandardPrompt`**: [`ArtStandardMessage`](src/types/index.ts:457)[] (Type Alias: [`ArtStandardPrompt`](src/types/index.ts:502)). The universal, provider-agnostic format for LLM prompts.
+- **`ArtStandardMessage`**:
+    - **Interface:** [`ArtStandardMessage`](src/types/index.ts:457)
+    - Represents a single message in the prompt.
+    - **Properties:**
+        - `role`: [`ArtStandardMessageRole`](src/types/index.ts:451) (Type Alias: `system`, `user`, `assistant`, `tool_request`, `tool_result`, `tool`).
+        - `content`: `string | object | null` (depends on role).
+        - `name?`: For `tool_result`, the tool name.
+        - `tool_calls?`: Array of objects detailing tools the `assistant` wants to call (`id`, `type: 'function'`, `function: { name, arguments: stringified JSON }`).
+        - `tool_call_id?`: For `tool_result`, links to the `tool_calls` ID.
+- **Validation:** [`ArtStandardMessageSchema`](src/types/schemas.ts:8) and [`ArtStandardPromptSchema`](src/types/schemas.ts:54) (Zod schemas) are used for validation.
+- **Purpose:** Abstract away provider-specific prompt formats, simplify agent logic, and ensure consistency.
+
+### 5.3. Streaming and `StreamEvent`s
+
+- **`StreamEvent`**:
+    - **Interface:** [`StreamEvent`](src/types/index.ts:138)
+    - Standardized event emitted from LLM streams.
+    - **Properties:**
+        - `type`: `'TOKEN'`, `'METADATA'`, `'ERROR'`, `'END'`.
+        - `data`: Content depends on `type`.
+        - `tokenType?`: More specific classification for `TOKEN` events (e.g., `LLM_THINKING`, `LLM_RESPONSE`, `AGENT_THOUGHT_LLM_RESPONSE`, `FINAL_SYNTHESIS_LLM_RESPONSE`).
+        - `threadId`, `traceId`, `sessionId?`.
+- **Benefits:** Real-time feedback, improved perceived performance, handling intermediate thoughts.
+- **UI Integration:** [`LLMStreamSocket`](src/systems/ui/llm-stream-socket.ts:13) broadcasts these events for real-time UI updates.
+
+### 5.4. System Prompt Hierarchy and Customization
+
+- The final system prompt is constructed by combining an **Agent Base Prompt** (internal to the agent, e.g., `PESAgent.defaultSystemPrompt` from [`src/core/agents/pes-agent.ts`](src/core/agents/pes-agent.ts:71)) with a **Custom Prompt Part**.
+- **Precedence (highest to lowest):**
+    1. **Call-Level:** `AgentProps.options.systemPrompt` (for a single `process()` call).
+    2. **Thread-Level:** `ThreadConfig.systemPrompt` (for an entire conversation thread, retrieved via [`StateManager.getThreadConfigValue()`](src/systems/context/managers/StateManager.ts:113)).
+    3. **Instance-Level:** `ArtInstanceConfig.defaultSystemPrompt` (default for the ART instance, passed to agent constructor).
+- **Concatenation:** `Agent Base Prompt + "\n\n" + Resolved Custom Prompt Part`.
+
+### 5.5. State Management (`StateSavingStrategy`)
+
+- **`StateSavingStrategy`**: Type Alias: [`StateSavingStrategy`](src/types/index.ts:602) (`"explicit"` | `"implicit"`).
+- Configured in `ArtInstanceConfig`.
+- **`'explicit'` (Default):** `AgentState` is only saved when [`StateManager.setAgentState()`](src/systems/context/managers/StateManager.ts:215) is explicitly called by agent logic. [`StateManager.saveStateIfModified()`](src/systems/context/managers/StateManager.ts:135) is a no-op for `AgentState` persistence.
+- **`'implicit'`:** [`StateManager.loadThreadContext()`](src/systems/context/managers/StateManager.ts:57) caches the state (deep clones it). If `AgentState` is modified, [`StateManager.saveStateIfModified()`](src/systems/context/managers/StateManager.ts:135) (called by `PESAgent` at end of cycle) automatically persists changes by comparing JSON snapshots. Explicit `setAgentState()` still works and updates the snapshot.
+
+## 6. Getting Started
+
+### 6.1. Installation
+
+- **Prerequisites:** Node.js (LTS version), npm or yarn.
+- **Command:** `npm install art-framework` or `yarn add art-framework`.
+
+### 6.2. Project Setup Recommendations
+
+- **Directory Structure:** Organize code logically (e.g., `src/agents/`, `src/tools/`, `src/config/art-config.ts`, `src/main.ts`).
+- **Centralized `ArtInstanceConfig`:** Define your main configuration in a dedicated file (e.g., `src/config/art-config.ts`).
+- **Secure API Key Management:**
+    - **NEVER hardcode API keys.**
+    - Use environment variables (`process.env.YOUR_API_KEY`) for local development (with `.env` files).
+    - Use dedicated secrets management services (AWS Secrets Manager, Google Cloud Secret Manager) for production.
+    - For client-side apps, proxy LLM calls through a secure backend server.
+- **TypeScript Configuration (`tsconfig.json`):** Essential for type checking and compilation.
+
+### 6.3. Quick Start: "Hello, Agent!"
+
+- **Steps:**
+    1. Import `createArtInstance`, `ArtInstanceConfig`, `AgentProps`, `LogLevel`, and a `ProviderAdapter` (e.g., `OpenAIAdapter` or a mock).
+    2. Define `ArtInstanceConfig` with `storage` (e.g., `{ type: 'memory' }`) and `providers`.
+    3. Call `createArtInstance(artConfig)`.
+    4. Call `art.process(agentProps)` with a `query`, `threadId`, and `options.providerConfig` (specifying `providerName`, `modelId`, `adapterOptions` like `apiKey`).
+- **Example:** [`Docs/getting-started/quick-start.md`](Docs/getting-started/quick-start.md)
+
+## 7. How-To Guides (Detailed)
+
+### 7.1. Configure an ART Instance ([`Docs/how-to/configure-art-instance.md`](Docs/how-to/configure-art-instance.md))
+
+- **Scenarios:**
+    - **Simple In-Memory Agent:** Uses [`InMemoryStorageAdapter`](src/adapters/storage/inMemory.ts:16) for testing/demos.
+    - **Persistent Web Agent:** Uses [`IndexedDBStorageAdapter`](src/adapters/storage/indexedDB.ts:33) for browser persistence and multiple LLM options.
+    - **Custom Agent Core:** Demonstrates specifying a custom `IAgentCore` implementation and explicit state saving.
+- **Key Configuration Points:** `storage` (`'memory'` or `'indexedDB'`), `providers.availableProviders` (defining `name`, `adapter`, `isLocal`), `RuntimeProviderConfig` (in `AgentProps.options` for `providerName`, `modelId`, `adapterOptions`), `tools`, `stateSavingStrategy`, `logger.level`.
+
+### 7.2. Configure System Prompts ([`Docs/how-to/configure-system-prompts.md`](Docs/how-to/configure-system-prompts.md))
+
+- Explains how to set custom system prompts at instance, thread, and call levels, leveraging the hierarchy.
+- **Mechanism:**
+    - Instance-level: `ArtInstanceConfig.defaultSystemPrompt`.
+    - Thread-level: `ThreadConfig.systemPrompt` (set via [`StateManager.setThreadConfig()`](src/systems/context/managers/StateManager.ts:193)).
+    - Call-level: `AgentProps.options.systemPrompt` (passed to `art.process()`).
+- The agent's base prompt is always included, and the highest precedence custom part is appended.
+
+### 7.3. Create a Custom Agent Core ([`Docs/how-to/create-custom-agent.md`](Docs/how-to/create-custom-agent.md))
+
+- Guide to implementing the [`IAgentCore`](src/core/interfaces.ts:54) interface for custom orchestration logic.
+- **Steps:**
+    1. Understand `IAgentCore`'s `process` method signature.
+    2. Define your agent's custom reasoning pattern (e.g., ReAct, specialized task flow).
+    3. Create a class implementing `IAgentCore`, accepting necessary ART subsystem dependencies in its constructor (e.g., `StateManager`, `ReasoningEngine`).
+    4. Implement the `process` method, handling context loading, prompt construction, LLM interaction, tool usage, state saving, and observation recording.
+    5. Configure `ArtInstanceConfig.agentCore` to use your custom agent class.
+
+### 7.4. Define and Use Tools ([`Docs/how-to/define-tools.md`](Docs/how-to/define-tools.md))
+
+- Guide to extending agent capabilities with custom tools.
+- **Steps:**
+    1. Understand [`IToolExecutor`](src/core/interfaces.ts:164) and [`ToolSchema`](src/types/index.ts:233).
+    2. Create a custom tool class implementing `IToolExecutor`.
+    3. Implement the `schema` property: define `name`, `description`, `inputSchema` (JSON Schema), `outputSchema?`, `examples?`.
+    4. Implement the `async execute(input, context)` method: contains tool's logic, returns `ToolResult` (`status`, `output`/`error`).
+    5. Register the tool: Add an instance to `ArtInstanceConfig.tools`.
+    6. (Optional) Enable the tool for specific threads via `ThreadConfig.enabledTools`.
+    7. Ensure agent's planning prompt informs LLM about the tool.
+
+### 7.5. Handle Streaming Events in a UI ([`Docs/how-to/handle-streaming-ui.md`](Docs/how-to/handle-streaming-ui.md))
+
+- Conceptual guide for client-side UI integration with ART's UI Sockets for real-time updates.
+- **Key Sockets:**
+    - [`LLMStreamSocket`](src/systems/ui/llm-stream-socket.ts:13): For `StreamEvent`s (token-by-token LLM responses).
+    - [`ObservationSocket`](src/systems/ui/observation-socket.ts:12): For `Observation` objects (agent's thought process, tool usage).
+    - [`ConversationSocket`](src/systems/ui/conversation-socket.ts:12): For new `ConversationMessage`s (chat history).
+- **Usage:** Obtain socket instances from `artInstance.uiSystem`, then use their `subscribe()` methods with callbacks and optional filters (`threadId`, event types).
+
+### 7.6. Manage Agent State (`StateSavingStrategy`) ([`Docs/how-to/manage-agent-state.md`](Docs/how-to/manage-agent-state.md))
+
+- Explains how `AgentState` persistence is controlled by `StateSavingStrategy` in `ArtInstanceConfig`.
+- **`'explicit'` (Default):** Requires manual calls to [`StateManager.setAgentState()`](src/systems/context/managers/StateManager.ts:215) to save state.
+- **`'implicit'`:** Automatically saves modified `AgentState` when [`StateManager.saveStateIfModified()`](src/systems/context/managers/StateManager.ts:135) is called (e.g., by `PESAgent` at end of cycle) by comparing snapshots.
+
+### 7.7. Manage Multiple LLM Providers ([`Docs/how-to/manage-multiple-llms.md`](Docs/how-to/manage-multiple-llms.md))
+
+- Guide to configuring and using multiple LLM providers simultaneously.
+- **Steps:**
+    1. Configure `ProviderManagerConfig.availableProviders` in `ArtInstanceConfig`, defining unique names, adapter classes, and `isLocal` flag for each provider setup.
+    2. Select a provider at runtime using `AgentProps.options.providerConfig` (specifying `providerName`, `modelId`, and `adapterOptions` like `apiKey`).
+    3. (Optional) Set a thread-level default provider in `ThreadConfig.providerConfig`.
+
+### 7.8. Use the `ans` Variable in `CalculatorTool` ([`Docs/how-to/use-calculator-ans.md`](Docs/how-to/use-calculator-ans.md))
+
+- Explains how the built-in [`CalculatorTool`](src/tools/CalculatorTool.ts:62) remembers the result of the last calculation within the same conversation thread as `ans`, enabling multi-step calculations.
+- `ans` is thread-scoped and overwritten by each successful calculation.
+
+### 7.9. Leverage `<think>` Tags for Agent Observability ([`Docs/how-to/leverage-think-tags.md`](Docs/how-to/leverage-think-tags.md))
+
+- How to instruct LLMs to output reasoning within `<think>...</think>` XML-like tags.
+- The [`OutputParser`](src/systems/reasoning/OutputParser.ts:26) extracts this content into a `thoughts` field, providing deeper insights into the LLM's reasoning for debugging and transparency.
+
+### 7.10. Use Prompt Fragments with `PromptManager` ([`Docs/how-to/use-prompt-fragments.md`](Docs/how-to/use-prompt-fragments.md))
+
+- Explains how [`PromptManager.getFragment()`](src/systems/reasoning/PromptManager.ts:38) provides reusable, named text pieces (fragments) with optional variable substitution.
+- These fragments can be embedded into the `content` of `ArtStandardMessage` objects during prompt construction by agent logic, promoting consistency and reducing redundancy.
+- [`PromptManager.validatePrompt()`](src/systems/reasoning/PromptManager.ts:65) can be used to validate the assembled `ArtStandardPrompt`.
+
+## 8. Examples (Detailed)
+
+### 8.1. Basic Chatbot ([`Docs/examples/basic-chatbot.md`](Docs/examples/basic-chatbot.md))
+
+- Demonstrates minimal setup for a simple conversational agent.
+- Uses [`InMemoryStorageAdapter`](src/adapters/storage/inMemory.ts:16) (non-persistent history) and can be configured with a mock or real LLM adapter.
+- Illustrates `ArtInstanceConfig`, `createArtInstance`, `AgentProps`, and basic `art.process()` interaction.
+
+### 8.2. Agent with Tools ([`Docs/examples/agent-with-tools.md`](Docs/examples/agent-with-tools.md))
+
+- Shows how to integrate and use tools (e.g., built-in [`CalculatorTool`](src/tools/CalculatorTool.ts:62)) with `PESAgent`.
+- **Key Concepts:** Tool registration in `ArtInstanceConfig.tools`, LLM prompting for tools, tool call detection by `OutputParser`, tool execution by `ToolSystem`, `ToolResult` handling, and synthesis with tool results.
+
+### 8.3. Multi-Provider Agent ([`Docs/examples/multi-provider-agent.md`](Docs/examples/multi-provider-agent.md))
+
+- Demonstrates configuring and dynamically using multiple LLM providers (e.g., OpenAI, Anthropic, Ollama) at runtime.
+- Highlights `ArtInstanceConfig.providers.availableProviders` and `AgentProps.options.providerConfig` for dynamic selection.
+
+### 8.4. Persistent Agent (using IndexedDB) ([`Docs/examples/persistent-agent.md`](Docs/examples/persistent-agent.md))
+
+- Shows how to configure an agent to use [`IndexedDBStorageAdapter`](src/adapters/storage/indexedDB.ts:33) for persisting conversation history and agent state across browser sessions.
+- Intended for browser environments. Demonstrates loading and saving history.
+
+## 9. Advanced Topics
+
+### 9.1. Debugging ART Applications ([`Docs/advanced/debugging-art-applications.md`](Docs/advanced/debugging-art-applications.md))
+
+- **Strategies:**
+    - **`Logger`:** Set `LogLevel.DEBUG` for detailed internal logs.
+    - **`ObservationSystem`:** Subscribe to [`ObservationSocket`](src/systems/ui/observation-socket.ts:12) or query [`ObservationManager.getObservations()`](src/systems/observation/observation-manager.ts:64) to inspect agent's audit trail (`INTENT`, `PLAN`, `TOOL_EXECUTION`, `ERROR`).
+    - **Stored Data:** Inspect `IndexedDB` (browser dev tools) for `conversations`, `observations`, `state`.
+    - **LLM Prompts/Responses:** Log full `ArtStandardPrompt` before sending, and raw LLM output after receiving. Isolate LLM calls for testing.
+    - **Tool Debugging:** Validate `ToolSchema`, log inside `execute()`, test tools in isolation.
+    - **TypeScript & Static Analysis:** Leverage type checking and linters.
+    - **Step-Through Debugging:** Use breakpoints in agent logic, parsers, tool system, and adapters.
+
+### 9.2. Performance Tuning ([`Docs/advanced/performance-tuning.md`](Docs/advanced/performance-tuning.md))
+
+- **LLM Interaction:** Model selection (latency vs. capability), always enable streaming for UX, concise/clear prompts, `max_tokens` limits, `ProviderManager` tuning (`maxParallelApiInstancesPerProvider`, `apiInstanceIdleTimeoutSeconds`).
+- **Storage Adapter:** Choose appropriate adapter (`InMemory` for speed, `IndexedDB` for browser persistence). Optimize `query()` for large datasets (e.g., using IndexedDB indexes).
+- **Agent Logic:** Minimize LLM calls, efficient context gathering (`historyLimit`), efficient tool execution, consider `StateSavingStrategy` overhead.
+- **Asynchronous Operations:** Ensure proper `async/await` usage to avoid blocking.
+- **Caching:** Implement application-level caching for tool results or frequently accessed data.
+- **Observability & Profiling:** Use `LogLevel.DEBUG` and profiling tools.
+- **Client-Side UI:** Efficiently render streamed tokens, debounce/throttle UI updates.
+
+### 9.3. Security Considerations ([`Docs/advanced/security-considerations.md`](Docs/advanced/security-considerations.md))
+
+- **API Key Management:** Never hardcode. Use environment variables, secrets management services, or backend proxies.
+- **Tool Security:** Strict `inputSchema` validation, principle of least privilege, sandboxing for code execution, output sanitization, `ThreadConfig.enabledTools` for access control.
+- **LLM Prompt Injection:** Clear system prompts, input filtering (limited), robust output parsing/validation, defense in depth, use models with built-in defenses.
+- **Data Privacy & Storage:** Be mindful of sensitive data in conversation history, agent state, and observations. Secure storage (encryption, access controls), retention policies, user data rights.
+- **UI Socket Communication:** Secure channels (WSS/HTTPS), authentication/authorization for subscriptions, input validation for control messages.
+- **Denial of Service (DoS) / Resource Exhaustion:** Implement rate limiting, quotas for LLM calls and tool execution, manage storage growth.
+- **Third-Party Dependencies:** Keep updated, audit for vulnerabilities.
+- **Secure Development Practices:** Follow secure coding, regular reviews, threat modeling.
+
+### 9.4. Understanding `ProviderManagerImpl` Internals ([`Docs/advanced/understanding-provider-manager.md`](Docs/advanced/understanding-provider-manager.md))
+
+- Deep dive into the internal mechanisms of `ProviderManager`:
+    - **Configuration Signature:** Unique identifier for adapter configurations.
+    - **Managed Instances:** Internal map storing active/idle adapter instances.
+    - **Request Queue:** Holds requests when concurrency limits are reached.
+- **Lifecycle:** Detailed explanation of adapter request, release, and eviction processes, including local provider constraints and API concurrency limits.
+- **Trade-offs:** Discusses design choices like caching by signature and release responsibility.
+
+## 10. API Reference (Comprehensive)
+
+The ART Framework provides a rich API, documented in detail under the `Docs/API/` directory and directly from source code comments.
+
+### 10.1. Enumerations
+
+- [`ErrorCode`](src/errors.ts:6): Standardized error codes for framework issues. Includes categories for Configuration, Storage, Reasoning, Tool, Agent Core, General, and Provider Manager errors.
+- [`LogLevel`](src/utils/logger.ts:4): Severity levels for the `Logger` (`DEBUG`, `INFO`, `WARN`, `ERROR`).
+- [`MessageRole`](src/types/index.ts:38): Role of a message sender in a conversation (`USER`, `AI`, `SYSTEM`, `TOOL`).
+- [`ModelCapability`](src/types/index.ts:99): Capabilities a model might possess (`TEXT`, `VISION`, `STREAMING`, `TOOL_USE`, `RAG`, `CODE`, `REASONING`).
+- [`ObservationType`](src/types/index.ts:66): Types of events recorded during agent execution (`INTENT`, `PLAN`, `THOUGHTS`, `TOOL_CALL`, `TOOL_EXECUTION`, `SYNTHESIS`, `ERROR`, `FINAL_RESPONSE`, `STATE_UPDATE`, `LLM_STREAM_START/METADATA/ERROR/END`).
+
+### 10.2. Classes
+
+- **Error Classes (extend [`ARTError`](src/errors.ts:53)):**
+    - [`AdapterInstantiationError`](src/errors.ts:107): Thrown when an adapter fails to instantiate.
+    - [`ApiQueueTimeoutError`](src/errors/errors.ts:100): Thrown when waiting for an API provider instance times out.
+    - [`ARTError`](src/errors.ts:53): Base custom error class for ART framework specific errors. Includes `code` and `originalError`.
+    - [`LocalInstanceBusyError`](src/errors.ts:93): Thrown when a local provider instance is already active.
+    - [`LocalProviderConflictError`](src/errors.ts:86): Thrown when attempting to activate a local provider while another is active.
+    - [`UnknownProviderError`](src/errors.ts:79): Thrown when a requested provider is not configured.
+- **Adapters:**
+    - [`AnthropicAdapter`](src/adapters/reasoning/anthropic.ts:55): Implements `ProviderAdapter` for Anthropic Messages API.
+    - [`DeepSeekAdapter`](src/adapters/reasoning/deepseek.ts:87): Implements `ProviderAdapter` for DeepSeek API (OpenAI-compatible).
+    - [`GeminiAdapter`](src/adapters/reasoning/gemini.ts:33): Implements `ProviderAdapter` for Google Gemini models.
+    - [`IndexedDBStorageAdapter`](src/adapters/storage/indexedDB.ts:33): Implements `StorageAdapter` for browser IndexedDB.
+    - [`InMemoryStorageAdapter`](src/adapters/storage/inMemory.ts:16): Implements `StorageAdapter` for in-memory storage.
+    - [`OllamaAdapter`](src/adapters/reasoning/ollama.ts:67): Implements `ProviderAdapter` for Ollama (OpenAI-compatible).
+    - [`OpenAIAdapter`](src/adapters/reasoning/openai.ts:91): Implements `ProviderAdapter` for OpenAI Chat Completions API.
+    - [`OpenRouterAdapter`](src/adapters/reasoning/openrouter.ts:93): Implements `ProviderAdapter` for OpenRouter API (OpenAI-compatible).
+- **Core Components:**
+    - [`CalculatorTool`](src/tools/CalculatorTool.ts:62): Implements `IToolExecutor` for mathematical expressions.
+    - [`LLMStreamSocket`](src/systems/ui/llm-stream-socket.ts:13): Extends `TypedSocket` for broadcasting `StreamEvent`s.
+    - [`Logger`](src/utils/logger.ts:29): Static class for console logging with configurable levels.
+    - [`PESAgent`](src/core/agents/pes-agent.ts:91): Implements `IAgentCore` for Plan-Execute-Synthesize logic.
+    - [`TypedSocket`](src/systems/ui/typed-socket.ts:18): Generic base class for publish/subscribe pattern.
+    - [`XmlMatcher`](src/utils/xml-matcher.ts:25): Utility class to find and extract content within XML-like tags from text streams.
+- **Other:**
+    - `AgentFactory` ([`src/core/agent-factory.ts`](src/core/agent-factory.ts:117)): Internal class responsible for instantiating and wiring all core ART components. Used by `createArtInstance`.
+    - `ProviderManagerImpl` ([`src/providers/ProviderManagerImpl.ts`](src/providers/ProviderManagerImpl.ts:35)): Implements `IProviderManager`.
+    - `ConversationManagerImpl` ([`src/systems/context/managers/ConversationManager.ts`](src/systems/context/managers/ConversationManager.ts:10)): Implements `ConversationManager`.
+    - `StateManagerImpl` ([`src/systems/context/managers/StateManager.ts`](src/systems/context/managers/StateManager.ts:34)): Implements `StateManager`.
+    - `ObservationManagerImpl` ([`src/systems/observation/observation-manager.ts`](src/systems/observation/observation-manager.ts:12)): Implements `ObservationManager`.
+    - `ToolRegistryImpl` ([`src/systems/tool/ToolRegistry.ts`](src/systems/tool/ToolRegistry.ts:10)): Implements `ToolRegistry`.
+    - `ToolSystemImpl` ([`src/systems/tool/ToolSystem.ts`](src/systems/tool/ToolSystem.ts:13)): Implements `ToolSystem`.
+    - `PromptManagerImpl` ([`src/systems/reasoning/PromptManager.ts`](src/systems/reasoning/PromptManager.ts:25)): Implements `PromptManager`.
+    - `ReasoningEngineImpl` ([`src/systems/reasoning/ReasoningEngine.ts`](src/systems/reasoning/ReasoningEngine.ts:17)): Implements `ReasoningEngine`.
+    - `OutputParserImpl` ([`src/systems/reasoning/OutputParser.ts`](src/systems/reasoning/OutputParser.ts:26)): Implements `OutputParser`.
+    - `UISystemImpl` ([`src/systems/ui/ui-system.ts`](src/systems/ui/ui-system.ts:16)): Implements `UISystem`.
+    - `ConversationRepository` ([`src/systems/context/repositories/ConversationRepository.ts`](src/systems/context/repositories/ConversationRepository.ts:14)): Implements `IConversationRepository`.
+    - `ObservationRepository` ([`src/systems/context/repositories/ObservationRepository.ts`](src/systems/context/repositories/ObservationRepository.ts:14)): Implements `IObservationRepository`.
+    - `StateRepository` ([`src/systems/context/repositories/StateRepository.ts`](src/systems/context/repositories/StateRepository.ts:15)): Implements `IStateRepository`.
+    - `ContextProvider` ([`src/systems/context/ContextProvider.ts`](src/systems/context/ContextProvider.ts:17)): Placeholder for RAG.
+
+### 10.3. Interfaces
+
+- **Agent Core & Execution:**
+    - [`AgentFinalResponse`](src/types/index.ts:357): Final structured response from agent core.
+    - `AgentOptions` ([`src/types/index.ts`](src/types/index.ts:336)): Options to override agent behavior at runtime.
+    - [`AgentProps`](src/types/index.ts:316): Properties to initiate an agent processing cycle.
+    - [`AgentState`](src/types/index.ts:294): Non-configuration state associated with an agent or thread.
+    - [`ArtInstance`](src/core/interfaces.ts:475): Fully initialized ART Framework client instance.
+    - [`ArtInstanceConfig`](src/types/index.ts:610): Configuration for creating an ART instance.
+    - [`ExecutionContext`](src/types/index.ts:393): Context provided to a tool during its execution.
+    - [`ExecutionMetadata`](src/types/index.ts:367): Metadata summarizing an agent execution cycle.
+    - [`IAgentCore`](src/core/interfaces.ts:54): Interface for the central agent orchestrator.
+- **Messaging & Conversation:**
+    - [`ArtStandardMessage`](src/types/index.ts:457): Single message in `ArtStandardPrompt` format.
+    - [`ConversationManager`](src/core/interfaces.ts:292): Interface for managing conversation history.
+    - [`ConversationMessage`](src/types/index.ts:48): Single message within a conversation thread.
+    - `ConversationSocket` ([`src/core/interfaces.ts`](src/core/interfaces.ts:380)): TypedSocket for `ConversationMessage` data.
+    - [`IConversationRepository`](src/core/interfaces.ts:452): Repository for `ConversationMessage`s.
+    - `MessageOptions` ([`src/types/index.ts`](src/types/index.ts:566)): Options for retrieving conversation messages.
+- **LLM & Reasoning:**
+    - `AvailableProviderEntry` ([`src/types/providers.ts`](src/types/providers.ts:6)): Entry defining an available provider adapter.
+    - `CallOptions` ([`src/types/index.ts`](src/types/index.ts:407)): Options for configuring an LLM call.
+    - `IProviderManager` ([`src/types/providers.ts`](src/types/providers.ts:34)): Interface for the ProviderManager.
+    - `LLMMetadata` ([`src/types/index.ts`](src/types/index.ts:210)): Metadata about an LLM call.
+    - `ManagedAdapterAccessor` ([`src/types/providers.ts`](src/types/providers.ts:28)): Object returned by ProviderManager granting access to an adapter instance.
+    - `OllamaAdapterOptions` ([`src/adapters/reasoning/ollama.ts`](src/adapters/reasoning/ollama.ts:21)): Configuration options for `OllamaAdapter`.
+    - [`OutputParser`](src/core/interfaces.ts:123): Interface for parsing structured output from LLM responses.
+    - [`ParsedToolCall`](src/types/index.ts:266): Parsed request from LLM to call a tool.
+    - `PromptContext` ([`src/types/index.ts`](src/types/index.ts:512)): Contextual data for prompt generation.
+    - [`PromptManager`](src/core/interfaces.ts:92): Interface for prompt fragment management and validation.
+    - [`ProviderAdapter`](src/core/interfaces.ts:151): Base interface for LLM Provider Adapters.
+    - [`ProviderManagerConfig`](src/types/providers.ts:13): Configuration for ProviderManager.
+    - [`ReasoningEngine`](src/core/interfaces.ts:68): Interface for interacting with LLMs.
+    - [`RuntimeProviderConfig`](src/types/providers.ts:21): Configuration passed at runtime for a specific LLM call.
+    - [`StreamEvent`](src/types/index.ts:138): Single event emitted from an asynchronous LLM stream.
+- **Tools:**
+    - [`IToolExecutor`](src/core/interfaces.ts:164): Interface for executable tool logic.
+    - [`ToolRegistry`](src/core/interfaces.ts:180): Interface for managing tool registration.
+    - [`ToolResult`](src/types/index.ts:248): Structured result of a tool execution.
+    - [`ToolSchema`](src/types/index.ts:233): Defines the schema for a tool.
+    - [`ToolSystem`](src/core/interfaces.ts:206): Interface for orchestrating tool execution.
+- **State & Storage:**
+    - `FilterOptions` ([`src/types/index.ts`](src/types/index.ts:551)): Options for filtering data from storage.
+    - `JsonObjectSchema` ([`src/types/index.ts`](src/types/index.ts:185)): Basic JSON Schema definition for objects.
+    - `IStateRepository` ([`src/core/interfaces.ts`](src/core/interfaces.ts:465)): Repository for `ThreadConfig` and `AgentState`.
+    - [`StateManager`](src/core/interfaces.ts:225): Interface for managing thread-specific configuration and state.
+    - [`StorageAdapter`](src/core/interfaces.ts:406): Interface for a generic persistence layer.
+    - [`ThreadConfig`](src/types/index.ts:278): Configuration specific to a conversation thread.
+    - [`ThreadContext`](src/types/index.ts:306): Encapsulates configuration and state for a thread.
+- **Observability & UI:**
+    - `IObservationRepository` ([`src/core/interfaces.ts`](src/core/interfaces.ts:459)): Repository for `Observation` data.
+    - `ObservationFilter` ([`src/types/index.ts`](src/types/index.ts:580)): Options for filtering observations.
+    - [`ObservationManager`](src/core/interfaces.ts:317): Interface for managing observations.
+    - `ObservationSocket` ([`src/core/interfaces.ts`](src/core/interfaces.ts:378)): TypedSocket for `Observation` data.
+    - `ITypedSocket` ([`src/core/interfaces.ts`](src/core/interfaces.ts:339)): Generic interface for a typed publish/subscribe socket.
+    - [`UISystem`](src/core/interfaces.ts:393): Interface for providing access to UI communication sockets.
+    - `XmlMatcherChunk` ([`src/utils/xml-matcher.ts`](src/utils/xml-matcher.ts:7)): Chunk of text processed by `XmlMatcher`.
+
+### 10.4. Type Aliases
+
+- [`ArtStandardMessageRole`](src/types/index.ts:451): Defines standard roles for messages (`system`, `user`, `assistant`, `tool_request`, `tool_result`, `tool`).
+- [`ArtStandardPrompt`](src/types/index.ts:502): Represents the entire prompt as an array of `ArtStandardMessage`s.
+- `FormattedPrompt` ([`src/types/index.ts`](src/types/index.ts:545)): Deprecated, use `ArtStandardPrompt`.
+- [`JsonSchema`](src/types/index.ts:204): Represents a JSON Schema object.
+- [`StateSavingStrategy`](src/types/index.ts:602): Defines the strategy for saving `AgentState` (`explicit` | `implicit`).
+- `UnsubscribeFunction` ([`src/systems/ui/typed-socket.ts`](src/systems/ui/typed-socket.ts:5)): Function type for unsubscribing from sockets.
+
+### 10.5. Functions
+
+- [`createArtInstance`](src/core/agent-factory.ts:294): High-level factory function to create and initialize an ART instance.
+- [`generateUUID`](src/utils/uuid.ts:8): Generates a unique Version 4 UUID.
+- `validateJsonSchema` ([`src/utils/validation.ts`](src/utils/validation.ts:23)): Utility for validating objects against JSON Schema using Ajv. Caches compiled validators.
+- `clearJsonSchemaValidatorCache` ([`src/utils/validation.ts`](src/utils/validation.ts:67)): Clears internal cache for JSON schema validator.
+
+### 10.6. Variables
+
+- [`ArtStandardMessageSchema`](src/types/schemas.ts:8): Zod schema for validating `ArtStandardMessage`.
+- [`ArtStandardPromptSchema`](src/types/schemas.ts:54): Zod schema for validating `ArtStandardPrompt`.
+- [`VERSION`](src/index.ts:72): The current version of the ART Framework package.
+
+This comprehensive documentation aims to provide a deep understanding of the ART Framework, enabling developers to build, customize, and debug sophisticated AI agents effectively.
