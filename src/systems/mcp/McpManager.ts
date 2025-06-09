@@ -1,5 +1,5 @@
 import { ToolRegistry, StateManager } from '../../core/interfaces';
-import { ARTError } from '../../types';
+import { ARTError, ErrorCode } from '../../errors';
 import { Logger } from '../../utils/logger';
 import { AuthManager } from '../../systems/auth/AuthManager';
 import { McpProxyTool } from './McpProxyTool';
@@ -179,7 +179,7 @@ export class McpManager {
   async refreshServer(serverId: string): Promise<void> {
     const serverConfig = this.config.servers.find(s => s.id === serverId);
     if (!serverConfig) {
-      throw new ARTError('SERVER_NOT_FOUND', `Server with ID "${serverId}" not found`, { serverId });
+      throw new ARTError(`Server with ID "${serverId}" not found`, ErrorCode.SERVER_NOT_FOUND);
     }
 
     await this._discoverTools(serverConfig);
@@ -354,7 +354,7 @@ export class McpManager {
 
     // Add auth headers if needed
     if (serverConfig.authStrategyId && this.authManager) {
-      const authHeaders = await this.authManager.authenticate(serverConfig.authStrategyId);
+      const authHeaders = await this.authManager.getHeaders(serverConfig.authStrategyId);
       Object.assign(headers, authHeaders);
     }
 
@@ -386,10 +386,10 @@ export class McpManager {
       clearTimeout(timeoutId);
       
       if (error.name === 'AbortError') {
-        throw new ARTError('REQUEST_TIMEOUT', `Health check timed out after ${timeout}ms`);
+        throw new ARTError(`Health check timed out after ${timeout}ms`, ErrorCode.REQUEST_TIMEOUT);
       }
       
-      throw new ARTError('HEALTH_CHECK_FAILED', `Health check failed: ${error.message}`);
+      throw new ARTError(`Health check failed: ${error.message}`, ErrorCode.HEALTH_CHECK_FAILED);
     }
   }
 
@@ -448,7 +448,7 @@ export class McpManager {
 
     // Add auth headers if needed
     if (serverConfig.authStrategyId && this.authManager) {
-      const authHeaders = await this.authManager.authenticate(serverConfig.authStrategyId);
+      const authHeaders = await this.authManager.getHeaders(serverConfig.authStrategyId);
       Object.assign(headers, authHeaders);
     }
 
@@ -475,10 +475,10 @@ export class McpManager {
       clearTimeout(timeoutId);
       
       if (error.name === 'AbortError') {
-        throw new ARTError('REQUEST_TIMEOUT', `Tool discovery timed out after ${timeout}ms`);
+        throw new ARTError(`Tool discovery timed out after ${timeout}ms`, ErrorCode.REQUEST_TIMEOUT);
       }
       
-      throw new ARTError('TOOL_DISCOVERY_FAILED', `Tool discovery failed: ${error.message}`);
+      throw new ARTError(`Tool discovery failed: ${error.message}`, ErrorCode.TOOL_DISCOVERY_FAILED);
     }
   }
 

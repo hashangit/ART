@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import { spawn, ChildProcess } from 'child_process';
 import { Logger } from '../../utils/logger';
-import { ARTError } from '../../types';
+import { ARTError, ErrorCode } from '../../errors';
 import { AuthManager } from '../../systems/auth/AuthManager';
 
 /**
@@ -64,8 +64,8 @@ export interface McpServerCapabilities {
   prompts?: {
     listChanged?: boolean;
   };
-  logging?: {};
-  sampling?: {};
+  logging?: Record<string, unknown>;
+  sampling?: Record<string, unknown>;
 }
 
 /**
@@ -144,7 +144,7 @@ export class McpClient extends EventEmitter {
    */
   async connect(): Promise<void> {
     if (this.connected) {
-      throw new ARTError('ALREADY_CONNECTED', 'MCP client is already connected');
+      throw new ARTError('MCP client is already connected', ErrorCode.ALREADY_CONNECTED);
     }
 
     Logger.info(`McpClient: Connecting using ${this.config.type} transport...`);
@@ -188,7 +188,7 @@ export class McpClient extends EventEmitter {
     Logger.info('McpClient: Disconnecting...');
 
     // Clear pending requests
-    for (const [id, pending] of this.pendingRequests) {
+    for (const [, pending] of this.pendingRequests) {
       clearTimeout(pending.timeout);
       pending.reject(new Error('Connection closed'));
     }
@@ -215,7 +215,7 @@ export class McpClient extends EventEmitter {
    * Sends a ping to the MCP server
    */
   async ping(): Promise<void> {
-    const result = await this._sendRequest('ping', {});
+    await this._sendRequest('ping', {});
     Logger.debug('McpClient: Ping successful');
   }
 
@@ -295,7 +295,7 @@ export class McpClient extends EventEmitter {
    */
   private async _connectStdio(): Promise<void> {
     if (!this.config.command) {
-      throw new ARTError('MISSING_CONFIG', 'Command is required for stdio transport');
+      throw new ARTError('Command is required for stdio transport', ErrorCode.MISSING_CONFIG);
     }
 
     Logger.debug(`McpClient: Spawning process: ${this.config.command} ${this.config.args?.join(' ') || ''}`);
@@ -369,21 +369,21 @@ export class McpClient extends EventEmitter {
    */
   private async _connectSSE(): Promise<void> {
     if (!this.config.url) {
-      throw new ARTError('MISSING_CONFIG', 'URL is required for SSE transport');
+      throw new ARTError('URL is required for SSE transport', ErrorCode.MISSING_CONFIG);
     }
 
     const headers: Record<string, string> = { ...this.config.headers };
 
     // Add authentication headers if needed
     if (this.config.authStrategyId && this.authManager) {
-      const authHeaders = await this.authManager.authenticate(this.config.authStrategyId);
+      const authHeaders = await this.authManager.getHeaders(this.config.authStrategyId);
       Object.assign(headers, authHeaders);
     }
 
     // Create EventSource for receiving messages
-    this.eventSource = new EventSource(this.config.url, {
-      headers
-    });
+    // Note: EventSource doesn't support custom headers in standard implementation
+    // Authentication would need to be handled via URL parameters or cookies
+    this.eventSource = new EventSource(this.config.url);
 
     this.httpUrl = this.config.url.replace('/sse', '/messages'); // Assume messages endpoint
 
@@ -430,7 +430,7 @@ export class McpClient extends EventEmitter {
   private async _connectHTTP(): Promise<void> {
     // HTTP transport would be implemented here for bidirectional communication
     // This is a placeholder for future HTTP transport implementation
-    throw new ARTError('NOT_IMPLEMENTED', 'HTTP transport not yet implemented');
+    throw new ARTError('HTTP transport not yet implemented', ErrorCode.NOT_IMPLEMENTED);
   }
 
   /**
@@ -474,7 +474,7 @@ export class McpClient extends EventEmitter {
    */
   private async _sendRequest(method: string, params: any, timeout: number = 30000): Promise<any> {
     if (!this.connected && method !== 'initialize') {
-      throw new ARTError('NOT_CONNECTED', 'MCP client is not connected');
+      throw new ARTError('MCP client is not connected', ErrorCode.NOT_CONNECTED);
     }
 
     const id = this.nextRequestId++;
@@ -488,7 +488,7 @@ export class McpClient extends EventEmitter {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pendingRequests.delete(id);
-        reject(new ARTError('REQUEST_TIMEOUT', `Request ${method} timed out after ${timeout}ms`));
+        reject(new ARTError(`Request ${method} timed out after ${timeout}ms`, ErrorCode.REQUEST_TIMEOUT));
       }, timeout);
 
       this.pendingRequests.set(id, { resolve, reject, timeout: timer });
@@ -521,19 +521,19 @@ export class McpClient extends EventEmitter {
    */
   private async _sendMessage(message: JsonRpcMessage): Promise<void> {
     const serialized = JSON.stringify(message);
-    Logger.debug(`McpClient: Sending message: ${message.method || 'response'}`);
+    Logger.debug(`McpClient: Sending message: ${'method' in message ? message.method : 'response'}`);
 
     switch (this.config.type) {
       case 'stdio':
         if (!this.childProcess?.stdin) {
-          throw new ARTError('NO_STDIN', 'Child process stdin not available');
+          throw new ARTError('Child process stdin not available', ErrorCode.NO_STDIN);
         }
         this.childProcess.stdin.write(serialized + '\n');
         break;
 
-      case 'sse':
+      case 'sse': {
         if (!this.httpUrl) {
-          throw new ARTError('NO_HTTP_URL', 'HTTP URL not configured for SSE transport');
+          throw new ARTError('HTTP URL not configured for SSE transport', ErrorCode.NO_HTTP_URL);
         }
         
         const headers: Record<string, string> = {
@@ -543,7 +543,7 @@ export class McpClient extends EventEmitter {
 
         // Add authentication headers if needed
         if (this.config.authStrategyId && this.authManager) {
-          const authHeaders = await this.authManager.authenticate(this.config.authStrategyId);
+          const authHeaders = await this.authManager.getHeaders(this.config.authStrategyId);
           Object.assign(headers, authHeaders);
         }
 
@@ -554,12 +554,13 @@ export class McpClient extends EventEmitter {
         });
 
         if (!response.ok) {
-          throw new ARTError('HTTP_ERROR', `HTTP request failed: ${response.status} ${response.statusText}`);
+          throw new ARTError(`HTTP request failed: ${response.status} ${response.statusText}`, ErrorCode.HTTP_ERROR);
         }
         break;
+      }
 
       case 'http':
-        throw new ARTError('NOT_IMPLEMENTED', 'HTTP transport not yet implemented');
+        throw new ARTError('HTTP transport not yet implemented', ErrorCode.NOT_IMPLEMENTED);
 
       default:
         throw new ARTError('UNSUPPORTED_TRANSPORT', `Unsupported transport: ${this.config.type}`);
@@ -584,9 +585,8 @@ export class McpClient extends EventEmitter {
         
         if (response.error) {
           pending.reject(new ARTError(
-            'MCP_SERVER_ERROR',
-            response.error.message,
-            { code: response.error.code, data: response.error.data }
+            `MCP server error: ${response.error.message}`,
+            ErrorCode.EXTERNAL_SERVICE_ERROR
           ));
         } else {
           pending.resolve(response.result);
