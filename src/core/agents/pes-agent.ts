@@ -9,7 +9,8 @@ import {
     OutputParser,
     ObservationManager,
     ToolSystem,
-    UISystem // Added UISystem import
+    UISystem, // Added UISystem import
+    IA2ATaskRepository // Added A2A task repository interface
     // Assuming repository interfaces might be needed indirectly or for type safety, though not directly used
 } from '../interfaces';
 import {
@@ -26,6 +27,11 @@ import {
     LLMMetadata,
     ArtStandardPrompt, // Import new types
     ArtStandardMessageRole,
+    A2ATask, // Added A2A task types
+    A2ATaskStatus,
+    A2ATaskPriority,
+    A2AAgentInfo,
+    CreateA2ATaskRequest,
     // PromptContext, // Removed unused import after refactoring prompt construction
     // ThreadConfig, // Removed unused import (config accessed via ThreadContext)
     // ToolSchema, // Removed unused import
@@ -65,6 +71,8 @@ interface PESAgentDependencies {
     toolSystem: ToolSystem;
     /** Provides access to UI communication sockets. */
     uiSystem: UISystem; // Added UISystem dependency
+    /** Repository for A2A tasks. */
+    a2aTaskRepository: IA2ATaskRepository;
 }
 
 // Default system prompt remains
@@ -115,9 +123,10 @@ export class PESAgent implements IAgentCore {
      * 1.  **Initiation & Config:** Loads thread configuration and resolves system prompt
      * 2.  **Data Gathering:** Gathers history, available tools
      * 3.  **Planning:** LLM call for planning and parsing
-     * 4.  **Tool Execution:** Executes identified tool calls
-     * 5.  **Synthesis:** LLM call for final response generation
-     * 6.  **Finalization:** Saves messages and cleanup
+     * 4.  **A2A Discovery & Delegation:** Identifies and delegates A2A tasks to remote agents
+     * 5.  **Tool Execution:** Executes identified local tool calls
+     * 6.  **Synthesis:** LLM call for final response generation including A2A results
+     * 7.  **Finalization:** Saves messages and cleanup
      *
      * @param {AgentProps} props - The input properties containing the user query, threadId, userId, traceId, etc.
      * @returns {Promise<AgentFinalResponse>} A promise resolving to the final response, including the AI message and execution metadata.
@@ -150,7 +159,12 @@ export class PESAgent implements IAgentCore {
                 aggregatedLlmMetadata = { ...(aggregatedLlmMetadata ?? {}), ...planningMetadata };
             }
 
-            // Stage 4: Execute tools
+            // Stage 4: Perform A2A discovery and delegation
+            const a2aTasks = await this._performDiscoveryAndDelegation(
+                planningOutput, props.threadId, traceId
+            );
+
+            // Stage 5: Execute local tools
             const toolResults = await this._executeLocalTools(
                 planningOutput.toolCalls, props.threadId, traceId
             );
@@ -161,16 +175,16 @@ export class PESAgent implements IAgentCore {
                 errorMessage = 'Tool execution errors occurred.';
             }
 
-            // Stage 5: Perform synthesis
+            // Stage 6: Perform synthesis
             const { finalResponseContent, synthesisMetadata } = await this._performSynthesis(
-                props, systemPrompt, history, planningOutput, toolResults, runtimeProviderConfig, traceId
+                props, systemPrompt, history, planningOutput, toolResults, a2aTasks, runtimeProviderConfig, traceId
             );
             llmCalls++;
             if (synthesisMetadata) {
                 aggregatedLlmMetadata = { ...(aggregatedLlmMetadata ?? {}), ...synthesisMetadata };
             }
 
-            // Stage 6: Finalization
+            // Stage 7: Finalization
             finalAiMessage = await this._finalize(props, finalResponseContent, traceId);
 
         } catch (error: any) {
@@ -454,6 +468,236 @@ export class PESAgent implements IAgentCore {
     }
 
     /**
+     * Performs A2A task discovery and delegation.
+     * Extracts A2A tasks from planning output, discovers available agents, and delegates tasks.
+     * @private
+     */
+    private async _performDiscoveryAndDelegation(
+        planningOutput: any,
+        threadId: string,
+        traceId: string
+    ): Promise<A2ATask[]> {
+        Logger.debug(`[${traceId}] Stage 4: A2A Discovery and Delegation`);
+        
+        try {
+            // Step 1: Extract A2A tasks from planning output
+            const extractedA2ATasks = this._extractA2ATasksFromPlan(planningOutput, threadId, traceId);
+            
+            if (extractedA2ATasks.length === 0) {
+                Logger.debug(`[${traceId}] No A2A tasks identified in planning output`);
+                return [];
+            }
+            
+            Logger.debug(`[${traceId}] Extracted ${extractedA2ATasks.length} A2A task(s) from planning output`);
+            
+            // Step 2: Create AgentDiscoveryService instance
+            const discoveryService = new (await import('../../systems/a2a/AgentDiscoveryService')).AgentDiscoveryService({
+                discoveryEndpoint: 'http://localhost:4200/api/services', // TODO: Make configurable
+                timeoutMs: 10000
+            });
+            
+            // Step 3: Create TaskDelegationService instance
+            const delegationService = new (await import('../../systems/a2a/TaskDelegationService')).TaskDelegationService(
+                discoveryService,
+                this.deps.a2aTaskRepository,
+                {
+                    defaultTimeoutMs: 30000,
+                    maxRetries: 2,
+                    retryDelayMs: 1000,
+                    useExponentialBackoff: true
+                }
+            );
+            
+            // Step 4: Delegate tasks to suitable remote agents
+            const delegatedTasks = await delegationService.delegateTasks(extractedA2ATasks, traceId);
+            
+            if (delegatedTasks.length > 0) {
+                Logger.info(`[${traceId}] Successfully delegated ${delegatedTasks.length}/${extractedA2ATasks.length} A2A task(s)`);
+                
+                // Record successful delegation observation
+                await this.deps.observationManager.record({
+                    threadId: threadId,
+                    traceId: traceId,
+                    type: ObservationType.TOOL_CALL, // Using TOOL_CALL as closest equivalent for A2A delegation
+                    content: {
+                        phase: 'a2a_delegation',
+                        totalExtracted: extractedA2ATasks.length,
+                        successfullyDelegated: delegatedTasks.length,
+                        taskIds: delegatedTasks.map(t => t.taskId),
+                        targetAgents: delegatedTasks.map(t => t.targetAgent?.agentName).filter(Boolean)
+                    },
+                    metadata: { timestamp: Date.now() }
+                });
+            } else {
+                Logger.warn(`[${traceId}] No A2A tasks were successfully delegated`);
+            }
+            
+            return delegatedTasks;
+            
+        } catch (err: any) {
+            const errorMessage = `A2A discovery and delegation failed: ${err.message}`;
+            Logger.error(`[${traceId}] A2A Discovery Error:`, err);
+            await this.deps.observationManager.record({
+                threadId: threadId, traceId, type: ObservationType.ERROR, 
+                content: { phase: 'a2a_discovery', error: err.message, stack: err.stack }, 
+                metadata: { timestamp: Date.now() }
+            });
+            // Don't fail the entire process for A2A errors - just log and continue
+            return [];
+        }
+    }
+
+    /**
+     * Extracts A2A task opportunities from the planning output.
+     * Looks for specific patterns or keywords that indicate tasks suitable for delegation.
+     * @private
+     */
+    private _extractA2ATasksFromPlan(
+        planningOutput: any,
+        threadId: string,
+        traceId: string
+    ): A2ATask[] {
+        const extractedTasks: A2ATask[] = [];
+        
+        if (!planningOutput || !planningOutput.plan) {
+            Logger.debug(`[${traceId}] No plan content available for A2A extraction`);
+            return extractedTasks;
+        }
+        
+        const planText = planningOutput.plan.toLowerCase();
+        const intentText = (planningOutput.intent || '').toLowerCase();
+        const fullPlanningText = `${intentText} ${planText}`;
+        
+        // Define A2A task patterns and their corresponding task types
+        const a2aPatterns = [
+            {
+                keywords: ['analyze', 'analysis', 'examine', 'investigate', 'study', 'research'],
+                taskType: 'analysis',
+                description: 'Data analysis or research task'
+            },
+            {
+                keywords: ['summarize', 'summary', 'synthesize', 'consolidate', 'compile'],
+                taskType: 'synthesis',
+                description: 'Content synthesis or summarization task'
+            },
+            {
+                keywords: ['transform', 'convert', 'translate', 'format', 'restructure'],
+                taskType: 'transformation',
+                description: 'Data transformation or conversion task'
+            },
+            {
+                keywords: ['calculate', 'compute', 'process', 'crunch', 'mathematical'],
+                taskType: 'computation',
+                description: 'Mathematical or computational task'
+            },
+            {
+                keywords: ['generate', 'create', 'produce', 'build', 'construct'],
+                taskType: 'generation',
+                description: 'Content or artifact generation task'
+            },
+            {
+                keywords: ['validate', 'verify', 'check', 'review', 'audit'],
+                taskType: 'validation',
+                description: 'Validation or verification task'
+            }
+        ];
+        
+        // Check for explicit A2A delegation markers
+        const explicitA2AMarkers = [
+            'delegate to',
+            'assign to agent',
+            'remote agent',
+            'a2a task',
+            'agent-to-agent',
+            'external agent'
+        ];
+        
+        let hasExplicitA2AMarker = false;
+        for (const marker of explicitA2AMarkers) {
+            if (fullPlanningText.includes(marker)) {
+                hasExplicitA2AMarker = true;
+                Logger.debug(`[${traceId}] Found explicit A2A marker: "${marker}"`);
+                break;
+            }
+        }
+        
+        // Extract tasks based on patterns
+        for (const pattern of a2aPatterns) {
+            const matchedKeywords = pattern.keywords.filter(keyword => 
+                fullPlanningText.includes(keyword)
+            );
+            
+            if (matchedKeywords.length > 0 || hasExplicitA2AMarker) {
+                // Create A2A task
+                const taskId = generateUUID();
+                const now = Date.now();
+                
+                const a2aTask: A2ATask = {
+                    taskId,
+                    status: A2ATaskStatus.PENDING,
+                    payload: {
+                        taskType: pattern.taskType,
+                        input: {
+                            originalQuery: planningOutput.intent || '',
+                            planContext: planningOutput.plan || '',
+                            matchedKeywords: matchedKeywords,
+                            extractionReason: hasExplicitA2AMarker ? 'explicit_marker' : 'keyword_match'
+                        },
+                        instructions: `${pattern.description} based on the planning context`,
+                        parameters: {
+                            threadId: threadId,
+                            traceId: traceId,
+                            extractedAt: now
+                        }
+                    },
+                    sourceAgent: {
+                        agentId: 'pes-agent',
+                        agentName: 'PES Agent',
+                        agentType: 'reasoning',
+                        capabilities: ['planning', 'execution', 'synthesis']
+                    },
+                    priority: hasExplicitA2AMarker ? A2ATaskPriority.HIGH : A2ATaskPriority.MEDIUM,
+                    metadata: {
+                        createdAt: now,
+                        updatedAt: now,
+                        initiatedBy: threadId,
+                        correlationId: traceId,
+                        retryCount: 0,
+                        maxRetries: 3,
+                        timeoutMs: 30000, // 30 seconds timeout
+                        tags: ['extracted', pattern.taskType]
+                    }
+                };
+                
+                extractedTasks.push(a2aTask);
+                
+                Logger.debug(`[${traceId}] Extracted A2A task: ${pattern.taskType} (keywords: ${matchedKeywords.join(', ')})`);
+                
+                // For now, only extract one task per pattern to avoid overwhelming
+                break;
+            }
+        }
+        
+        // Record observation for extracted tasks
+        if (extractedTasks.length > 0) {
+            this.deps.observationManager.record({
+                threadId: threadId,
+                traceId: traceId,
+                type: ObservationType.PLAN, // Using PLAN type as it's related to planning phase
+                content: {
+                    phase: 'a2a_extraction',
+                    extractedTaskCount: extractedTasks.length,
+                    taskTypes: extractedTasks.map(t => t.payload.taskType),
+                    hasExplicitMarker: hasExplicitA2AMarker
+                },
+                metadata: { timestamp: Date.now() }
+            }).catch(err => Logger.error(`[${traceId}] Failed to record A2A extraction observation:`, err));
+        }
+        
+        return extractedTasks;
+    }
+
+    /**
      * Executes local tools identified during planning.
      * @private
      */
@@ -488,10 +732,11 @@ export class PESAgent implements IAgentCore {
         formattedHistory: ArtStandardPrompt, 
         planningOutput: any, 
         toolResults: ToolResult[], 
+        a2aTasks: A2ATask[],
         runtimeProviderConfig: RuntimeProviderConfig,
         traceId: string
     ) {
-        Logger.debug(`[${traceId}] Stage 5: Synthesis Call`);
+        Logger.debug(`[${traceId}] Stage 6: Synthesis Call`);
         
         // Record SYNTHESIS observation before making the call
         await this.deps.observationManager.record({
@@ -512,7 +757,11 @@ export class PESAgent implements IAgentCore {
                         toolResults.length > 0
                         ? toolResults.map(result => `- Tool: ${result.toolName} (Call ID: ${result.callId})\n  Status: ${result.status}\n  ${result.status === 'success' ? `Output: ${JSON.stringify(result.output)}` : ''}\n  ${result.status === 'error' ? `Error: ${result.error ?? 'Unknown error'}` : ''}`).join('\n')
                         : 'No tools were executed.'
-                    }\n\nBased on the user query, the plan, and the results of any tool executions, synthesize a final response to the user.\nIf the tools failed or provided unexpected results, explain the issue and try to answer based on available information or ask for clarification.`
+                    }\n\nA2A Task Results:\n${
+                        a2aTasks.length > 0
+                        ? a2aTasks.map(task => `- Task: ${task.payload.taskType} (ID: ${task.taskId})\n  Status: ${task.status}\n  ${task.result?.success ? `Output: ${JSON.stringify(task.result.data)}` : ''}\n  ${task.result?.success === false ? `Error: ${task.result.error ?? 'Unknown error'}` : ''}`).join('\n')
+                        : 'No A2A tasks were delegated.'
+                    }\n\nBased on the user query, the plan, and the results of any tool executions and A2A task delegations, synthesize a final response to the user.\nIf the tools or A2A tasks failed or provided unexpected results, explain the issue and try to answer based on available information or ask for clarification.`
                 }
             ];
         } catch (err: any) {
@@ -520,7 +769,7 @@ export class PESAgent implements IAgentCore {
             throw new ARTError(`Failed to construct synthesis prompt object: ${err.message}`, ErrorCode.PROMPT_ASSEMBLY_FAILED, err);
         }
 
-        Logger.debug(`[${traceId}] Stage 5b: Synthesis LLM Call`);
+        Logger.debug(`[${traceId}] Stage 6b: Synthesis LLM Call`);
         
         const synthesisOptions: CallOptions = {
             threadId: props.threadId,
@@ -610,7 +859,7 @@ export class PESAgent implements IAgentCore {
      * @private
      */
     private async _finalize(props: AgentProps, finalResponseContent: string, traceId: string): Promise<ConversationMessage> {
-        Logger.debug(`[${traceId}] Stage 6: Finalization`);
+        Logger.debug(`[${traceId}] Stage 7: Finalization`);
         
         const finalTimestamp = Date.now();
         const finalAiMessage: ConversationMessage = {

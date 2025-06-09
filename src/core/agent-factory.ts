@@ -5,6 +5,7 @@ import {
     IConversationRepository,
     IObservationRepository,
     IStateRepository,
+    IA2ATaskRepository,
     ConversationManager,
     StateManager,
     ObservationManager,
@@ -38,6 +39,7 @@ import { IndexedDBStorageAdapter } from '../adapters/storage/indexedDB'; // Corr
 import { ConversationRepository } from '../systems/context/repositories/ConversationRepository'; // Corrected path
 import { ObservationRepository } from '../systems/context/repositories/ObservationRepository'; // Corrected path - Moved from observation system
 import { StateRepository } from '../systems/context/repositories/StateRepository'; // Corrected path
+import { TaskStatusRepository } from '../systems/context/repositories/TaskStatusRepository'; // A2A task repository
 // Managers
 import { ConversationManager as ConversationManagerImpl } from '../systems/context/managers/ConversationManager'; // Corrected path
 import { StateManager as StateManagerImpl } from '../systems/context/managers/StateManager'; // Corrected path
@@ -121,6 +123,7 @@ export class AgentFactory {
     private conversationRepository: IConversationRepository | null = null;
     private observationRepository: IObservationRepository | null = null;
     private stateRepository: IStateRepository | null = null;
+    private a2aTaskRepository: IA2ATaskRepository | null = null;
     private conversationManager: ConversationManager | null = null;
     private stateManager: StateManager | null = null;
     private observationManager: ObservationManager | null = null;
@@ -178,6 +181,7 @@ export class AgentFactory {
         this.conversationRepository = new ConversationRepository(this.storageAdapter!);
         this.observationRepository = new ObservationRepository(this.storageAdapter!);
         this.stateRepository = new StateRepository(this.storageAdapter!);
+        this.a2aTaskRepository = new TaskStatusRepository(this.storageAdapter!);
 
         // --- Initialize UI System ---
         // UISystem constructor expects repositories, not sockets
@@ -231,7 +235,8 @@ export class AgentFactory {
         // Check for all required components after initialization
         if (!this.stateManager || !this.conversationManager || !this.toolRegistry ||
             !this.promptManager || !this.reasoningEngine || !this.outputParser ||
-            !this.observationManager || !this.toolSystem || !this.providerManager) { // Check providerManager
+            !this.observationManager || !this.toolSystem || !this.providerManager ||
+            !this.a2aTaskRepository) { // Check A2A task repository
             throw new Error("AgentFactory not fully initialized. Call initialize() before creating an agent.");
         }
 
@@ -247,6 +252,7 @@ export class AgentFactory {
             observationManager: this.observationManager,
             toolSystem: this.toolSystem,
             uiSystem: this.uiSystem!, // Include the UI System (non-null assertion)
+            a2aTaskRepository: this.a2aTaskRepository, // Include A2A task repository
             instanceDefaultCustomSystemPrompt: this.config.defaultSystemPrompt, // Pass instance-level default system prompt from ArtInstanceConfig
             // Note: providerAdapter is used by reasoningEngine, not directly by agent core usually
         };
