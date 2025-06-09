@@ -647,3 +647,184 @@ export interface ArtInstanceConfig {
   // Add other top-level configuration properties as needed, e.g.:
   // defaultThreadConfig?: Partial<ThreadConfig>;
 }
+
+/**
+ * Represents the possible states of an A2A (Agent-to-Agent) task.
+ */
+export enum A2ATaskStatus {
+  /** Task has been created but not yet assigned to an agent. */
+  PENDING = 'PENDING',
+  /** Task has been assigned to an agent and is being processed. */
+  IN_PROGRESS = 'IN_PROGRESS',
+  /** Task has been completed successfully. */
+  COMPLETED = 'COMPLETED',
+  /** Task has failed during execution. */
+  FAILED = 'FAILED',
+  /** Task has been cancelled before completion. */
+  CANCELLED = 'CANCELLED',
+  /** Task is waiting for external dependencies or manual intervention. */
+  WAITING = 'WAITING',
+  /** Task is being reviewed for quality assurance. */
+  REVIEW = 'REVIEW'
+}
+
+/**
+ * Represents the priority level of an A2A task.
+ */
+export enum A2ATaskPriority {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  URGENT = 'URGENT'
+}
+
+/**
+ * Represents agent information for A2A task assignment.
+ */
+export interface A2AAgentInfo {
+  /** Unique identifier for the agent. */
+  agentId: string;
+  /** Human-readable name for the agent. */
+  agentName: string;
+  /** The type or role of the agent (e.g., 'reasoning', 'data-processing', 'synthesis'). */
+  agentType: string;
+  /** Base URL or endpoint for communicating with the agent. */
+  endpoint?: string;
+  /** Agent capabilities or specializations. */
+  capabilities?: string[];
+  /** Current load or availability status of the agent. */
+  status?: 'available' | 'busy' | 'offline';
+}
+
+/**
+ * Represents metadata about A2A task execution.
+ */
+export interface A2ATaskMetadata {
+  /** Timestamp when the task was created (Unix timestamp in milliseconds). */
+  createdAt: number;
+  /** Timestamp when the task was last updated (Unix timestamp in milliseconds). */
+  updatedAt: number;
+  /** Timestamp when the task was started (if applicable). */
+  startedAt?: number;
+  /** Timestamp when the task was completed/failed (if applicable). */
+  completedAt?: number;
+  /** The user or system that initiated this task. */
+  initiatedBy?: string;
+  /** Correlation ID for tracking related tasks across the system. */
+  correlationId?: string;
+  /** Number of retry attempts made for this task. */
+  retryCount?: number;
+  /** Maximum number of retry attempts allowed. */
+  maxRetries?: number;
+  /** Timeout duration in milliseconds. */
+  timeoutMs?: number;
+  /** Tags or labels for categorizing tasks. */
+  tags?: string[];
+}
+
+/**
+ * Represents the result of an A2A task execution.
+ */
+export interface A2ATaskResult {
+  /** Whether the task execution was successful. */
+  success: boolean;
+  /** The data returned by the task execution. */
+  data?: any;
+  /** Error message if the task failed. */
+  error?: string;
+  /** Additional metadata about the execution. */
+  metadata?: Record<string, any>;
+  /** Execution duration in milliseconds. */
+  durationMs?: number;
+}
+
+/**
+ * Represents a task for Agent-to-Agent (A2A) communication and delegation.
+ * Used for asynchronous task delegation between AI agents in distributed systems.
+ */
+export interface A2ATask {
+  /** Unique identifier for the task. */
+  taskId: string;
+  
+  /** Current status of the task. */
+  status: A2ATaskStatus;
+  
+  /** The data payload containing task parameters and context. */
+  payload: {
+    /** The type of task to be executed (e.g., 'analyze', 'synthesize', 'transform'). */
+    taskType: string;
+    /** Input data required for task execution. */
+    input: any;
+    /** Instructions or configuration for the task. */
+    instructions?: string;
+    /** Additional parameters specific to the task type. */
+    parameters?: Record<string, any>;
+  };
+  
+  /** Information about the agent that created/requested this task. */
+  sourceAgent: A2AAgentInfo;
+  
+  /** Information about the agent assigned to execute this task (if assigned). */
+  targetAgent?: A2AAgentInfo;
+  
+  /** Task priority level. */
+  priority: A2ATaskPriority;
+  
+  /** Task execution metadata. */
+  metadata: A2ATaskMetadata;
+  
+  /** The result of task execution (if completed). */
+  result?: A2ATaskResult;
+  
+  /** Callback URL or identifier for task completion notifications. */
+  callbackUrl?: string;
+  
+  /** Dependencies that must be completed before this task can start. */
+  dependencies?: string[];
+}
+
+/**
+ * Represents a request to create a new A2A task.
+ */
+export interface CreateA2ATaskRequest {
+  /** The type of task to be executed. */
+  taskType: string;
+  /** Input data for the task. */
+  input: any;
+  /** Instructions for task execution. */
+  instructions?: string;
+  /** Task parameters. */
+  parameters?: Record<string, any>;
+  /** Task priority. */
+  priority?: A2ATaskPriority;
+  /** Source agent information. */
+  sourceAgent: A2AAgentInfo;
+  /** Preferred target agent (if any). */
+  preferredTargetAgent?: A2AAgentInfo;
+  /** Task dependencies. */
+  dependencies?: string[];
+  /** Callback URL for notifications. */
+  callbackUrl?: string;
+  /** Task timeout in milliseconds. */
+  timeoutMs?: number;
+  /** Maximum retry attempts. */
+  maxRetries?: number;
+  /** Task tags. */
+  tags?: string[];
+}
+
+/**
+ * Represents an update to an existing A2A task.
+ */
+export interface UpdateA2ATaskRequest {
+  /** Task ID to update. */
+  taskId: string;
+  /** New task status (if changing). */
+  status?: A2ATaskStatus;
+  /** Target agent assignment (if assigning/reassigning). */
+  targetAgent?: A2AAgentInfo;
+  /** Task result (if completing). */
+  result?: A2ATaskResult;
+  /** Additional metadata updates. */
+  metadata?: Partial<A2ATaskMetadata>;
+}
