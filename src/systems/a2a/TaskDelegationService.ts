@@ -198,9 +198,9 @@ export class TaskDelegationService {
       }
 
       throw new ARTError(
-        ErrorCode.UNKNOWN_ERROR,
         `Failed to delegate task ${task.taskId}: ${error.message}`,
-        { taskId: task.taskId, targetAgent: error.targetAgent }
+        ErrorCode.UNKNOWN_ERROR,
+        error
       );
     }
   }
@@ -220,9 +220,8 @@ export class TaskDelegationService {
   ): Promise<TaskSubmissionResponse> {
     if (!targetAgent.endpoint) {
       throw new ARTError(
-        ErrorCode.UNKNOWN_ERROR,
         `Target agent "${targetAgent.agentName}" has no endpoint configured`,
-        { agentId: targetAgent.agentId }
+        ErrorCode.VALIDATION_ERROR
       );
     }
 
@@ -249,7 +248,7 @@ export class TaskDelegationService {
 
     Logger.debug(`[${traceId}] Submitting task ${task.taskId} to ${taskSubmissionUrl}`);
 
-    let lastError: Error;
+    let lastError: Error = new Error('Unknown error');
     let attempt = 0;
 
     // Retry loop with exponential backoff
@@ -317,9 +316,9 @@ export class TaskDelegationService {
     }
 
     throw new ARTError(
-      ErrorCode.UNKNOWN_ERROR,
       `Failed to submit task ${task.taskId} to agent "${targetAgent.agentName}" after ${this.config.maxRetries + 1} attempts: ${lastError.message}`,
-      { taskId: task.taskId, targetAgent: targetAgent.agentId, lastError: lastError.message }
+      ErrorCode.EXTERNAL_SERVICE_ERROR,
+      lastError
     );
   }
 
@@ -392,18 +391,20 @@ export class TaskDelegationService {
     traceId?: string
   ): Promise<A2ATask> {
     const now = Date.now();
+    const updatedMetadata: A2ATaskMetadata = {
+      ...task.metadata,
+      updatedAt: now
+    };
+
     const updates: Partial<A2ATask> = {
       status: statusResponse.status,
-      metadata: {
-        ...task.metadata,
-        updatedAt: now
-      }
+      metadata: updatedMetadata
     };
 
     // Handle completion
     if (statusResponse.status === A2ATaskStatus.COMPLETED && statusResponse.result) {
       updates.result = statusResponse.result;
-      updates.metadata!.completedAt = now;
+      updatedMetadata.completedAt = now;
     }
 
     // Handle failure
@@ -413,16 +414,16 @@ export class TaskDelegationService {
         error: statusResponse.error,
         metadata: { remoteError: true, timestamp: now }
       };
-      updates.metadata!.completedAt = now;
+      updatedMetadata.completedAt = now;
     }
 
     // Update additional metadata
     if (statusResponse.metadata) {
-      updates.metadata = {
-        ...updates.metadata,
-        ...statusResponse.metadata
-      };
+      Object.assign(updatedMetadata, statusResponse.metadata);
     }
+
+    // Update the updates object with the final metadata
+    updates.metadata = updatedMetadata;
 
     await this.taskRepository.updateTask(task.taskId, updates);
     

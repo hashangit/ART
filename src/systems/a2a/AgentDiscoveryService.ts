@@ -132,8 +132,8 @@ export class AgentDiscoveryService {
 
       if (!response.ok) {
         throw new ARTError(
-          ErrorCode.EXTERNAL_SERVICE_ERROR,
-          `Discovery endpoint returned ${response.status}: ${response.statusText}`
+          `Discovery endpoint returned ${response.status}: ${response.statusText}`,
+          ErrorCode.EXTERNAL_SERVICE_ERROR
         );
       }
 
@@ -163,8 +163,8 @@ export class AgentDiscoveryService {
     } catch (error: any) {
       if (error.name === 'AbortError') {
         throw new ARTError(
-          ErrorCode.TIMEOUT,
-          `Agent discovery request timed out after ${this.config.timeoutMs}ms`
+          `Agent discovery request timed out after ${this.config.timeoutMs}ms`,
+          ErrorCode.TIMEOUT
         );
       }
       
@@ -173,8 +173,8 @@ export class AgentDiscoveryService {
       }
 
       throw new ARTError(
-        ErrorCode.EXTERNAL_SERVICE_ERROR,
         `Failed to discover A2A agents: ${error.message}`,
+        ErrorCode.EXTERNAL_SERVICE_ERROR,
         error
       );
     }

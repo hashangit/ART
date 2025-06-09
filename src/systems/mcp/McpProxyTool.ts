@@ -1,12 +1,12 @@
 import { IToolExecutor } from '../../core/interfaces';
-import { ToolSchema, ToolResult, ExecutionContext, ARTError } from '../../types';
+import { ToolSchema, ToolResult, ExecutionContext, ARTError, ErrorCode } from '../../types';
 import { Logger } from '../../utils/logger';
 import { AuthManager } from '../../systems/auth/AuthManager';
-import { 
-  McpServerConfig, 
-  McpToolDefinition, 
-  McpToolExecutionRequest, 
-  McpToolExecutionResponse 
+import {
+  McpServerConfig,
+  McpToolDefinition,
+  McpToolExecutionRequest,
+  McpToolExecutionResponse
 } from './types';
 
 /**
@@ -40,16 +40,7 @@ export class McpProxyTool implements IToolExecutor {
       name: `mcp_${serverConfig.id}_${toolDefinition.name}`,
       description: toolDefinition.description,
       inputSchema: toolDefinition.inputSchema,
-      outputSchema: toolDefinition.outputSchema,
-      metadata: {
-        ...toolDefinition.metadata,
-        mcpServer: {
-          id: serverConfig.id,
-          name: serverConfig.name,
-          url: serverConfig.url
-        },
-        originalToolName: toolDefinition.name
-      }
+      outputSchema: toolDefinition.outputSchema
     };
 
     Logger.debug(`McpProxyTool: Created proxy for tool "${toolDefinition.name}" from server "${serverConfig.name}"`);
@@ -86,7 +77,9 @@ export class McpProxyTool implements IToolExecutor {
         Logger.debug(`McpProxyTool: Tool "${this.toolDefinition.name}" executed successfully in ${duration}ms`);
         
         return {
-          success: true,
+          callId: context.traceId || 'unknown',
+          toolName: this.schema.name,
+          status: 'success',
           output: response.output,
           metadata: {
             ...response.metadata,
@@ -101,7 +94,9 @@ export class McpProxyTool implements IToolExecutor {
         Logger.error(`McpProxyTool: Tool "${this.toolDefinition.name}" failed: ${response.error}`);
         
         return {
-          success: false,
+          callId: context.traceId || 'unknown',
+          toolName: this.schema.name,
+          status: 'error',
           error: response.error || 'Unknown error from MCP server',
           metadata: {
             ...response.metadata,
@@ -118,7 +113,9 @@ export class McpProxyTool implements IToolExecutor {
       Logger.error(`McpProxyTool: Failed to execute tool "${this.toolDefinition.name}": ${error.message}`);
       
       return {
-        success: false,
+        callId: context.traceId || 'unknown',
+        toolName: this.schema.name,
+        status: 'error',
         error: `MCP execution failed: ${error.message}`,
         metadata: {
           executionTime: duration,
@@ -149,15 +146,15 @@ export class McpProxyTool implements IToolExecutor {
     // Add authentication headers if auth strategy is configured
     if (this.serverConfig.authStrategyId && this.authManager) {
       try {
-        const authHeaders = await this.authManager.authenticate(this.serverConfig.authStrategyId);
+        const authHeaders = await this.authManager.getHeaders(this.serverConfig.authStrategyId);
         Object.assign(headers, authHeaders);
         Logger.debug(`McpProxyTool: Added authentication headers for server "${this.serverConfig.name}"`);
       } catch (error: any) {
         Logger.error(`McpProxyTool: Authentication failed for server "${this.serverConfig.name}": ${error.message}`);
         throw new ARTError(
-          'AUTHENTICATION_FAILED',
           `Failed to authenticate with MCP server: ${error.message}`,
-          { serverId: this.serverConfig.id, authStrategyId: this.serverConfig.authStrategyId }
+          ErrorCode.TOOL_EXECUTION_ERROR,
+          error
         );
       }
     }
@@ -192,20 +189,15 @@ export class McpProxyTool implements IToolExecutor {
       
       if (error.name === 'AbortError') {
         throw new ARTError(
-          'REQUEST_TIMEOUT',
           `MCP server request timed out after ${timeout}ms`,
-          { serverId: this.serverConfig.id, timeout }
+          ErrorCode.NETWORK_ERROR
         );
       }
       
       throw new ARTError(
-        'MCP_SERVER_ERROR',
         `Failed to communicate with MCP server: ${error.message}`,
-        { 
-          serverId: this.serverConfig.id, 
-          url,
-          originalError: error.message 
-        }
+        ErrorCode.NETWORK_ERROR,
+        error instanceof Error ? error : new Error(String(error))
       );
     }
   }

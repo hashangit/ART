@@ -160,8 +160,13 @@ export class PESAgent implements IAgentCore {
             }
 
             // Stage 4: Perform A2A discovery and delegation
-            const a2aTasks = await this._performDiscoveryAndDelegation(
+            const delegatedA2ATasks = await this._performDiscoveryAndDelegation(
                 planningOutput, props.threadId, traceId
+            );
+
+            // Stage 4b: Wait for A2A task completion
+            const completedA2ATasks = await this._waitForA2ACompletion(
+                delegatedA2ATasks, props.threadId, traceId
             );
 
             // Stage 5: Execute local tools
@@ -177,7 +182,7 @@ export class PESAgent implements IAgentCore {
 
             // Stage 6: Perform synthesis
             const { finalResponseContent, synthesisMetadata } = await this._performSynthesis(
-                props, systemPrompt, history, planningOutput, toolResults, a2aTasks, runtimeProviderConfig, traceId
+                props, systemPrompt, history, planningOutput, toolResults, completedA2ATasks, runtimeProviderConfig, traceId
             );
             llmCalls++;
             if (synthesisMetadata) {
@@ -695,6 +700,146 @@ export class PESAgent implements IAgentCore {
         }
         
         return extractedTasks;
+    }
+
+    /**
+     * Waits for A2A tasks to complete with configurable timeout.
+     * Polls task status periodically and updates local repository with results.
+     * @private
+     */
+    private async _waitForA2ACompletion(
+        a2aTasks: A2ATask[],
+        threadId: string,
+        traceId: string,
+        maxWaitTimeMs: number = 30000, // 30 seconds default
+        pollIntervalMs: number = 2000   // 2 seconds default
+    ): Promise<A2ATask[]> {
+        if (a2aTasks.length === 0) {
+            Logger.debug(`[${traceId}] No A2A tasks to wait for`);
+            return a2aTasks;
+        }
+
+        Logger.debug(`[${traceId}] Waiting for ${a2aTasks.length} A2A task(s) to complete (timeout: ${maxWaitTimeMs}ms)`);
+        
+        const startTime = Date.now();
+        const updatedTasks: A2ATask[] = [...a2aTasks];
+        
+        // Record observation for waiting start
+        await this.deps.observationManager.record({
+            threadId: threadId,
+            traceId: traceId,
+            type: ObservationType.TOOL_CALL, // Using TOOL_CALL as closest equivalent
+            content: {
+                phase: 'a2a_waiting',
+                message: 'Started waiting for A2A task completion',
+                taskCount: a2aTasks.length,
+                maxWaitTimeMs: maxWaitTimeMs,
+                pollIntervalMs: pollIntervalMs
+            },
+            metadata: { timestamp: Date.now() }
+        }).catch(err => Logger.error(`[${traceId}] Failed to record A2A waiting observation:`, err));
+
+        try {
+            while ((Date.now() - startTime) < maxWaitTimeMs) {
+                // Check if all tasks are completed
+                const incompleteTasks = updatedTasks.filter(task => 
+                    task.status !== A2ATaskStatus.COMPLETED && 
+                    task.status !== A2ATaskStatus.FAILED &&
+                    task.status !== A2ATaskStatus.CANCELLED
+                );
+
+                if (incompleteTasks.length === 0) {
+                    Logger.info(`[${traceId}] All A2A tasks completed successfully`);
+                    break;
+                }
+
+                Logger.debug(`[${traceId}] Waiting for ${incompleteTasks.length} A2A task(s) to complete...`);
+
+                // Poll each incomplete task for status updates
+                for (let i = 0; i < updatedTasks.length; i++) {
+                    const task = updatedTasks[i];
+                    
+                    // Skip already completed tasks
+                    if (task.status === A2ATaskStatus.COMPLETED || 
+                        task.status === A2ATaskStatus.FAILED ||
+                        task.status === A2ATaskStatus.CANCELLED) {
+                        continue;
+                    }
+
+                    try {
+                        // Get latest task status from repository (may have been updated by webhooks)
+                        const latestTask = await this.deps.a2aTaskRepository.getTask(task.taskId);
+                        if (latestTask) {
+                            updatedTasks[i] = latestTask;
+                            Logger.debug(`[${traceId}] Task ${task.taskId} status updated to: ${latestTask.status}`);
+                        }
+                    } catch (error: any) {
+                        Logger.warn(`[${traceId}] Failed to get updated status for task ${task.taskId}:`, error);
+                    }
+                }
+
+                // Wait before next poll cycle
+                await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+            }
+
+            // Check final completion status
+            const completedTasks = updatedTasks.filter(task => task.status === A2ATaskStatus.COMPLETED);
+            const failedTasks = updatedTasks.filter(task => task.status === A2ATaskStatus.FAILED);
+            const timeoutTasks = updatedTasks.filter(task => 
+                task.status !== A2ATaskStatus.COMPLETED && 
+                task.status !== A2ATaskStatus.FAILED &&
+                task.status !== A2ATaskStatus.CANCELLED
+            );
+
+            const totalWaitTime = Date.now() - startTime;
+            
+            // Record completion observation
+            await this.deps.observationManager.record({
+                threadId: threadId,
+                traceId: traceId,
+                type: ObservationType.TOOL_CALL,
+                content: {
+                    phase: 'a2a_waiting_complete',
+                    message: 'A2A task waiting completed',
+                    totalWaitTimeMs: totalWaitTime,
+                    completedTasks: completedTasks.length,
+                    failedTasks: failedTasks.length,
+                    timeoutTasks: timeoutTasks.length,
+                    success: timeoutTasks.length === 0
+                },
+                metadata: { timestamp: Date.now() }
+            }).catch(err => Logger.error(`[${traceId}] Failed to record A2A waiting completion observation:`, err));
+
+            if (timeoutTasks.length > 0) {
+                Logger.warn(`[${traceId}] ${timeoutTasks.length} A2A task(s) did not complete within timeout (${maxWaitTimeMs}ms)`);
+            }
+
+            if (completedTasks.length > 0) {
+                Logger.info(`[${traceId}] Successfully completed ${completedTasks.length} A2A task(s) in ${totalWaitTime}ms`);
+            }
+
+            return updatedTasks;
+
+        } catch (error: any) {
+            Logger.error(`[${traceId}] Error during A2A task waiting:`, error);
+            
+            // Record error observation
+            await this.deps.observationManager.record({
+                threadId: threadId,
+                traceId: traceId,
+                type: ObservationType.ERROR,
+                content: {
+                    phase: 'a2a_waiting',
+                    error: error.message,
+                    stack: error.stack,
+                    waitTimeMs: Date.now() - startTime
+                },
+                metadata: { timestamp: Date.now() }
+            }).catch(err => Logger.error(`[${traceId}] Failed to record A2A waiting error observation:`, err));
+
+            // Don't fail the entire process for A2A waiting errors - return current state
+            return updatedTasks;
+        }
     }
 
     /**

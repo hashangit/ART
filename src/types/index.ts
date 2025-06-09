@@ -694,6 +694,15 @@ export interface A2AAgentInfo {
   capabilities?: string[];
   /** Current load or availability status of the agent. */
   status?: 'available' | 'busy' | 'offline';
+  /** Authentication configuration for communicating with the agent. */
+  authentication?: {
+    /** Type of authentication required. */
+    type: 'bearer' | 'api_key' | 'none';
+    /** Bearer token for authorization (if type is 'bearer'). */
+    token?: string;
+    /** API key for authorization (if type is 'api_key'). */
+    apiKey?: string;
+  };
 }
 
 /**
@@ -708,6 +717,10 @@ export interface A2ATaskMetadata {
   startedAt?: number;
   /** Timestamp when the task was completed/failed (if applicable). */
   completedAt?: number;
+  /** Timestamp when the task was delegated to a remote agent (if applicable). */
+  delegatedAt?: number;
+  /** Timestamp when the task was last updated (for compatibility). */
+  lastUpdated?: number;
   /** The user or system that initiated this task. */
   initiatedBy?: string;
   /** Correlation ID for tracking related tasks across the system. */
@@ -718,6 +731,8 @@ export interface A2ATaskMetadata {
   maxRetries?: number;
   /** Timeout duration in milliseconds. */
   timeoutMs?: number;
+  /** Estimated completion time in milliseconds (if provided by remote agent). */
+  estimatedCompletionMs?: number;
   /** Tags or labels for categorizing tasks. */
   tags?: string[];
 }
