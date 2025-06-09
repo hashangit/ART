@@ -281,6 +281,37 @@ export interface StateManager {
    */
   setAgentState(threadId: string, state: AgentState): Promise<void>;
 
+  /**
+   * Enables specific tools for a conversation thread by adding them to the thread's enabled tools list.
+   * This method loads the current thread configuration, updates the enabledTools array,
+   * and persists the changes. Cache is invalidated to ensure fresh data on next load.
+   * @param threadId - The unique identifier of the thread.
+   * @param toolNames - Array of tool names to enable for this thread.
+   * @returns A promise that resolves when the tools are enabled and configuration is saved.
+   * @throws {ARTError} If no ThreadConfig exists for the threadId, or if the repository fails.
+   */
+  enableToolsForThread(threadId: string, toolNames: string[]): Promise<void>;
+
+  /**
+   * Disables specific tools for a conversation thread by removing them from the thread's enabled tools list.
+   * This method loads the current thread configuration, updates the enabledTools array,
+   * and persists the changes. Cache is invalidated to ensure fresh data on next load.
+   * @param threadId - The unique identifier of the thread.
+   * @param toolNames - Array of tool names to disable for this thread.
+   * @returns A promise that resolves when the tools are disabled and configuration is saved.
+   * @throws {ARTError} If no ThreadConfig exists for the threadId, or if the repository fails.
+   */
+  disableToolsForThread(threadId: string, toolNames: string[]): Promise<void>;
+
+  /**
+   * Gets the list of currently enabled tools for a specific thread.
+   * This is a convenience method that loads the thread context and returns the enabledTools array.
+   * @param threadId - The unique identifier of the thread.
+   * @returns A promise that resolves to an array of enabled tool names, or empty array if no tools are enabled.
+   * @throws {ARTError} If the thread context cannot be loaded.
+   */
+  getEnabledToolsForThread(threadId: string): Promise<string[]>;
+
   // Potentially add methods to update config/state if needed during runtime,
   // though v0.2.4 focuses on loading existing config.
   // updateAgentState(threadId: string, updates: Partial<AgentState>): Promise<void>;
@@ -477,6 +508,20 @@ export interface IStateRepository {
  * This object is the main entry point for interacting with the framework after setup.
  * It provides access to the core processing method and key subsystems.
  */
+/**
+ * Interface for an authentication strategy that can provide authorization headers.
+ * This enables pluggable security for remote service connections (MCP servers, A2A agents, etc.)
+ */
+export interface IAuthStrategy {
+  /**
+   * Asynchronously retrieves the authentication headers.
+   * This might involve checking a cached token, refreshing it if expired, and then returning it.
+   * @returns A promise that resolves to a record of header keys and values.
+   * @throws {ARTError} If authentication fails or cannot be obtained.
+   */
+  getAuthHeaders(): Promise<Record<string, string>>;
+}
+
 export interface ArtInstance {
     /** The main method to process a user query using the configured Agent Core. */
     readonly process: IAgentCore['process'];

@@ -241,6 +241,94 @@ export class StateManager implements IStateManager {
     }
     
     /**
+     * Enables specific tools for a conversation thread by adding them to the thread's enabled tools list.
+     * This method loads the current thread configuration, updates the enabledTools array,
+     * and persists the changes. Cache is invalidated to ensure fresh data on next load.
+     * @param threadId - The unique identifier of the thread.
+     * @param toolNames - Array of tool names to enable for this thread.
+     * @throws {Error} If threadId is empty, toolNames is empty, or if the repository fails.
+     */
+    async enableToolsForThread(threadId: string, toolNames: string[]): Promise<void> {
+        if (!threadId) {
+            throw new Error("StateManager: threadId cannot be empty for enableToolsForThread.");
+        }
+        if (!toolNames || toolNames.length === 0) {
+            throw new Error("StateManager: toolNames cannot be empty for enableToolsForThread.");
+        }
+
+        // Load current context to get existing config
+        const context = await this.loadThreadContext(threadId);
+        if (!context.config) {
+            throw new Error(`StateManager: No ThreadConfig found for threadId '${threadId}'. Cannot enable tools without existing configuration.`);
+        }
+
+        // Create updated config with additional enabled tools
+        const currentEnabledTools = context.config.enabledTools || [];
+        const newEnabledTools = [...new Set([...currentEnabledTools, ...toolNames])]; // Remove duplicates
+
+        const updatedConfig: ThreadConfig = {
+            ...context.config,
+            enabledTools: newEnabledTools
+        };
+
+        // Save updated config and clear cache
+        await this.setThreadConfig(threadId, updatedConfig);
+        // console.debug(`StateManager: Enabled tools [${toolNames.join(', ')}] for thread ${threadId}.`);
+    }
+
+    /**
+     * Disables specific tools for a conversation thread by removing them from the thread's enabled tools list.
+     * This method loads the current thread configuration, updates the enabledTools array,
+     * and persists the changes. Cache is invalidated to ensure fresh data on next load.
+     * @param threadId - The unique identifier of the thread.
+     * @param toolNames - Array of tool names to disable for this thread.
+     * @throws {Error} If threadId is empty, toolNames is empty, or if the repository fails.
+     */
+    async disableToolsForThread(threadId: string, toolNames: string[]): Promise<void> {
+        if (!threadId) {
+            throw new Error("StateManager: threadId cannot be empty for disableToolsForThread.");
+        }
+        if (!toolNames || toolNames.length === 0) {
+            throw new Error("StateManager: toolNames cannot be empty for disableToolsForThread.");
+        }
+
+        // Load current context to get existing config
+        const context = await this.loadThreadContext(threadId);
+        if (!context.config) {
+            throw new Error(`StateManager: No ThreadConfig found for threadId '${threadId}'. Cannot disable tools without existing configuration.`);
+        }
+
+        // Create updated config with tools removed
+        const currentEnabledTools = context.config.enabledTools || [];
+        const newEnabledTools = currentEnabledTools.filter(tool => !toolNames.includes(tool));
+
+        const updatedConfig: ThreadConfig = {
+            ...context.config,
+            enabledTools: newEnabledTools
+        };
+
+        // Save updated config and clear cache
+        await this.setThreadConfig(threadId, updatedConfig);
+        // console.debug(`StateManager: Disabled tools [${toolNames.join(', ')}] for thread ${threadId}.`);
+    }
+
+    /**
+     * Gets the list of currently enabled tools for a specific thread.
+     * This is a convenience method that loads the thread context and returns the enabledTools array.
+     * @param threadId - The unique identifier of the thread.
+     * @returns A promise that resolves to an array of enabled tool names, or empty array if no tools are enabled.
+     * @throws {Error} If the thread context cannot be loaded.
+     */
+    async getEnabledToolsForThread(threadId: string): Promise<string[]> {
+        if (!threadId) {
+            throw new Error("StateManager: threadId cannot be empty for getEnabledToolsForThread.");
+        }
+
+        const context = await this.loadThreadContext(threadId);
+        return context.config?.enabledTools || [];
+    }
+
+    /**
      * Clears the internal context cache. Useful if the underlying storage is manipulated externally
      * during an agent's processing cycle, though this is generally not recommended.
      * Or for testing purposes.

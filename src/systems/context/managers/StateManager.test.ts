@@ -182,18 +182,182 @@ describe('StateManager', () => {
   });
 
   describe('saveStateIfModified', () => {
-    it('should resolve and log a warning (no-op)', async () => {
+    it('should resolve and log a warning for explicit strategy (no-op)', async () => {
       const consoleWarnSpy = vi.spyOn(console, 'warn');
       await expect(manager.saveStateIfModified(threadId)).resolves.toBeUndefined();
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining(`saveStateIfModified called for thread ${threadId}, but state modification tracking/saving is not implemented`)
+        expect.stringContaining(`saveStateIfModified called for thread ${threadId}. AgentState must be saved explicitly`)
       );
-      expect(mockRepository.setThreadContext).not.toHaveBeenCalled(); // Ensure repo wasn't called
+      expect(mockRepository.setAgentState).not.toHaveBeenCalled(); // Ensure repo wasn't called
       consoleWarnSpy.mockRestore();
     });
 
      it('should reject if threadId is empty', async () => {
         await expect(manager.saveStateIfModified('')).rejects.toThrow('threadId cannot be empty');
+    });
+  });
+
+  describe('enableToolsForThread', () => {
+    it('should enable new tools by adding them to enabledTools', async () => {
+      const config = createTestConfig(['existingTool']);
+      const context: ThreadContext = { config, state: null };
+      mockRepository.getThreadContext = vi.fn().mockResolvedValue(context);
+
+      await manager.enableToolsForThread(threadId, ['newTool1', 'newTool2']);
+
+      expect(mockRepository.getThreadContext).toHaveBeenCalledWith(threadId);
+      expect(mockRepository.setThreadConfig).toHaveBeenCalledWith(threadId, {
+        ...config,
+        enabledTools: ['existingTool', 'newTool1', 'newTool2']
+      });
+    });
+
+    it('should handle duplicate tools without adding them twice', async () => {
+      const config = createTestConfig(['tool1', 'tool2']);
+      const context: ThreadContext = { config, state: null };
+      mockRepository.getThreadContext = vi.fn().mockResolvedValue(context);
+
+      await manager.enableToolsForThread(threadId, ['tool2', 'tool3']);
+
+      expect(mockRepository.setThreadConfig).toHaveBeenCalledWith(threadId, {
+        ...config,
+        enabledTools: ['tool1', 'tool2', 'tool3']
+      });
+    });
+
+    it('should handle empty enabledTools array', async () => {
+      const config = createTestConfig([]);
+      const context: ThreadContext = { config, state: null };
+      mockRepository.getThreadContext = vi.fn().mockResolvedValue(context);
+
+      await manager.enableToolsForThread(threadId, ['newTool']);
+
+      expect(mockRepository.setThreadConfig).toHaveBeenCalledWith(threadId, {
+        ...config,
+        enabledTools: ['newTool']
+      });
+    });
+
+    it('should throw error if threadId is empty', async () => {
+      await expect(manager.enableToolsForThread('', ['tool']))
+        .rejects.toThrow('threadId cannot be empty for enableToolsForThread');
+    });
+
+    it('should throw error if toolNames is empty', async () => {
+      await expect(manager.enableToolsForThread(threadId, []))
+        .rejects.toThrow('toolNames cannot be empty for enableToolsForThread');
+    });
+
+    it('should throw error if no ThreadConfig exists', async () => {
+      const context: ThreadContext = { config: null as any, state: null };
+      mockRepository.getThreadContext = vi.fn().mockResolvedValue(context);
+
+      await expect(manager.enableToolsForThread(threadId, ['tool']))
+        .rejects.toThrow(`No ThreadConfig found for threadId '${threadId}'`);
+    });
+  });
+
+  describe('disableToolsForThread', () => {
+    it('should disable tools by removing them from enabledTools', async () => {
+      const config = createTestConfig(['tool1', 'tool2', 'tool3']);
+      const context: ThreadContext = { config, state: null };
+      mockRepository.getThreadContext = vi.fn().mockResolvedValue(context);
+
+      await manager.disableToolsForThread(threadId, ['tool1', 'tool3']);
+
+      expect(mockRepository.getThreadContext).toHaveBeenCalledWith(threadId);
+      expect(mockRepository.setThreadConfig).toHaveBeenCalledWith(threadId, {
+        ...config,
+        enabledTools: ['tool2']
+      });
+    });
+
+    it('should handle non-existent tools gracefully', async () => {
+      const config = createTestConfig(['tool1', 'tool2']);
+      const context: ThreadContext = { config, state: null };
+      mockRepository.getThreadContext = vi.fn().mockResolvedValue(context);
+
+      await manager.disableToolsForThread(threadId, ['nonexistent', 'tool1']);
+
+      expect(mockRepository.setThreadConfig).toHaveBeenCalledWith(threadId, {
+        ...config,
+        enabledTools: ['tool2']
+      });
+    });
+
+    it('should handle empty enabledTools array', async () => {
+      const config = createTestConfig([]);
+      const context: ThreadContext = { config, state: null };
+      mockRepository.getThreadContext = vi.fn().mockResolvedValue(context);
+
+      await manager.disableToolsForThread(threadId, ['tool']);
+
+      expect(mockRepository.setThreadConfig).toHaveBeenCalledWith(threadId, {
+        ...config,
+        enabledTools: []
+      });
+    });
+
+    it('should throw error if threadId is empty', async () => {
+      await expect(manager.disableToolsForThread('', ['tool']))
+        .rejects.toThrow('threadId cannot be empty for disableToolsForThread');
+    });
+
+    it('should throw error if toolNames is empty', async () => {
+      await expect(manager.disableToolsForThread(threadId, []))
+        .rejects.toThrow('toolNames cannot be empty for disableToolsForThread');
+    });
+
+    it('should throw error if no ThreadConfig exists', async () => {
+      const context: ThreadContext = { config: null as any, state: null };
+      mockRepository.getThreadContext = vi.fn().mockResolvedValue(context);
+
+      await expect(manager.disableToolsForThread(threadId, ['tool']))
+        .rejects.toThrow(`No ThreadConfig found for threadId '${threadId}'`);
+    });
+  });
+
+  describe('getEnabledToolsForThread', () => {
+    it('should return the enabledTools array from thread config', async () => {
+      const config = createTestConfig(['tool1', 'tool2', 'tool3']);
+      const context: ThreadContext = { config, state: null };
+      mockRepository.getThreadContext = vi.fn().mockResolvedValue(context);
+
+      const result = await manager.getEnabledToolsForThread(threadId);
+
+      expect(result).toEqual(['tool1', 'tool2', 'tool3']);
+      expect(mockRepository.getThreadContext).toHaveBeenCalledWith(threadId);
+    });
+
+    it('should return empty array if enabledTools is undefined', async () => {
+      const config = { reasoning: { provider: 'p', model: 'm' }, historyLimit: 1 } as ThreadConfig;
+      const context: ThreadContext = { config, state: null };
+      mockRepository.getThreadContext = vi.fn().mockResolvedValue(context);
+
+      const result = await manager.getEnabledToolsForThread(threadId);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array if config is null', async () => {
+      const context: ThreadContext = { config: null as any, state: null };
+      mockRepository.getThreadContext = vi.fn().mockResolvedValue(context);
+
+      const result = await manager.getEnabledToolsForThread(threadId);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should throw error if threadId is empty', async () => {
+      await expect(manager.getEnabledToolsForThread(''))
+        .rejects.toThrow('threadId cannot be empty for getEnabledToolsForThread');
+    });
+
+    it('should throw error if context loading fails', async () => {
+      const repoError = new Error('Context load failed');
+      mockRepository.getThreadContext = vi.fn().mockRejectedValue(repoError);
+
+      await expect(manager.getEnabledToolsForThread(threadId)).rejects.toThrow(repoError);
     });
   });
 });
