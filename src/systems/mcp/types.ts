@@ -116,4 +116,25 @@ export interface McpManagerConfig {
   autoRefresh: boolean;
   /** Tool discovery refresh interval in milliseconds */
   refreshInterval: number;
+}
+
+/**
+ * Configuration for creating an MCP client connection
+ */
+export interface McpClientConfig {
+  /** Server configuration */
+  server: McpServerConfig;
+  /** Transport configuration for the connection */
+  transport: {
+    type: 'stdio' | 'sse' | 'http';
+    // For stdio transport
+    command?: string;
+    args?: string[];
+    cwd?: string;
+    env?: Record<string, string>;
+    // For SSE/HTTP transport
+    url?: string;
+    headers?: Record<string, string>;
+    timeout?: number;
+  };
 } 
