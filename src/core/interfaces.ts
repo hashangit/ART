@@ -504,10 +504,77 @@ export interface IStateRepository {
 }
 
 /**
- * Represents the fully initialized and configured ART Framework client instance.
- * This object is the main entry point for interacting with the framework after setup.
- * It provides access to the core processing method and key subsystems.
+ * Interface for managing A2A (Agent-to-Agent) task persistence and retrieval.
  */
+export interface IA2ATaskRepository {
+  /**
+   * Creates a new A2A task in the repository.
+   * @param task - The A2ATask object to create.
+   * @returns A promise that resolves when the task is successfully stored.
+   * @throws {ARTError} If the task cannot be created (e.g., duplicate taskId, validation errors).
+   */
+  createTask(task: import('../types').A2ATask): Promise<void>;
+
+  /**
+   * Retrieves an A2A task by its unique identifier.
+   * @param taskId - The unique identifier of the task.
+   * @returns A promise resolving to the A2ATask object if found, or null if not found.
+   * @throws {ARTError} If an error occurs during retrieval.
+   */
+  getTask(taskId: string): Promise<import('../types').A2ATask | null>;
+
+  /**
+   * Updates an existing A2A task with new information.
+   * @param taskId - The unique identifier of the task to update.
+   * @param updates - Partial A2ATask object containing the fields to update.
+   * @returns A promise that resolves when the task is successfully updated.
+   * @throws {ARTError} If the task is not found or cannot be updated.
+   */
+  updateTask(taskId: string, updates: Partial<import('../types').A2ATask>): Promise<void>;
+
+  /**
+   * Removes an A2A task from the repository.
+   * @param taskId - The unique identifier of the task to delete.
+   * @returns A promise that resolves when the task is successfully deleted.
+   * @throws {ARTError} If the task is not found or cannot be deleted.
+   */
+  deleteTask(taskId: string): Promise<void>;
+
+  /**
+   * Retrieves tasks associated with a specific thread.
+   * @param threadId - The thread identifier to filter tasks.
+   * @param filter - Optional filter criteria for task status, priority, or assigned agent.
+   * @returns A promise resolving to an array of A2ATask objects matching the criteria.
+   */
+  getTasksByThread(threadId: string, filter?: {
+    status?: import('../types').A2ATaskStatus | import('../types').A2ATaskStatus[];
+    priority?: import('../types').A2ATaskPriority;
+    assignedAgentId?: string;
+  }): Promise<import('../types').A2ATask[]>;
+
+  /**
+   * Retrieves tasks assigned to a specific agent.
+   * @param agentId - The agent identifier to filter tasks.
+   * @param filter - Optional filter criteria for task status or priority.
+   * @returns A promise resolving to an array of A2ATask objects assigned to the agent.
+   */
+  getTasksByAgent(agentId: string, filter?: {
+    status?: import('../types').A2ATaskStatus | import('../types').A2ATaskStatus[];
+    priority?: import('../types').A2ATaskPriority;
+  }): Promise<import('../types').A2ATask[]>;
+
+  /**
+   * Retrieves tasks based on their current status.
+   * @param status - The task status(es) to filter by.
+   * @param options - Optional query parameters like limit and pagination.
+   * @returns A promise resolving to an array of A2ATask objects with the specified status.
+   */
+  getTasksByStatus(
+    status: import('../types').A2ATaskStatus | import('../types').A2ATaskStatus[],
+    options?: { limit?: number; offset?: number }
+  ): Promise<import('../types').A2ATask[]>;
+}
+
 /**
  * Interface for an authentication strategy that can provide authorization headers.
  * This enables pluggable security for remote service connections (MCP servers, A2A agents, etc.)
