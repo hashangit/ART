@@ -187,58 +187,57 @@ function mapObservationToFinding(observation: any): ZyntopiaObservation {
 }
 
 function parseArtResponse(responseText: string): { thoughts: ThoughtItem[], response: string } {
-    const cleanText = responseText.replace(/\*\*(Intent|Plan|Thought|Response):\*\*/g, '@@@$1:').trim();
-    const parts = cleanText.split('@@@').filter(p => p.trim());
-
     const result: { thoughts: ThoughtItem[], response: string } = {
         thoughts: [],
         response: ''
     };
 
-    let responseFound = false;
-    let lastThoughtIndex = -1;
+    const intentMatch = responseText.match(/<Intent>([\s\S]*?)<\/Intent>/);
+    if (intentMatch && intentMatch[1].trim()) {
+        result.thoughts.push({
+            id: `thought_intent_${Date.now()}`, type: 'Intent', content: intentMatch[1].trim(),
+            icon: Target, color: 'border-blue-500', titleColor: 'text-blue-600 dark:text-blue-400',
+        });
+    }
 
-    for (const [index, part] of parts.entries()) {
-        const trimmedPart = part.trim();
-        if (trimmedPart.startsWith('Intent:')) {
+    const planMatch = responseText.match(/<Plan>([\s\S]*?)<\/Plan>/);
+    if (planMatch && planMatch[1].trim()) {
+        result.thoughts.push({
+            id: `thought_plan_${Date.now()}`, type: 'Plan', content: planMatch[1].trim(),
+            icon: ListChecks, color: 'border-purple-500', titleColor: 'text-purple-600 dark:text-purple-400',
+        });
+    }
+
+    const thoughtMatches = [...responseText.matchAll(/<Thought>([\s\S]*?)<\/Thought>/g)];
+    for (const thoughtMatch of thoughtMatches) {
+        if (thoughtMatch[1].trim()) {
             result.thoughts.push({
-                id: `thought_intent_${Date.now()}`, type: 'Intent', content: trimmedPart.substring('Intent:'.length).trim(),
-                icon: Target, color: 'border-blue-500', titleColor: 'text-blue-600 dark:text-blue-400',
-            });
-            lastThoughtIndex = index;
-        } else if (trimmedPart.startsWith('Plan:')) {
-             result.thoughts.push({
-                id: `thought_plan_${Date.now()}`, type: 'Plan', content: trimmedPart.substring('Plan:'.length).trim(),
-                icon: ListChecks, color: 'border-purple-500', titleColor: 'text-purple-600 dark:text-purple-400',
-            });
-            lastThoughtIndex = index;
-        } else if (trimmedPart.startsWith('Thought:')) {
-            result.thoughts.push({
-                id: `thought_thought_${Date.now()}_${result.thoughts.length}`, type: 'Thought', content: trimmedPart.substring('Thought:'.length).trim(),
+                id: `thought_thought_${Date.now()}_${result.thoughts.length}`, type: 'Thought', content: thoughtMatch[1].trim(),
                 icon: BrainCircuit, color: 'border-green-500', titleColor: 'text-green-600 dark:text-green-400',
             });
-            lastThoughtIndex = index;
-        } else if (trimmedPart.startsWith('Response:')) {
-            result.response = trimmedPart.substring('Response:'.length).trim();
-            responseFound = true;
         }
     }
-    
-    // Fallback logic if the "Response:" tag is missing
-    if (!responseFound) {
-      if (lastThoughtIndex !== -1 && lastThoughtIndex + 1 < parts.length) {
-        // If there are thoughts, assume everything after the last one is the response
-        result.response = parts.slice(lastThoughtIndex + 1).map(p => p.replace(/^(Intent|Plan|Thought):/, '').trim()).join('\n\n').trim();
-      } else if (result.thoughts.length > 0 && parts.length > lastThoughtIndex) {
-        // This handles the case where the last part is the response but doesn't have a tag.
-        const lastPart = parts[parts.length - 1];
-        if (!lastPart.match(/^(Intent|Plan|Thought):/)) {
-            result.response = lastPart.trim();
+
+    const responseMatch = responseText.match(/<Response>([\s\S]*?)<\/Response>/);
+    if (responseMatch) {
+        result.response = responseMatch[1].trim();
+    } else {
+        // Fallback: if <Response> tag is missing, take everything after the last known tag.
+        let lastIndex = 0;
+        if (intentMatch) lastIndex = Math.max(lastIndex, intentMatch.index! + intentMatch[0].length);
+        if (planMatch) lastIndex = Math.max(lastIndex, planMatch.index! + planMatch[0].length);
+        if (thoughtMatches.length > 0) {
+            const lastThought = thoughtMatches[thoughtMatches.length - 1];
+            lastIndex = Math.max(lastIndex, lastThought.index! + lastThought[0].length);
         }
-      } else {
-        // If there are no thought markers at all, the whole thing is the response
-        result.response = responseText;
-      }
+
+        const rest = responseText.substring(lastIndex).trim();
+        if (rest) {
+            result.response = rest;
+        } else if (result.thoughts.length === 0) {
+            // Final fallback: if no tags were found at all.
+            result.response = responseText;
+        }
     }
 
     return result;
@@ -773,16 +772,23 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
           historyLimit: 10,
           systemPrompt: `You are Zee, a helpful AI assistant powered by the ART Framework.
 
-Your entire output MUST strictly follow the format below. Do not include any other text, headers, or explanations outside of this structure.
+Your entire output MUST strictly follow the format below, using XML-style tags. Do not include any other text, headers, or explanations outside of this structure.
 
-**Intent:** [Your concise understanding of the user's primary goal.]
+<Intent>
+[Your concise understanding of the user's primary goal.]
+</Intent>
 
-**Plan:**
+<Plan>
 [A numbered list of the steps you will take to address the user's request.]
+</Plan>
 
-**Thought:** [Your reasoning or reflection on a step. You can have multiple thought blocks.]
+<Thought>
+[Your reasoning or reflection on a step. You can have multiple thought blocks.]
+</Thought>
 
-**Response:** [The final, user-facing answer, formatted in clear and readable markdown.]`,
+<Response>
+[The final, user-facing answer, formatted in clear and readable markdown.]
+</Response>`,
         });
         toast(`Model switched to ${selectedModelEntry.name}`);
       }
