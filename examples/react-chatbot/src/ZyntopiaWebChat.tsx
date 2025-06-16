@@ -433,7 +433,7 @@ function FindingCard({ finding, isInline = false }: { finding: ZyntopiaObservati
           "Stop Reason": parsedContent.stopReason,
           "Input Tokens": parsedContent.inputTokens,
           "Output Tokens": parsedContent.outputTokens,
-          "Total Tokens": parsedContent.totalTokenCount,
+          "Total Tokens": (parsedContent.inputTokens && parsedContent.outputTokens) ? (parsedContent.inputTokens + parsedContent.outputTokens) : undefined,
           "First Token MS": parsedContent.timeToFirstTokenMs,
           "Total Time MS": parsedContent.totalGenerationTimeMs,
       };
@@ -856,6 +856,58 @@ Your entire output MUST strictly follow the format below, using XML-style tags. 
 
       const { thoughts: messageThoughts, response: finalResponse } = parseArtResponse(responseContent);
 
+      // --- Aggregate LLM Metadata ---
+      const intermediateSteps = (response as any).intermediateSteps || [];
+      let totalInputTokens = 0;
+      let totalOutputTokens = 0;
+      let timeToFirstTokenMs: number | undefined;
+      let lastStopReason: string | undefined;
+
+      if (intermediateSteps.length > 0) {
+        intermediateSteps.forEach((step: any) => {
+          const llmMeta = step.observation?.metadata?.llmMetadata;
+          if (llmMeta) {
+            totalInputTokens += llmMeta.inputTokens || 0;
+            totalOutputTokens += llmMeta.outputTokens || 0;
+            if (timeToFirstTokenMs === undefined && llmMeta.timeToFirstTokenMs) {
+              timeToFirstTokenMs = llmMeta.timeToFirstTokenMs;
+            }
+            if (llmMeta.stopReason) {
+              lastStopReason = llmMeta.stopReason;
+            }
+          }
+        });
+      }
+      
+      // Add the final LLM call's metadata if it exists
+      if (response.metadata.llmMetadata) {
+        const finalMeta = response.metadata.llmMetadata;
+        // This check prevents double-counting if the final call is also in intermediateSteps
+        if (!intermediateSteps.some((step:any) => step.observation?.metadata?.llmMetadata === finalMeta)) {
+            totalInputTokens += finalMeta.inputTokens || 0;
+            totalOutputTokens += finalMeta.outputTokens || 0;
+            if (timeToFirstTokenMs === undefined && finalMeta.timeToFirstTokenMs) {
+                timeToFirstTokenMs = finalMeta.timeToFirstTokenMs;
+            }
+            if (finalMeta.stopReason) {
+                lastStopReason = finalMeta.stopReason;
+            }
+        }
+      }
+
+      const meta: Record<string, any> = {
+          'Input Tokens': totalInputTokens || undefined,
+          'Output Tokens': totalOutputTokens || undefined,
+          'Total Tokens': (totalInputTokens + totalOutputTokens) || undefined,
+          'First Token MS': timeToFirstTokenMs,
+          'Total Time MS': response.metadata.totalDurationMs,
+          'Finish Reason': lastStopReason || response.metadata.llmMetadata?.stopReason || 'stop',
+          'LLM Calls': response.metadata.llmCalls,
+          'Tool Calls': response.metadata.toolCalls,
+      };
+
+      const finalMetadata = Object.fromEntries(Object.entries(meta).filter(([_, v]) => v !== null && v !== undefined));
+
       const assistantMessage: ZyntopiaMessage = {
         id: (Date.now() + 1).toString(),
         content: finalResponse,
@@ -863,12 +915,7 @@ Your entire output MUST strictly follow the format below, using XML-style tags. 
         timestamp: new Date(),
         reactions: true,
         thoughts: messageThoughts,
-        metadata: {
-          'Response Time': `${response.metadata.totalDurationMs}ms`,
-          'LLM Calls': response.metadata.llmCalls,
-          'Tool Calls': response.metadata.toolCalls,
-          'Finish Reason': response.metadata.llmMetadata?.stopReason || 'stop',
-        }
+        metadata: finalMetadata
       };
 
       setMessages(prev => [...prev, assistantMessage]);
