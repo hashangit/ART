@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createArtInstance } from 'art-framework';
 import toast, { Toaster } from 'react-hot-toast';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 // UI Components
 import {
@@ -262,17 +264,26 @@ function FindingCard({ finding, isInline = false }: { finding: ZyntopiaObservati
 
   const { type, icon, color, titleColor, content, tool_name, status, call_id, toolId } = finding;
 
-  // Determine Icon
-  const DefaultIcon = type === 'Intent' ? Target :
-                      type === 'Plan' ? ListChecks :
-                      type === 'Thought' ? BrainCircuit :
-                      type === 'Synthesis' ? Combine :
-                      type === 'Tool Call' ? Terminal :
-                      type === 'Tool Execution' ? CheckCircle :
-                      Info;
-  const DisplayIcon = icon || DefaultIcon;
-  const cardColor = color || 'border-gray-500';
-  const cardTitleColor = titleColor || 'text-gray-700 dark:text-gray-300';
+  // --- Icon and Color Mapping ---
+  const typeMapping: Record<string, { icon: any; color: string; titleColor: string }> = {
+    'Intent': { icon: Target, color: 'border-blue-500', titleColor: 'text-blue-600 dark:text-blue-400' },
+    'Plan': { icon: ListChecks, color: 'border-purple-500', titleColor: 'text-purple-600 dark:text-purple-400' },
+    'Thought': { icon: BrainCircuit, color: 'border-green-500', titleColor: 'text-green-600 dark:text-green-400' },
+    'Tool Call': { icon: Terminal, color: 'border-orange-500', titleColor: 'text-orange-600 dark:text-orange-400' },
+    'Tool Execution': { icon: CheckCircle, color: 'border-green-500', titleColor: 'text-green-600 dark:text-green-400' },
+    'Synthesis': { icon: Combine, color: 'border-teal-500', titleColor: 'text-teal-600 dark:text-teal-400' },
+    'LLM_STREAM_START': { icon: ArrowRight, color: 'border-gray-400', titleColor: 'text-gray-500 dark:text-gray-400' },
+    'LLM_STREAM_METADATA': { icon: BarChartHorizontalBig, color: 'border-gray-400', titleColor: 'text-gray-500 dark:text-gray-400' },
+    'LLM_STREAM_END': { icon: CheckCircle, color: 'border-gray-400', titleColor: 'text-gray-500 dark:text-gray-400' },
+    'FINAL_RESPONSE': { icon: MessageSquare, color: 'border-blue-500', titleColor: 'text-blue-600 dark:text-blue-400' },
+    // Add default for any other types
+    'default': { icon: Info, color: 'border-gray-500', titleColor: 'text-gray-600 dark:text-gray-400' },
+  };
+  
+  const typeConfig = typeMapping[type] || typeMapping.default;
+  const DisplayIcon = icon || typeConfig.icon;
+  const cardColor = color || typeConfig.color;
+  const cardTitleColor = titleColor || typeConfig.titleColor;
 
   // --- Card Rendering Logic ---
 
@@ -379,19 +390,83 @@ function FindingCard({ finding, isInline = false }: { finding: ZyntopiaObservati
     );
   }
 
-  // 3. Generic Card (Intent, Plan, Thought, Synthesis, etc.)
+  // 3. Generic Card for most other types
   let displayContent = content;
-  if ((type === 'Intent' || type === 'Plan') && typeof content === 'string') {
-    const parsed = safeJsonParse(content);
-    if (parsed) {
-      if ((type === 'Intent') && parsed.intent) {
-        displayContent = parsed.intent;
-      } else if ((type === 'Plan') && parsed.plan) {
-        displayContent = parsed.plan;
+  const parsedContent = safeJsonParse(content);
+  
+  // For types that are just simple messages inside a JSON object
+  if (parsedContent && parsedContent.message) {
+    displayContent = parsedContent.message;
+  }
+  
+  // For LLM stream phases
+  if (parsedContent && parsedContent.phase) {
+    displayContent = `Phase: ${parsedContent.phase}`;
+  }
+  
+  // Clean up Intent/Plan/Thought content if it's still JSON
+  const relevantTypes = ['Intent', 'Plan', 'Thought', 'INTENT', 'PLAN', 'THOUGHTS'];
+  if (relevantTypes.includes(type) && typeof displayContent === 'string') {
+    const furtherParsed = safeJsonParse(displayContent);
+    if (furtherParsed) {
+      const typeLower = type.toLowerCase().replace(/s$/, ''); // intent, plan, thought
+      if (furtherParsed[typeLower]) {
+        displayContent = furtherParsed[typeLower];
       }
     }
   }
+
+  // Handle FINAL_RESPONSE specifically
+  if (type === 'FINAL_RESPONSE' && parsedContent) {
+      if (parsedContent.message) {
+          const innerMessage = safeJsonParse(parsedContent.message);
+          if (innerMessage && innerMessage.content) {
+              const { thoughts } = parseArtResponse(innerMessage.content);
+              const responseText = innerMessage.content.split('**Response:**')[1]?.trim() || innerMessage.content;
+              
+              return (
+                  <Card className={`relative overflow-hidden ${isInline ? 'border-l-2' : 'mb-3 border-l-2'} ${cardColor} shadow-sm hover:shadow-md transition-shadow duration-200 bg-white dark:bg-slate-800/30`}>
+                      <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isInline ? 'p-1.5 pl-2' : 'p-2 pl-3'}`}>
+                          <div className="flex items-center gap-2 overflow-hidden mr-2">
+                              <DisplayIcon className={`h-4 w-4 ${cardTitleColor} flex-shrink-0`} />
+                              <CardTitle className={`text-xs font-semibold truncate ${cardTitleColor}`}>Final Response</CardTitle>
+                          </div>
+                      </CardHeader>
+                      <CardContent className={isInline ? 'p-1.5 pt-0 pl-2' : 'p-2 pt-0 pl-3'}>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap mb-2">{responseText}</p>
+                          {thoughts.length > 0 && <p className="text-xs text-muted-foreground mt-1">({thoughts.length} thoughts generated)</p>}
+                      </CardContent>
+                  </Card>
+              );
+          }
+      }
+  }
   
+  // Handle LLM_STREAM_METADATA specifically
+  if (type === 'LLM_STREAM_METADATA' && parsedContent) {
+      const stats = {
+          "Stop Reason": parsedContent.stopReason,
+          "Input Tokens": parsedContent.inputTokens,
+          "Output Tokens": parsedContent.outputTokens,
+          "Total Tokens": parsedContent.totalTokenCount,
+          "First Token MS": parsedContent.timeToFirstTokenMs,
+          "Total Time MS": parsedContent.totalGenerationTimeMs,
+      };
+      return (
+          <Card className={`relative overflow-hidden ${isInline ? 'border-l-2' : 'mb-3 border-l-2'} ${cardColor} shadow-sm hover:shadow-md transition-shadow duration-200 bg-white dark:bg-slate-800/30`}>
+              <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isInline ? 'p-1.5 pl-2' : 'p-2 pl-3'}`}>
+                  <div className="flex items-center gap-2 overflow-hidden mr-2">
+                      <DisplayIcon className={`h-4 w-4 ${cardTitleColor} flex-shrink-0`} />
+                      <CardTitle className={`text-xs font-semibold truncate ${cardTitleColor}`}>LLM Stats</CardTitle>
+                  </div>
+              </CardHeader>
+              <CardContent className={isInline ? 'p-1.5 pt-0 pl-2' : 'p-2 pt-0 pl-3'}>
+                  {formatKeyValue(stats)}
+              </CardContent>
+          </Card>
+      );
+  }
+
   return (
     <Card className={`relative overflow-hidden ${isInline ? 'border-l-2' : 'mb-3 border-l-2'} ${cardColor} shadow-sm hover:shadow-md transition-shadow duration-200 bg-white dark:bg-slate-800/30`}>
       <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isInline ? 'p-1.5 pl-2' : 'p-2 pl-3'}`}>
@@ -500,9 +575,11 @@ function ChatMessage({ message, onCopy, onRetry }: {
         )}
 
         {/* Main Message Text */}
-        <p className="text-sm whitespace-pre-wrap">
-          {renderTextWithLinks(message.content)}
-        </p>
+        <div className="text-sm whitespace-pre-wrap markdown-container">
+           <ReactMarkdown remarkPlugins={[remarkGfm]}>
+             {message.content}
+           </ReactMarkdown>
+        </div>
 
         {/* Reactions and Metadata */}
         {message.reactions && isAI && (
@@ -593,6 +670,8 @@ As you process user requests:
 2. Create detailed Plan observations breaking down your approach
 3. Share Thought observations as you work through complex problems
 4. Be thoughtful and analytical in your responses
+
+When you provide the final response, format it using markdown for clarity and readability (e.g., using lists, bolding, and code blocks where appropriate).
 
 Provide clear, concise, and helpful responses while making your reasoning visible through observations.`,
           });
