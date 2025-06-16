@@ -1,6 +1,6 @@
 import ReactDOM from 'react-dom/client';
 import ZyntopiaWebChat from './ZyntopiaWebChat';
-import { InMemoryStorageAdapter, GeminiAdapter, OpenAIAdapter } from 'art-framework';
+import { IndexedDBStorageAdapter, GeminiAdapter, OpenAIAdapter } from 'art-framework';
 import './styles/globals.css';
 
 // Demo configuration for the ART Framework with Zyntopia UI
@@ -8,7 +8,7 @@ const zyntopiaConfig = {
   // Core ART Framework configuration
   artConfig: {
     // Storage configuration
-    storage: new InMemoryStorageAdapter(),
+    storage: new IndexedDBStorageAdapter({ objectStores: [] }),
     
     // Provider configuration - using correct ProviderManagerConfig format
     providers: {

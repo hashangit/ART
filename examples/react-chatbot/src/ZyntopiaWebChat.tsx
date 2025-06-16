@@ -62,7 +62,8 @@ import {
 // Import the actual ART Framework types
 import { 
   ObservationType, 
-  AvailableProviderEntry
+  AvailableProviderEntry,
+  MessageRole
 } from '../../../src/types';
 import { ArtInstance } from '../../../src/core/interfaces';
 
@@ -660,41 +661,56 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
         setIsInitialized(true);
         setError(null);
 
-        // Add welcome message
-        const welcomeMessage: ZyntopiaMessage = {
-          id: Date.now().toString(),
-          content: `Hello! I'm your personal AI Assistant Zee`,
-          role: 'assistant',
-          timestamp: new Date(),
-          reactions: true,
-          thoughts: [
-            { 
-              id: 'test_intent_1', 
-              type: 'Intent', 
-              icon: Target, 
-              color: 'border-blue-500', 
-              titleColor: 'text-blue-600 dark:text-blue-400', 
-              content: 'Welcome the user and establish my identity as Zee.' 
-            },
-            { 
-              id: 'test_plan_1', 
-              type: 'Plan', 
-              icon: ListChecks, 
-              color: 'border-purple-500', 
-              titleColor: 'text-purple-600 dark:text-purple-400', 
-              content: '1. Greet the user warmly\n2. Establish my capabilities\n3. Wait for user input' 
-            },
-            { 
-              id: 'test_thought_1', 
-              type: 'Thought', 
-              icon: BrainCircuit, 
-              color: 'border-green-500', 
-              titleColor: 'text-green-600 dark:text-green-400', 
-              content: 'This is the first interaction - I should be friendly and helpful.' 
-            }
-          ],
-        };
-        setMessages([welcomeMessage]);
+        // Load existing messages or show a welcome message
+        const historicalMessages = await artInstance.conversationManager.getMessages(threadId.current, { limit: 100 });
+        if (historicalMessages && historicalMessages.length > 0) {
+            // Map ConversationMessage to ZyntopiaMessage
+            const mappedMessages: ZyntopiaMessage[] = historicalMessages.map(m => ({
+                id: m.messageId,
+                content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
+                role: m.role === MessageRole.USER ? 'user' : 'assistant',
+                timestamp: new Date(m.timestamp),
+                reactions: m.role !== MessageRole.USER
+            }));
+            setMessages(mappedMessages);
+            toast.success(`Loaded ${mappedMessages.length} messages from history.`);
+        } else {
+            // Add welcome message if no history
+            const welcomeMessage: ZyntopiaMessage = {
+              id: Date.now().toString(),
+              content: `Hello! I'm your personal AI Assistant Zee`,
+              role: 'assistant',
+              timestamp: new Date(),
+              reactions: true,
+              thoughts: [
+                { 
+                  id: 'test_intent_1', 
+                  type: 'Intent', 
+                  icon: Target, 
+                  color: 'border-blue-500', 
+                  titleColor: 'text-blue-600 dark:text-blue-400', 
+                  content: 'Welcome the user and establish my identity as Zee.' 
+                },
+                { 
+                  id: 'test_plan_1', 
+                  type: 'Plan', 
+                  icon: ListChecks, 
+                  color: 'border-purple-500', 
+                  titleColor: 'text-purple-600 dark:text-purple-400', 
+                  content: '1. Greet the user warmly\\n2. Establish my capabilities\\n3. Wait for user input' 
+                },
+                { 
+                  id: 'test_thought_1', 
+                  type: 'Thought', 
+                  icon: BrainCircuit, 
+                  color: 'border-green-500', 
+                  titleColor: 'text-green-600 dark:text-green-400', 
+                  content: 'This is the first interaction - I should be friendly and helpful.' 
+                }
+              ],
+            };
+            setMessages([welcomeMessage]);
+        }
         
         toast.success('ART Framework initialized successfully!');
 
