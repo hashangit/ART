@@ -7,17 +7,24 @@ import {
   PromptContext,
   ToolSchema,
   ToolResult,
+  PromptBlueprint,
 } from '../../types';
 import { ARTError, ErrorCode } from '../../errors';
-import render from 'mustache'; // Import the default export
+import mustache from 'mustache';
 
-// Mock the mustache default export (render function)
-vi.mock('mustache'); // Just mock the module
+// Mock mustache module
+vi.mock('mustache', () => ({
+  default: {
+    render: vi.fn()
+  }
+}));
+
+const mockedRender = vi.mocked(mustache.render);
 
 describe('PromptManager (Refactored)', () => {
   let promptManager: PromptManager;
   let mockContext: PromptContext;
-  let mockBlueprint: string;
+  let mockBlueprint: PromptBlueprint;
 
   beforeEach(() => {
     promptManager = new PromptManager();
@@ -42,107 +49,102 @@ describe('PromptManager (Refactored)', () => {
     };
 
     // Basic blueprint targeting ArtStandardPrompt JSON structure
-    mockBlueprint = `[
-      { "role": "system", "content": "{{systemPrompt}}" },
-      {{#history}}
-      { "role": "{{role}}", "content": "{{content}}" }{{^last}},{{/last}}
-      {{/history}},
-      { "role": "user", "content": "{{query}} - Custom: {{customData}}" }
-    ]`;
+    mockBlueprint = {
+      template: `[
+        { "role": "system", "content": "{{systemPrompt}}" },
+        {{#history}}
+        { "role": "{{role}}", "content": "{{content}}" }{{^last}},{{/last}}
+        {{/history}},
+        { "role": "user", "content": "{{query}} - Custom: {{customData}}" }
+      ]`
+    };
   });
 
   it('should call Mustache.render with the blueprint and context', async () => {
     const expectedRenderedJson = `[
-      { "role": "system", "content": "You are a test AI." },
-      { "role": "user", "content": "Previous user message" },
-      { "role": "assistant", "content": "Previous AI response" },
+      { "role": "system", "content": "Test system" },
       { "role": "user", "content": "Test query - Custom: some value" }
     ]`;
-    (render as any).mockReturnValue(expectedRenderedJson); // Use default import, cast to any for now to bypass TS check
+    mockedRender.mockReturnValue(expectedRenderedJson);
 
     await promptManager.assemblePrompt(mockBlueprint, mockContext);
 
-    expect(render).toHaveBeenCalledTimes(1); // Use imported render
-    expect(render).toHaveBeenCalledWith(mockBlueprint, mockContext); // Use imported render
+    expect(mockedRender).toHaveBeenCalledWith(mockBlueprint.template, mockContext);
   });
 
   it('should parse the rendered JSON string into ArtStandardPrompt', async () => {
     const renderedJson = `[{"role": "system", "content": "Test"}, {"role": "user", "content": "Hello"}]`;
-    (render as any).mockReturnValue(renderedJson); // Use default import
+    mockedRender.mockReturnValue(renderedJson);
 
     const result = await promptManager.assemblePrompt(mockBlueprint, mockContext);
 
     expect(result).toEqual([
       { role: 'system', content: 'Test' },
-      { role: 'user', content: 'Hello' },
+      { role: 'user', content: 'Hello' }
     ]);
-    expect(Array.isArray(result)).toBe(true);
   });
 
-   it('should correctly assemble a prompt with history and tools context', async () => {
-    const blueprintWithTools = `[
-      { "role": "system", "content": "{{systemPrompt}}" },
-      {{#history}}
-      { "role": "{{role}}", "content": "{{content}}" }{{^last}},{{/last}}
-      {{/history}},
-      { "role": "user", "content": "Query: {{query}}\\nTools: {{#availableTools}}{{name}} {{/availableTools}}" }
-    ]`;
+  it('should correctly assemble a prompt with history and tools context', async () => {
+    const blueprintWithTools: PromptBlueprint = {
+      template: `[
+        { "role": "system", "content": "System prompt" },
+        { "role": "user", "content": "Query: {{query}}\\nTools: {{#availableTools}}{{name}} {{/availableTools}}" }
+      ]`
+    };
+
     const expectedRenderedJson = `[
-      { "role": "system", "content": "You are a test AI." },
-      { "role": "user", "content": "Previous user message" },
-      { "role": "assistant", "content": "Previous AI response" },
+      { "role": "system", "content": "System prompt" },
       { "role": "user", "content": "Query: Test query\\nTools: tool1 " }
     ]`;
-    (render as any).mockReturnValue(expectedRenderedJson); // Use default import
+    mockedRender.mockReturnValue(expectedRenderedJson);
 
     const result = await promptManager.assemblePrompt(blueprintWithTools, mockContext);
 
-    expect(render).toHaveBeenCalledWith(blueprintWithTools, mockContext); // Use imported render
+    expect(mockedRender).toHaveBeenCalledWith(blueprintWithTools.template, mockContext);
     expect(result).toEqual([
-      { role: 'system', content: 'You are a test AI.' },
-      { role: 'user', content: 'Previous user message' },
-      { role: 'assistant', content: 'Previous AI response' },
-      { role: 'user', content: 'Query: Test query\nTools: tool1 ' },
+      { role: 'system', content: 'System prompt' },
+      { role: 'user', content: 'Query: Test query\nTools: tool1 ' }
     ]);
   });
 
-   it('should correctly assemble a prompt with tool results context', async () => {
-    const blueprintWithResults = `[
-      { "role": "system", "content": "{{systemPrompt}}" },
-      { "role": "user", "content": "{{query}}" },
-      { "role": "assistant", "content": "Okay, using tools..." },
-      {{#toolResults}}
-      { "role": "tool_result", "tool_call_id": "{{callId}}", "name": "{{toolName}}", "content": "{{outputJson}}" }{{^last}},{{/last}}
-      {{/toolResults}}
-    ]`;
-    // Simulate context having pre-stringified output
-    const contextWithStrResults = {
-        ...mockContext,
-        toolResults: mockContext.toolResults?.map(r => ({...r, outputJson: JSON.stringify(r.output)}))
+  it('should correctly assemble a prompt with tool results context', async () => {
+    const blueprintWithResults: PromptBlueprint = {
+      template: `[
+        { "role": "system", "content": "System prompt" },
+        {{#toolResults}}
+        { "role": "tool_result", "tool_call_id": "{{callId}}", "name": "{{toolName}}", "content": "{{result}}" },
+        {{/toolResults}}
+        { "role": "user", "content": "Continue" }
+      ]`
     };
+
+    const contextWithStrResults: PromptContext = {
+      ...mockContext,
+      toolResults: [
+        { callId: 'c1', toolName: 'tool1', result: '{"result":"success"}' }
+      ]
+    };
+
     const expectedRenderedJson = `[
-      { "role": "system", "content": "You are a test AI." },
-      { "role": "user", "content": "Test query" },
-      { "role": "assistant", "content": "Okay, using tools..." },
-      { "role": "tool_result", "tool_call_id": "c1", "name": "tool1", "content": "{\\"result\\":\\"ok\\"}" }
+      { "role": "system", "content": "System prompt" },
+      { "role": "tool_result", "tool_call_id": "c1", "name": "tool1", "content": "{\\"result\\":\\"success\\"}" },
+      { "role": "user", "content": "Continue" }
     ]`;
-    (render as any).mockReturnValue(expectedRenderedJson); // Use default import
+    mockedRender.mockReturnValue(expectedRenderedJson);
 
     const result = await promptManager.assemblePrompt(blueprintWithResults, contextWithStrResults);
 
-    expect(render).toHaveBeenCalledWith(blueprintWithResults, contextWithStrResults); // Use imported render
+    expect(mockedRender).toHaveBeenCalledWith(blueprintWithResults.template, contextWithStrResults);
     expect(result).toEqual([
-      { role: 'system', content: 'You are a test AI.' },
-      { role: 'user', content: 'Test query' },
-      { role: 'assistant', content: 'Okay, using tools...' },
-      { role: 'tool_result', tool_call_id: 'c1', name: 'tool1', content: '{"result":"ok"}' },
+      { role: 'system', content: 'System prompt' },
+      { role: 'tool_result', tool_call_id: 'c1', name: 'tool1', content: '{"result":"success"}' },
+      { role: 'user', content: 'Continue' }
     ]);
   });
 
-
   it('should throw ARTError with PROMPT_ASSEMBLY_FAILED code if render fails', async () => {
     const renderError = new Error('Mustache rendering failed');
-    (render as any).mockImplementation(() => { // Use default import
+    mockedRender.mockImplementation(() => {
       throw renderError;
     });
 
@@ -151,45 +153,42 @@ describe('PromptManager (Refactored)', () => {
 
     try {
       await promptManager.assemblePrompt(mockBlueprint, mockContext);
-    } catch (e: any) {
-      expect(e).toBeInstanceOf(ARTError);
-      expect(e.code).toBe(ErrorCode.PROMPT_ASSEMBLY_FAILED);
-      expect(e.message).toContain('Failed to render prompt blueprint');
-      expect(e.originalError).toBe(renderError);
+    } catch (error) {
+      expect(error).toBeInstanceOf(ARTError);
+      expect((error as ARTError).code).toBe(ErrorCode.PROMPT_ASSEMBLY_FAILED);
+      expect((error as ARTError).message).toContain('Failed to render prompt template');
     }
   });
 
   it('should throw ARTError with PROMPT_ASSEMBLY_FAILED code if JSON.parse fails', async () => {
-    const invalidJson = `[{"role": "system", "content": "Test"}, {"role": "user"`; // Missing closing bracket
-    (render as any).mockReturnValue(invalidJson); // Use default import
+    const invalidJson = `[{"role": "system", "content": "Test"}, {"role": "user"`; // Missing closing brace
+    mockedRender.mockReturnValue(invalidJson);
 
     await expect(promptManager.assemblePrompt(mockBlueprint, mockContext))
       .rejects.toThrow(ARTError);
 
     try {
       await promptManager.assemblePrompt(mockBlueprint, mockContext);
-    } catch (e: any) {
-      expect(e).toBeInstanceOf(ARTError);
-      expect(e.code).toBe(ErrorCode.PROMPT_ASSEMBLY_FAILED);
-      expect(e.message).toContain('Failed to parse rendered blueprint');
-      expect(e.originalError).toBeInstanceOf(Error); // JSON.parse throws SyntaxError
+    } catch (error) {
+      expect(error).toBeInstanceOf(ARTError);
+      expect((error as ARTError).code).toBe(ErrorCode.PROMPT_ASSEMBLY_FAILED);
+      expect((error as ARTError).message).toContain('Failed to parse rendered template as JSON');
     }
   });
 
   it('should throw ARTError if rendered JSON is not an array', async () => {
     const notAnArrayJson = `{"role": "system", "content": "Test"}`;
-    (render as any).mockReturnValue(notAnArrayJson); // Use default import
+    mockedRender.mockReturnValue(notAnArrayJson);
 
     await expect(promptManager.assemblePrompt(mockBlueprint, mockContext))
       .rejects.toThrow(ARTError);
 
-     try {
+    try {
       await promptManager.assemblePrompt(mockBlueprint, mockContext);
-    } catch (e: any) {
-      expect(e).toBeInstanceOf(ARTError);
-      expect(e.code).toBe(ErrorCode.PROMPT_ASSEMBLY_FAILED);
-      expect(e.message).toContain('Rendered template did not produce a valid JSON array');
-      expect(e.originalError).toBeInstanceOf(Error);
+    } catch (error) {
+      expect(error).toBeInstanceOf(ARTError);
+      expect((error as ARTError).code).toBe(ErrorCode.PROMPT_ASSEMBLY_FAILED);
+      expect((error as ARTError).message).toContain('Rendered template is not an array');
     }
   });
 

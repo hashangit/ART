@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { AnthropicAdapter, AnthropicAdapterOptions } from './anthropic';
 import { Logger } from '../../utils/logger';
-import { CallOptions } from '../../types';
+import { CallOptions, ArtStandardPrompt, StreamEvent } from '../../types';
 
 // Mock Logger
 vi.mock('../../utils/logger', () => ({
@@ -15,205 +15,245 @@ vi.mock('../../utils/logger', () => ({
   },
 }));
 
-// Mock global fetch
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+// Mock Anthropic SDK
+vi.mock('@anthropic-ai/sdk');
+
+import { Anthropic } from '@anthropic-ai/sdk';
+
+// Create typed mock
+const MockedAnthropic = vi.mocked(Anthropic);
+const mockCreate = vi.fn();
+
+// Configure the mock
+MockedAnthropic.mockImplementation(() => ({
+  messages: {
+    create: mockCreate,
+  },
+} as any));
+
+// Mock the APIError
+const MockAPIError = vi.fn().mockImplementation((message: string, status?: number) => {
+  const error = new Error(message);
+  (error as any).status = status;
+  return error;
+});
+
+(MockedAnthropic as any).APIError = MockAPIError;
+
+// Helper function to consume the async iterable stream into an array
+async function consumeStream(stream: AsyncIterable<StreamEvent>): Promise<StreamEvent[]> {
+    const events: StreamEvent[] = [];
+    for await (const event of stream) {
+        events.push(event);
+    }
+    return events;
+}
 
 describe('AnthropicAdapter', () => {
   let adapter: AnthropicAdapter;
   const defaultOptions: AnthropicAdapterOptions = { apiKey: 'test-anthropic-key' };
-  const defaultCallOptions: CallOptions = { threadId: 't-anthropic' };
-  const defaultMaxTokens = 1024; // From adapter implementation
+  const defaultCallOptions: CallOptions = { 
+    threadId: 't-anthropic',
+    providerConfig: {
+      providerName: 'anthropic',
+      modelId: 'claude-3-7-sonnet-20250219',
+      adapterOptions: { apiKey: 'test-anthropic-key' }
+    }
+  };
 
   beforeEach(() => {
+    vi.clearAllMocks();
+    mockCreate.mockReset();
+    
+    // Setup mock return value for successful calls
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'text', text: 'Mock response' }],
+      usage: { input_tokens: 10, output_tokens: 5 },
+      stop_reason: 'end_turn',
+    });
+    
     adapter = new AnthropicAdapter(defaultOptions);
-    vi.clearAllMocks(); // Clear mocks including fetch and Logger
   });
 
   afterEach(() => {
-    vi.restoreAllMocks(); // Ensure fetch mock doesn't leak
+    vi.restoreAllMocks();
   });
 
   it('should throw error if API key is missing', () => {
-    expect(() => new AnthropicAdapter({} as AnthropicAdapterOptions)).toThrow('Anthropic API key is required.');
+    expect(() => new AnthropicAdapter({} as AnthropicAdapterOptions)).toThrow('AnthropicAdapter requires an apiKey in options.');
   });
 
-  it('should initialize with default model and API version if not provided', () => {
-    expect((adapter as any).model).toBe('claude-3-haiku-20240307');
-    expect((adapter as any).apiVersion).toBe('2023-06-01');
-    expect((adapter as any).apiBaseUrl).toBe('https://api.anthropic.com/v1');
-    expect(Logger.debug).toHaveBeenCalledWith('AnthropicAdapter initialized with model: claude-3-haiku-20240307, version: 2023-06-01');
+  it('should initialize with default model if not provided', () => {
+    expect((adapter as any).defaultModel).toBe('claude-3-7-sonnet-20250219');
+    expect(Logger.debug).toHaveBeenCalledWith('AnthropicAdapter initialized with model: claude-3-7-sonnet-20250219');
   });
 
-  it('should initialize with provided model, version, and apiBaseUrl', () => {
-    const opts: AnthropicAdapterOptions = { apiKey: 'key', model: 'claude-3-opus-20240229', apiVersion: '2024-01-01', apiBaseUrl: 'http://localhost:8082' };
+  it('should initialize with provided model', () => {
+    const opts: AnthropicAdapterOptions = { apiKey: 'key', model: 'claude-3-opus-20240229' };
     const customAdapter = new AnthropicAdapter(opts);
-    expect((customAdapter as any).model).toBe('claude-3-opus-20240229');
-    expect((customAdapter as any).apiVersion).toBe('2024-01-01');
-    expect((customAdapter as any).apiBaseUrl).toBe('http://localhost:8082');
+    expect((customAdapter as any).defaultModel).toBe('claude-3-opus-20240229');
   });
 
-  it('should make a successful API call with basic prompt', async () => {
-    const mockResponse = {
-      id: 'msg_123', type: 'message', role: 'assistant', model: 'claude-3...',
-      content: [{ type: 'text', text: ' Anthropic says hello! ' }],
-      stop_reason: 'end_turn', stop_sequence: null, usage: { input_tokens: 10, output_tokens: 5 },
-    };
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockResponse,
-      status: 200,
-      statusText: 'OK',
+  describe('call (non-streaming)', () => {
+    it('should translate basic ArtStandardPrompt and call Anthropic SDK', async () => {
+      const mockResponse = {
+        content: [{ type: 'text', text: 'Anthropic says hello!' }],
+        usage: { input_tokens: 10, output_tokens: 5 },
+        stop_reason: 'end_turn',
+      };
+      mockCreate.mockResolvedValueOnce(mockResponse);
+
+      const prompt: ArtStandardPrompt = [{ role: 'user', content: 'Say hello' }];
+      const resultStream = await adapter.call(prompt, defaultCallOptions);
+      const results = await consumeStream(resultStream);
+
+      expect(mockCreate).toHaveBeenCalledOnce();
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: 'claude-3-7-sonnet-20250219',
+          messages: [{ role: 'user', content: 'Say hello' }],
+          max_tokens: 4096,
+          stream: false,
+        }),
+        expect.any(Object) // Request options
+      );
+
+      expect(results.find(e => e.type === 'TOKEN')?.data).toBe('Anthropic says hello!');
+      expect(results.find(e => e.type === 'METADATA')?.data).toMatchObject({
+        inputTokens: 10,
+        outputTokens: 5,
+        stopReason: 'end_turn',
+      });
+      expect(results.some(e => e.type === 'END')).toBe(true);
+      expect(Logger.debug).toHaveBeenCalledWith(expect.stringContaining('Calling Anthropic API'), expect.anything());
     });
 
-    const prompt = 'Say hello';
-    const result = await adapter.call(prompt, defaultCallOptions);
+    it('should translate ArtStandardPrompt with system prompt', async () => {
+      const mockResponse = { content: [{ type: 'text', text: 'Understood system.' }] };
+      mockCreate.mockResolvedValueOnce(mockResponse);
 
-    expect(result).toBe('Anthropic says hello!'); // Should be trimmed
-    expect(mockFetch).toHaveBeenCalledOnce();
-    const expectedUrl = `https://api.anthropic.com/v1/messages`;
-    expect(mockFetch).toHaveBeenCalledWith(
-      expectedUrl,
-      expect.objectContaining({
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': defaultOptions.apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-3-haiku-20240307',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: defaultMaxTokens, // Default max_tokens
-        }),
-      })
-    );
-    expect(Logger.debug).toHaveBeenCalledWith(expect.stringContaining('Calling Anthropic API'), expect.anything());
-    expect(Logger.debug).toHaveBeenCalledWith(expect.stringContaining('Anthropic API call successful'), expect.anything());
-  });
+      const prompt: ArtStandardPrompt = [
+        { role: 'system', content: 'You are helpful.' },
+        { role: 'user', content: 'Hello' },
+      ];
+      await consumeStream(await adapter.call(prompt, defaultCallOptions));
 
-   it('should handle non-string prompt by coercing to string', async () => {
-     const mockResponse = { content: [{ type: 'text', text: 'Processed object.' }] };
-     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => mockResponse });
-     const prompt = { value: true }; // Non-string prompt
-     await adapter.call(prompt as any, defaultCallOptions); // Cast to any for test
-
-     expect(Logger.warn).toHaveBeenCalledWith('AnthropicAdapter received non-string prompt. Treating as string.');
-     expect(mockFetch).toHaveBeenCalledWith(
-       expect.any(String),
-       expect.objectContaining({
-         body: JSON.stringify({
-           model: 'claude-3-haiku-20240307',
-           messages: [{ role: 'user', content: '[object Object]' }], // Default string coercion
-           max_tokens: defaultMaxTokens,
-         }),
-       })
-     );
-  });
-
-  it('should include optional parameters in the API call payload', async () => {
-    const mockResponse = { content: [{ type: 'text', text: 'Response with params.' }] };
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => mockResponse });
-
-    const callOptions: CallOptions = {
-      ...defaultCallOptions,
-      temperature: 0.7,
-      max_tokens: 500, // Explicitly set max_tokens
-      topP: 0.8,
-      topK: 40,
-      stopSequences: ['\nHuman:'],
-      system: 'You are a helpful bot.', // System prompt
-    };
-    await adapter.call('Test params', callOptions);
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        body: JSON.stringify({
-          model: 'claude-3-haiku-20240307',
-          messages: [{ role: 'user', content: 'Test params' }],
-          system: 'You are a helpful bot.',
-          max_tokens: 500,
-          temperature: 0.7,
-          top_p: 0.8,
-          top_k: 40,
-          stop_sequences: ['\nHuman:'],
-        }),
-      })
-    );
-  });
-
-  it('should use default max_tokens if not provided in options', async () => {
-    const mockResponse = { content: [{ type: 'text', text: 'Response default tokens.' }] };
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => mockResponse });
-
-    await adapter.call('Test default tokens', defaultCallOptions); // No max_tokens in options
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        body: expect.stringContaining(`"max_tokens":${defaultMaxTokens}`), // Check default is used
-      })
-    );
-  });
-
-
-  it('should handle API error response (non-200 status) with JSON body', async () => {
-    const errorBody = JSON.stringify({ type: 'error', error: { type: 'invalid_request_error', message: 'Invalid API key.' } });
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      text: async () => errorBody,
-      json: async () => JSON.parse(errorBody), // Mock json() as well if needed
-      status: 401,
-      statusText: 'Unauthorized',
+      expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
+        system: 'You are helpful.',
+        messages: [{ role: 'user', content: 'Hello' }],
+      }), expect.any(Object));
     });
 
-    await expect(adapter.call('Test API error', defaultCallOptions)).rejects.toThrow(
-        'Anthropic API request failed: 401 Unauthorized - Invalid API key.' // Parsed message
-    );
-    expect(Logger.error).toHaveBeenCalledWith(
-        expect.stringContaining('Anthropic API request failed with status 401'),
+    it('should include optional generation parameters', async () => {
+      const mockResponse = { content: [{ type: 'text', text: 'Response with params.' }] };
+      mockCreate.mockResolvedValueOnce(mockResponse);
+
+      const callOptions: CallOptions = {
+        ...defaultCallOptions,
+        temperature: 0.7,
+        maxOutputTokens: 500,
+        topP: 0.8,
+        topK: 40,
+        stopSequences: ['\nHuman:'],
+      };
+      const prompt: ArtStandardPrompt = [{ role: 'user', content: 'Test params' }];
+      await consumeStream(await adapter.call(prompt, callOptions));
+
+      expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
+        max_tokens: 500,
+        temperature: 0.7,
+        top_p: 0.8,
+        top_k: 40,
+        stop_sequences: ['\nHuman:'],
+      }), expect.any(Object));
+    });
+
+    it('should handle SDK error during messages.create', async () => {
+      const sdkError = new Error('Invalid API Key');
+      mockCreate.mockRejectedValueOnce(sdkError);
+
+      const prompt: ArtStandardPrompt = [{ role: 'user', content: 'Test SDK error' }];
+      const resultStream = await adapter.call(prompt, defaultCallOptions);
+      const results = await consumeStream(resultStream);
+
+      expect(results.find(e => e.type === 'ERROR')?.data).toBe(sdkError);
+      expect(results.some(e => e.type === 'END')).toBe(true);
+      expect(Logger.error).toHaveBeenCalledWith(
+        expect.stringContaining('Error during Anthropic SDK call: Invalid API Key'),
         expect.anything()
-    );
-  });
-
-  it('should handle API error response (non-200 status) with non-JSON body', async () => {
-    const errorBody = 'Internal Server Error';
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      text: async () => errorBody,
-      status: 500,
-      statusText: 'Internal Server Error',
+      );
     });
 
-    await expect(adapter.call('Test API error non-json', defaultCallOptions)).rejects.toThrow(
-        'Anthropic API request failed: 500 Internal Server Error - Internal Server Error' // Raw text body
-    );
+    it('should handle invalid response structure (no content)', async () => {
+      const invalidResponse = { usage: { input_tokens: 5 } }; // No content array
+      mockCreate.mockResolvedValueOnce(invalidResponse);
+
+      const prompt: ArtStandardPrompt = [{ role: 'user', content: 'Test invalid' }];
+      const resultStream = await adapter.call(prompt, defaultCallOptions);
+      const results = await consumeStream(resultStream);
+
+      const errorEvent = results.find(e => e.type === 'ERROR');
+      expect(errorEvent).toBeDefined();
+      expect(errorEvent?.data).toBeInstanceOf(Error);
+      expect((errorEvent?.data as Error).message).toContain('Invalid response structure from Anthropic SDK');
+      expect(results.some(e => e.type === 'END')).toBe(true);
+    });
+
+    it('should yield error if translation fails', async () => {
+      const invalidPrompt: ArtStandardPrompt = [
+        { role: 'tool_result', content: 'Result', name: undefined, tool_call_id: undefined } as any // Missing required fields
+      ];
+
+      const resultStream = await adapter.call(invalidPrompt, defaultCallOptions);
+      const results = await consumeStream(resultStream);
+
+      expect(mockCreate).not.toHaveBeenCalled(); // SDK should not be called
+      const errorEvent = results.find(e => e.type === 'ERROR');
+      expect(errorEvent).toBeDefined();
+      expect(results.some(e => e.type === 'END')).toBe(true);
+    });
   });
 
-   it('should handle invalid response structure (missing text content)', async () => {
-    const invalidResponse = { content: [{ type: 'other', value: '...' }] }; // No text content
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => invalidResponse });
+  describe('call (streaming)', () => {
+    it('should call messages.create with stream:true and yield events', async () => {
+      // Mock the stream response
+      const mockStream = (async function*() {
+        yield { type: 'message_start', message: { usage: { input_tokens: 5, output_tokens: 0 } } };
+        yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Hello ' } };
+        yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'World' } };
+        yield { type: 'message_delta', delta: { stop_reason: 'end_turn' }, usage: { output_tokens: 10 } };
+      })();
+      mockCreate.mockResolvedValueOnce(mockStream);
 
-    await expect(adapter.call('Test invalid structure', defaultCallOptions)).rejects.toThrow(
-        'Invalid response structure from Anthropic API: No text content found.'
-    );
-     expect(Logger.error).toHaveBeenCalledWith(
-        'Invalid response structure from Anthropic API: No text content found',
-        expect.objectContaining({ responseData: invalidResponse })
-    );
+      const prompt: ArtStandardPrompt = [{ role: 'user', content: 'Stream hello' }];
+      const callOptions: CallOptions = { ...defaultCallOptions, stream: true };
+      const resultStream = await adapter.call(prompt, callOptions);
+      const results = await consumeStream(resultStream);
+
+      expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
+        stream: true,
+      }), expect.any(Object));
+
+      const tokens = results.filter(e => e.type === 'TOKEN').map(e => e.data);
+      expect(tokens).toEqual(['Hello ', 'World']);
+
+      const metadataEvents = results.filter(e => e.type === 'METADATA');
+      expect(metadataEvents.length).toBeGreaterThan(0);
+
+      expect(results.some(e => e.type === 'END')).toBe(true);
+    });
+
+    it('should handle SDK error during streaming', async () => {
+      const sdkError = new Error('Stream connection failed');
+      mockCreate.mockRejectedValueOnce(sdkError);
+
+      const prompt: ArtStandardPrompt = [{ role: 'user', content: 'Test stream error' }];
+      const callOptions: CallOptions = { ...defaultCallOptions, stream: true };
+      const resultStream = await adapter.call(prompt, callOptions);
+      const results = await consumeStream(resultStream);
+
+      expect(results.find(e => e.type === 'ERROR')?.data).toBe(sdkError);
+      expect(results.some(e => e.type === 'END')).toBe(true);
+    });
   });
-
-   it('should handle fetch network error', async () => {
-    const networkError = new Error('Network connection failed');
-    mockFetch.mockRejectedValueOnce(networkError);
-
-    await expect(adapter.call('Test network error', defaultCallOptions)).rejects.toThrow('Network connection failed');
-    expect(Logger.error).toHaveBeenCalledWith(
-        'Error during Anthropic API call: Network connection failed',
-        expect.objectContaining({ error: networkError })
-    );
-  });
-
-  // TODO: Add tests for system prompt and history handling once implemented
 });

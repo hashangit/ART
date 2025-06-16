@@ -22,12 +22,13 @@ vi.mock('../adapters/storage/indexedDB', () => ({ // Relative path
 vi.mock('../systems/context/repositories/ConversationRepository', () => ({ ConversationRepository: vi.fn() })); // Relative path
 vi.mock('../systems/context/repositories/ObservationRepository', () => ({ ObservationRepository: vi.fn() })); // Relative path
 vi.mock('../systems/context/repositories/StateRepository', () => ({ StateRepository: vi.fn() })); // Relative path
+vi.mock('../systems/context/repositories/TaskStatusRepository', () => ({ TaskStatusRepository: vi.fn() })); // A2A task repository
 vi.mock('../systems/ui/typed-socket', () => ({ TypedSocket: vi.fn() })); // Relative path
 vi.mock('../systems/ui/ui-system', () => ({ // Relative path
     UISystem: vi.fn().mockImplementation(() => ({
-        getObservationSocket: vi.fn(() => vi.fn()),
-        getConversationSocket: vi.fn(() => vi.fn()),
-        getLLMStreamSocket: vi.fn(() => vi.fn()),
+        getObservationSocket: vi.fn(() => ({ notify: vi.fn() })),
+        getConversationSocket: vi.fn(() => ({ notify: vi.fn() })),
+        getLLMStreamSocket: vi.fn(() => ({ notify: vi.fn() })),
     }))
 }));
 vi.mock('../systems/context/managers/ConversationManager', () => ({ ConversationManager: vi.fn() })); // Relative path
@@ -57,6 +58,7 @@ import { IndexedDBStorageAdapter } from '../adapters/storage/indexedDB';
 import { ConversationRepository } from '../systems/context/repositories/ConversationRepository';
 import { ObservationRepository } from '../systems/context/repositories/ObservationRepository';
 import { StateRepository } from '../systems/context/repositories/StateRepository';
+import { TaskStatusRepository } from '../systems/context/repositories/TaskStatusRepository';
 // import { TypedSocket } from '../systems/ui/typed-socket'; // Removed unused import
 import { UISystem as UISystemMock } from '../systems/ui/ui-system'; // Use relative path
 import { ConversationManager } from '../systems/context/managers/ConversationManager';
@@ -98,12 +100,12 @@ describe('AgentFactory', () => {
 
     it('should throw error if storage config is missing', () => {
         expect(() => new AgentFactory({ providers: mockProviderManagerConfig } as any)) // Check for providers
-            .toThrow("AgentFactoryConfig requires 'storage' configuration.");
+            .toThrow("ArtInstanceConfig requires 'storage' configuration.");
     });
 
     it('should throw error if providers config is missing', () => {
         expect(() => new AgentFactory({ storage: mockStorageConfigMemory } as any)) // Check for providers
-            .toThrow("AgentFactoryConfig requires 'providers' configuration.");
+            .toThrow("ArtInstanceConfig requires 'providers' configuration.");
     });
 
     describe('initialize', () => {
@@ -140,6 +142,7 @@ describe('AgentFactory', () => {
             expect(ConversationRepository).toHaveBeenCalledWith(adapterInstance);
             expect(ObservationRepository).toHaveBeenCalledWith(adapterInstance);
             expect(StateRepository).toHaveBeenCalledWith(adapterInstance);
+            expect(TaskStatusRepository).toHaveBeenCalledWith(adapterInstance);
         });
 
         it('should initialize UI system and sockets', async () => {
@@ -153,7 +156,8 @@ describe('AgentFactory', () => {
             // Check UISystem initialization
             const obsRepoInstance = (ObservationRepository as Mock).mock.results[0].value;
             const convRepoInstance = (ConversationRepository as Mock).mock.results[0].value;
-            expect(UISystemMock).toHaveBeenCalledWith(obsRepoInstance, convRepoInstance); // Check mock UISystem call
+            const a2aTaskRepoInstance = (TaskStatusRepository as Mock).mock.results[0].value;
+            expect(UISystemMock).toHaveBeenCalledWith(obsRepoInstance, convRepoInstance, a2aTaskRepoInstance); // Check mock UISystem call - now includes TaskStatusRepository
         });
 
         it('should initialize managers with repositories and sockets', async () => {
@@ -164,12 +168,10 @@ describe('AgentFactory', () => {
             const repoObsInstance = (ObservationRepository as Mock).mock.results[0].value;
             const repoStateInstance = (StateRepository as Mock).mock.results[0].value;
             const uiSystemInstance = (UISystemMock as Mock).mock.results[0].value; // Use aliased mock
-            const obsSocket = uiSystemInstance.getObservationSocket(); // Get mock socket from mock UI system
-            const convSocket = uiSystemInstance.getConversationSocket(); // Get mock socket from mock UI system
 
-            expect(ConversationManager).toHaveBeenCalledWith(repoConvInstance, convSocket); // Use updated name
-            expect(StateManager).toHaveBeenCalledWith(repoStateInstance); // Use updated name
-            expect(ObservationManager).toHaveBeenCalledWith(repoObsInstance, obsSocket);
+            expect(ConversationManager).toHaveBeenCalledWith(repoConvInstance, expect.objectContaining({ notify: expect.any(Function) })); // Use updated name
+            expect(StateManager).toHaveBeenCalledWith(repoStateInstance, 'explicit'); // Use updated name - includes strategy parameter
+            expect(ObservationManager).toHaveBeenCalledWith(repoObsInstance, expect.objectContaining({ notify: expect.any(Function) }));
         });
 
         it('should initialize ToolRegistry and register initial tools', async () => {
@@ -246,6 +248,10 @@ describe('AgentFactory', () => {
                 observationManager: (ObservationManager as Mock).mock.results[0].value,
                 toolSystem: (ToolSystem as Mock).mock.results[0].value,
                 uiSystem: (UISystemMock as Mock).mock.results[0].value, // Use aliased mock
+                a2aTaskRepository: (TaskStatusRepository as Mock).mock.results[0].value, // Add the new A2A task repository
+                authManager: null, // Add auth manager (currently null)
+                mcpManager: null, // Add MCP manager (currently null)
+                instanceDefaultCustomSystemPrompt: undefined // Add default system prompt
             };
             expect(PESAgent).toHaveBeenCalledWith(expectedDeps);
         });

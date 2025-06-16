@@ -110,6 +110,17 @@ export interface PromptManager {
      */
     validatePrompt(prompt: ArtStandardPrompt): ArtStandardPrompt;
 
+    /**
+     * Assembles a prompt using a Mustache template (blueprint) and context data.
+     * Renders the template with the provided context and parses the result as an ArtStandardPrompt.
+     *
+     * @param blueprint - The Mustache template containing the prompt structure.
+     * @param context - The context data to inject into the template.
+     * @returns A promise resolving to the assembled ArtStandardPrompt.
+     * @throws {ARTError} If template rendering or JSON parsing fails.
+     */
+    assemblePrompt(blueprint: import('../types').PromptBlueprint, context: import('../types').PromptContext): Promise<ArtStandardPrompt>;
+
     // Future methods could include:
     // - loadFragmentsFromDir(directoryPath: string): Promise<void>;
     // - registerFragment(name: string, content: string): void;
@@ -428,6 +439,8 @@ export interface UISystem {
   getConversationSocket(): ConversationSocketImpl;
   /** Returns the singleton instance of the LLMStreamSocket. */
   getLLMStreamSocket(): import("../systems/ui/llm-stream-socket").LLMStreamSocket;
+  /** Returns the singleton instance of the A2ATaskSocket. */
+  getA2ATaskSocket(): import("../systems/ui/a2a-task-socket").A2ATaskSocket;
   // TODO: Potentially add getStateSocket(): StateSocket; in the future
 }
 

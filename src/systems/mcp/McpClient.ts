@@ -161,7 +161,7 @@ export class McpClient extends EventEmitter {
           await this._connectHTTP();
           break;
         default:
-          throw new ARTError('UNSUPPORTED_TRANSPORT', `Unsupported transport type: ${this.config.type}`);
+          throw new ARTError(`Unsupported transport type: ${this.config.type}`, ErrorCode.UNSUPPORTED_TRANSPORT);
       }
 
       // Perform MCP initialization handshake
@@ -563,7 +563,7 @@ export class McpClient extends EventEmitter {
         throw new ARTError('HTTP transport not yet implemented', ErrorCode.NOT_IMPLEMENTED);
 
       default:
-        throw new ARTError('UNSUPPORTED_TRANSPORT', `Unsupported transport: ${this.config.type}`);
+        throw new ARTError(`Unsupported transport: ${this.config.type}`, ErrorCode.UNSUPPORTED_TRANSPORT);
     }
   }
 

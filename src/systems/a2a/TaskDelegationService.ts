@@ -2,7 +2,7 @@
 
 import { Logger } from '../../utils/logger';
 import { ARTError, ErrorCode } from '../../errors';
-import { A2ATask, A2ATaskStatus, A2AAgentInfo, A2ATaskResult, UpdateA2ATaskRequest } from '../../types';
+import { A2ATask, A2ATaskStatus, A2AAgentInfo, A2ATaskResult, UpdateA2ATaskRequest, A2ATaskMetadata } from '../../types';
 import { IA2ATaskRepository } from '../../core/interfaces';
 import { AgentDiscoveryService } from './AgentDiscoveryService';
 

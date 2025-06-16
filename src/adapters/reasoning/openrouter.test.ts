@@ -25,7 +25,14 @@ describe('OpenRouterAdapter', () => {
     apiKey: 'test-openrouter-key',
     model: 'google/gemini-pro', // Example required model
   };
-  const defaultCallOptions: CallOptions = { threadId: 't-openrouter' };
+  const defaultCallOptions: CallOptions = { 
+  threadId: 't-openrouter',
+  providerConfig: {
+    providerName: 'openrouter',
+    modelId: 'anthropic/claude-3.5-sonnet',
+    adapterOptions: { apiKey: 'test-openrouter-key' }
+  }
+};
 
   beforeEach(() => {
     adapter = new OpenRouterAdapter(defaultOptions);
@@ -37,11 +44,11 @@ describe('OpenRouterAdapter', () => {
   });
 
   it('should throw error if API key is missing', () => {
-    expect(() => new OpenRouterAdapter({ model: 'test/model' } as OpenRouterAdapterOptions)).toThrow('OpenRouter API key is required.');
+    expect(() => new OpenRouterAdapter({ model: 'test/model' } as OpenRouterAdapterOptions)).toThrow('OpenRouterAdapter requires an apiKey in options.');
   });
 
   it('should throw error if model is missing', () => {
-    expect(() => new OpenRouterAdapter({ apiKey: 'key' } as OpenRouterAdapterOptions)).toThrow('OpenRouter model identifier is required');
+    expect(() => new OpenRouterAdapter({ apiKey: 'key' } as OpenRouterAdapterOptions)).toThrow('OpenRouterAdapter requires a model identifier in options (e.g., \'google/gemini-pro\').');
   });
 
   it('should initialize with default apiBaseUrl if not provided', () => {

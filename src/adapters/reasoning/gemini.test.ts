@@ -36,7 +36,14 @@ vi.mock('@google/genai', () => ({
 describe('GeminiAdapter (Refactored)', () => {
   let adapter: GeminiAdapter;
   const defaultOptions: GeminiAdapterOptions = { apiKey: 'test-gemini-key' };
-  const defaultCallOptions: CallOptions = { threadId: 't-gemini' };
+  const defaultCallOptions: CallOptions = { 
+  threadId: 't-gemini',
+  providerConfig: {
+    providerName: 'google',
+    modelId: 'gemini-1.5-pro',
+    adapterOptions: { apiKey: 'test-gemini-key' }
+  }
+};
 
   beforeEach(() => {
     vi.clearAllMocks(); // Clear all mocks before each test

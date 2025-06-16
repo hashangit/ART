@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TaskStatusRepository } from './TaskStatusRepository';
 import { StorageAdapter } from '../../../core/interfaces';
-import { A2ATask, A2ATaskStatus, A2ATaskPriority, ARTError } from '../../../types';
+import { A2ATask, A2ATaskStatus, A2ATaskPriority, ARTError, ErrorCode } from '../../../types';
 
 // Create a comprehensive mock StorageAdapter
 const createMockStorageAdapter = (): StorageAdapter => ({
@@ -79,13 +79,13 @@ describe('TaskStatusRepository', () => {
       const invalidTask = { ...createSampleTask(), taskId: '' };
 
       await expect(repository.createTask(invalidTask as any)).rejects.toThrow(
-        new ARTError('VALIDATION_ERROR', 'Task must have a valid taskId')
+        new ARTError('Task must have a valid taskId', ErrorCode.VALIDATION_ERROR)
       );
     });
 
     it('should throw error for null task', async () => {
       await expect(repository.createTask(null as any)).rejects.toThrow(
-        new ARTError('VALIDATION_ERROR', 'Task must have a valid taskId')
+        new ARTError('Task must have a valid taskId', ErrorCode.VALIDATION_ERROR)
       );
     });
 
@@ -95,7 +95,7 @@ describe('TaskStatusRepository', () => {
       (mockAdapter.get as any).mockResolvedValue(existingTask);
 
       await expect(repository.createTask(task)).rejects.toThrow(
-        new ARTError('DUPLICATE_TASK_ID', `Task with ID '${task.taskId}' already exists`)
+        new ARTError(`Task with ID '${task.taskId}' already exists`, ErrorCode.DUPLICATE_TASK_ID)
       );
     });
   });
@@ -122,7 +122,7 @@ describe('TaskStatusRepository', () => {
 
     it('should throw error for empty taskId', async () => {
       await expect(repository.getTask('')).rejects.toThrow(
-        new ARTError('VALIDATION_ERROR', 'TaskId is required')
+        new ARTError('TaskId is required', ErrorCode.VALIDATION_ERROR)
       );
     });
 
@@ -132,7 +132,7 @@ describe('TaskStatusRepository', () => {
       (mockAdapter.get as any).mockRejectedValue(adapterError);
 
       await expect(repository.getTask(taskId)).rejects.toThrow(
-        new ARTError('REPOSITORY_ERROR', `Failed to retrieve task '${taskId}': ${adapterError}`)
+        new ARTError(`Failed to retrieve task '${taskId}': ${adapterError}`, ErrorCode.REPOSITORY_ERROR)
       );
     });
   });
@@ -189,13 +189,13 @@ describe('TaskStatusRepository', () => {
       const updates = { status: A2ATaskStatus.COMPLETED };
 
       await expect(repository.updateTask('', updates)).rejects.toThrow(
-        new ARTError('VALIDATION_ERROR', 'TaskId is required')
+        new ARTError('TaskId is required', ErrorCode.VALIDATION_ERROR)
       );
     });
 
     it('should throw error for empty updates', async () => {
       await expect(repository.updateTask('task-1', {})).rejects.toThrow(
-        new ARTError('VALIDATION_ERROR', 'Updates object cannot be empty')
+        new ARTError('Updates object cannot be empty', ErrorCode.VALIDATION_ERROR)
       );
     });
 
@@ -205,14 +205,14 @@ describe('TaskStatusRepository', () => {
       (mockAdapter.get as any).mockResolvedValue(null);
 
       await expect(repository.updateTask(taskId, updates)).rejects.toThrow(
-        new ARTError('TASK_NOT_FOUND', `Task with ID '${taskId}' not found`)
+        new ARTError(`Task with ID '${taskId}' not found`, ErrorCode.TASK_NOT_FOUND)
       );
     });
 
     it('should propagate ARTErrors from storage operations', async () => {
       const taskId = 'task-1';
       const updates = { status: A2ATaskStatus.COMPLETED };
-      const artError = new ARTError('STORAGE_ERROR', 'Database unavailable');
+      const artError = new ARTError('Database unavailable', ErrorCode.STORAGE_ERROR);
       (mockAdapter.get as any).mockRejectedValue(artError);
 
       await expect(repository.updateTask(taskId, updates)).rejects.toThrow(artError);
@@ -225,7 +225,7 @@ describe('TaskStatusRepository', () => {
       (mockAdapter.get as any).mockRejectedValue(genericError);
 
       await expect(repository.updateTask(taskId, updates)).rejects.toThrow(
-        new ARTError('REPOSITORY_ERROR', `Failed to update task '${taskId}': ${genericError}`)
+        new ARTError(`Failed to update task '${taskId}': ${genericError}`, ErrorCode.REPOSITORY_ERROR)
       );
     });
   });
@@ -245,7 +245,7 @@ describe('TaskStatusRepository', () => {
 
     it('should throw error for empty taskId', async () => {
       await expect(repository.deleteTask('')).rejects.toThrow(
-        new ARTError('VALIDATION_ERROR', 'TaskId is required')
+        new ARTError('TaskId is required', ErrorCode.VALIDATION_ERROR)
       );
     });
 
@@ -254,13 +254,13 @@ describe('TaskStatusRepository', () => {
       (mockAdapter.get as any).mockResolvedValue(null);
 
       await expect(repository.deleteTask(taskId)).rejects.toThrow(
-        new ARTError('TASK_NOT_FOUND', `Task with ID '${taskId}' not found`)
+        new ARTError(`Task with ID '${taskId}' not found`, ErrorCode.TASK_NOT_FOUND)
       );
     });
 
     it('should propagate ARTErrors from storage operations', async () => {
       const taskId = 'task-1';
-      const artError = new ARTError('STORAGE_ERROR', 'Database unavailable');
+      const artError = new ARTError('Database unavailable', ErrorCode.STORAGE_ERROR);
       (mockAdapter.get as any).mockRejectedValue(artError);
 
       await expect(repository.deleteTask(taskId)).rejects.toThrow(artError);
@@ -272,7 +272,7 @@ describe('TaskStatusRepository', () => {
       (mockAdapter.get as any).mockRejectedValue(genericError);
 
       await expect(repository.deleteTask(taskId)).rejects.toThrow(
-        new ARTError('REPOSITORY_ERROR', `Failed to delete task '${taskId}': ${genericError}`)
+        new ARTError(`Failed to delete task '${taskId}': ${genericError}`, ErrorCode.REPOSITORY_ERROR)
       );
     });
   });
@@ -412,7 +412,7 @@ describe('TaskStatusRepository', () => {
 
     it('should throw error for empty threadId', async () => {
       await expect(repository.getTasksByThread('')).rejects.toThrow(
-        new ARTError('VALIDATION_ERROR', 'ThreadId is required')
+        new ARTError('ThreadId is required', ErrorCode.VALIDATION_ERROR)
       );
     });
 
@@ -422,7 +422,7 @@ describe('TaskStatusRepository', () => {
       (mockAdapter.query as any).mockRejectedValue(adapterError);
 
       await expect(repository.getTasksByThread(threadId)).rejects.toThrow(
-        new ARTError('REPOSITORY_ERROR', `Failed to get tasks for thread '${threadId}': ${adapterError}`)
+        new ARTError(`Failed to get tasks for thread '${threadId}': ${adapterError}`, ErrorCode.REPOSITORY_ERROR)
       );
     });
   });
@@ -481,7 +481,7 @@ describe('TaskStatusRepository', () => {
 
     it('should throw error for empty agentId', async () => {
       await expect(repository.getTasksByAgent('')).rejects.toThrow(
-        new ARTError('VALIDATION_ERROR', 'AgentId is required')
+        new ARTError('AgentId is required', ErrorCode.VALIDATION_ERROR)
       );
     });
   });
@@ -561,7 +561,7 @@ describe('TaskStatusRepository', () => {
 
     it('should throw error for empty status', async () => {
       await expect(repository.getTasksByStatus(null as any)).rejects.toThrow(
-        new ARTError('VALIDATION_ERROR', 'Status is required')
+        new ARTError('Status is required', ErrorCode.VALIDATION_ERROR)
       );
     });
   });

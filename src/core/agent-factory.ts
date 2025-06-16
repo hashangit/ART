@@ -54,6 +54,11 @@ import { OutputParser as OutputParserImpl } from '../systems/reasoning/OutputPar
 // Provider Adapters are now managed by ProviderManagerImpl
 // UI System
 import { UISystem as UISystemImpl } from '../systems/ui/ui-system'; // Correct path
+// Auth and MCP Systems
+import { AuthManager } from '../systems/auth/AuthManager'; // Import AuthManager
+import { McpManager } from '../systems/mcp/McpManager'; // Import McpManager
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { McpManagerConfig } from '../systems/mcp/types'; // type-only import for McpManagerConfig
 // Removed direct imports of concrete socket classes - they will be accessed via UISystem instance
 // Removed unused type imports: Observation, ConversationMessage, ObservationType, MessageRole
 import { Logger } from '../utils/logger'; // Import Logger
@@ -134,6 +139,8 @@ export class AgentFactory {
     private promptManager: PromptManager | null = null;
     private outputParser: OutputParser | null = null;
     private toolSystem: ToolSystem | null = null;
+    private authManager: AuthManager | null = null;
+    private mcpManager: McpManager | null = null;
 
 
     /**
@@ -185,7 +192,7 @@ export class AgentFactory {
 
         // --- Initialize UI System ---
         // UISystem constructor expects repositories, not sockets
-        this.uiSystem = new UISystemImpl(this.observationRepository!, this.conversationRepository!); // Pass repositories
+        this.uiSystem = new UISystemImpl(this.observationRepository!, this.conversationRepository!, this.a2aTaskRepository || undefined); // Pass repositories including A2A task repository
 
         // --- Initialize Managers ---
         // Pass the actual socket instances obtained from the initialized uiSystem
@@ -222,6 +229,33 @@ export class AgentFactory {
         // --- Initialize Tool System ---
         // Inject ToolRegistry, StateManager, and ObservationManager into ToolSystem
         this.toolSystem = new ToolSystemImpl(this.toolRegistry!, this.stateManager!, this.observationManager!); // Added observationManager
+
+        // --- Initialize Auth Manager ---
+        if (this.config.authConfig?.enabled) {
+            this.authManager = new AuthManager();
+            // Register any pre-configured strategies
+            if (this.config.authConfig.strategies) {
+                for (const { id, strategy } of this.config.authConfig.strategies) {
+                    this.authManager.registerStrategy(id, strategy);
+                }
+            }
+            Logger.info("AuthManager initialized.");
+        }
+
+        // --- Initialize MCP Manager ---
+        if (this.config.mcpConfig) {
+            if (!this.toolRegistry || !this.stateManager) {
+                throw new Error("MCP Manager requires ToolRegistry and StateManager to be initialized first.");
+            }
+            this.mcpManager = new McpManager(
+                this.config.mcpConfig,
+                this.toolRegistry,
+                this.stateManager,
+                this.authManager || undefined // Pass AuthManager if available
+            );
+            await this.mcpManager.initialize();
+            Logger.info("McpManager initialized and connected to servers.");
+        }
     }
 
     /**
@@ -253,6 +287,8 @@ export class AgentFactory {
             toolSystem: this.toolSystem,
             uiSystem: this.uiSystem!, // Include the UI System (non-null assertion)
             a2aTaskRepository: this.a2aTaskRepository, // Include A2A task repository
+            authManager: this.authManager, // Include Auth Manager (may be null if not configured)
+            mcpManager: this.mcpManager, // Include MCP Manager (may be null if not configured)
             instanceDefaultCustomSystemPrompt: this.config.defaultSystemPrompt, // Pass instance-level default system prompt from ArtInstanceConfig
             // Note: providerAdapter is used by reasoningEngine, not directly by agent core usually
         };
@@ -276,6 +312,10 @@ export class AgentFactory {
     getConversationManager(): ConversationManager | null { return this.conversationManager; }
     /** Gets the initialized Observation Manager instance. */
     getObservationManager(): ObservationManager | null { return this.observationManager; }
+    /** Gets the initialized Auth Manager instance. */
+    getAuthManager(): AuthManager | null { return this.authManager; }
+    /** Gets the initialized MCP Manager instance. */
+    getMcpManager(): McpManager | null { return this.mcpManager; }
     // Add getters for other components like reasoningEngine, toolSystem if needed
 }
 

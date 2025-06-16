@@ -31,7 +31,7 @@ describe('ToolSystem', () => {
   let toolSystem: ToolSystem;
   let mockToolRegistry: ToolRegistry;
   let mockStateManager: StateManager;
-  // let mockObservationManager; // Add when needed
+  let mockObservationManager: any; // Add ObservationManager mock
 
   let mockTool1: IToolExecutor;
   let mockTool2: IToolExecutor;
@@ -79,13 +79,16 @@ describe('ToolSystem', () => {
       saveStateIfModified: vi.fn(),
     };
 
-    // Mock ObservationManager (placeholder)
-    // mockObservationManager = { record: vi.fn(), getObservations: vi.fn() };
+    // Mock ObservationManager
+    mockObservationManager = { 
+      record: vi.fn().mockResolvedValue(undefined), // Return resolved Promise
+      getObservations: vi.fn().mockResolvedValue([])
+    };
 
     toolSystem = new ToolSystem(
       mockToolRegistry as any, // Cast to any to satisfy interface during mock setup
       mockStateManager as any,
-      // mockObservationManager as any
+      mockObservationManager as any
     );
 
     // Default mock for validation (success)

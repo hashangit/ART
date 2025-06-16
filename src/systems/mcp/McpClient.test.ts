@@ -64,7 +64,7 @@ describe('McpClient', () => {
     
     // Mock AuthManager
     mockAuthManager = {
-      authenticate: vi.fn().mockResolvedValue({ Authorization: 'Bearer test-token' })
+      getHeaders: vi.fn().mockResolvedValue({ Authorization: 'Bearer test-token' })
     } as any;
 
     // Setup mock child process
@@ -289,7 +289,7 @@ describe('McpClient', () => {
       await connectPromise;
 
       expect(mcpClient.isConnected()).toBe(true);
-      expect(mockAuthManager.authenticate).toHaveBeenCalledWith('test-auth');
+      expect(mockAuthManager.getHeaders).toHaveBeenCalledWith('test-auth');
       
       global.EventSource = originalEventSource;
     });
@@ -320,7 +320,7 @@ describe('McpClient', () => {
     });
 
     it('should handle authentication errors', async () => {
-      mockAuthManager.authenticate = vi.fn().mockRejectedValue(new Error('Auth failed'));
+      mockAuthManager.getHeaders = vi.fn().mockRejectedValue(new Error('Auth failed'));
 
       await expect(mcpClient.connect()).rejects.toThrow('Auth failed');
     });
@@ -344,7 +344,7 @@ describe('McpClient', () => {
         }
       });
 
-      let stdoutHandler: Function;
+      let stdoutHandler: Function | undefined;
       mockChildProcess.stdout.on.mockImplementation((event: string, handler: Function) => {
         if (event === 'data') {
           stdoutHandler = handler;
@@ -370,8 +370,9 @@ describe('McpClient', () => {
       await connectPromise;
 
       // Store the handler that was set up during connection for later use in tests
-      const currentHandler = stdoutHandler;
-      (mcpClient as any)._testStdoutHandler = currentHandler;
+      if (stdoutHandler) {
+        (mcpClient as any)._testStdoutHandler = stdoutHandler;
+      }
     });
 
     it('should ping server successfully', async () => {
@@ -455,14 +456,14 @@ describe('McpClient', () => {
         }
       }, 10);
 
-      await expect(pingPromise).rejects.toThrow('MCP_SERVER_ERROR');
+      await expect(pingPromise).rejects.toThrow('MCP server error: Method not found');
     });
 
     it('should handle request timeouts', async () => {
       const pingPromise = mcpClient.ping();
 
       // Don't send a response to trigger timeout
-      await expect(pingPromise).rejects.toThrow('REQUEST_TIMEOUT');
+      await expect(pingPromise).rejects.toThrow('Request ping timed out after 30000ms');
     }, 35000); // Longer timeout for this test
 
     it('should list resources successfully', async () => {
@@ -596,57 +597,65 @@ describe('McpClient', () => {
       await connectPromise;
     });
 
-    it('should handle notifications', (done) => {
-      mcpClient.on('notification', (method, params) => {
-        expect(method).toBe('notifications/message');
-        expect(params.level).toBe('info');
-        done();
-      });
+    it('should handle notifications', () => {
+      return new Promise<void>((resolve) => {
+        mcpClient.on('notification', (method, params) => {
+          expect(method).toBe('notifications/message');
+          expect(params.level).toBe('info');
+          resolve();
+        });
 
       const handler = (mcpClient as any)._testStdoutHandler;
-      handler(JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'notifications/message',
-        params: { level: 'info', data: 'Test message' }
-      }) + '\n');
+        handler(JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'notifications/message',
+          params: { level: 'info', data: 'Test message' }
+        }) + '\n');
+      });
     });
 
-    it('should emit specific events for known notifications', (done) => {
-      mcpClient.on('message', (params) => {
-        expect(params.level).toBe('info');
-        done();
-      });
+    it('should emit specific events for known notifications', () => {
+      return new Promise<void>((resolve) => {
+        mcpClient.on('message', (params) => {
+          expect(params.level).toBe('info');
+          resolve();
+        });
 
       const handler = (mcpClient as any)._testStdoutHandler;
-      handler(JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'notifications/message',
-        params: { level: 'info', data: 'Test message' }
-      }) + '\n');
+        handler(JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'notifications/message',
+          params: { level: 'info', data: 'Test message' }
+        }) + '\n');
+      });
     });
 
-    it('should handle resources changed notifications', (done) => {
-      mcpClient.on('resourcesChanged', () => {
-        done();
-      });
+    it('should handle resources changed notifications', () => {
+      return new Promise<void>((resolve) => {
+        mcpClient.on('resourcesChanged', () => {
+          resolve();
+        });
 
       const handler = (mcpClient as any)._testStdoutHandler;
-      handler(JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'notifications/resources/list_changed'
-      }) + '\n');
+        handler(JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'notifications/resources/list_changed'
+        }) + '\n');
+      });
     });
 
-    it('should handle tools changed notifications', (done) => {
-      mcpClient.on('toolsChanged', () => {
-        done();
-      });
+    it('should handle tools changed notifications', () => {
+      return new Promise<void>((resolve) => {
+        mcpClient.on('toolsChanged', () => {
+          resolve();
+        });
 
       const handler = (mcpClient as any)._testStdoutHandler;
-      handler(JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'notifications/tools/list_changed'
-      }) + '\n');
+        handler(JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'notifications/tools/list_changed'
+        }) + '\n');
+      });
     });
   });
 
@@ -662,7 +671,7 @@ describe('McpClient', () => {
       // Mock as already connected
       (mcpClient as any).connected = true;
 
-      await expect(mcpClient.connect()).rejects.toThrow('ALREADY_CONNECTED');
+      await expect(mcpClient.connect()).rejects.toThrow('MCP client is already connected');
     });
 
     it('should reject requests when not connected', async () => {
@@ -673,7 +682,7 @@ describe('McpClient', () => {
       };
       mcpClient = new McpClient(config);
 
-      await expect(mcpClient.ping()).rejects.toThrow('NOT_CONNECTED');
+      await expect(mcpClient.ping()).rejects.toThrow('MCP client is not connected');
     });
 
     it('should handle unsupported transport types', async () => {
@@ -682,7 +691,7 @@ describe('McpClient', () => {
       };
       mcpClient = new McpClient(config);
 
-      await expect(mcpClient.connect()).rejects.toThrow('NOT_IMPLEMENTED');
+      await expect(mcpClient.connect()).rejects.toThrow('HTTP transport not yet implemented');
     });
 
     it('should handle missing configuration for stdio', async () => {
@@ -692,7 +701,7 @@ describe('McpClient', () => {
       };
       mcpClient = new McpClient(config);
 
-      await expect(mcpClient.connect()).rejects.toThrow('MISSING_CONFIG');
+      await expect(mcpClient.connect()).rejects.toThrow('Command is required for stdio transport');
     });
 
     it('should handle missing configuration for SSE', async () => {
@@ -702,7 +711,7 @@ describe('McpClient', () => {
       };
       mcpClient = new McpClient(config);
 
-      await expect(mcpClient.connect()).rejects.toThrow('MISSING_CONFIG');
+      await expect(mcpClient.connect()).rejects.toThrow('URL is required for SSE transport');
     });
   });
 

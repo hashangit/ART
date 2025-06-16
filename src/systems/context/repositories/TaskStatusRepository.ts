@@ -1,5 +1,5 @@
 import { IA2ATaskRepository, StorageAdapter } from '../../../core/interfaces';
-import { A2ATask, A2ATaskStatus, A2ATaskPriority, ARTError } from '../../../types';
+import { A2ATask, A2ATaskStatus, A2ATaskPriority, ARTError, ErrorCode } from '../../../types';
 
 // Define the structure of the data as stored, including the 'id' field (taskId)
 type StoredA2ATask = A2ATask & { id: string };
@@ -36,13 +36,13 @@ export class TaskStatusRepository implements IA2ATaskRepository {
    */
   async createTask(task: A2ATask): Promise<void> {
     if (!task || !task.taskId) {
-      throw new ARTError('VALIDATION_ERROR', 'Task must have a valid taskId');
+      throw new ARTError('Task must have a valid taskId', ErrorCode.VALIDATION_ERROR);
     }
 
     // Check if task already exists
     const existingTask = await this.adapter.get<StoredA2ATask>(this.collectionName, task.taskId);
     if (existingTask) {
-      throw new ARTError('DUPLICATE_TASK_ID', `Task with ID '${task.taskId}' already exists`);
+      throw new ARTError(`Task with ID '${task.taskId}' already exists`, ErrorCode.DUPLICATE_TASK_ID);
     }
 
     // Add the 'id' field mirroring 'taskId' for compatibility with keyPath='id' adapters
@@ -62,7 +62,7 @@ export class TaskStatusRepository implements IA2ATaskRepository {
    */
   async getTask(taskId: string): Promise<A2ATask | null> {
     if (!taskId) {
-      throw new ARTError('VALIDATION_ERROR', 'TaskId is required');
+      throw new ARTError('TaskId is required', ErrorCode.VALIDATION_ERROR);
     }
 
     try {
@@ -76,7 +76,7 @@ export class TaskStatusRepository implements IA2ATaskRepository {
       delete (task as Partial<StoredA2ATask>).id;
       return task as A2ATask;
     } catch (error) {
-      throw new ARTError('REPOSITORY_ERROR', `Failed to retrieve task '${taskId}': ${error}`);
+      throw new ARTError(`Failed to retrieve task '${taskId}': ${error}`, ErrorCode.REPOSITORY_ERROR);
     }
   }
 
@@ -89,18 +89,18 @@ export class TaskStatusRepository implements IA2ATaskRepository {
    */
   async updateTask(taskId: string, updates: Partial<A2ATask>): Promise<void> {
     if (!taskId) {
-      throw new ARTError('VALIDATION_ERROR', 'TaskId is required');
+      throw new ARTError('TaskId is required', ErrorCode.VALIDATION_ERROR);
     }
 
     if (!updates || Object.keys(updates).length === 0) {
-      throw new ARTError('VALIDATION_ERROR', 'Updates object cannot be empty');
+      throw new ARTError('Updates object cannot be empty', ErrorCode.VALIDATION_ERROR);
     }
 
     try {
       // Get the existing task
       const existingTask = await this.adapter.get<StoredA2ATask>(this.collectionName, taskId);
       if (!existingTask) {
-        throw new ARTError('TASK_NOT_FOUND', `Task with ID '${taskId}' not found`);
+        throw new ARTError(`Task with ID '${taskId}' not found`, ErrorCode.TASK_NOT_FOUND);
       }
 
       // Merge updates with existing task
@@ -125,7 +125,7 @@ export class TaskStatusRepository implements IA2ATaskRepository {
       if (error instanceof ARTError) {
         throw error;
       }
-      throw new ARTError('REPOSITORY_ERROR', `Failed to update task '${taskId}': ${error}`);
+      throw new ARTError(`Failed to update task '${taskId}': ${error}`, ErrorCode.REPOSITORY_ERROR);
     }
   }
 
@@ -137,14 +137,14 @@ export class TaskStatusRepository implements IA2ATaskRepository {
    */
   async deleteTask(taskId: string): Promise<void> {
     if (!taskId) {
-      throw new ARTError('VALIDATION_ERROR', 'TaskId is required');
+      throw new ARTError('TaskId is required', ErrorCode.VALIDATION_ERROR);
     }
 
     try {
       // Check if task exists
       const existingTask = await this.adapter.get<StoredA2ATask>(this.collectionName, taskId);
       if (!existingTask) {
-        throw new ARTError('TASK_NOT_FOUND', `Task with ID '${taskId}' not found`);
+        throw new ARTError(`Task with ID '${taskId}' not found`, ErrorCode.TASK_NOT_FOUND);
       }
 
       await this.adapter.delete(this.collectionName, taskId);
@@ -152,7 +152,7 @@ export class TaskStatusRepository implements IA2ATaskRepository {
       if (error instanceof ARTError) {
         throw error;
       }
-      throw new ARTError('REPOSITORY_ERROR', `Failed to delete task '${taskId}': ${error}`);
+      throw new ARTError(`Failed to delete task '${taskId}': ${error}`, ErrorCode.REPOSITORY_ERROR);
     }
   }
 
@@ -171,7 +171,7 @@ export class TaskStatusRepository implements IA2ATaskRepository {
     }
   ): Promise<A2ATask[]> {
     if (!threadId) {
-      throw new ARTError('VALIDATION_ERROR', 'ThreadId is required');
+      throw new ARTError('ThreadId is required', ErrorCode.VALIDATION_ERROR);
     }
 
     try {
@@ -195,7 +195,7 @@ export class TaskStatusRepository implements IA2ATaskRepository {
 
         if (filter.assignedAgentId) {
           filteredTasks = filteredTasks.filter(task => 
-            task.assignedAgent?.agentId === filter.assignedAgentId
+            task.targetAgent?.agentId === filter.assignedAgentId
           );
         }
       }
@@ -206,7 +206,7 @@ export class TaskStatusRepository implements IA2ATaskRepository {
       // Remove the 'id' field from results
       return this._removeIdField(filteredTasks);
     } catch (error) {
-      throw new ARTError('REPOSITORY_ERROR', `Failed to get tasks for thread '${threadId}': ${error}`);
+      throw new ARTError(`Failed to get tasks for thread '${threadId}': ${error}`, ErrorCode.REPOSITORY_ERROR);
     }
   }
 
@@ -224,7 +224,7 @@ export class TaskStatusRepository implements IA2ATaskRepository {
     }
   ): Promise<A2ATask[]> {
     if (!agentId) {
-      throw new ARTError('VALIDATION_ERROR', 'AgentId is required');
+      throw new ARTError('AgentId is required', ErrorCode.VALIDATION_ERROR);
     }
 
     try {
@@ -235,7 +235,7 @@ export class TaskStatusRepository implements IA2ATaskRepository {
 
       // Filter by assigned agent
       let filteredTasks = queryResults.filter(task => 
-        task.assignedAgent?.agentId === agentId
+        task.targetAgent?.agentId === agentId
       );
 
       // Apply additional filters
@@ -256,7 +256,7 @@ export class TaskStatusRepository implements IA2ATaskRepository {
       // Remove the 'id' field from results
       return this._removeIdField(filteredTasks);
     } catch (error) {
-      throw new ARTError('REPOSITORY_ERROR', `Failed to get tasks for agent '${agentId}': ${error}`);
+      throw new ARTError(`Failed to get tasks for agent '${agentId}': ${error}`, ErrorCode.REPOSITORY_ERROR);
     }
   }
 
@@ -271,7 +271,7 @@ export class TaskStatusRepository implements IA2ATaskRepository {
     options?: { limit?: number; offset?: number }
   ): Promise<A2ATask[]> {
     if (!status) {
-      throw new ARTError('VALIDATION_ERROR', 'Status is required');
+      throw new ARTError('Status is required', ErrorCode.VALIDATION_ERROR);
     }
 
     try {
@@ -304,16 +304,20 @@ export class TaskStatusRepository implements IA2ATaskRepository {
       // Remove the 'id' field from results
       return this._removeIdField(filteredTasks);
     } catch (error) {
-      throw new ARTError('REPOSITORY_ERROR', `Failed to get tasks by status: ${error}`);
+      throw new ARTError(`Failed to get tasks by status: ${error}`, ErrorCode.REPOSITORY_ERROR);
     }
   }
 
   /**
-   * Helper method to remove the internal 'id' field from task arrays.
+   * Utility method to remove the internal 'id' field from stored tasks before returning them.
    * @param tasks - Array of StoredA2ATask objects.
-   * @returns Array of A2ATask objects without the 'id' field.
+   * @returns Array of A2ATask objects with 'id' field removed.
    */
   private _removeIdField(tasks: StoredA2ATask[]): A2ATask[] {
-    return tasks.map(({ id: _id, ...rest }) => rest);
+    return tasks.map(task => {
+      const cleanTask = { ...task };
+      delete (cleanTask as Partial<StoredA2ATask>).id;
+      return cleanTask as A2ATask;
+    });
   }
 } 

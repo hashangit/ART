@@ -70,7 +70,7 @@ describe('ReasoningEngine', () => {
     it('should be instantiated with a valid ProviderManager', () => {
         expect(engine).toBeInstanceOf(ReasoningEngine);
         expect(Logger.info).toHaveBeenCalledOnce();
-        expect(Logger.info).toHaveBeenCalledWith('ReasoningEngine initialized');
+        expect(Logger.info).toHaveBeenCalledWith('ReasoningEngine initialized with ProviderManager');
     });
 
     it('should request an adapter from the ProviderManager for each call', async () => {
@@ -151,7 +151,7 @@ describe('ReasoningEngine', () => {
         expect(mockProviderManager.getAdapter).toHaveBeenCalledOnce();
         expect(Logger.error).toHaveBeenCalledOnce();
         expect(Logger.error).toHaveBeenCalledWith(
-            'ReasoningEngine encountered an error getting adapter from ProviderManager:',
+            'ReasoningEngine failed to get adapter: Failed to get adapter',
             expect.objectContaining({ error: getAdapterError })
         );
         expect(mockRelease).not.toHaveBeenCalled(); // Release should not be called if adapter wasn't obtained

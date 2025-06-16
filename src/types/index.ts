@@ -17,6 +17,7 @@ export {
 // --- UI Socket Related Types ---
 export { LLMStreamSocket } from '../systems/ui/llm-stream-socket';
 export { TypedSocket } from '../systems/ui/typed-socket';
+export { A2ATaskSocket } from '../systems/ui/a2a-task-socket';
 export type { UnsubscribeFunction } from '../systems/ui/typed-socket';
 
 // --- Zod Schemas for Validation ---
@@ -534,6 +535,15 @@ export interface PromptContext {
   [key: string]: any;
 }
 
+/**
+ * Represents a Mustache template that can be rendered with a PromptContext to produce an ArtStandardPrompt.
+ * Used by the PromptManager.assemblePrompt method.
+ */
+export interface PromptBlueprint {
+  /** The Mustache template string that will be rendered with context data to produce a JSON string representing an ArtStandardPrompt */
+  template: string;
+}
+
 // --- END ART STANDARD PROMPT TYPES ---
 
 
@@ -603,6 +613,8 @@ export type StateSavingStrategy = 'explicit' | 'implicit';
 
 // Explicitly import ProviderManagerConfig here for ArtInstanceConfig
 import type { ProviderManagerConfig as PMConfig } from './providers';
+// Import McpManagerConfig for ArtInstanceConfig
+import type { McpManagerConfig } from '../systems/mcp/types';
 
 /**
  * Configuration for creating an ART instance.
@@ -644,6 +656,21 @@ export interface ArtInstanceConfig {
    * This can be overridden at the thread level or at the individual call level.
    */
   defaultSystemPrompt?: string;
+  /**
+   * Optional configuration for MCP (Model Context Protocol) manager.
+   * Enables connection to external MCP servers for dynamic tool loading.
+   */
+  mcpConfig?: McpManagerConfig;
+  /**
+   * Optional configuration for authentication strategies.
+   * Used for secure connections to external services and MCP servers.
+   */
+  authConfig?: {
+    /** Whether to enable authentication manager. Defaults to false. */
+    enabled?: boolean;
+    /** Pre-configured authentication strategies to register at startup. */
+    strategies?: Array<{ id: string; strategy: any }>;
+  };
   // Add other top-level configuration properties as needed, e.g.:
   // defaultThreadConfig?: Partial<ThreadConfig>;
 }

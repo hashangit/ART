@@ -22,7 +22,14 @@ global.fetch = mockFetch;
 describe('DeepSeekAdapter', () => {
   let adapter: DeepSeekAdapter;
   const defaultOptions: DeepSeekAdapterOptions = { apiKey: 'test-deepseek-key' };
-  const defaultCallOptions: CallOptions = { threadId: 't-deepseek' };
+  const defaultCallOptions: CallOptions = { 
+  threadId: 't-deepseek',
+  providerConfig: {
+    providerName: 'deepseek',
+    modelId: 'deepseek-chat',
+    adapterOptions: { apiKey: 'test-deepseek-key' }
+  }
+};
 
   beforeEach(() => {
     adapter = new DeepSeekAdapter(defaultOptions);
@@ -34,7 +41,7 @@ describe('DeepSeekAdapter', () => {
   });
 
   it('should throw error if API key is missing', () => {
-    expect(() => new DeepSeekAdapter({} as DeepSeekAdapterOptions)).toThrow('DeepSeek API key is required.');
+    expect(() => new DeepSeekAdapter({} as DeepSeekAdapterOptions)).toThrow('DeepSeekAdapter requires an apiKey in options.');
   });
 
   it('should initialize with default model and apiBaseUrl if not provided', () => {

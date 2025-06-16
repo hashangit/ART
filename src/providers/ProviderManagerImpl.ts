@@ -146,7 +146,12 @@ export class ProviderManagerImpl implements IProviderManager {
         // 5. If no limits, create new instance (checklist item 12 part of 360)
         let adapterInstance: ProviderAdapter;
         try {
-            adapterInstance = new providerEntry.adapter(config.adapterOptions);
+            // Pass provider name along with adapter options
+            const adapterOptions = { 
+                ...config.adapterOptions, 
+                providerName: config.providerName 
+            };
+            adapterInstance = new providerEntry.adapter(adapterOptions);
         } catch (error: any) {
             throw new AdapterInstantiationError(config.providerName, error);
         }

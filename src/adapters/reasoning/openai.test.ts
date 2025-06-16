@@ -33,7 +33,14 @@ async function consumeStream(stream: AsyncIterable<StreamEvent>): Promise<Stream
 describe('OpenAIAdapter (Refactored)', () => {
   let adapter: OpenAIAdapter;
   const defaultOptions: OpenAIAdapterOptions = { apiKey: 'test-api-key' };
-  const defaultCallOptions: CallOptions = { threadId: 't-openai' };
+  const defaultCallOptions: CallOptions = { 
+  threadId: 't-openai',
+  providerConfig: {
+    providerName: 'openai',
+    modelId: 'gpt-4o',
+    adapterOptions: { apiKey: 'test-openai-key' }
+  }
+};
 
   beforeEach(() => {
     adapter = new OpenAIAdapter(defaultOptions);

@@ -1,10 +1,11 @@
 // src/systems/reasoning/PromptManager.ts
 import { PromptManager as PromptManagerInterface } from '../../core/interfaces';
-import { ArtStandardPrompt } from '../../types';
+import { ArtStandardPrompt, PromptBlueprint, PromptContext } from '../../types';
 import { ArtStandardPromptSchema } from '../../types/schemas'; // Import Zod schema (Reverted - trying this path again)
 import { ARTError, ErrorCode } from '../../errors';
 import { Logger } from '../../utils/logger';
 import { ZodError } from 'zod'; // Import ZodError for type checking
+import mustache from 'mustache';
 
 // --- Define Prompt Fragments ---
 // Store fragments in a simple object for now. Could be loaded from files later.
@@ -59,8 +60,8 @@ export class PromptManager implements PromptManagerInterface {
      * Validates a constructed prompt object against the standard schema.
      *
      * @param prompt - The ArtStandardPrompt object constructed by the agent.
-     * @returns The validated prompt object.
-     * @throws {ARTError} If validation fails.
+     * @returns The validated prompt object (potentially after normalization if the schema does that).
+     * @throws {ARTError} If validation fails (can be caught and wrapped in ARTError).
      */
     validatePrompt(prompt: ArtStandardPrompt): ArtStandardPrompt {
         try {
@@ -81,6 +82,61 @@ export class PromptManager implements PromptManagerInterface {
             throw new ARTError(
                 `Unexpected error during prompt validation: ${error.message}`,
                 ErrorCode.PROMPT_VALIDATION_FAILED, // Use same code for now
+                error
+            );
+        }
+    }
+
+    /**
+     * Assembles a prompt using a Mustache template (blueprint) and context data.
+     * Renders the template with the provided context and parses the result as an ArtStandardPrompt.
+     *
+     * @param blueprint - The Mustache template containing the prompt structure.
+     * @param context - The context data to inject into the template.
+     * @returns A promise resolving to the assembled ArtStandardPrompt.
+     * @throws {ARTError} If template rendering or JSON parsing fails.
+     */
+    async assemblePrompt(blueprint: PromptBlueprint, context: PromptContext): Promise<ArtStandardPrompt> {
+        try {
+            // Render the Mustache template with the context
+            const renderedTemplate = mustache.render(blueprint.template, context);
+            
+            // Parse the rendered template as JSON
+            let parsedPrompt: any;
+            try {
+                parsedPrompt = JSON.parse(renderedTemplate);
+            } catch (parseError: any) {
+                Logger.error(`[PromptManager] Failed to parse rendered template as JSON:`, parseError);
+                throw new ARTError(
+                    `Failed to parse rendered template as JSON: ${parseError.message}`,
+                    ErrorCode.PROMPT_ASSEMBLY_FAILED,
+                    parseError
+                );
+            }
+
+            // Ensure the parsed result is an array
+            if (!Array.isArray(parsedPrompt)) {
+                Logger.error(`[PromptManager] Rendered template is not an array:`, parsedPrompt);
+                throw new ARTError(
+                    `Rendered template is not an array: ${typeof parsedPrompt}`,
+                    ErrorCode.PROMPT_ASSEMBLY_FAILED
+                );
+            }
+
+            // Return the assembled prompt (cast to ArtStandardPrompt)
+            return parsedPrompt as ArtStandardPrompt;
+            
+        } catch (error: any) {
+            // If it's already an ARTError, re-throw it
+            if (error instanceof ARTError) {
+                throw error;
+            }
+            
+            // Otherwise, wrap in ARTError
+            Logger.error(`[PromptManager] Failed to render prompt template:`, error);
+            throw new ARTError(
+                `Failed to render prompt template: ${error.message}`,
+                ErrorCode.PROMPT_ASSEMBLY_FAILED,
                 error
             );
         }

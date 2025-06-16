@@ -1,6 +1,6 @@
 import { ProviderAdapter } from '../core/interfaces';
 
-export { ProviderAdapter };
+export type { ProviderAdapter };
 
 /** Entry defining an available provider adapter */
 export interface AvailableProviderEntry {

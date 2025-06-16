@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { McpManager } from './McpManager';
-import { McpProxyTool } from './McpProxyTool';
+// import { McpProxyTool } from './McpProxyTool';
 import { ToolRegistry, StateManager } from '../../core/interfaces';
 import { AuthManager } from '../../systems/auth/AuthManager';
 import { ARTError } from '../../types';
@@ -87,7 +87,7 @@ describe('McpManager', () => {
     // Mock AuthManager
     mockAuthManager = {
       registerStrategy: vi.fn(),
-      authenticate: vi.fn().mockResolvedValue({ 'Authorization': 'Bearer test-token' })
+      getHeaders: vi.fn().mockResolvedValue({ 'Authorization': 'Bearer test-token' })
     } as any;
 
     mockConfig = {
@@ -194,7 +194,7 @@ describe('McpManager', () => {
 
       const status = mcpManager.getServerStatus('test-server-1');
       expect(status?.status).toBe('error');
-      expect(status?.lastError).toContain('HEALTH_CHECK_FAILED');
+      expect(status?.lastError).toContain('Health check failed');
     });
 
     it('should handle tool discovery failure gracefully', async () => {
@@ -254,11 +254,11 @@ describe('McpManager', () => {
 
       await mcpManager.initialize();
 
-      expect(mockAuthManager.authenticate).toHaveBeenCalledWith('test-auth');
+      expect(mockAuthManager.getHeaders).toHaveBeenCalledWith('test-auth');
     });
 
     it('should handle authentication failure', async () => {
-      mockAuthManager.authenticate = vi.fn().mockRejectedValue(new Error('Auth failed'));
+      mockAuthManager.getHeaders = vi.fn().mockRejectedValue(new Error('Auth failed'));
 
       await mcpManager.initialize();
 
@@ -405,7 +405,7 @@ describe('McpManager', () => {
       await managerWithAutoRefresh.initialize();
 
       const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
-      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
+      // const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
 
       await managerWithAutoRefresh.shutdown();
 
@@ -444,7 +444,7 @@ describe('McpManager', () => {
 
       const status = mcpManager.getServerStatus('test-server-1');
       expect(status?.status).toBe('error');
-      expect(status?.lastError).toContain('HEALTH_CHECK_FAILED');
+      expect(status?.lastError).toContain('Health check failed');
     });
   });
 }); 

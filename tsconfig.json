@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
+    "target": "ES2020",
     "module": "ESNext",
-    "lib": ["ESNext", "DOM"],
+    "lib": ["ES2020", "DOM"],
     "moduleResolution": "bundler",
     "strict": true,
     "sourceMap": true,
@@ -10,6 +10,7 @@
     "declarationMap": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
     "paths": {
       "@/*": ["./src/*"]
     },
