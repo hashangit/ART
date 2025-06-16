@@ -1,6 +1,6 @@
 import ReactDOM from 'react-dom/client';
 import ZyntopiaWebChat from './ZyntopiaWebChat';
-import { InMemoryStorageAdapter, GeminiAdapter } from 'art-framework';
+import { InMemoryStorageAdapter, GeminiAdapter, OpenAIAdapter } from 'art-framework';
 import './styles/globals.css';
 
 // Demo configuration for the ART Framework with Zyntopia UI
@@ -14,9 +14,28 @@ const zyntopiaConfig = {
     providers: {
       availableProviders: [
         {
-          name: 'gemini',
+          name: 'Gemini 2.5 Flash',
           adapter: GeminiAdapter,
           isLocal: false,
+          baseOptions: { provider: 'gemini', modelId: 'gemini-2.5-flash-preview-05-20' }
+        },
+        {
+          name: 'Gemini 2.5 Pro',
+          adapter: GeminiAdapter,
+          isLocal: false,
+          baseOptions: { provider: 'gemini', modelId: 'gemini-2.5-pro-preview-06-05' }
+        },
+        {
+            name: 'GPT-4o',
+            adapter: OpenAIAdapter,
+            isLocal: false,
+            baseOptions: { provider: 'openai', modelId: 'gpt-4o' }
+        },
+        {
+            name: 'GPT-4o Mini',
+            adapter: OpenAIAdapter,
+            isLocal: false,
+            baseOptions: { provider: 'openai', modelId: 'gpt-4o-mini' }
         },
       ],
       maxParallelApiInstancesPerProvider: 5,
@@ -38,8 +57,8 @@ const zyntopiaConfig = {
     mcp: {
       servers: [
         {
-          id: 'local-mcp',
-          name: 'Local MCP Server',
+          id: 'zyntopia-mcp',
+          name: 'Zyntopia MCP Service',
           url: 'http://localhost:4200/api/mcp',
           enabled: true,
           timeout: 10000,
@@ -57,6 +76,7 @@ const zyntopiaConfig = {
   // UI Configuration
   title: 'Zyntopia WebChat',
   subtitle: 'Powered by ART Framework',
+  defaultModel: 'Gemini 2.5 Flash', // Match the 'name' from availableProviders
   
   // Event handlers
   onMessage: (message: any) => {

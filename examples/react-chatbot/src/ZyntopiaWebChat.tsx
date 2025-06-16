@@ -60,7 +60,11 @@ import {
 } from 'lucide-react';
 
 // Import the actual ART Framework types
-import { ObservationType } from '../../../src/types';
+import { 
+  ObservationType, 
+  AvailableProviderEntry
+} from '../../../src/types';
+import { ArtInstance } from '../../../src/core/interfaces';
 
 // Types
 export interface ZyntopiaMessage {
@@ -73,6 +77,7 @@ export interface ZyntopiaMessage {
   thoughts?: ThoughtItem[];
   reactions?: boolean;
   metadata?: Record<string, any>;
+  onError?: (error: Error) => void;
 }
 
 export interface ZyntopiaObservation {
@@ -107,6 +112,7 @@ export interface ZyntopiaWebChatConfig {
   // UI Configuration
   title?: string;
   subtitle?: string;
+  defaultModel?: string; // e.g. 'gemini/gemini-1.5-flash-latest'
   
   // Event handlers
   onMessage?: (message: ZyntopiaMessage) => void;
@@ -114,37 +120,6 @@ export interface ZyntopiaWebChatConfig {
 }
 
 // --- Helper Functions ---
-
-// Basic URL detection and rendering
-const urlRegex = /(https?:\/\/[^\s]+)/g;
-function renderTextWithLinks(text: string) {
-  if (typeof text !== 'string') return text ?? '';
-  return text.split(urlRegex).map((part, index) => {
-    if (part.match(urlRegex)) {
-      let url = part;
-      let punctuation = '';
-      const trailingChars = ['.', ',', '!', '?', ':', ';'];
-      if (trailingChars.includes(url.slice(-1))) {
-        punctuation = url.slice(-1);
-        url = url.slice(0, -1);
-      }
-      return (
-        <React.Fragment key={`link-${index}`}>
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 underline hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 break-all"
-          >
-            {url}
-          </a>
-          {punctuation}
-        </React.Fragment>
-      );
-    }
-    return <React.Fragment key={`text-${index}`}>{part}</React.Fragment>;
-  });
-}
 
 // Helper to safely parse JSON content
 function safeJsonParse(jsonString: any, defaultValue = null) {
@@ -622,6 +597,7 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
   artConfig,
   title = 'Zyntopia WebChat',
   subtitle = 'Powered by ART Framework',
+  defaultModel,
   onMessage,
   onError,
 }) => {
@@ -633,9 +609,11 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
   const [observations, setObservations] = useState<ZyntopiaObservation[]>([]);
   const [input, setInput] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [availableModels, setAvailableModels] = useState<AvailableProviderEntry[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>(defaultModel || '');
   
   // Refs
-  const artInstanceRef = useRef<any>(null);
+  const artInstanceRef = useRef<ArtInstance | null>(null);
   const threadId = useRef<string>(`thread_${Date.now()}_${Math.random().toString(36).substring(2)}`);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -645,37 +623,25 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
       try {
         setIsLoading(true);
         
+        // Fetch available models directly from the passed-in config
+        if (artConfig?.providers?.availableProviders) {
+            const models = artConfig.providers.availableProviders;
+            setAvailableModels(models);
+            if (models.length > 0) {
+              const defaultModelExists = models.some((m: AvailableProviderEntry) => m.name === defaultModel);
+              const initialModel = defaultModelExists ? defaultModel : models[0].name;
+              setSelectedModel(initialModel!);
+              console.log('Initial model set to:', initialModel);
+            }
+        } else {
+            console.warn('No available providers configured in artConfig.');
+        }
+
         const artInstance = await createArtInstance(artConfig);
         artInstanceRef.current = artInstance;
+        
         setIsInitialized(true);
         setError(null);
-        
-        // Initialize thread configuration
-        const stateManager = artInstance.stateManager;
-        if (stateManager) {
-          await stateManager.setThreadConfig(threadId.current, {
-            providerConfig: {
-              providerName: 'gemini',
-              modelId: 'gemini-2.5-flash-preview-05-20',
-              adapterOptions: {
-                apiKey: import.meta.env.VITE_GEMINI_API_KEY || 'your-gemini-api-key',
-              },
-            },
-            enabledTools: [],
-            historyLimit: 10,
-            systemPrompt: `You are ZOI, a helpful AI assistant powered by the ART Framework. 
-
-As you process user requests:
-1. Always provide clear Intent observations about what the user wants
-2. Create detailed Plan observations breaking down your approach
-3. Share Thought observations as you work through complex problems
-4. Be thoughtful and analytical in your responses
-
-When you provide the final response, format it using markdown for clarity and readability (e.g., using lists, bolding, and code blocks where appropriate).
-
-Provide clear, concise, and helpful responses while making your reasoning visible through observations.`,
-          });
-        }
 
         // Add welcome message
         const welcomeMessage: ZyntopiaMessage = {
@@ -752,7 +718,60 @@ Provide clear, concise, and helpful responses while making your reasoning visibl
     };
 
     initializeART();
-  }, [artConfig, onError]);
+  }, [artConfig, onError, defaultModel]);
+
+  // Effect to update thread config when selected model changes
+  useEffect(() => {
+    const updateThreadConfig = async () => {
+      if (!isInitialized || !artInstanceRef.current || !selectedModel) return;
+
+      const stateManager = artInstanceRef.current.stateManager;
+      const selectedModelEntry = availableModels.find(m => m.name === selectedModel);
+
+      if (stateManager && selectedModelEntry) {
+        const provider = selectedModelEntry.baseOptions?.provider;
+        const modelId = selectedModelEntry.baseOptions?.modelId;
+
+        if (!provider || !modelId) {
+            console.error('Selected model entry is missing baseOptions with provider and modelId', selectedModelEntry);
+            toast.error('Selected model is misconfigured.');
+            return;
+        }
+        
+        // This is a temporary way to get the API key.
+        // In a real app, this should be handled securely.
+        const apiKey = provider === 'gemini' ? import.meta.env.VITE_GEMINI_API_KEY : 
+                       provider === 'openai' ? import.meta.env.VITE_OPENAI_API_KEY : 
+                       'your-api-key';
+
+        console.log(`Updating thread config for provider: ${selectedModelEntry.name}, model: ${modelId}`);
+        
+        await stateManager.setThreadConfig(threadId.current, {
+          providerConfig: {
+            providerName: selectedModelEntry.name, // Use the unique name from the config
+            modelId: modelId,
+            adapterOptions: { apiKey },
+          },
+          enabledTools: [],
+          historyLimit: 10,
+          systemPrompt: `You are ZOI, a helpful AI assistant powered by the ART Framework. 
+
+As you process user requests:
+1. Always provide clear Intent observations about what the user wants
+2. Create detailed Plan observations breaking down your approach
+3. Share Thought observations as you work through complex problems
+4. Be thoughtful and analytical in your responses
+
+When you provide the final response, format it using markdown for clarity and readability (e.g., using lists, bolding, and code blocks where appropriate).
+
+Provide clear, concise, and helpful responses while making your reasoning visible through observations.`,
+        });
+        toast(`Model switched to ${selectedModelEntry.name}`);
+      }
+    };
+
+    updateThreadConfig();
+  }, [selectedModel, isInitialized, availableModels]);
 
   // Handle sending messages
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -775,31 +794,20 @@ Provide clear, concise, and helpful responses while making your reasoning visibl
         query: userMessage.content,
         threadId: threadId.current,
         options: {
-          // Disable task persistence for now to avoid IndexedDB issues
-          persistTasks: false,
-          // Enable observation capture for thoughts
-          enableObservations: true,
-          // Add timeout to prevent hanging
-          timeout: 30000,
+          // Timeouts are configured on the provider or MCP level, not here.
         },
       });
 
-      // Extract the response content properly - ART Framework returns structured response
+      // Extract the response content properly from AgentFinalResponse
       let responseContent = '';
-      if (typeof response === 'string') {
-        responseContent = response;
-      } else if (response && typeof response === 'object') {
-        // ART Framework returns nested structure: {response: {content: "..."}, metadata: {...}}
-        if (response.response && typeof response.response === 'object') {
-          responseContent = response.response.content || response.response.message || '';
-        } else {
-          responseContent = response.content || response.message || response.response || '';
-        }
-        
-        // Ensure we have a string, not an object
-        if (typeof responseContent !== 'string') {
-          responseContent = (responseContent as any)?.content || String(responseContent || 'No response content');
-        }
+      const responseMessage = response.response; // This is a ConversationMessage
+
+      if (responseMessage && typeof responseMessage.content === 'string') {
+        responseContent = responseMessage.content;
+      } else if (responseMessage) {
+        // Handle non-string content if necessary (e.g., for complex tool results)
+        // For now, we'll stringify it as a fallback.
+        responseContent = JSON.stringify(responseMessage.content);
       } else {
         responseContent = 'I apologize, but I encountered an issue processing your request.';
       }
@@ -817,10 +825,10 @@ Provide clear, concise, and helpful responses while making your reasoning visibl
         reactions: true,
         thoughts: messageThoughts,
         metadata: {
-          'Response Time': '1.2s',
-          'Tokens Used': Math.floor(Math.random() * 500) + 100,
-          'Model': 'ART Framework',
-          'Finish Reason': 'stop'
+          'Response Time': `${response.metadata.totalDurationMs}ms`,
+          'LLM Calls': response.metadata.llmCalls,
+          'Tool Calls': response.metadata.toolCalls,
+          'Finish Reason': response.metadata.llmMetadata?.stopReason || 'stop',
         }
       };
 
@@ -1140,7 +1148,18 @@ Provide clear, concise, and helpful responses while making your reasoning visibl
                            <div className="flex-grow"></div>
                            <div className="flex items-center gap-2">
                               <span className="text-xs text-muted-foreground">Model:</span>
-                              <Select defaultValue="art-framework"><SelectTrigger className="w-auto h-8 text-xs focus:ring-0 focus:ring-offset-0 rounded-full border-none bg-slate-200 dark:bg-slate-700 px-3"><SelectValue placeholder="Select Model" /></SelectTrigger><SelectContent><SelectItem value="art-framework">ART Framework</SelectItem><SelectItem value="gpt4">GPT-4</SelectItem><SelectItem value="claude3">Claude 3 Opus</SelectItem></SelectContent></Select>
+                              <Select value={selectedModel} onValueChange={setSelectedModel} disabled={!isInitialized || availableModels.length === 0}>
+                                <SelectTrigger className="w-auto h-8 text-xs focus:ring-0 focus:ring-offset-0 rounded-full border-none bg-slate-200 dark:bg-slate-700 px-3">
+                                  <SelectValue placeholder="Select Model" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableModels.map(model => (
+                                    <SelectItem key={model.name} value={model.name!}>
+                                      {model.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                            </div>
                         </div>
                       </div>
