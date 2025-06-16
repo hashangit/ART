@@ -196,36 +196,47 @@ function parseArtResponse(responseText: string): { thoughts: ThoughtItem[], resp
     };
 
     let responseFound = false;
-    for (const part of parts) {
+    let lastThoughtIndex = -1;
+
+    for (const [index, part] of parts.entries()) {
         const trimmedPart = part.trim();
         if (trimmedPart.startsWith('Intent:')) {
             result.thoughts.push({
                 id: `thought_intent_${Date.now()}`, type: 'Intent', content: trimmedPart.substring('Intent:'.length).trim(),
                 icon: Target, color: 'border-blue-500', titleColor: 'text-blue-600 dark:text-blue-400',
             });
+            lastThoughtIndex = index;
         } else if (trimmedPart.startsWith('Plan:')) {
              result.thoughts.push({
                 id: `thought_plan_${Date.now()}`, type: 'Plan', content: trimmedPart.substring('Plan:'.length).trim(),
                 icon: ListChecks, color: 'border-purple-500', titleColor: 'text-purple-600 dark:text-purple-400',
             });
+            lastThoughtIndex = index;
         } else if (trimmedPart.startsWith('Thought:')) {
             result.thoughts.push({
                 id: `thought_thought_${Date.now()}_${result.thoughts.length}`, type: 'Thought', content: trimmedPart.substring('Thought:'.length).trim(),
                 icon: BrainCircuit, color: 'border-green-500', titleColor: 'text-green-600 dark:text-green-400',
             });
+            lastThoughtIndex = index;
         } else if (trimmedPart.startsWith('Response:')) {
             result.response = trimmedPart.substring('Response:'.length).trim();
             responseFound = true;
         }
     }
     
+    // Fallback logic if the "Response:" tag is missing
     if (!responseFound) {
-      if (result.thoughts.length > 0) {
+      if (lastThoughtIndex !== -1 && lastThoughtIndex + 1 < parts.length) {
+        // If there are thoughts, assume everything after the last one is the response
+        result.response = parts.slice(lastThoughtIndex + 1).map(p => p.replace(/^(Intent|Plan|Thought):/, '').trim()).join('\n\n').trim();
+      } else if (result.thoughts.length > 0 && parts.length > lastThoughtIndex) {
+        // This handles the case where the last part is the response but doesn't have a tag.
         const lastPart = parts[parts.length - 1];
-        if (!lastPart.match(/^(Intent|Plan|Thought|Response):/)) {
+        if (!lastPart.match(/^(Intent|Plan|Thought):/)) {
             result.response = lastPart.trim();
         }
       } else {
+        // If there are no thought markers at all, the whole thing is the response
         result.response = responseText;
       }
     }
@@ -507,7 +518,7 @@ function ChatMessage({ message, onCopy, onRetry }: {
             <CollapsibleTrigger asChild>
                <Button variant="ghost" size="sm" className="text-xs text-blue-500 dark:text-blue-400 p-0 h-auto hover:bg-transparent flex items-center gap-1">
                  <BrainCircuit className="h-3 w-3" />
-                 <span>{isThoughtsOpen ? 'Hide' : 'Show'} Zoi's Thoughts</span>
+                 <span>{isThoughtsOpen ? 'Hide' : 'Show'} Zee's Thoughts</span>
                  {isThoughtsOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                </Button>
             </CollapsibleTrigger>
@@ -592,6 +603,12 @@ function ChatMessage({ message, onCopy, onRetry }: {
   );
 }
 
+// Custom interface for our file state
+interface UploadedFileState {
+  file: File;
+  content: string | null; // Will hold text content, or null for non-text files
+}
+
 // Main Zyntopia WebChat Component
 export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
   artConfig,
@@ -608,7 +625,7 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
   const [messages, setMessages] = useState<ZyntopiaMessage[]>([]);
   const [observations, setObservations] = useState<ZyntopiaObservation[]>([]);
   const [input, setInput] = useState('');
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFileState[]>([]);
   const [availableModels, setAvailableModels] = useState<AvailableProviderEntry[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>(defaultModel || '');
   
@@ -646,7 +663,7 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
         // Add welcome message
         const welcomeMessage: ZyntopiaMessage = {
           id: Date.now().toString(),
-          content: `Hello! I'm your personal AI Assistant ZOI`,
+          content: `Hello! I'm your personal AI Assistant Zee`,
           role: 'assistant',
           timestamp: new Date(),
           reactions: true,
@@ -657,7 +674,7 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
               icon: Target, 
               color: 'border-blue-500', 
               titleColor: 'text-blue-600 dark:text-blue-400', 
-              content: 'Welcome the user and establish my identity as ZOI.' 
+              content: 'Welcome the user and establish my identity as Zee.' 
             },
             { 
               id: 'test_plan_1', 
@@ -754,17 +771,18 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
           },
           enabledTools: [],
           historyLimit: 10,
-          systemPrompt: `You are ZOI, a helpful AI assistant powered by the ART Framework. 
+          systemPrompt: `You are Zee, a helpful AI assistant powered by the ART Framework.
 
-As you process user requests:
-1. Always provide clear Intent observations about what the user wants
-2. Create detailed Plan observations breaking down your approach
-3. Share Thought observations as you work through complex problems
-4. Be thoughtful and analytical in your responses
+Your entire output MUST strictly follow the format below. Do not include any other text, headers, or explanations outside of this structure.
 
-When you provide the final response, format it using markdown for clarity and readability (e.g., using lists, bolding, and code blocks where appropriate).
+**Intent:** [Your concise understanding of the user's primary goal.]
 
-Provide clear, concise, and helpful responses while making your reasoning visible through observations.`,
+**Plan:**
+[A numbered list of the steps you will take to address the user's request.]
+
+**Thought:** [Your reasoning or reflection on a step. You can have multiple thought blocks.]
+
+**Response:** [The final, user-facing answer, formatted in clear and readable markdown.]`,
         });
         toast(`Model switched to ${selectedModelEntry.name}`);
       }
@@ -776,22 +794,37 @@ Provide clear, concise, and helpful responses while making your reasoning visibl
   // Handle sending messages
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!isInitialized || !artInstanceRef.current || isLoading || !input.trim()) return;
+
+    const fileContext = uploadedFiles
+      .filter(f => f.content !== null)
+      .map(f => `--- Start of File: ${f.file.name} ---\n${f.content}\n--- End of File: ${f.file.name} ---`)
+      .join('\n\n');
+      
+    const finalInput = input.trim();
+
+    if (!isInitialized || !artInstanceRef.current || isLoading || (!finalInput && !fileContext)) {
+      return;
+    }
+
+    const fullQuery = fileContext ? `${fileContext}\n\n${finalInput}` : finalInput;
+
+    const displayMessageContent = finalInput || `Processing ${uploadedFiles.length} uploaded file(s)...`;
 
     const userMessage: ZyntopiaMessage = {
       id: Date.now().toString(),
-      content: input.trim(),
+      content: displayMessageContent,
       role: 'user',
       timestamp: new Date(),
     };
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setUploadedFiles([]); // Clear files from state after including them in the message
     setIsLoading(true);
 
     try {
       const response = await artInstanceRef.current.process({
-        query: userMessage.content,
+        query: fullQuery,
         threadId: threadId.current,
         options: {
           // Timeouts are configured on the provider or MCP level, not here.
@@ -896,8 +929,8 @@ Provide clear, concise, and helpful responses while making your reasoning visibl
       }
       
       // Check file type - more flexible approach
-      const allowedTypes = ['text/plain', 'text/markdown', 'application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'application/json'];
-      const allowedExtensions = ['.txt', '.md', '.markdown', '.pdf', '.jpg', '.jpeg', '.png', '.gif', '.json'];
+      const allowedTypes = ['text/plain', 'text/markdown', 'application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'application/json', 'text/html', 'application/x-yaml', 'text/xml', 'text/javascript', 'text/typescript', 'application/x-python-code'];
+      const allowedExtensions = ['.txt', '.md', '.markdown', '.pdf', '.jpg', '.jpeg', '.png', '.gif', '.json', '.html', '.yaml', '.yml', '.xml', '.tsx', '.ts', '.jsx', '.js', '.py', '.rb', '.java', '.c', '.cpp', '.h', '.hpp', '.cs', '.go', '.php', '.sh', '.zsh', '.ps1', '.doc', '.docx', '.odt', '.rtf'];
       
       const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
       const isValidType = allowedTypes.includes(file.type) || allowedExtensions.includes(fileExtension);
@@ -911,40 +944,27 @@ Provide clear, concise, and helpful responses while making your reasoning visibl
     });
 
     if (validFiles.length > 0) {
-      setUploadedFiles(prev => [...prev, ...validFiles]);
-      
-      // Create a message about the uploaded files
-      const fileNames = validFiles.map(f => f.name).join(', ');
-      const fileMessage: ZyntopiaMessage = {
-        id: Date.now().toString(),
-        content: `📎 Uploaded ${validFiles.length} file(s): ${fileNames}`,
-        role: 'user',
-        timestamp: new Date(),
-      };
-      
-      setMessages(prev => [...prev, fileMessage]);
-      toast.success(`Successfully uploaded ${validFiles.length} file(s)`);
-      
-      // Process files with ART Framework
-      try {
-        for (const file of validFiles) {
-          const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-          const isTextFile = file.type === 'text/plain' || 
-                           file.type === 'text/markdown' || 
-                           ['.txt', '.md', '.markdown'].includes(fileExtension);
-          
-          if (isTextFile) {
+      const fileReadPromises = validFiles.map(async (file): Promise<UploadedFileState> => {
+        const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+        const isTextFile = ![".jpg", ".jpeg", ".png", ".gif", ".pdf"].includes(fileExtension);
+
+        if (isTextFile) {
+          try {
             const text = await file.text();
-            console.log(`File content for ${file.name}:`, text.substring(0, 500) + '...');
-            
-            // You could potentially add this to the ART Framework context
-            // For now, just log it for debugging
-            if (artInstanceRef.current) {
-              // Future: Could integrate with ART Framework's context management
-              console.log('File ready for ART integration:', file.name);
-            }
+            return { file, content: text };
+          } catch (readError) {
+            console.error(`Could not read file ${file.name}:`, readError);
+            toast.error(`Could not read file ${file.name}`);
+            return { file, content: null };
           }
         }
+        return { file, content: null }; // For non-text or failed-to-read files
+      });
+
+      try {
+        const newFilesWithContent = await Promise.all(fileReadPromises);
+        setUploadedFiles(prev => [...prev, ...newFilesWithContent]);
+        toast.success(`Successfully processed ${validFiles.length} file(s)`);
       } catch (error) {
         console.error('Error processing uploaded files:', error);
         toast.error('Error processing some files');
@@ -1033,7 +1053,7 @@ Provide clear, concise, and helpful responses while making your reasoning visibl
             </TabsTrigger>
             <TabsTrigger value="findings" className="text-xs py-2 data-[state=active]:shadow-none">
               <BrainCircuit className="mr-1 h-3.5 w-3.5" />
-              ZOI's Findings
+              Zee's Findings
               {observations.length > 0 && (
                 <span className="ml-2 bg-blue-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center">
                   {observations.length}
@@ -1063,7 +1083,7 @@ Provide clear, concise, and helpful responses while making your reasoning visibl
                             <div className="rounded-lg p-3 max-w-xl shadow-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-50">
                               <div className="flex items-center gap-2">
                                 <BrainCircuit className="h-4 w-4 animate-pulse" />
-                                <span className="text-sm">ZOI is thinking...</span>
+                                <span className="text-sm">Zee is thinking...</span>
                               </div>
                             </div>
                           </div>
@@ -1075,7 +1095,7 @@ Provide clear, concise, and helpful responses while making your reasoning visibl
                         {/* Uploaded files display */}
                         {uploadedFiles.length > 0 && (
                           <div className="mb-3 flex flex-wrap gap-2">
-                            {uploadedFiles.map((file, index) => (
+                            {uploadedFiles.map(({ file }, index) => (
                               <div key={index} className="flex items-center gap-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-sm">
                                 <Paperclip className="h-3 w-3" />
                                 <span className="truncate max-w-32">{file.name}</span>
@@ -1123,7 +1143,7 @@ Provide clear, concise, and helpful responses while making your reasoning visibl
                              ref={fileInputRef}
                              type="file"
                              multiple
-                             accept=".txt,.md,.pdf,.jpg,.jpeg,.png,.gif,.json"
+                             accept=".txt,.md,.pdf,.jpg,.jpeg,.png,.gif,.json,.html,.yaml,.yml,.xml,.tsx,.ts,.jsx,.js,.py,.rb,.java,.c,.cpp,.h,.hpp,.cs,.go,.php,.sh,.zsh,.ps1,.doc,.docx,.odt,.rtf"
                              onChange={handleFileUpload}
                              className="hidden"
                            />
@@ -1174,7 +1194,7 @@ Provide clear, concise, and helpful responses while making your reasoning visibl
                   <div className="text-center text-slate-500 dark:text-slate-400 py-12">
                     <BrainCircuit className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <h3 className="text-lg font-medium mb-2">No observations yet</h3>
-                    <p className="text-sm">Start a conversation to see ZOI's thinking process and observations</p>
+                    <p className="text-sm">Start a conversation to see Zee's thinking process and observations</p>
                   </div>
                 ) : (
                   observations.map(finding => (
