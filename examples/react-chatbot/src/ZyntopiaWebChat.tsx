@@ -53,7 +53,8 @@ import {
   AlertCircle,
   Book,
   Trash2,
-  BarChartHorizontalBig
+  BarChartHorizontalBig,
+  X
 } from 'lucide-react';
 
 // Import the actual ART Framework types
@@ -208,6 +209,53 @@ function mapObservationToFinding(observation: any): ZyntopiaObservation {
   };
 }
 
+function parseArtResponse(responseText: string): { thoughts: ThoughtItem[], response: string } {
+    const cleanText = responseText.replace(/\*\*(Intent|Plan|Thought|Response):\*\*/g, '@@@$1:').trim();
+    const parts = cleanText.split('@@@').filter(p => p.trim());
+
+    const result: { thoughts: ThoughtItem[], response: string } = {
+        thoughts: [],
+        response: ''
+    };
+
+    let responseFound = false;
+    for (const part of parts) {
+        const trimmedPart = part.trim();
+        if (trimmedPart.startsWith('Intent:')) {
+            result.thoughts.push({
+                id: `thought_intent_${Date.now()}`, type: 'Intent', content: trimmedPart.substring('Intent:'.length).trim(),
+                icon: Target, color: 'border-blue-500', titleColor: 'text-blue-600 dark:text-blue-400',
+            });
+        } else if (trimmedPart.startsWith('Plan:')) {
+             result.thoughts.push({
+                id: `thought_plan_${Date.now()}`, type: 'Plan', content: trimmedPart.substring('Plan:'.length).trim(),
+                icon: ListChecks, color: 'border-purple-500', titleColor: 'text-purple-600 dark:text-purple-400',
+            });
+        } else if (trimmedPart.startsWith('Thought:')) {
+            result.thoughts.push({
+                id: `thought_thought_${Date.now()}_${result.thoughts.length}`, type: 'Thought', content: trimmedPart.substring('Thought:'.length).trim(),
+                icon: BrainCircuit, color: 'border-green-500', titleColor: 'text-green-600 dark:text-green-400',
+            });
+        } else if (trimmedPart.startsWith('Response:')) {
+            result.response = trimmedPart.substring('Response:'.length).trim();
+            responseFound = true;
+        }
+    }
+    
+    if (!responseFound) {
+      if (result.thoughts.length > 0) {
+        const lastPart = parts[parts.length - 1];
+        if (!lastPart.match(/^(Intent|Plan|Thought|Response):/)) {
+            result.response = lastPart.trim();
+        }
+      } else {
+        result.response = responseText;
+      }
+    }
+
+    return result;
+}
+
 // Finding Card Component
 function FindingCard({ finding, isInline = false }: { finding: ZyntopiaObservation; isInline?: boolean }) {
   if (!finding) return null;
@@ -332,6 +380,18 @@ function FindingCard({ finding, isInline = false }: { finding: ZyntopiaObservati
   }
 
   // 3. Generic Card (Intent, Plan, Thought, Synthesis, etc.)
+  let displayContent = content;
+  if ((type === 'Intent' || type === 'Plan') && typeof content === 'string') {
+    const parsed = safeJsonParse(content);
+    if (parsed) {
+      if ((type === 'Intent') && parsed.intent) {
+        displayContent = parsed.intent;
+      } else if ((type === 'Plan') && parsed.plan) {
+        displayContent = parsed.plan;
+      }
+    }
+  }
+  
   return (
     <Card className={`relative overflow-hidden ${isInline ? 'border-l-2' : 'mb-3 border-l-2'} ${cardColor} shadow-sm hover:shadow-md transition-shadow duration-200 bg-white dark:bg-slate-800/30`}>
       <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isInline ? 'p-1.5 pl-2' : 'p-2 pl-3'}`}>
@@ -347,10 +407,10 @@ function FindingCard({ finding, isInline = false }: { finding: ZyntopiaObservati
         </div>
       </CardHeader>
       <CardContent className={isInline ? 'p-1.5 pt-0 pl-2' : 'p-2 pt-0 pl-3'}>
-        {typeof content === 'string' ? (
-           <p className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{content}</p>
+        {typeof displayContent === 'string' ? (
+           <p className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{displayContent}</p>
         ) : (
-           <p className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{JSON.stringify(content)}</p>
+           <p className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{JSON.stringify(displayContent)}</p>
         )}
       </CardContent>
     </Card>
@@ -371,9 +431,16 @@ function ChatMessage({ message, onCopy, onRetry }: {
   const allowedThoughtTypes = ['Intent', 'Plan', 'Thought'];
   const inlineThoughts = (message.thoughts ?? []).filter(t => allowedThoughtTypes.includes(t.type));
 
+  console.log('ChatMessage - Message thoughts:', message.thoughts);
+  console.log('ChatMessage - Inline thoughts:', inlineThoughts);
+
   const intentThought = inlineThoughts.find(t => t.type === 'Intent');
   const planThought = inlineThoughts.find(t => t.type === 'Plan');
   const otherThoughts = inlineThoughts.filter(t => t.type === 'Thought');
+
+  console.log('ChatMessage - Intent:', intentThought);
+  console.log('ChatMessage - Plan:', planThought);
+  console.log('ChatMessage - Other thoughts:', otherThoughts);
 
   return (
     <div className={`flex gap-3 my-4 ${isUser ? 'justify-end' : ''}`}>
@@ -396,19 +463,35 @@ function ChatMessage({ message, onCopy, onRetry }: {
             </CollapsibleTrigger>
             <CollapsibleContent className="animate-in slide-in-from-top-2 duration-300 mt-2">
               <div className="space-y-2">
-                {intentThought && <FindingCard key={`inline-${intentThought.id}`} finding={intentThought as any} isInline={true} />}
-                {planThought && <FindingCard key={`inline-${planThought.id}`} finding={planThought as any} isInline={true} />}
+                {intentThought && <FindingCard key={`inline-${intentThought.id}`} finding={{
+                  ...intentThought,
+                  timestamp: new Date(),
+                  type: intentThought.type
+                } as ZyntopiaObservation} isInline={true} />}
+                {planThought && <FindingCard key={`inline-${planThought.id}`} finding={{
+                  ...planThought,
+                  timestamp: new Date(),
+                  type: planThought.type
+                } as ZyntopiaObservation} isInline={true} />}
                 {otherThoughts.length > 0 && (
                     otherThoughts.length > 1 ? (
                          <ScrollArea className="max-h-32 mt-2 pr-2">
                              <div className="space-y-2">
                                  {otherThoughts.map((thought) => (
-                                     <FindingCard key={`inline-${thought.id}`} finding={thought as any} isInline={true} />
+                                     <FindingCard key={`inline-${thought.id}`} finding={{
+                                       ...thought,
+                                       timestamp: new Date(),
+                                       type: thought.type
+                                     } as ZyntopiaObservation} isInline={true} />
                                  ))}
                              </div>
                          </ScrollArea>
                     ) : (
-                         <FindingCard key={`inline-${otherThoughts[0].id}`} finding={otherThoughts[0] as any} isInline={true} />
+                         <FindingCard key={`inline-${otherThoughts[0].id}`} finding={{
+                           ...otherThoughts[0],
+                           timestamp: new Date(),
+                           type: otherThoughts[0].type
+                         } as ZyntopiaObservation} isInline={true} />
                     )
                 )}
               </div>
@@ -472,10 +555,12 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
   const [messages, setMessages] = useState<ZyntopiaMessage[]>([]);
   const [observations, setObservations] = useState<ZyntopiaObservation[]>([]);
   const [input, setInput] = useState('');
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   
   // Refs
   const artInstanceRef = useRef<any>(null);
   const threadId = useRef<string>(`thread_${Date.now()}_${Math.random().toString(36).substring(2)}`);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize ART Framework
   useEffect(() => {
@@ -501,7 +586,15 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
             },
             enabledTools: [],
             historyLimit: 10,
-            systemPrompt: 'You are ZOI, a helpful AI assistant powered by the ART Framework. Provide clear, concise, and helpful responses.',
+            systemPrompt: `You are ZOI, a helpful AI assistant powered by the ART Framework. 
+
+As you process user requests:
+1. Always provide clear Intent observations about what the user wants
+2. Create detailed Plan observations breaking down your approach
+3. Share Thought observations as you work through complex problems
+4. Be thoughtful and analytical in your responses
+
+Provide clear, concise, and helpful responses while making your reasoning visible through observations.`,
           });
         }
 
@@ -512,6 +605,32 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
           role: 'assistant',
           timestamp: new Date(),
           reactions: true,
+          thoughts: [
+            { 
+              id: 'test_intent_1', 
+              type: 'Intent', 
+              icon: Target, 
+              color: 'border-blue-500', 
+              titleColor: 'text-blue-600 dark:text-blue-400', 
+              content: 'Welcome the user and establish my identity as ZOI.' 
+            },
+            { 
+              id: 'test_plan_1', 
+              type: 'Plan', 
+              icon: ListChecks, 
+              color: 'border-purple-500', 
+              titleColor: 'text-purple-600 dark:text-purple-400', 
+              content: '1. Greet the user warmly\n2. Establish my capabilities\n3. Wait for user input' 
+            },
+            { 
+              id: 'test_thought_1', 
+              type: 'Thought', 
+              icon: BrainCircuit, 
+              color: 'border-green-500', 
+              titleColor: 'text-green-600 dark:text-green-400', 
+              content: 'This is the first interaction - I should be friendly and helpful.' 
+            }
+          ],
         };
         setMessages([welcomeMessage]);
         
@@ -522,16 +641,26 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
         if (observationSocket) {
           const unsubscribe = observationSocket.subscribe(
             (observation: any) => {
+              console.log('Received observation:', observation);
               const mappedObservation = mapObservationToFinding(observation);
-              setObservations(prev => [...prev, mappedObservation]);
+              setObservations(prev => {
+                const newObservations = [...prev, mappedObservation];
+                console.log('Total observations:', newObservations.length);
+                return newObservations;
+              });
             },
-            undefined,
-            { threadId: threadId.current }
+            // Subscribe to specific observation types including thoughts
+            [ObservationType.INTENT, ObservationType.PLAN, ObservationType.THOUGHTS, ObservationType.TOOL_CALL, ObservationType.TOOL_EXECUTION, ObservationType.SYNTHESIS],
+            { 
+              threadId: threadId.current
+            }
           );
           
           return () => {
             unsubscribe();
           };
+        } else {
+          console.warn('No observation socket available');
         }
         
       } catch (err) {
@@ -566,6 +695,14 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
       const response = await artInstanceRef.current.process({
         query: userMessage.content,
         threadId: threadId.current,
+        options: {
+          // Disable task persistence for now to avoid IndexedDB issues
+          persistTasks: false,
+          // Enable observation capture for thoughts
+          enableObservations: true,
+          // Add timeout to prevent hanging
+          timeout: 30000,
+        },
       });
 
       // Extract the response content properly - ART Framework returns structured response
@@ -591,12 +728,15 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
       console.log('ART Response:', response);
       console.log('Extracted content:', responseContent);
 
+      const { thoughts: messageThoughts, response: finalResponse } = parseArtResponse(responseContent);
+
       const assistantMessage: ZyntopiaMessage = {
         id: (Date.now() + 1).toString(),
-        content: responseContent,
+        content: finalResponse,
         role: 'assistant',
         timestamp: new Date(),
         reactions: true,
+        thoughts: messageThoughts,
         metadata: {
           'Response Time': '1.2s',
           'Tokens Used': Math.floor(Math.random() * 500) + 100,
@@ -651,7 +791,92 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
   const handleClearConversation = () => {
     setMessages([]);
     setObservations([]);
+    setUploadedFiles([]);
     toast.success('Conversation cleared');
+  };
+
+  // File upload handling
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const newFiles = Array.from(files);
+    const validFiles = newFiles.filter(file => {
+      // Check file size (max 10MB per file)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`File "${file.name}" is too large. Maximum size is 10MB.`);
+        return false;
+      }
+      
+      // Check file type - more flexible approach
+      const allowedTypes = ['text/plain', 'text/markdown', 'application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'application/json'];
+      const allowedExtensions = ['.txt', '.md', '.markdown', '.pdf', '.jpg', '.jpeg', '.png', '.gif', '.json'];
+      
+      const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+      const isValidType = allowedTypes.includes(file.type) || allowedExtensions.includes(fileExtension);
+      
+      if (!isValidType) {
+        toast.error(`File "${file.name}" with type "${file.type}" and extension "${fileExtension}" is not supported. Allowed: ${allowedExtensions.join(', ')}`);
+        return false;
+      }
+      
+      return true;
+    });
+
+    if (validFiles.length > 0) {
+      setUploadedFiles(prev => [...prev, ...validFiles]);
+      
+      // Create a message about the uploaded files
+      const fileNames = validFiles.map(f => f.name).join(', ');
+      const fileMessage: ZyntopiaMessage = {
+        id: Date.now().toString(),
+        content: `📎 Uploaded ${validFiles.length} file(s): ${fileNames}`,
+        role: 'user',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, fileMessage]);
+      toast.success(`Successfully uploaded ${validFiles.length} file(s)`);
+      
+      // Process files with ART Framework
+      try {
+        for (const file of validFiles) {
+          const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+          const isTextFile = file.type === 'text/plain' || 
+                           file.type === 'text/markdown' || 
+                           ['.txt', '.md', '.markdown'].includes(fileExtension);
+          
+          if (isTextFile) {
+            const text = await file.text();
+            console.log(`File content for ${file.name}:`, text.substring(0, 500) + '...');
+            
+            // You could potentially add this to the ART Framework context
+            // For now, just log it for debugging
+            if (artInstanceRef.current) {
+              // Future: Could integrate with ART Framework's context management
+              console.log('File ready for ART integration:', file.name);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error processing uploaded files:', error);
+        toast.error('Error processing some files');
+      }
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleAddDocuments = () => {
+    fileInputRef.current?.click();
+  };
+
+  const removeUploadedFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    toast.success('File removed');
   };
 
   if (error) {
@@ -760,6 +985,25 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
                   </ScrollArea>
                   <div className="border-t bg-slate-50 dark:bg-slate-900 flex-shrink-0">
                       <div className="max-w-4xl mx-auto px-4 pt-3 pb-1">
+                        {/* Uploaded files display */}
+                        {uploadedFiles.length > 0 && (
+                          <div className="mb-3 flex flex-wrap gap-2">
+                            {uploadedFiles.map((file, index) => (
+                              <div key={index} className="flex items-center gap-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-sm">
+                                <Paperclip className="h-3 w-3" />
+                                <span className="truncate max-w-32">{file.name}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-4 w-4 p-0 hover:bg-blue-200 dark:hover:bg-blue-800"
+                                  onClick={() => removeUploadedFile(index)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         <form onSubmit={handleSendMessage} className="relative mb-2">
                            <div className="relative">
                               <Textarea
@@ -787,7 +1031,32 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
                            </div>
                         </form>
                         <div className="flex items-center gap-2 mb-2">
-                           <TooltipProvider key="tip-paperclip" delayDuration={100}> <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"> <Paperclip className="h-4 w-4" /> </Button></TooltipTrigger><TooltipContent className="bg-black text-white"><p>Add Documents</p></TooltipContent></Tooltip> </TooltipProvider>
+                           {/* Hidden file input */}
+                           <input
+                             ref={fileInputRef}
+                             type="file"
+                             multiple
+                             accept=".txt,.md,.pdf,.jpg,.jpeg,.png,.gif,.json"
+                             onChange={handleFileUpload}
+                             className="hidden"
+                           />
+                           <TooltipProvider key="tip-paperclip" delayDuration={100}> 
+                             <Tooltip>
+                               <TooltipTrigger asChild>
+                                 <Button 
+                                   variant="ghost" 
+                                   size="icon" 
+                                   className="h-7 w-7 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"
+                                   onClick={handleAddDocuments}
+                                 > 
+                                   <Paperclip className="h-4 w-4" /> 
+                                 </Button>
+                               </TooltipTrigger>
+                               <TooltipContent className="bg-black text-white">
+                                 <p>Add Documents</p>
+                               </TooltipContent>
+                             </Tooltip> 
+                           </TooltipProvider>
                            <TooltipProvider key="tip-globe" delayDuration={100}> <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"> <Globe className="h-4 w-4" /> </Button></TooltipTrigger><TooltipContent className="bg-black text-white"><p>Discover</p></TooltipContent></Tooltip> </TooltipProvider>
                            <div className="flex-grow"></div>
                            <div className="flex items-center gap-2">
