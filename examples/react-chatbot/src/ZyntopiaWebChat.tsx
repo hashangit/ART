@@ -627,6 +627,7 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileState[]>([]);
   const [availableModels, setAvailableModels] = useState<AvailableProviderEntry[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>(defaultModel || '');
+  const [lastResponseData, setLastResponseData] = useState<{ response: any; obsStartIndex: number } | null>(null);
   
   // Refs
   const artInstanceRef = useRef<ArtInstance | null>(null);
@@ -736,6 +737,90 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = ({
     initializeART();
   }, [artConfig, onError, defaultModel]);
 
+  // Effect to calculate stats and add final message once response and observations are ready
+  useEffect(() => {
+    if (!lastResponseData) return;
+
+    const { response, obsStartIndex } = lastResponseData;
+    // Use the full observations list from state, which is updated by the socket
+    const turnObservations = observations.slice(obsStartIndex);
+
+    const llmMetadataObservations = turnObservations.filter(
+      (obs: any) => obs.type === 'LLM_STREAM_METADATA'
+    );
+    
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let timeToFirstTokenMs: number | undefined;
+    let lastStopReason: string | undefined;
+
+    if (llmMetadataObservations.length > 0) {
+      llmMetadataObservations.forEach((obs: any) => {
+        const meta = safeJsonParse(obs.content);
+        if (meta) {
+          totalInputTokens += meta.inputTokens || 0;
+          totalOutputTokens += meta.outputTokens || 0;
+          if (timeToFirstTokenMs === undefined && meta.timeToFirstTokenMs) {
+            timeToFirstTokenMs = meta.timeToFirstTokenMs;
+          }
+          if (meta.stopReason) {
+            lastStopReason = meta.stopReason;
+          }
+        }
+      });
+    } else if (response.metadata.llmMetadata) {
+      // Fallback for safety, though the above should work
+      const llmMeta = response.metadata.llmMetadata;
+      totalInputTokens = llmMeta.inputTokens || 0;
+      totalOutputTokens = llmMeta.outputTokens || 0;
+      timeToFirstTokenMs = llmMeta.timeToFirstTokenMs;
+      lastStopReason = llmMeta.stopReason;
+    }
+
+    const meta: Record<string, any> = {
+      'Input Tokens': totalInputTokens,
+      'Output Tokens': totalOutputTokens,
+      'Total Tokens': totalInputTokens + totalOutputTokens,
+      'First Token MS': timeToFirstTokenMs,
+      'Total Time MS': response.metadata.totalDurationMs,
+      'Finish Reason': lastStopReason || response.metadata.llmMetadata?.stopReason || 'stop',
+      'LLM Calls': response.metadata.llmCalls,
+      'Tool Calls': response.metadata.toolCalls,
+    };
+
+    const finalMetadata = Object.fromEntries(Object.entries(meta).filter(([_, v]) => v !== null && v !== undefined && v !== 0));
+
+    // Extract response text
+    let responseContent = '';
+    const responseMessage = response.response;
+    if (responseMessage && typeof responseMessage.content === 'string') {
+      responseContent = responseMessage.content;
+    } else if (responseMessage) {
+      responseContent = JSON.stringify(responseMessage.content);
+    } else {
+      responseContent = 'I apologize, but I encountered an issue processing your request.';
+    }
+    
+    const { thoughts: messageThoughts, response: finalResponse } = parseArtResponse(responseContent);
+
+    // Create and add the final assistant message
+    const assistantMessage: ZyntopiaMessage = {
+      id: (Date.now() + 1).toString(),
+      content: finalResponse,
+      role: 'assistant',
+      timestamp: new Date(),
+      reactions: true,
+      thoughts: messageThoughts,
+      metadata: finalMetadata
+    };
+
+    setMessages(prev => [...prev, assistantMessage]);
+    onMessage?.(assistantMessage);
+    setIsLoading(false);
+    setLastResponseData(null); // Reset for the next turn
+
+  }, [lastResponseData, observations, onMessage, onError]);
+
   // Effect to update thread config when selected model changes
   useEffect(() => {
     const updateThreadConfig = async () => {
@@ -828,6 +913,7 @@ Your entire output MUST strictly follow the format below, using XML-style tags. 
     setUploadedFiles([]); // Clear files from state after including them in the message
     setIsLoading(true);
 
+    const obsStartIndex = observations.length;
     try {
       const response = await artInstanceRef.current.process({
         query: fullQuery,
@@ -836,91 +922,7 @@ Your entire output MUST strictly follow the format below, using XML-style tags. 
           // Timeouts are configured on the provider or MCP level, not here.
         },
       });
-
-      // Extract the response content properly from AgentFinalResponse
-      let responseContent = '';
-      const responseMessage = response.response; // This is a ConversationMessage
-
-      if (responseMessage && typeof responseMessage.content === 'string') {
-        responseContent = responseMessage.content;
-      } else if (responseMessage) {
-        // Handle non-string content if necessary (e.g., for complex tool results)
-        // For now, we'll stringify it as a fallback.
-        responseContent = JSON.stringify(responseMessage.content);
-      } else {
-        responseContent = 'I apologize, but I encountered an issue processing your request.';
-      }
-      
-      console.log('ART Response:', response);
-      console.log('Extracted content:', responseContent);
-
-      const { thoughts: messageThoughts, response: finalResponse } = parseArtResponse(responseContent);
-
-      // --- Aggregate LLM Metadata ---
-      const intermediateSteps = (response as any).intermediateSteps || [];
-      let totalInputTokens = 0;
-      let totalOutputTokens = 0;
-      let timeToFirstTokenMs: number | undefined;
-      let lastStopReason: string | undefined;
-
-      if (intermediateSteps.length > 0) {
-        intermediateSteps.forEach((step: any) => {
-          const llmMeta = step.observation?.metadata?.llmMetadata;
-          if (llmMeta) {
-            totalInputTokens += llmMeta.inputTokens || 0;
-            totalOutputTokens += llmMeta.outputTokens || 0;
-            if (timeToFirstTokenMs === undefined && llmMeta.timeToFirstTokenMs) {
-              timeToFirstTokenMs = llmMeta.timeToFirstTokenMs;
-            }
-            if (llmMeta.stopReason) {
-              lastStopReason = llmMeta.stopReason;
-            }
-          }
-        });
-      }
-      
-      // Add the final LLM call's metadata if it exists
-      if (response.metadata.llmMetadata) {
-        const finalMeta = response.metadata.llmMetadata;
-        // This check prevents double-counting if the final call is also in intermediateSteps
-        if (!intermediateSteps.some((step:any) => step.observation?.metadata?.llmMetadata === finalMeta)) {
-            totalInputTokens += finalMeta.inputTokens || 0;
-            totalOutputTokens += finalMeta.outputTokens || 0;
-            if (timeToFirstTokenMs === undefined && finalMeta.timeToFirstTokenMs) {
-                timeToFirstTokenMs = finalMeta.timeToFirstTokenMs;
-            }
-            if (finalMeta.stopReason) {
-                lastStopReason = finalMeta.stopReason;
-            }
-        }
-      }
-
-      const meta: Record<string, any> = {
-          'Input Tokens': totalInputTokens || undefined,
-          'Output Tokens': totalOutputTokens || undefined,
-          'Total Tokens': (totalInputTokens + totalOutputTokens) || undefined,
-          'First Token MS': timeToFirstTokenMs,
-          'Total Time MS': response.metadata.totalDurationMs,
-          'Finish Reason': lastStopReason || response.metadata.llmMetadata?.stopReason || 'stop',
-          'LLM Calls': response.metadata.llmCalls,
-          'Tool Calls': response.metadata.toolCalls,
-      };
-
-      const finalMetadata = Object.fromEntries(Object.entries(meta).filter(([_, v]) => v !== null && v !== undefined));
-
-      const assistantMessage: ZyntopiaMessage = {
-        id: (Date.now() + 1).toString(),
-        content: finalResponse,
-        role: 'assistant',
-        timestamp: new Date(),
-        reactions: true,
-        thoughts: messageThoughts,
-        metadata: finalMetadata
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-      onMessage?.(assistantMessage);
-
+      setLastResponseData({ response, obsStartIndex });
     } catch (err) {
       console.error('Error processing message:', err);
       const errorMessage: ZyntopiaMessage = {
@@ -932,7 +934,6 @@ Your entire output MUST strictly follow the format below, using XML-style tags. 
       };
       setMessages(prev => [...prev, errorMessage]);
       onError?.(err instanceof Error ? err : new Error('Processing failed'));
-    } finally {
       setIsLoading(false);
     }
   };
