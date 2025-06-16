@@ -1,9 +1,5 @@
 // Main chatbot components  
 export { ZyntopiaWebChat, default } from './ZyntopiaWebChat';
-export { ArtChatbot } from './ArtChatbot';
-
-// Types from ArtChatbot
-export type { ArtChatbotConfig, ChatMessage, ArtObservation } from './ArtChatbot';
 
 // Types from ZyntopiaWebChat
 export type { 
