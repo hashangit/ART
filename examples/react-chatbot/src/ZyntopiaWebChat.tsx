@@ -117,20 +117,20 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = (props) => {
       
       <div className="flex flex-1 flex-col bg-white dark:bg-slate-950 h-full overflow-hidden">
         {/* Header */}
-        <div className="flex h-16 items-center justify-between border-b px-6 flex-shrink-0">
-          <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9 bg-blue-600 text-white flex items-center justify-center">
-                  <BrainCircuit className="h-5 w-5" />
+        <div className="flex h-16 items-center justify-between border-b px-4 sm:px-6 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+              <Avatar className="h-8 w-8 sm:h-9 sm:w-9 bg-blue-600 text-white flex items-center justify-center flex-shrink-0">
+                  <BrainCircuit className="h-4 w-4 sm:h-5 sm:w-5" />
               </Avatar>
-              <div>
+              <div className="overflow-hidden">
                   <div className="flex items-baseline gap-2">
-                      <h1 className="text-base font-semibold">{props.title || 'Zyntopia WebChat'}</h1>
-                      <span className="text-xs text-muted-foreground">{props.subtitle || 'Powered by ART Framework'}</span>
+                      <h1 className="text-base font-semibold truncate">{props.title || 'Zyntopia WebChat'}</h1>
+                      <span className="text-xs text-muted-foreground hidden sm:inline-block flex-shrink-0">{props.subtitle || 'Powered by ART Framework'}</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">{currentThreadTitle}</p>
+                  <p className="text-sm text-muted-foreground truncate">{currentThreadTitle}</p>
               </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               <TooltipProvider>
                   <Tooltip>
                       <TooltipTrigger asChild>
@@ -161,7 +161,21 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = (props) => {
                       <TooltipContent><p>Delete Current Chat</p></TooltipContent>
                   </Tooltip>
               </TooltipProvider>
-              <Button variant="outline" size="sm"> <Share2 className="mr-2 h-4 w-4" /> Share </Button>
+              <div className="hidden sm:block">
+                <Button variant="outline" size="sm"> <Share2 className="mr-2 h-4 w-4" /> Share </Button>
+              </div>
+              <div className="sm:hidden">
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <Share2 className="h-4 w-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Share</p></TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+              </div>
           </div>
         </div>
         
