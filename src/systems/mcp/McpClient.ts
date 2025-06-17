@@ -294,6 +294,11 @@ export class McpClient extends EventEmitter {
    * @private
    */
   private async _connectStdio(): Promise<void> {
+    // TODO: The McpManager currently does not support dynamic management (add/remove)
+    // of local stdio-based MCP servers. To enable this, the following is needed:
+    // 1.  Update McpManager's configuration to allow defining stdio-based servers, not just URL-based ones.
+    // 2.  Implement logic in McpManager to dynamically spawn and kill these subprocesses using McpClient.
+    // 3.  Ensure that the UI can reflect the state of these local servers and provide controls to manage them.
     if (!this.config.command) {
       throw new ARTError('Command is required for stdio transport', ErrorCode.MISSING_CONFIG);
     }
