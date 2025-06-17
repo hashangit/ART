@@ -19,15 +19,13 @@ export function useZyntopiaChat({ artConfig, defaultModel, onMessage, onError }:
   const [selectedModel, setSelectedModel] = useState<string>(defaultModel || '');
   const [lastResponseData, setLastResponseData] = useState<{ response: any; obsStartIndex: number } | null>(null);
   const [threadId, setThreadId] = useState<string | null>(null);
+  const [currentThreadTitle, setCurrentThreadTitle] = useState<string>('AI Assistant Conversation');
   
   const artInstanceRef = useRef<ArtInstance | null>(null);
   const observationSocketUnsubscribe = useRef<() => void | undefined>();
 
   const loadHistoryForThread = useCallback(async (instance: ArtInstance, tid: string) => {
-    const [historicalMessages, historicalObservations] = await Promise.all([
-      instance.conversationManager.getMessages(tid, { limit: 100 }),
-      instance.observationManager.getObservations(tid, { limit: 500 }), // Fetch observations for the thread
-    ]);
+    const historicalMessages = await instance.conversationManager.getMessages(tid, { limit: 100 });
     
     if (historicalMessages && historicalMessages.length > 0) {
         const mappedMessages: ZyntopiaMessage[] = historicalMessages.map((m: ConversationMessage) => {
@@ -40,61 +38,24 @@ export function useZyntopiaChat({ artConfig, defaultModel, onMessage, onError }:
                 };
             }
 
-            // For assistant messages, parse thoughts and reconstruct metadata
+            // For assistant messages, parse thoughts and reconstruct metadata from the saved message
             const { thoughts, response } = parseArtResponse(typeof m.content === 'string' ? m.content : '');
             
-            let finalMetadata: Record<string, any> = {};
-            const traceId = m.metadata?.traceId;
+            const savedMeta = m.metadata || {};
+            const llmMeta = savedMeta.llmMetadata || {};
 
-            if (traceId && historicalObservations) {
-                const turnObservations = historicalObservations.filter(obs => obs.metadata?.traceId === traceId);
-                const llmMetadataObservations = turnObservations.filter(
-                    (obs: any) => obs.type === ObservationType.LLM_STREAM_METADATA
-                );
+            const meta = {
+                'Input Tokens': llmMeta.inputTokens,
+                'Output Tokens': llmMeta.outputTokens,
+                'Total Tokens': (llmMeta.inputTokens || 0) + (llmMeta.outputTokens || 0),
+                'First Token MS': llmMeta.timeToFirstTokenMs,
+                'Total Time MS': savedMeta.totalDurationMs,
+                'Finish Reason': llmMeta.stopReason,
+                'LLM Calls': savedMeta.llmCalls,
+                'Tool Calls': savedMeta.toolCalls,
+            };
 
-                let totalInputTokens = 0;
-                let totalOutputTokens = 0;
-                let timeToFirstTokenMs: number | undefined;
-                let lastStopReason: string | undefined;
-                let totalDurationMs: number | undefined;
-                let llmCalls = 0;
-                let toolCalls = 0;
-
-                if (llmMetadataObservations.length > 0) {
-                    llmMetadataObservations.forEach((obs: any) => {
-                        const meta = obs.payload || {};
-                        totalInputTokens += meta.inputTokens || 0;
-                        totalOutputTokens += meta.outputTokens || 0;
-                        if (timeToFirstTokenMs === undefined && meta.timeToFirstTokenMs) {
-                            timeToFirstTokenMs = meta.timeToFirstTokenMs;
-                        }
-                        if (meta.stopReason) {
-                            lastStopReason = meta.stopReason;
-                        }
-                    });
-                }
-                
-                const executionObs = turnObservations.find(obs => obs.type === ObservationType.EXECUTION);
-                if (executionObs) {
-                    const payload = executionObs.payload || {};
-                    totalDurationMs = payload.totalDurationMs;
-                    llmCalls = payload.llmCalls;
-                    toolCalls = payload.toolCalls;
-                }
-
-                const meta = {
-                    'Input Tokens': totalInputTokens,
-                    'Output Tokens': totalOutputTokens,
-                    'Total Tokens': totalInputTokens + totalOutputTokens,
-                    'First Token MS': timeToFirstTokenMs,
-                    'Total Time MS': totalDurationMs,
-                    'Finish Reason': lastStopReason,
-                    'LLM Calls': llmCalls,
-                    'Tool Calls': toolCalls,
-                };
-
-                finalMetadata = Object.fromEntries(Object.entries(meta).filter(([_, v]) => v !== null && v !== undefined && v !== 0));
-            }
+            const finalMetadata = Object.fromEntries(Object.entries(meta).filter(([_, v]) => v !== null && v !== undefined && v !== 0 && v !== ''));
 
             return {
                 id: m.messageId,
@@ -127,6 +88,10 @@ export function useZyntopiaChat({ artConfig, defaultModel, onMessage, onError }:
     localStorage.setItem(CURRENT_THREAD_ID_KEY, newThreadId);
     setThreadId(newThreadId);
     
+    const history: ChatHistoryItem[] = safeJsonParse(localStorage.getItem(CHAT_HISTORY_KEY) || '[]', []);
+    const currentThreadHistory = history.find(h => h.threadId === newThreadId);
+    setCurrentThreadTitle(currentThreadHistory?.title || 'New Chat');
+
     await loadHistoryForThread(artInstanceRef.current, newThreadId);
 
     // Unsubscribe from old thread observations and subscribe to new one
@@ -206,6 +171,7 @@ export function useZyntopiaChat({ artConfig, defaultModel, onMessage, onError }:
     if (!lastResponseData) return;
 
     const { response, obsStartIndex } = lastResponseData;
+    const art = artInstanceRef.current;
     const turnObservations = observations.slice(obsStartIndex);
 
     const llmMetadataObservations = turnObservations.filter(
@@ -264,22 +230,48 @@ export function useZyntopiaChat({ artConfig, defaultModel, onMessage, onError }:
     
     const { thoughts: messageThoughts, response: finalResponse } = parseArtResponse(responseContent);
 
-    const assistantMessage: ZyntopiaMessage = {
-      id: (Date.now() + 1).toString(),
-      content: finalResponse,
-      role: 'assistant',
-      timestamp: new Date(),
-      reactions: true,
-      thoughts: messageThoughts,
-      metadata: finalMetadata
-    };
+    if (art && threadId) {
+      // Manually save the assistant message to the conversation history
+      const messageToSave = response.response;
+      if (!messageToSave.metadata) {
+        messageToSave.metadata = {};
+      }
+      // Merge the execution metadata into the message's metadata before saving
+      Object.assign(messageToSave.metadata, response.metadata);
 
-    setMessages(prev => [...prev, assistantMessage]);
-    onMessage?.(assistantMessage);
-    setIsLoading(false);
-    setLastResponseData(null);
+      art.conversationManager.addMessages(threadId, [messageToSave]);
 
-  }, [lastResponseData, observations, onMessage, onError]);
+      const { thoughts: messageThoughts, response: finalResponse, title: chatTitle } = parseArtResponse(responseContent);
+
+      // If we got a new title, update the history in localStorage
+      if (chatTitle) {
+          const history: ChatHistoryItem[] = safeJsonParse(localStorage.getItem(CHAT_HISTORY_KEY) || '[]', []);
+          const currentThreadHistory = history.find(h => h.threadId === threadId);
+          if (currentThreadHistory) {
+              currentThreadHistory.title = chatTitle;
+              currentThreadHistory.timestamp = Date.now();
+              localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(history));
+              setCurrentThreadTitle(chatTitle);
+          }
+      }
+
+      const assistantMessage: ZyntopiaMessage = {
+        id: (Date.now() + 1).toString(),
+        content: finalResponse,
+        role: 'assistant',
+        timestamp: new Date(),
+        reactions: true,
+        thoughts: messageThoughts,
+        metadata: finalMetadata
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+      onMessage?.(assistantMessage);
+      setIsLoading(false);
+      setLastResponseData(null);
+    }
+
+  }, [lastResponseData, observations, onMessage, onError, threadId]);
 
   // This effect manages the model/provider configuration for the current thread
   useEffect(() => {
@@ -310,10 +302,14 @@ export function useZyntopiaChat({ artConfig, defaultModel, onMessage, onError }:
             adapterOptions: { apiKey },
           },
           enabledTools: [],
-          historyLimit: 10,
+          historyLimit: 200,
           systemPrompt: `You are Zee, a helpful AI assistant powered by the ART Framework.
 
 Your entire output MUST strictly follow the format below, using XML-style tags. Do not include any other text, headers, or explanations outside of this structure.
+
+<Title>
+[A concise, 5-6 word title for this conversation based on the full conversation history and the latest user request.]
+</Title>
 
 <Intent>
 [Your concise understanding of the user's primary goal.]
@@ -463,5 +459,6 @@ Your entire output MUST strictly follow the format below, using XML-style tags. 
     listConversations,
     threadId,
     deleteConversation,
+    currentThreadTitle,
   };
 } 

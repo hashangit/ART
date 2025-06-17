@@ -71,6 +71,7 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = (props) => {
     listConversations,
     threadId,
     deleteConversation,
+    currentThreadTitle,
   } = useZyntopiaChat(props);
 
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -126,7 +127,7 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = (props) => {
                       <h1 className="text-base font-semibold">{props.title || 'Zyntopia WebChat'}</h1>
                       <span className="text-xs text-muted-foreground">{props.subtitle || 'Powered by ART Framework'}</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">AI Assistant Conversation</p>
+                  <p className="text-sm text-muted-foreground">{currentThreadTitle}</p>
               </div>
           </div>
           <div className="flex items-center gap-2">
