@@ -27,7 +27,8 @@ import {
   Clock,
   ArrowRight,
   Trash2,
-  X
+  X,
+  PlusCircle
 } from 'lucide-react';
 
 // Local Types, Hooks, and Components
@@ -36,10 +37,12 @@ import { useZyntopiaChat } from './hooks/useZyntopiaChat';
 import { useFileUpload } from './hooks/useFileUpload';
 import { ChatMessage } from './components/webchat/ChatMessage';
 import { FindingCard } from './components/webchat/FindingCard';
+import { ChatHistory } from './components/webchat/ChatHistory';
 
 // Main Zyntopia WebChat Component
 export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = (props) => {
   const [input, setInput] = useState('');
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const {
     uploadedFiles,
@@ -63,6 +66,11 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = (props) => {
     sendMessage,
     handleRetryMessage,
     handleClearConversation,
+    startNewConversation,
+    switchThread,
+    listConversations,
+    threadId,
+    deleteConversation,
   } = useZyntopiaChat(props);
 
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -122,7 +130,26 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = (props) => {
               </div>
           </div>
           <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Active now</span>
+              <TooltipProvider>
+                  <Tooltip>
+                      <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => startNewConversation()}>
+                            <PlusCircle className="h-4 w-4" />
+                          </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>New Chat</p></TooltipContent>
+                  </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                  <Tooltip>
+                      <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => setIsHistoryOpen(true)}>
+                            <Clock className="h-4 w-4" />
+                          </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>History</p></TooltipContent>
+                  </Tooltip>
+              </TooltipProvider>
               <TooltipProvider>
                   <Tooltip>
                       <TooltipTrigger asChild>
@@ -130,15 +157,7 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = (props) => {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                       </TooltipTrigger>
-                      <TooltipContent><p>Clear</p></TooltipContent>
-                  </Tooltip>
-              </TooltipProvider>
-              <TooltipProvider>
-                  <Tooltip>
-                      <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon"><Clock className="h-4 w-4" /></Button>
-                      </TooltipTrigger>
-                      <TooltipContent><p>History</p></TooltipContent>
+                      <TooltipContent><p>Delete Current Chat</p></TooltipContent>
                   </Tooltip>
               </TooltipProvider>
               <Button variant="outline" size="sm"> <Share2 className="mr-2 h-4 w-4" /> Share </Button>
@@ -300,6 +319,15 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = (props) => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <ChatHistory 
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        onSelectConversation={switchThread}
+        onDeleteConversation={deleteConversation}
+        listConversations={listConversations}
+        currentChatId={threadId}
+      />
     </div>
   );
 };
