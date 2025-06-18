@@ -2,62 +2,87 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { McpManager } from './McpManager';
-// import { McpProxyTool } from './McpProxyTool';
+import { ConfigManager } from './ConfigManager';
+import { McpProxyTool } from './McpProxyTool';
 import { ToolRegistry, StateManager } from '../../core/interfaces';
-import { AuthManager } from '../../systems/auth/AuthManager';
-import { ARTError } from '../../types';
-import {
-  McpManagerConfig,
-  McpServerConfig,
-  McpToolDiscoveryResponse
-} from './types';
+import { AuthManager } from '../auth/AuthManager';
+import { ArtMcpConfig, McpServerConfig } from './types';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 
-// Mock fetch globally
-global.fetch = vi.fn();
+// Mock the ConfigManager
+vi.mock('./ConfigManager');
+vi.mock('@modelcontextprotocol/sdk/client/index.js');
+vi.mock('@modelcontextprotocol/sdk/client/stdio.js');
+vi.mock('@modelcontextprotocol/sdk/client/sse.js');
+vi.mock('reconnecting-eventsource', () => ({
+  default: vi.fn()
+}));
 
 describe('McpManager', () => {
   let mcpManager: McpManager;
   let mockToolRegistry: ToolRegistry;
   let mockStateManager: StateManager;
   let mockAuthManager: AuthManager;
-  let mockConfig: McpManagerConfig;
+  let mockConfigManager: ConfigManager;
+  let mockClient: Client;
+  let mockStdioTransport: StdioClientTransport;
+  let mockSSETransport: SSEClientTransport;
 
-  const mockServerConfig: McpServerConfig = {
-    id: 'test-server-1',
-    name: 'Test Server 1',
-    url: 'https://api.test-server.com',
-    authStrategyId: 'test-auth',
-    enabled: true,
-    timeout: 5000
-  };
-
-  const mockToolDiscoveryResponse: McpToolDiscoveryResponse = {
-    tools: [
-      {
-        name: 'test-tool-1',
-        description: 'A test tool',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            input: { type: 'string' }
+  const mockConfig: ArtMcpConfig = {
+    mcpServers: {
+      'tavily_search': {
+        id: 'tavily_search',
+        type: 'stdio',
+        enabled: true,
+        displayName: 'Tavily Search',
+        description: 'Search tool for finding information',
+        connection: {
+          command: 'npx',
+          args: ['-y', 'tavily-mcp@0.1.4'],
+          env: { 'TAVILY_API_KEY': 'test-key' }
+        },
+        installation: { source: 'npm', package: 'tavily-mcp@0.1.4' },
+        timeout: 30000,
+        tools: [
+          {
+            name: 'search',
+            description: 'Search for information',
+            inputSchema: {
+              type: 'object',
+              properties: { query: { type: 'string' } },
+              required: ['query']
+            }
           }
-        }
+        ],
+        resources: [],
+        resourceTemplates: []
       },
-      {
-        name: 'test-tool-2',
-        description: 'Another test tool',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            value: { type: 'number' }
+      'weather_api': {
+        id: 'weather_api',
+        type: 'sse',
+        enabled: false,
+        displayName: 'Weather API',
+        description: 'Weather information service',
+        connection: {
+          url: 'https://weather.example.com/sse',
+          authStrategyId: 'weather-auth'
+        },
+        tools: [
+          {
+            name: 'get_weather',
+            description: 'Get current weather',
+            inputSchema: {
+              type: 'object',
+              properties: { location: { type: 'string' } },
+              required: ['location']
+            }
           }
-        }
+        ],
+        resources: [],
+        resourceTemplates: []
       }
-    ],
-    server: {
-      name: 'Test Server',
-      version: '1.0.0',
-      capabilities: ['tools', 'health']
     }
   };
 
@@ -69,7 +94,7 @@ describe('McpManager', () => {
       registerTool: vi.fn().mockResolvedValue(undefined),
       getToolExecutor: vi.fn().mockResolvedValue(undefined),
       getAvailableTools: vi.fn().mockResolvedValue([])
-    };
+    } as any;
 
     // Mock StateManager
     mockStateManager = {
@@ -82,7 +107,7 @@ describe('McpManager', () => {
       enableToolsForThread: vi.fn().mockResolvedValue(undefined),
       disableToolsForThread: vi.fn().mockResolvedValue(undefined),
       getEnabledToolsForThread: vi.fn().mockResolvedValue([])
-    };
+    } as any;
 
     // Mock AuthManager
     mockAuthManager = {
@@ -90,361 +115,245 @@ describe('McpManager', () => {
       getHeaders: vi.fn().mockResolvedValue({ 'Authorization': 'Bearer test-token' })
     } as any;
 
-    mockConfig = {
-      servers: [mockServerConfig],
-      defaultTimeout: 10000,
-      autoRetry: true,
-      retryInterval: 5000,
-      maxRetries: 3,
-      autoRefresh: false,
-      refreshInterval: 30000
-    };
+    // Mock ConfigManager
+    mockConfigManager = {
+      getConfig: vi.fn().mockReturnValue(mockConfig),
+      setServerConfig: vi.fn(),
+      removeServerConfig: vi.fn()
+    } as any;
+    (ConfigManager as any).mockImplementation(() => mockConfigManager);
 
-    mcpManager = new McpManager(
-      mockConfig,
-      mockToolRegistry,
-      mockStateManager,
-      mockAuthManager
-    );
+    // Mock SDK Client and Transports
+    mockClient = {
+      connect: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+      request: vi.fn().mockResolvedValue({ content: ['test result'], _meta: {} })
+    } as any;
+    mockStdioTransport = { onclose: undefined } as any;
+    mockSSETransport = { onclose: undefined } as any;
+
+    (Client as any).mockImplementation(() => mockClient);
+    (StdioClientTransport as any).mockImplementation(() => mockStdioTransport);
+    (SSEClientTransport as any).mockImplementation(() => mockSSETransport);
+
+    mcpManager = new McpManager(mockToolRegistry, mockStateManager, mockAuthManager);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await mcpManager.shutdown();
     vi.clearAllTimers();
   });
 
-  describe('Constructor and Configuration', () => {
-    it('should initialize with provided configuration', () => {
-      expect(mcpManager).toBeDefined();
-      expect(mcpManager.getServerStatuses()).toHaveLength(0);
+  describe('Initialization from Config Catalog', () => {
+    it('should create ConfigManager and read config', async () => {
+      await mcpManager.initialize();
+
+      expect(ConfigManager).toHaveBeenCalledTimes(1);
+      expect(mockConfigManager.getConfig).toHaveBeenCalled();
     });
 
-    it('should accept configuration without auth manager', () => {
-      const manager = new McpManager(mockConfig, mockToolRegistry, mockStateManager);
-      expect(manager).toBeDefined();
+    it('should register lazy proxy tools for enabled servers only', async () => {
+      await mcpManager.initialize();
+
+      // Should register 1 tool from the enabled 'tavily_search' server
+      // Should NOT register tools from the disabled 'weather_api' server
+      expect(mockToolRegistry.registerTool).toHaveBeenCalledTimes(1);
+      
+      const registeredTool = vi.mocked(mockToolRegistry.registerTool).mock.calls[0][0];
+      expect(registeredTool).toBeInstanceOf(McpProxyTool);
+      expect(registeredTool.schema.name).toBe('mcp_tavily_search_search');
     });
 
-    it('should update configuration', () => {
-      const newConfig = { ...mockConfig, defaultTimeout: 15000 };
-      mcpManager.updateConfig(newConfig);
-      // Configuration update is internal, so we just check it doesn't throw
-      expect(true).toBe(true);
+    it('should not register tools from disabled servers', async () => {
+      await mcpManager.initialize();
+
+      // Verify that weather_api tools were not registered (server is disabled)
+      const calls = vi.mocked(mockToolRegistry.registerTool).mock.calls;
+      const registeredToolNames = calls.map(call => call[0].schema.name);
+      expect(registeredToolNames).not.toContain('mcp_weather_api_get_weather');
+    });
+
+    it('should handle empty config gracefully', async () => {
+      (mockConfigManager.getConfig as any).mockReturnValue({ mcpServers: {} });
+
+      await mcpManager.initialize();
+
+      expect(mockToolRegistry.registerTool).not.toHaveBeenCalled();
     });
   });
 
-  describe('Server Management', () => {
+  describe('Lazy Connection Management', () => {
     beforeEach(async () => {
-      // Mock successful health check and tool discovery
-      (global.fetch as any)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          text: () => Promise.resolve('OK')
+      await mcpManager.initialize();
+    });
+
+    it('should create stdio connection on-demand', async () => {
+      const client = await mcpManager.getOrCreateConnection('tavily_search');
+
+      expect(StdioClientTransport).toHaveBeenCalledWith({
+        command: 'npx',
+        args: ['-y', 'tavily-mcp@0.1.4'],
+        cwd: undefined,
+        env: expect.objectContaining({
+          'TAVILY_API_KEY': 'test-key'
         })
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve(mockToolDiscoveryResponse)
-        });
-
-      await mcpManager.initialize();
-    });
-
-    it('should initialize and connect to enabled servers', async () => {
-      const statuses = mcpManager.getServerStatuses();
-      expect(statuses).toHaveLength(1);
-      expect(statuses[0].id).toBe('test-server-1');
-      expect(statuses[0].status).toBe('connected');
-      expect(statuses[0].toolCount).toBe(2);
-    });
-
-    it('should register discovered tools with the tool registry', async () => {
-      expect(mockToolRegistry.registerTool).toHaveBeenCalledTimes(2);
-    });
-
-    it('should get server status by ID', () => {
-      const status = mcpManager.getServerStatus('test-server-1');
-      expect(status).toBeDefined();
-      expect(status?.id).toBe('test-server-1');
-      expect(status?.status).toBe('connected');
-    });
-
-    it('should return undefined for non-existent server', () => {
-      const status = mcpManager.getServerStatus('non-existent');
-      expect(status).toBeUndefined();
-    });
-
-    it('should get discovered tools for a server', () => {
-      const tools = mcpManager.getServerTools('test-server-1');
-      expect(tools).toHaveLength(2);
-      expect(tools?.[0].name).toBe('test-tool-1');
-    });
-
-    it('should get all discovered tools', () => {
-      const allTools = mcpManager.getAllDiscoveredTools();
-      expect(allTools.size).toBe(1);
-      expect(allTools.get('test-server-1')).toHaveLength(2);
-    });
-  });
-
-  describe('Server Connection Handling', () => {
-    it('should handle health check failure gracefully', async () => {
-      (global.fetch as any).mockRejectedValueOnce(new Error('Connection failed'));
-
-      await mcpManager.initialize();
-
-      const status = mcpManager.getServerStatus('test-server-1');
-      expect(status?.status).toBe('error');
-      expect(status?.lastError).toContain('Health check failed');
-    });
-
-    it('should handle tool discovery failure gracefully', async () => {
-      // Mock successful health check but failed tool discovery
-      (global.fetch as any)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          text: () => Promise.resolve('OK')
-        })
-        .mockRejectedValueOnce(new Error('Tool discovery failed'));
-
-      await mcpManager.initialize();
-
-      const status = mcpManager.getServerStatus('test-server-1');
-      expect(status?.status).toBe('error');
-    });
-
-    it('should handle HTTP error responses', async () => {
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: false,
-        status: 404,
-        text: () => Promise.resolve('Not Found')
       });
-
-      await mcpManager.initialize();
-
-      const status = mcpManager.getServerStatus('test-server-1');
-      expect(status?.status).toBe('error');
+      expect(Client).toHaveBeenCalledWith({ name: 'ART Framework', version: '0.1.0' });
+      expect(mockClient.connect).toHaveBeenCalledWith(mockStdioTransport);
+      expect(client).toBe(mockClient);
     });
 
-    it('should handle request timeout', async () => {
-      const mockAbortError = new Error('Request timed out');
-      mockAbortError.name = 'AbortError';
-      (global.fetch as any).mockRejectedValueOnce(mockAbortError);
-
-      await mcpManager.initialize();
-
-      const status = mcpManager.getServerStatus('test-server-1');
-      expect(status?.status).toBe('error');
-    });
-  });
-
-  describe('Authentication', () => {
-    it('should use authentication when auth strategy is configured', async () => {
-      (global.fetch as any)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          text: () => Promise.resolve('OK')
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve(mockToolDiscoveryResponse)
-        });
-
-      await mcpManager.initialize();
-
-      expect(mockAuthManager.getHeaders).toHaveBeenCalledWith('test-auth');
-    });
-
-    it('should handle authentication failure', async () => {
-      mockAuthManager.getHeaders = vi.fn().mockRejectedValue(new Error('Auth failed'));
-
-      await mcpManager.initialize();
-
-      const status = mcpManager.getServerStatus('test-server-1');
-      expect(status?.status).toBe('error');
-    });
-  });
-
-  describe('Server CRUD Operations', () => {
-    beforeEach(async () => {
-      // Mock responses for initial setup
-      (global.fetch as any)
-        .mockResolvedValue({
-          ok: true,
-          status: 200,
-          text: () => Promise.resolve('OK'),
-          json: () => Promise.resolve(mockToolDiscoveryResponse)
-        });
-
-      await mcpManager.initialize();
-    });
-
-    it('should add a new server', async () => {
-      const newServer: McpServerConfig = {
-        id: 'test-server-2',
-        name: 'Test Server 2',
-        url: 'https://api.test-server-2.com',
-        enabled: true
+    it('should create SSE connection with auth headers', async () => {
+      // Enable the weather server for this test
+      const configWithEnabledWeather = {
+        ...mockConfig,
+        mcpServers: {
+          ...mockConfig.mcpServers,
+          weather_api: { ...mockConfig.mcpServers.weather_api, enabled: true }
+        }
       };
+      (mockConfigManager.getConfig as any).mockReturnValue(configWithEnabledWeather);
 
-      await mcpManager.addServer(newServer);
+      const client = await mcpManager.getOrCreateConnection('weather_api');
 
-      const statuses = mcpManager.getServerStatuses();
-      expect(statuses).toHaveLength(2);
-      expect(statuses.find(s => s.id === 'test-server-2')).toBeDefined();
+      expect(mockAuthManager.getHeaders).toHaveBeenCalledWith('weather-auth');
+      expect(SSEClientTransport).toHaveBeenCalledWith(
+        new URL('https://weather.example.com/sse'),
+        { requestInit: { headers: { 'Authorization': 'Bearer test-token' } } }
+      );
+      expect(mockClient.connect).toHaveBeenCalledWith(mockSSETransport);
+      expect(client).toBe(mockClient);
     });
 
-    it('should remove a server', async () => {
-      await mcpManager.removeServer('test-server-1');
+    it('should reuse existing connections', async () => {
+      const client1 = await mcpManager.getOrCreateConnection('tavily_search');
+      const client2 = await mcpManager.getOrCreateConnection('tavily_search');
 
-      const statuses = mcpManager.getServerStatuses();
-      expect(statuses).toHaveLength(0);
-      expect(mcpManager.getServerStatus('test-server-1')).toBeUndefined();
+      expect(client1).toBe(client2);
+      expect(StdioClientTransport).toHaveBeenCalledTimes(1);
+      expect(mockClient.connect).toHaveBeenCalledTimes(1);
     });
 
-    it('should disconnect from a server', async () => {
-      await mcpManager.disconnectFromServer('test-server-1');
-
-      const status = mcpManager.getServerStatus('test-server-1');
-      expect(status?.status).toBe('disconnected');
-      expect(status?.toolCount).toBe(0);
+    it('should throw error for non-existent server', async () => {
+      await expect(mcpManager.getOrCreateConnection('non-existent'))
+        .rejects.toThrow('Configuration for server "non-existent" not found');
     });
 
-    it('should connect to a specific server', async () => {
-      const newServer: McpServerConfig = {
-        id: 'test-server-3',
-        name: 'Test Server 3',
-        url: 'https://api.test-server-3.com',
-        enabled: false
-      };
+    it('should handle connection cleanup on transport close', async () => {
+      await mcpManager.getOrCreateConnection('tavily_search');
+      
+      // Simulate transport close
+      if (mockStdioTransport.onclose) {
+        mockStdioTransport.onclose();
+      }
 
-      await mcpManager.addServer(newServer, false);
-      await mcpManager.connectToServer(newServer);
-
-      const status = mcpManager.getServerStatus('test-server-3');
-      expect(status?.status).toBe('connected');
-    });
-  });
-
-  describe('Tool Discovery and Registration', () => {
-    beforeEach(async () => {
-      (global.fetch as any)
-        .mockResolvedValue({
-          ok: true,
-          status: 200,
-          text: () => Promise.resolve('OK'),
-          json: () => Promise.resolve(mockToolDiscoveryResponse)
-        });
-
-      await mcpManager.initialize();
-    });
-
-    it('should refresh all servers', async () => {
-      await mcpManager.refreshAllServers();
-      // Should have called registerTool again for each tool
-      expect(mockToolRegistry.registerTool).toHaveBeenCalledTimes(4); // 2 initial + 2 refresh
-    });
-
-    it('should refresh a specific server', async () => {
-      await mcpManager.refreshServer('test-server-1');
-      expect(mockToolRegistry.registerTool).toHaveBeenCalledTimes(4); // 2 initial + 2 refresh
-    });
-
-    it('should throw error when refreshing non-existent server', async () => {
-      await expect(mcpManager.refreshServer('non-existent')).rejects.toThrow(ARTError);
-    });
-  });
-
-  describe('Thread-Specific Tool Management', () => {
-    it('should enable MCP tools for a thread', async () => {
-      const threadId = 'test-thread-1';
-      const toolNames = ['mcp_test-server-1_test-tool-1', 'mcp_test-server-1_test-tool-2'];
-
-      await mcpManager.enableMcpToolsForThread(threadId, toolNames);
-
-      expect(mockStateManager.enableToolsForThread).toHaveBeenCalledWith(threadId, toolNames);
-    });
-
-    it('should disable MCP tools for a thread', async () => {
-      const threadId = 'test-thread-1';
-      const toolNames = ['mcp_test-server-1_test-tool-1'];
-
-      await mcpManager.disableMcpToolsForThread(threadId, toolNames);
-
-      expect(mockStateManager.disableToolsForThread).toHaveBeenCalledWith(threadId, toolNames);
+      // Next connection should create a new client
+      await mcpManager.getOrCreateConnection('tavily_search');
+      expect(StdioClientTransport).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('Shutdown', () => {
-    it('should clean up intervals and timeouts on shutdown', async () => {
-      // First initialize with auto-refresh enabled to create intervals
-      const configWithAutoRefresh = {
-        ...mockConfig,
-        autoRefresh: true,
-        refreshInterval: 1000
-      };
-      
-      const managerWithAutoRefresh = new McpManager(
-        configWithAutoRefresh,
-        mockToolRegistry,
-        mockStateManager,
-        mockAuthManager
-      );
+    it('should close all active connections', async () => {
+      await mcpManager.initialize();
+      await mcpManager.getOrCreateConnection('tavily_search');
 
-      // Mock successful responses for initialization
-      (global.fetch as any)
-        .mockResolvedValue({
-          ok: true,
-          status: 200,
-          text: () => Promise.resolve('OK'),
-          json: () => Promise.resolve(mockToolDiscoveryResponse)
-        });
+      await mcpManager.shutdown();
 
-      await managerWithAutoRefresh.initialize();
+      expect(mockClient.close).toHaveBeenCalledTimes(1);
+    });
 
-      const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
-      // const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
-
-      await managerWithAutoRefresh.shutdown();
-
-      // Should have called clearInterval for auto-refresh intervals
-      expect(clearIntervalSpy).toHaveBeenCalled();
-      // clearTimeout may or may not be called depending on whether there are active timeouts
-      // For this test, we don't require clearTimeout to be called since the implementation
-      // may not always have active timeouts during shutdown
+    it('should handle shutdown with no active connections', async () => {
+      await mcpManager.shutdown();
+      // Should not throw
+      expect(true).toBe(true);
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle invalid JSON responses gracefully', async () => {
-      (global.fetch as any)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          text: () => Promise.resolve('OK')
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: () => Promise.reject(new Error('Invalid JSON'))
-        });
-
-      await mcpManager.initialize();
-
-      const status = mcpManager.getServerStatus('test-server-1');
-      expect(status?.status).toBe('error');
+  describe('Zyntopia Discovery API', () => {
+    beforeEach(() => {
+      // Reset global fetch mock before each test
+      vi.clearAllMocks();
+      global.fetch = vi.fn();
     });
 
-    it('should handle network errors during health check', async () => {
-      (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
+    it('should discover servers from Zyntopia API', async () => {
+      // Mock a successful fetch response
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve([
+          {
+            id: 'zyntopia-weather',
+            name: 'Weather Service',
+            service_type: 'MCP_SERVICE',
+            description: 'Weather data provider',
+            connection: { type: 'sse', url: 'https://weather.example.com/mcp' },
+            tools: [{ name: 'get_weather', description: 'Get weather data', inputSchema: { type: 'object' } }]
+          }
+        ])
+      });
 
-      await mcpManager.initialize();
+      const servers = await mcpManager.discoverAvailableServers('https://zyntopia.example.com/api/services');
+      expect(servers).toHaveLength(1);
+      expect(servers[0].id).toBe('zyntopia-weather');
+      expect(servers[0].displayName).toBe('Weather Service');
+    });
 
-      const status = mcpManager.getServerStatus('test-server-1');
-      expect(status?.status).toBe('error');
-      expect(status?.lastError).toContain('Health check failed');
+    it('should handle discovery API failures gracefully', async () => {
+      global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+      
+      await expect(mcpManager.discoverAvailableServers()).rejects.toThrow('Discovery API failed');
+    });
+
+    it('should initialize with both local and discovered servers', async () => {
+      // Mock discovery response
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve([
+          {
+            id: 'discovered-server',
+            name: 'Discovered Service',
+            service_type: 'MCP_SERVICE',
+            enabled: true,
+            connection: { type: 'stdio', command: 'discovered-tool' },
+            tools: [{ name: 'discovered_tool', description: 'A discovered tool', inputSchema: { type: 'object' } }]
+          }
+        ])
+      });
+
+      await mcpManager.initialize('https://zyntopia.example.com/api/services');
+      
+      // Should register tools from both local config AND discovered servers
+      expect(mockToolRegistry.registerTool).toHaveBeenCalledTimes(2); // 1 local + 1 discovered
+    });
+
+    it('should prefer local config over discovered servers for conflicts', async () => {
+      // Mock a discovered server with same ID as local config
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve([
+          {
+            id: 'tavily_search', // Same ID as in mock config
+            name: 'Conflicting Tavily',
+            service_type: 'MCP_SERVICE',
+            enabled: true,
+            connection: { type: 'stdio', command: 'different-command' },
+            tools: [{ name: 'conflict_tool', description: 'Conflicting tool', inputSchema: { type: 'object' } }]
+          }
+        ])
+      });
+
+      await mcpManager.initialize('https://zyntopia.example.com/api/services');
+      
+      // Should only register from local config (no duplicates)
+      expect(mockToolRegistry.registerTool).toHaveBeenCalledTimes(1);
+    });
+
+    it('should have placeholder for card generation', async () => {
+      const connection = { command: 'test', args: ['--test'] };
+      await mcpManager.generateAndInstallCard('test-server', connection);
+      // Should complete without error (placeholder implementation)
+      expect(true).toBe(true);
     });
   });
 }); 

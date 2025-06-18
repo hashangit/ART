@@ -1,13 +1,9 @@
 import { IToolExecutor } from '../../core/interfaces';
-import { ToolSchema, ToolResult, ExecutionContext, ARTError, ErrorCode } from '../../types';
+import { ToolSchema, ToolResult, ExecutionContext } from '../../types';
 import { Logger } from '../../utils/logger';
-import { AuthManager } from '../../systems/auth/AuthManager';
-import {
-  McpServerConfig,
-  McpToolDefinition,
-  McpToolExecutionRequest,
-  McpToolExecutionResponse
-} from './types';
+import { McpManager } from './McpManager';
+import { McpServerConfig, McpToolDefinition } from './types';
+import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 
 /**
  * A proxy tool that wraps an MCP server tool and implements the IToolExecutor interface.
@@ -16,34 +12,30 @@ import {
 export class McpProxyTool implements IToolExecutor {
   public readonly schema: ToolSchema;
   
-  private serverConfig: McpServerConfig;
+  private card: McpServerConfig;
   private toolDefinition: McpToolDefinition;
-  private authManager?: AuthManager;
+  private mcpManager: McpManager;
 
   /**
    * Creates a new MCP proxy tool.
-   * @param serverConfig - Configuration for the MCP server hosting this tool
+   * @param card - Configuration for the MCP server hosting this tool
    * @param toolDefinition - The tool definition from the MCP server
-   * @param authManager - Optional auth manager for securing requests
+   * @param mcpManager - The MCP manager for managing connections
    */
-  constructor(
-    serverConfig: McpServerConfig,
-    toolDefinition: McpToolDefinition,
-    authManager?: AuthManager
-  ) {
-    this.serverConfig = serverConfig;
+  constructor(card: McpServerConfig, toolDefinition: McpToolDefinition, mcpManager: McpManager) {
+    this.card = card;
     this.toolDefinition = toolDefinition;
-    this.authManager = authManager;
+    this.mcpManager = mcpManager;
 
     // Convert MCP tool definition to ART ToolSchema
     this.schema = {
-      name: `mcp_${serverConfig.id}_${toolDefinition.name}`,
-      description: toolDefinition.description,
+      name: `mcp_${card.id}_${toolDefinition.name}`,
+      description: toolDefinition.description || `Tool ${toolDefinition.name} from ${card.displayName || card.id}`,
       inputSchema: toolDefinition.inputSchema,
       outputSchema: toolDefinition.outputSchema
     };
 
-    Logger.debug(`McpProxyTool: Created proxy for tool "${toolDefinition.name}" from server "${serverConfig.name}"`);
+    Logger.debug(`McpProxyTool: Created proxy for tool "${toolDefinition.name}" from server "${card.displayName}"`);
   }
 
   /**
@@ -56,149 +48,34 @@ export class McpProxyTool implements IToolExecutor {
     const startTime = Date.now();
     
     try {
-      Logger.debug(`McpProxyTool: Executing tool "${this.toolDefinition.name}" on server "${this.serverConfig.name}"`);
+      Logger.debug(`McpProxyTool: Execution requested for "${this.schema.name}". Getting or creating connection...`);
+      const client = await this.mcpManager.getOrCreateConnection(this.card.id);
 
-      // Prepare the execution request
-      const request: McpToolExecutionRequest = {
-        toolName: this.toolDefinition.name,
-        input,
-        context: {
-          threadId: context.threadId,
-          traceId: context.traceId,
-          userId: context.userId
-        }
-      };
-
-      // Execute the tool on the MCP server
-      const response = await this._executeOnServer(request);
+      Logger.debug(`McpProxyTool: Connection ready. Executing tool "${this.toolDefinition.name}" on server "${this.card.displayName}"`);
+      const response = await client.request(
+        { method: "tools/call", params: { name: this.toolDefinition.name, arguments: input } },
+        CallToolResultSchema,
+        { timeout: this.card.timeout || 30000 }
+      );
+      
       const duration = Date.now() - startTime;
-
-      if (response.success) {
-        Logger.debug(`McpProxyTool: Tool "${this.toolDefinition.name}" executed successfully in ${duration}ms`);
-        
-        return {
-          callId: context.traceId || 'unknown',
-          toolName: this.schema.name,
-          status: 'success',
-          output: response.output,
-          metadata: {
-            ...response.metadata,
-            executionTime: duration,
-            mcpServer: {
-              id: this.serverConfig.id,
-              name: this.serverConfig.name
-            }
-          }
-        };
-      } else {
-        Logger.error(`McpProxyTool: Tool "${this.toolDefinition.name}" failed: ${response.error}`);
-        
-        return {
-          callId: context.traceId || 'unknown',
-          toolName: this.schema.name,
-          status: 'error',
-          error: response.error || 'Unknown error from MCP server',
-          metadata: {
-            ...response.metadata,
-            executionTime: duration,
-            mcpServer: {
-              id: this.serverConfig.id,
-              name: this.serverConfig.name
-            }
-          }
-        };
-      }
+      return {
+        callId: context.traceId || 'unknown',
+        toolName: this.schema.name,
+        status: 'success',
+        output: response.content || [],
+        metadata: { executionTime: duration, mcpServer: { id: this.card.id, name: this.card.displayName }, ...response._meta }
+      };
     } catch (error: any) {
       const duration = Date.now() - startTime;
       Logger.error(`McpProxyTool: Failed to execute tool "${this.toolDefinition.name}": ${error.message}`);
-      
       return {
         callId: context.traceId || 'unknown',
         toolName: this.schema.name,
         status: 'error',
         error: `MCP execution failed: ${error.message}`,
-        metadata: {
-          executionTime: duration,
-          mcpServer: {
-            id: this.serverConfig.id,
-            name: this.serverConfig.name
-          },
-          originalError: error.message
-        }
+        metadata: { executionTime: duration, mcpServer: { id: this.card.id, name: this.card.displayName }, originalError: error instanceof Error ? error.stack : String(error) }
       };
-    }
-  }
-
-  /**
-   * Executes the tool request on the MCP server.
-   * @private
-   */
-  private async _executeOnServer(request: McpToolExecutionRequest): Promise<McpToolExecutionResponse> {
-    const url = `${this.serverConfig.url}/tools/${this.toolDefinition.name}/execute`;
-    const timeout = this.serverConfig.timeout || 30000; // 30 second default
-
-    // Prepare headers
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...this.serverConfig.headers
-    };
-
-    // Add authentication headers if auth strategy is configured
-    if (this.serverConfig.authStrategyId && this.authManager) {
-      try {
-        const authHeaders = await this.authManager.getHeaders(this.serverConfig.authStrategyId);
-        Object.assign(headers, authHeaders);
-        Logger.debug(`McpProxyTool: Added authentication headers for server "${this.serverConfig.name}"`);
-      } catch (error: any) {
-        Logger.error(`McpProxyTool: Authentication failed for server "${this.serverConfig.name}": ${error.message}`);
-        throw new ARTError(
-          `Failed to authenticate with MCP server: ${error.message}`,
-          ErrorCode.TOOL_EXECUTION_ERROR,
-          error
-        );
-      }
-    }
-
-    // Create abort controller for timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-    try {
-      Logger.debug(`McpProxyTool: Making request to ${url}`);
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(request),
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
-      }
-
-      const responseData = await response.json();
-      Logger.debug(`McpProxyTool: Received response from server "${this.serverConfig.name}"`);
-      
-      return responseData as McpToolExecutionResponse;
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-      
-      if (error.name === 'AbortError') {
-        throw new ARTError(
-          `MCP server request timed out after ${timeout}ms`,
-          ErrorCode.NETWORK_ERROR
-        );
-      }
-      
-      throw new ARTError(
-        `Failed to communicate with MCP server: ${error.message}`,
-        ErrorCode.NETWORK_ERROR,
-        error instanceof Error ? error : new Error(String(error))
-      );
     }
   }
 
@@ -215,7 +92,7 @@ export class McpProxyTool implements IToolExecutor {
    * @returns The server configuration
    */
   getServerConfig(): McpServerConfig {
-    return { ...this.serverConfig };
+    return { ...this.card };
   }
 
   /**

@@ -1,121 +1,63 @@
-/**
- * Configuration for connecting to an MCP server
- */
-export interface McpServerConfig {
-  /** Unique identifier for this MCP server */
-  id: string;
-  /** Human-readable name for the server */
-  name: string;
-  /** URL endpoint for the MCP server */
-  url: string;
-  /** Authentication strategy ID to use for this server */
-  authStrategyId?: string;
-  /** Additional headers to send with requests */
-  headers?: Record<string, string>;
-  /** Timeout for connections (in milliseconds) */
-  timeout?: number;
-  /** Whether this server is currently enabled */
-  enabled: boolean;
-  /** Custom metadata for this server */
-  metadata?: Record<string, any>;
-}
+// src/systems/mcp/types.ts
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+
+// --- Public, Configurable Definitions ---
+export interface StdioConnection { command: string; args?: string[]; cwd?: string; env?: Record<string, string>; }
+export interface SseConnection { url: string; headers?: Record<string, string>; authStrategyId?: string; }
+export interface McpToolDefinition { name: string; description?: string; inputSchema: any; outputSchema?: any; }
+export interface McpResource { uri: string; name: string; mimeType?: string; description?: string; }
+export interface McpResourceTemplate { uriTemplate: string; name: string; description?: string; mimeType?: string; }
 
 /**
- * Response from MCP server tool discovery
+ * The MCPCard structure. This is the format for each server entry in art_mcp_config.json.
+ * It contains all information needed for discovery, installation, and connection.
  */
-export interface McpToolDiscoveryResponse {
-  /** Array of tools available on this server */
-  tools: McpToolDefinition[];
-  /** Server metadata */
-  server: {
-    name: string;
-    version: string;
-    capabilities?: string[];
-  };
-}
+export type McpServerConfig = {
+    id: string;
+    type: 'stdio' | 'sse';
+    enabled: boolean;
+    displayName?: string;
+    description?: string;
+    connection: StdioConnection | SseConnection;
+    installation?: { source: 'git' | 'npm' | 'manual'; [key: string]: any; };
+    timeout?: number;
+    // The server's capabilities are now part of the card itself
+    tools: McpToolDefinition[];
+    resources: McpResource[];
+    resourceTemplates: McpResourceTemplate[];
+};
 
 /**
- * Definition of a tool from an MCP server
+ * The root structure of the art_mcp_config.json file.
  */
-export interface McpToolDefinition {
-  /** Tool name (must be unique) */
-  name: string;
-  /** Human-readable description */
-  description: string;
-  /** Input schema (JSON Schema) */
-  inputSchema: any;
-  /** Output schema (JSON Schema) */
-  outputSchema?: any;
-  /** Additional metadata about the tool */
-  metadata?: Record<string, any>;
+export interface ArtMcpConfig {
+    mcpServers: Record<string, McpServerConfig>; // The key is the serverId
 }
 
-/**
- * Request to execute a tool on an MCP server
- */
-export interface McpToolExecutionRequest {
-  /** Name of the tool to execute */
-  toolName: string;
-  /** Input arguments for the tool */
-  input: any;
-  /** Execution context */
-  context: {
-    threadId: string;
-    traceId?: string;
-    userId?: string;
-  };
+// --- Internal State Management Types (Not for public config) ---
+export interface McpConnection {
+    server: McpServerStatus;
+    client: Client;
+    transport: StdioClientTransport | SSEClientTransport;
 }
-
-/**
- * Response from MCP server tool execution
- */
-export interface McpToolExecutionResponse {
-  /** Whether the execution was successful */
-  success: boolean;
-  /** Tool output data (if successful) */
-  output?: any;
-  /** Error message (if unsuccessful) */
-  error?: string;
-  /** Additional metadata about the execution */
-  metadata?: Record<string, any>;
-}
-
-/**
- * Status of an MCP server connection
- */
 export interface McpServerStatus {
-  /** Server ID */
-  id: string;
-  /** Connection status */
-  status: 'connected' | 'disconnected' | 'error' | 'connecting';
-  /** Last successful connection timestamp */
-  lastConnected?: Date;
-  /** Last error message if status is 'error' */
-  lastError?: string;
-  /** Number of available tools */
-  toolCount: number;
-  /** Health check response time (in ms) */
-  responseTime?: number;
+    id: string;
+    status: 'connected' | 'disconnected' | 'error' | 'connecting';
+    lastConnected?: Date;
+    lastError?: string;
+    toolCount: number;
 }
 
 /**
- * Configuration for MCP Manager
+ * Configuration for MCP Manager 2.0
  */
 export interface McpManagerConfig {
-  /** List of MCP servers to connect to */
-  servers: McpServerConfig[];
-  /** Default timeout for all operations (in milliseconds) */
-  defaultTimeout: number;
-  /** Whether to automatically retry failed connections */
-  autoRetry: boolean;
-  /** Retry interval in milliseconds */
-  retryInterval: number;
-  /** Maximum number of retry attempts */
-  maxRetries: number;
-  /** Whether to automatically refresh tool discovery */
-  autoRefresh: boolean;
-  /** Tool discovery refresh interval in milliseconds */
-  refreshInterval: number;
+  /** Whether to enable MCP functionality. Defaults to false. */
+  enabled: boolean;
+  /** Optional endpoint URL for discovering MCP servers from Zyntopia. Defaults to Zyntopia's API. */
+  discoveryEndpoint?: string;
 }
 
 /**

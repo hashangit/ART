@@ -247,14 +247,16 @@ export class AgentFactory {
             if (!this.toolRegistry || !this.stateManager) {
                 throw new Error("MCP Manager requires ToolRegistry and StateManager to be initialized first.");
             }
+            // McpManager now reads its own config from the file system and discovers from Zyntopia.
             this.mcpManager = new McpManager(
-                this.config.mcpConfig,
                 this.toolRegistry,
                 this.stateManager,
-                this.authManager || undefined // Pass AuthManager if available
+                this.authManager || undefined
             );
-            await this.mcpManager.initialize();
-            Logger.info("McpManager initialized and connected to servers.");
+            // Initialize with both local config and Zyntopia discovery
+            const discoveryEndpoint = this.config.mcpConfig.discoveryEndpoint || 'https://api.zyntopia.com/mcp-services';
+            await this.mcpManager.initialize(discoveryEndpoint);
+            Logger.info("McpManager Hub initialized with local config and Zyntopia discovery.");
         }
     }
 
