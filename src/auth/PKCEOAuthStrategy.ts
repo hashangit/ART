@@ -158,6 +158,27 @@ export class PKCEOAuthStrategy implements IAuthStrategy {
     Logger.info('Cached token and PKCE code verifier cleared.');
   }
 
+  /**
+   * Checks if there is a valid, non-expired token.
+   * @returns A promise that resolves to true if the token is valid, false otherwise.
+   */
+  public async isAuthenticated(): Promise<boolean> {
+    if (!this.cachedToken) {
+      return false;
+    }
+
+    if (Date.now() >= this.cachedToken.expiresAt) {
+      try {
+        await this.refreshToken();
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   // --- Private Helper Methods ---
 
   private generateCodeVerifier(): string {

@@ -2,17 +2,15 @@ import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Button } from "../ui/button";
-import { ScrollArea } from "../ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../ui/collapsible";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
-import { ZyntopiaMessage, ZyntopiaObservation } from '../../lib/types';
-import { FindingCard } from './FindingCard';
+} from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ArtMessage } from '@/lib/types';
 import {
   BrainCircuit,
   ChevronDown,
@@ -26,7 +24,7 @@ import {
 
 // Chat Message Component
 export function ChatMessage({ message, onCopy, onRetry }: { 
-  message: ZyntopiaMessage; 
+  message: ArtMessage;
   onCopy?: (content: string) => void;
   onRetry?: (messageId: string) => void;
 }) {
@@ -35,19 +33,13 @@ export function ChatMessage({ message, onCopy, onRetry }: {
   const [isThoughtsOpen, setIsThoughtsOpen] = useState(false);
   const [isMetadataOpen, setIsMetadataOpen] = useState(false);
 
-  const allowedThoughtTypes = ['Intent', 'Plan', 'Thought'];
-  const inlineThoughts = (message.thoughts ?? []).filter(t => allowedThoughtTypes.includes(t.type));
+  const inlineThoughts = (message.thoughts ?? []).filter(t => t.startsWith('Intent:') || t.startsWith('Plan:') || t.startsWith('Thought:'));
 
-  console.log('ChatMessage - Message thoughts:', message.thoughts);
-  console.log('ChatMessage - Inline thoughts:', inlineThoughts);
 
-  const intentThought = inlineThoughts.find(t => t.type === 'Intent');
-  const planThought = inlineThoughts.find(t => t.type === 'Plan');
-  const otherThoughts = inlineThoughts.filter(t => t.type === 'Thought');
+  const intentThought = inlineThoughts.find(t => t.startsWith('Intent:'));
+  const planThought = inlineThoughts.find(t => t.startsWith('Plan:'));
+  const otherThoughts = inlineThoughts.filter(t => t.startsWith('Thought:'));
 
-  console.log('ChatMessage - Intent:', intentThought);
-  console.log('ChatMessage - Plan:', planThought);
-  console.log('ChatMessage - Other thoughts:', otherThoughts);
 
   return (
     <div className={`flex gap-3 my-4 ${isUser ? 'justify-end' : ''}`}>
@@ -69,38 +61,12 @@ export function ChatMessage({ message, onCopy, onRetry }: {
                </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="animate-in slide-in-from-top-2 duration-300 mt-2">
-              <div className="space-y-2">
-                {intentThought && <FindingCard key={`inline-${intentThought.id}`} finding={{
-                  ...intentThought,
-                  timestamp: new Date(),
-                  type: intentThought.type
-                } as ZyntopiaObservation} isInline={true} />}
-                {planThought && <FindingCard key={`inline-${planThought.id}`} finding={{
-                  ...planThought,
-                  timestamp: new Date(),
-                  type: planThought.type
-                } as ZyntopiaObservation} isInline={true} />}
-                {otherThoughts.length > 0 && (
-                    otherThoughts.length > 1 ? (
-                         <ScrollArea className="max-h-32 mt-2 pr-2">
-                             <div className="space-y-2">
-                                 {otherThoughts.map((thought) => (
-                                     <FindingCard key={`inline-${thought.id}`} finding={{
-                                       ...thought,
-                                       timestamp: new Date(),
-                                       type: thought.type
-                                     } as ZyntopiaObservation} isInline={true} />
-                                 ))}
-                             </div>
-                         </ScrollArea>
-                    ) : (
-                         <FindingCard key={`inline-${otherThoughts[0].id}`} finding={{
-                           ...otherThoughts[0],
-                           timestamp: new Date(),
-                           type: otherThoughts[0].type
-                         } as ZyntopiaObservation} isInline={true} />
-                    )
-                )}
+              <div className="space-y-1 text-xs text-slate-600 dark:text-slate-400 bg-slate-200/50 dark:bg-slate-700/50 p-2 rounded-md">
+                {intentThought && <p>{intentThought}</p>}
+                {planThought && <p>{planThought}</p>}
+                {otherThoughts.map((thought, index) => (
+                  <p key={index}>{thought}</p>
+                ))}
               </div>
             </CollapsibleContent>
           </Collapsible>
@@ -131,7 +97,7 @@ export function ChatMessage({ message, onCopy, onRetry }: {
                        {Object.entries(message.metadata).map(([key, value]) => (
                            <div key={key} className="flex justify-between">
                                <span className="font-medium">{key}:</span>
-                               <span>{value}</span>
+                               <span>{String(value)}</span>
                            </div>
                        ))}
                     </CollapsibleContent>
@@ -147,4 +113,4 @@ export function ChatMessage({ message, onCopy, onRetry }: {
       )}
     </div>
   );
-} 
+}

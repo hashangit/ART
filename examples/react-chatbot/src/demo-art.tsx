@@ -1,46 +1,47 @@
 import ReactDOM from 'react-dom/client';
-import ZyntopiaWebChat from './ZyntopiaWebChat';
+import ArtWebChat from './ArtWebChat';
 import { IndexedDBStorageAdapter, GeminiAdapter, OpenAIAdapter } from 'art-framework';
+import { ArtMessage } from './lib/types';
 import './styles/globals.css';
 
-// Demo configuration for the ART Framework with Zyntopia UI
-const zyntopiaConfig = {
-  // Core ART Framework configuration
-  artConfig: {
-    // Storage configuration
-    storage: new IndexedDBStorageAdapter({ objectStores: [] }),
-    
-    // Provider configuration - using correct ProviderManagerConfig format
-    providers: {
-      availableProviders: [
-        {
-          name: 'Gemini 2.5 Flash',
-          adapter: GeminiAdapter,
+// Demo configuration for the ART Framework with ART UI
+const artConfig = {
+// Core ART Framework configuration
+artConfig: {
+  // Storage configuration
+  storage: new IndexedDBStorageAdapter({ objectStores: [] }),
+  
+  // Provider configuration - using correct ProviderManagerConfig format
+  providers: {
+    availableProviders: [
+      {
+        name: 'Gemini 2.5 Flash',
+        adapter: GeminiAdapter,
+        isLocal: false,
+        baseOptions: { provider: 'gemini', modelId: 'gemini-2.5-flash-preview-05-20' }
+      },
+      {
+        name: 'Gemini 2.5 Pro',
+        adapter: GeminiAdapter,
+        isLocal: false,
+        baseOptions: { provider: 'gemini', modelId: 'gemini-2.5-pro-preview-06-05' }
+      },
+      {
+          name: 'GPT-4o',
+          adapter: OpenAIAdapter,
           isLocal: false,
-          baseOptions: { provider: 'gemini', modelId: 'gemini-2.5-flash-preview-05-20' }
-        },
-        {
-          name: 'Gemini 2.5 Pro',
-          adapter: GeminiAdapter,
+          baseOptions: { provider: 'openai', modelId: 'gpt-4o' }
+      },
+      {
+          name: 'GPT-4o Mini',
+          adapter: OpenAIAdapter,
           isLocal: false,
-          baseOptions: { provider: 'gemini', modelId: 'gemini-2.5-pro-preview-06-05' }
-        },
-        {
-            name: 'GPT-4o',
-            adapter: OpenAIAdapter,
-            isLocal: false,
-            baseOptions: { provider: 'openai', modelId: 'gpt-4o' }
-        },
-        {
-            name: 'GPT-4o Mini',
-            adapter: OpenAIAdapter,
-            isLocal: false,
-            baseOptions: { provider: 'openai', modelId: 'gpt-4o-mini' }
-        },
-      ],
-      maxParallelApiInstancesPerProvider: 5,
-      apiInstanceIdleTimeoutSeconds: 300,
-    },
+          baseOptions: { provider: 'openai', modelId: 'gpt-4o-mini' }
+      },
+    ],
+    maxParallelApiInstancesPerProvider: 5,
+    apiInstanceIdleTimeoutSeconds: 300,
+  },
     
     // Tool configurations
     tools: [
@@ -74,12 +75,12 @@ const zyntopiaConfig = {
   },
   
   // UI Configuration
-  title: 'Zyntopia WebChat',
+  title: 'ART WebChat',
   subtitle: 'Powered by ART Framework',
   defaultModel: 'Gemini 2.5 Flash', // Match the 'name' from availableProviders
   
   // Event handlers
-  onMessage: (message: any) => {
+  onMessage: (message: ArtMessage) => {
     console.log('New message:', message);
   },
   onError: (error: Error) => {
@@ -90,7 +91,7 @@ const zyntopiaConfig = {
 function App() {
   return (
     <div className="h-screen w-screen bg-slate-100 dark:bg-slate-900 font-sans">
-      <ZyntopiaWebChat {...zyntopiaConfig} />
+      <ArtWebChat {...artConfig} />
     </div>
   );
 }

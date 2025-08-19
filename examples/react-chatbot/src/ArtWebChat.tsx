@@ -32,15 +32,15 @@ import {
 } from 'lucide-react';
 
 // Local Types, Hooks, and Components
-import { ZyntopiaWebChatConfig } from './lib/types';
-import { useZyntopiaChat } from './hooks/useZyntopiaChat';
+import { ArtWebChatConfig } from './lib/types';
+import { useArtChat } from './hooks/useArtChat';
 import { useFileUpload } from './hooks/useFileUpload';
 import { ChatMessage } from './components/webchat/ChatMessage';
 import { FindingCard } from './components/webchat/FindingCard';
 import { ChatHistory } from './components/webchat/ChatHistory';
 
-// Main Zyntopia WebChat Component
-export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = (props) => {
+// Main ART WebChat Component
+export const ArtWebChat: React.FC<ArtWebChatConfig> = (props) => {
   const [input, setInput] = useState('');
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
@@ -72,7 +72,7 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = (props) => {
     threadId,
     deleteConversation,
     currentThreadTitle,
-  } = useZyntopiaChat(props);
+  } = useArtChat(props);
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -124,7 +124,7 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = (props) => {
               </Avatar>
               <div className="overflow-hidden">
                   <div className="flex items-baseline gap-2">
-                      <h1 className="text-base font-semibold truncate">{props.title || 'Zyntopia WebChat'}</h1>
+                      <h1 className="text-base font-semibold truncate">{props.title || 'ART WebChat'}</h1>
                       <span className="text-xs text-muted-foreground hidden sm:inline-block flex-shrink-0">{props.subtitle || 'Powered by ART Framework'}</span>
                   </div>
                   <p className="text-sm text-muted-foreground truncate">{currentThreadTitle}</p>
@@ -187,7 +187,7 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = (props) => {
             </TabsTrigger>
             <TabsTrigger value="findings" className="text-xs py-2 data-[state=active]:shadow-none">
               <BrainCircuit className="mr-1 h-3.5 w-3.5" />
-              Zee's Findings
+              AI's Findings
               {observations.length > 0 && (
                 <span className="ml-2 bg-blue-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center">
                   {observations.length}
@@ -215,7 +215,7 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = (props) => {
                             <div className="rounded-lg p-3 max-w-xl shadow-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-50">
                               <div className="flex items-center gap-2">
                                 <BrainCircuit className="h-4 w-4 animate-pulse" />
-                                <span className="text-sm">Zee is thinking...</span>
+                                <span className="text-sm">AI is thinking...</span>
                               </div>
                             </div>
                           </div>
@@ -323,11 +323,11 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = (props) => {
                   <div className="text-center text-slate-500 dark:text-slate-400 py-12">
                     <BrainCircuit className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <h3 className="text-lg font-medium mb-2">No observations yet</h3>
-                    <p className="text-sm">Start a conversation to see Zee's thinking process and observations</p>
+                    <p className="text-sm">Start a conversation to see the AI's thinking process and observations</p>
                   </div>
                 ) : (
-                  observations.map(finding => (
-                      <FindingCard key={finding.id} finding={finding} isInline={false} />
+                  observations.map((finding, index) => (
+                      <FindingCard key={index} finding={finding} isInline={false} />
                   ))
                 )}
               </ScrollArea>
@@ -347,4 +347,4 @@ export const ZyntopiaWebChat: React.FC<ZyntopiaWebChatConfig> = (props) => {
   );
 };
 
-export default ZyntopiaWebChat;
+export default ArtWebChat;

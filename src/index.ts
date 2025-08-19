@@ -46,6 +46,12 @@ export type { OllamaAdapterOptions } from './adapters/reasoning/ollama';
 export { CalculatorTool } from './tools/CalculatorTool';
 // export { WebSearchTool } from './tools/WebSearchTool'; // Example for future
 
+// --- Authentication Components ---
+/** Manages authentication strategies and token lifecycle. */
+export { AuthManager } from './systems/auth/AuthManager';
+/** Implements the PKCE (Proof Key for Code Exchange) OAuth2 flow. */
+export { PKCEOAuthStrategy } from './auth/PKCEOAuthStrategy';
+
 // --- Core Types & Interfaces ---
 /** Export all core data structures and type definitions. @see {@link ./types/index.ts} */
 export * from './types';

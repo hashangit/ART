@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from "../ui/button";
-import { ScrollArea } from "../ui/scroll-area";
-import { ChatHistoryItem } from '../../lib/types';
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ChatHistoryItem } from '@/lib/types';
 import { MessageSquare, Trash2 } from 'lucide-react';
 import {
   Sheet,
@@ -9,7 +9,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetDescription,
-} from "../ui/sheet";
+} from "@/components/ui/sheet";
 
 interface ChatHistoryProps {
   isOpen: boolean;

@@ -1,13 +1,12 @@
 // Main chatbot components  
-export { ZyntopiaWebChat, default } from './ZyntopiaWebChat';
+export { ArtWebChat, default } from './ArtWebChat';
 
 // Types from ZyntopiaWebChat
 export type { 
-  ZyntopiaWebChatConfig, 
-  ZyntopiaMessage, 
-  ZyntopiaObservation, 
-  ThoughtItem 
-} from './ZyntopiaWebChat';
+  ArtWebChatConfig,
+  ArtMessage,
+  ArtObservation,
+} from './lib/types';
 
 // Note: Individual components, context, and additional types are not yet implemented
 // They can be added back when needed for advanced usage scenarios 

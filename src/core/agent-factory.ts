@@ -367,6 +367,7 @@ export async function createArtInstance(config: ArtInstanceConfig): Promise<ArtI
     const conversationManager = factory.getConversationManager(); // Assuming getter exists
     const toolRegistry = factory.getToolRegistry(); // Assuming getter exists
     const observationManager = factory.getObservationManager(); // Assuming getter exists
+    const authManager = factory.getAuthManager();
 
     // Ensure all required components were initialized
     if (!uiSystem || !stateManager || !conversationManager || !toolRegistry || !observationManager) {
@@ -380,5 +381,6 @@ export async function createArtInstance(config: ArtInstanceConfig): Promise<ArtI
         conversationManager: conversationManager,
         toolRegistry: toolRegistry,
         observationManager: observationManager,
+        authManager: authManager,
     };
 }

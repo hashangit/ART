@@ -600,7 +600,21 @@ export interface IAuthStrategy {
    * @throws {ARTError} If authentication fails or cannot be obtained.
    */
   getAuthHeaders(): Promise<Record<string, string>>;
+
+  /** Optional: Initiates the login flow for the strategy. */
+  login?(): Promise<void>;
+
+  /** Optional: Handles the redirect from the authentication server. */
+  handleRedirect?(): Promise<void>;
+
+  /** Optional: Logs the user out. */
+  logout?(): void;
+
+  /** Optional: Checks if the user is authenticated. */
+  isAuthenticated?(): Promise<boolean>;
 }
+
+import { AuthManager } from '../systems/auth/AuthManager';
 
 export interface ArtInstance {
     /** The main method to process a user query using the configured Agent Core. */
@@ -615,6 +629,8 @@ export interface ArtInstance {
     readonly toolRegistry: ToolRegistry;
     /** Accessor for the Observation Manager, used for recording and retrieving observations. */
     readonly observationManager: ObservationManager;
+    /** Accessor for the Auth Manager, used for handling authentication. */
+    readonly authManager?: AuthManager | null;
     // Note: Direct access to other internal components like ReasoningEngine or StorageAdapter
     // is typically discouraged; interaction should primarily happen via the managers and process method.
 }

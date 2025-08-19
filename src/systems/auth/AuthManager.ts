@@ -97,4 +97,36 @@ export class AuthManager {
     this.strategies.clear();
     Logger.debug(`AuthManager: Cleared ${count} strategies.`);
   }
-} 
+
+  public async login(strategyId: string): Promise<void> {
+    const strategy = this.strategies.get(strategyId);
+    if (!strategy || !strategy.login) {
+      throw new ARTError(`Login not supported for strategy '${strategyId}'.`, ErrorCode.INVALID_CONFIG);
+    }
+    await strategy.login();
+  }
+
+  public async handleRedirect(strategyId: string): Promise<void> {
+    const strategy = this.strategies.get(strategyId);
+    if (!strategy || !strategy.handleRedirect) {
+      throw new ARTError(`handleRedirect not supported for strategy '${strategyId}'.`, ErrorCode.INVALID_CONFIG);
+    }
+    await strategy.handleRedirect();
+  }
+
+  public logout(strategyId: string): void {
+    const strategy = this.strategies.get(strategyId);
+    if (!strategy || !strategy.logout) {
+      throw new ARTError(`Logout not supported for strategy '${strategyId}'.`, ErrorCode.INVALID_CONFIG);
+    }
+    strategy.logout();
+  }
+
+  public async isAuthenticated(strategyId: string): Promise<boolean> {
+    const strategy = this.strategies.get(strategyId);
+    if (!strategy || !strategy.isAuthenticated) {
+      return false;
+    }
+    return await strategy.isAuthenticated();
+  }
+}
