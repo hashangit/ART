@@ -4,20 +4,18 @@
 export { McpManager } from './McpManager';
 export { McpProxyTool } from './McpProxyTool';
 export { ConfigManager } from './ConfigManager';
-export { McpInstaller } from './McpInstaller';
+// McpInstaller is removed as it is not applicable in a browser-only environment.
 
 // Type Definitions
 export type {
   // Public config types
   ArtMcpConfig,
   McpServerConfig,
-  StdioConnection,
-  SseConnection,
+  StreamableHttpConnection,
   McpToolDefinition,
   McpResource,
   McpResourceTemplate,
   
   // Internal state types
-  McpConnection,
   McpServerStatus
-} from './types'; 
+} from './types';

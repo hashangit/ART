@@ -33,6 +33,7 @@ export enum ErrorCode {
     TOOL_EXECUTION_FAILED = 'TOOL_EXECUTION_FAILED', // Error within the ToolSystem execution loop
     SYNTHESIS_FAILED = 'SYNTHESIS_FAILED',
     AGENT_PROCESSING_ERROR = 'AGENT_PROCESSING_ERROR', // General error during agent.process
+    DELEGATION_FAILED = 'DELEGATION_FAILED', // A2A task delegation failed
 
     // General Errors
     NETWORK_ERROR = 'NETWORK_ERROR',
@@ -71,12 +72,14 @@ export enum ErrorCode {
 export class ARTError extends Error {
     public readonly code: ErrorCode;
     public readonly originalError?: Error;
+    public details: Record<string, any>;
 
-    constructor(message: string, code: ErrorCode, originalError?: Error) {
+    constructor(message: string, code: ErrorCode, originalError?: Error, details: Record<string, any> = {}) {
         super(message);
         this.name = 'ARTError';
         this.code = code;
         this.originalError = originalError;
+        this.details = details;
 
         // Maintains proper stack trace in V8 environments (Node, Chrome)
         if (Error.captureStackTrace) {

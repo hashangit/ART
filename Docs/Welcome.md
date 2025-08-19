@@ -33,6 +33,8 @@ ART aims to address common challenges in AI agent development by offering:
 *   **Configurable State Management:** Manage thread-specific configurations and agent state with strategies for explicit or implicit saving.
 *   **Comprehensive Observability:** Log and retrieve detailed observations of agent activity for debugging and analysis.
 *   **UI Integration Sockets:** `TypedSocket` implementations for `ConversationMessage`, `Observation`, and `LLMStreamEvent` to easily connect your agent to a user interface.
+*   **Browser-First Compatibility:** Designed to run in modern web browsers out-of-the-box, with Node.js-specific dependencies removed in favor of web standards.
+*   **Agent-to-Agent Delegation:** A hybrid system allowing agents to delegate tasks to other specialized agents, combining programmatic discovery with LLM-driven selection.
 
 ## Who is ART For?
 
@@ -263,6 +265,8 @@ Configuration for these components is primarily managed through `ArtInstanceConf
     *   [ArtStandardPrompt](./core-concepts/art-standard-prompt.md) - The common language for LLM prompts.
     *   [Streaming & StreamEvents](./core-concepts/streaming-and-streamevents.md) - Real-time LLM responses.
     *   [Provider Management](./core-concepts/provider-management.md) - Using multiple LLM providers.
+    *   [A2A Task Delegation](./core-concepts/a2a-delegation.md) - How agents delegate tasks to each other.
+    *   [Browser Compatibility](./core-concepts/browser-compatibility.md) - Principles for running ART in the browser.
 *   **Key How-To Guides:**
     *   [Configure an ART Instance](./how-to/configure-art-instance.md)
     *   [Define and Use Tools](./how-to/define-tools.md)

@@ -266,7 +266,7 @@ export class OpenAIAdapter implements ProviderAdapter {
     const aggregatedUsage: any = undefined; // Store usage if provided in stream
     // TODO: Add proper aggregation for streamed tool calls if needed
     let aggregatedToolCalls: any[] | undefined = undefined;
-    const reader = stream.pipeThrough(new TextDecoderStream()).getReader();
+    const reader = stream.pipeThrough(new TextDecoderStream() as any).getReader();
     let buffer = '';
     let done = false;
 

@@ -59,6 +59,8 @@ import { AuthManager } from '../systems/auth/AuthManager'; // Import AuthManager
 import { McpManager } from '../systems/mcp/McpManager'; // Import McpManager
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { McpManagerConfig } from '../systems/mcp/types'; // type-only import for McpManagerConfig
+import { AgentDiscoveryService } from '../systems/a2a/AgentDiscoveryService';
+import { TaskDelegationService } from '../systems/a2a/TaskDelegationService';
 // Removed direct imports of concrete socket classes - they will be accessed via UISystem instance
 // Removed unused type imports: Observation, ConversationMessage, ObservationType, MessageRole
 import { Logger } from '../utils/logger'; // Import Logger
@@ -141,6 +143,8 @@ export class AgentFactory {
     private toolSystem: ToolSystem | null = null;
     private authManager: AuthManager | null = null;
     private mcpManager: McpManager | null = null;
+    private agentDiscoveryService: AgentDiscoveryService | null = null;
+    private taskDelegationService: TaskDelegationService | null = null;
 
 
     /**
@@ -242,6 +246,18 @@ export class AgentFactory {
             Logger.info("AuthManager initialized.");
         }
 
+        // --- Initialize A2A Services ---
+        if (this.config.a2aConfig) {
+            this.agentDiscoveryService = new AgentDiscoveryService({
+                discoveryEndpoint: this.config.a2aConfig.discoveryEndpoint,
+            });
+            this.taskDelegationService = new TaskDelegationService(
+                this.a2aTaskRepository!,
+                { callbackUrl: this.config.a2aConfig.callbackUrl }
+            );
+            Logger.info("A2A Services (Discovery, Delegation) initialized.");
+        }
+
         // --- Initialize MCP Manager ---
         if (this.config.mcpConfig) {
             if (!this.toolRegistry || !this.stateManager) {
@@ -254,8 +270,7 @@ export class AgentFactory {
                 this.authManager || undefined
             );
             // Initialize with both local config and Zyntopia discovery
-            const discoveryEndpoint = this.config.mcpConfig.discoveryEndpoint || 'https://api.zyntopia.com/mcp-services';
-            await this.mcpManager.initialize(discoveryEndpoint);
+            await this.mcpManager.initialize(this.config.mcpConfig);
             Logger.info("McpManager Hub initialized with local config and Zyntopia discovery.");
         }
     }
@@ -291,6 +306,8 @@ export class AgentFactory {
             a2aTaskRepository: this.a2aTaskRepository, // Include A2A task repository
             authManager: this.authManager, // Include Auth Manager (may be null if not configured)
             mcpManager: this.mcpManager, // Include MCP Manager (may be null if not configured)
+            agentDiscoveryService: this.agentDiscoveryService, // Include A2A Discovery Service
+            taskDelegationService: this.taskDelegationService, // Include A2A Delegation Service
             instanceDefaultCustomSystemPrompt: this.config.defaultSystemPrompt, // Pass instance-level default system prompt from ArtInstanceConfig
             // Note: providerAdapter is used by reasoningEngine, not directly by agent core usually
         };

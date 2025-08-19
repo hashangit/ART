@@ -1,39 +1,19 @@
-import * as path from 'path';
-import * as fs from 'fs';
-import { homedir } from 'os';
 import { Logger } from '../../utils/logger';
 import { ArtMcpConfig, McpServerConfig } from './types';
 
 export class ConfigManager {
-  private configPath: string;
+  private configKey = 'art_mcp_config';
   private config: ArtMcpConfig;
 
   constructor() {
-    const artDir = path.join(homedir(), '.art');
-    this.configPath = path.join(artDir, 'art_mcp_config.json');
-    this.ensureConfigDirectoryExists(artDir);
     this.config = this.loadConfig();
   }
 
-  private ensureConfigDirectoryExists(dirPath: string): void {
-    if (!fs.existsSync(dirPath)) {
-      try {
-        fs.mkdirSync(dirPath, { recursive: true });
-        Logger.info(`ConfigManager: Created configuration directory at ${dirPath}`);
-      } catch (error: any) {
-        Logger.error(`ConfigManager: Failed to create configuration directory: ${error.message}`);
-        throw error;
-      }
-    }
-  }
-
   private loadConfig(): ArtMcpConfig {
-    if (fs.existsSync(this.configPath)) {
-      try {
-        const fileContent = fs.readFileSync(this.configPath, 'utf-8');
-        const rawConfig = JSON.parse(fileContent) as ArtMcpConfig;
-        
-        // Validate and fix the config automatically
+    try {
+      const storedConfig = localStorage.getItem(this.configKey);
+      if (storedConfig) {
+        const rawConfig = JSON.parse(storedConfig) as ArtMcpConfig;
         const validatedConfig = this.validateAndFixConfig(rawConfig);
         
         // If config was fixed, save it back
@@ -41,18 +21,16 @@ export class ConfigManager {
           Logger.info(`ConfigManager: Config was automatically validated and fixed`);
           this.writeConfig(validatedConfig);
         }
-        
         return validatedConfig;
-      } catch (error: any) {
-        Logger.error(`ConfigManager: Error reading or parsing config file: ${error.message}`);
-        return { mcpServers: {} };
       }
-    } else {
-      Logger.info(`ConfigManager: Configuration file not found. Creating a new one with default Tavily server at ${this.configPath}`);
-      const defaultConfig = this.createDefaultConfig();
-      this.writeConfig(defaultConfig);
-      return defaultConfig;
+    } catch (error: any) {
+      Logger.error(`ConfigManager: Error reading or parsing config from localStorage: ${error.message}`);
     }
+    
+    Logger.info(`ConfigManager: Configuration not found in localStorage. Creating a new default config.`);
+    const defaultConfig = this.createDefaultConfig();
+    this.writeConfig(defaultConfig);
+    return defaultConfig;
   }
 
   private validateAndFixConfig(config: ArtMcpConfig): ArtMcpConfig {
@@ -71,7 +49,7 @@ export class ConfigManager {
       // Ensure the server config has all required fields
       const fixedConfig: McpServerConfig = {
         id: serverConfig.id || serverId,
-        type: serverConfig.type || 'stdio',
+        type: serverConfig.type || 'streamable-http',
         enabled: serverConfig.enabled !== false, // Default to true
         displayName: serverConfig.displayName || serverId,
         description: serverConfig.description || `MCP server: ${serverId}`,
@@ -125,62 +103,42 @@ export class ConfigManager {
   }
 
   private createDefaultConfig(): ArtMcpConfig {
-    const npxPath = process.env.NPX_PATH || 'npx';
+    // Default to a remote, streamable-http Tavily server
     const tavilyCard: McpServerConfig = {
-        id: "tavily_search_stdio",
-        type: "stdio",
-        enabled: true,
-        displayName: "Tavily Search (Local)",
-        description: "Provides AI-powered search and web content extraction tools.",
-        connection: {
-            command: npxPath,
-            args: ["-y", "tavily-mcp@0.1.4"],
-            env: { "TAVILY_API_KEY": "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" }
+      id: "tavily_search_remote",
+      type: "streamable-http",
+      enabled: true,
+      displayName: "Tavily Search (Remote)",
+      description: "Provides AI-powered search and web content extraction tools via a remote server.",
+      connection: {
+        url: "https://mcp.tavily.com/v1/stream", // This is a placeholder URL
+        authStrategyId: "tavily_api_key" // Assumes an ApiKeyStrategy is configured
+      },
+      tools: [
+        {
+          name: "tavily-search",
+          description: "A powerful web search tool...",
+          inputSchema: { /* ... schema ... */ }
         },
-        installation: { source: "npm", package: "tavily-mcp@0.1.4" },
-        tools: [
-          {
-            name: "tavily-search",
-            description: "A powerful web search tool that provides comprehensive, real-time results using Tavily's AI search engine.",
-            inputSchema: {
-                type: "object",
-                properties: { 
-                  "query": { "type": "string", "description": "Search query" },
-                  "search_depth": { "type": "string", "enum": ["basic", "advanced"], "description": "The depth of the search. It can be 'basic' or 'advanced'", "default": "basic" },
-                  "topic": { "type": "string", "enum": ["general", "news"], "description": "The category of the search", "default": "general" },
-                  "max_results": { "type": "number", "description": "The maximum number of search results to return", "default": 10, "minimum": 5, "maximum": 20 },
-                  "include_raw_content": { "type": "boolean", "description": "Include the cleaned and parsed HTML content of each search result", "default": false }
-                },
-                required: ["query"]
-            }
-          },
-          {
-            name: "tavily-extract",
-            description: "A powerful web content extraction tool that retrieves and processes raw content from specified URLs.",
-            inputSchema: {
-                type: "object",
-                properties: {
-                  "urls": { "type": "array", "items": { "type": "string" }, "description": "List of URLs to extract content from" },
-                  "extract_depth": { "type": "string", "enum": ["basic", "advanced"], "description": "Depth of extraction - 'basic' or 'advanced'", "default": "basic" },
-                  "include_images": { "type": "boolean", "description": "Include a list of images extracted from the urls in the response", "default": false }
-                },
-                required: ["urls"]
-            }
-          }
-        ],
-        resources: [],
-        resourceTemplates: []
+        {
+          name: "tavily-extract",
+          description: "A powerful web content extraction tool...",
+          inputSchema: { /* ... schema ... */ }
+        }
+      ],
+      resources: [],
+      resourceTemplates: []
     };
-    return { mcpServers: { "tavily_search_stdio": tavilyCard } };
+    return { mcpServers: { "tavily_search_remote": tavilyCard } };
   }
 
   private writeConfig(config: ArtMcpConfig): void {
     try {
-      fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2), 'utf-8');
-      Logger.debug(`ConfigManager: Configuration saved to ${this.configPath}`);
+      localStorage.setItem(this.configKey, JSON.stringify(config, null, 2));
+      Logger.debug(`ConfigManager: Configuration saved to localStorage.`);
     } catch (error: any) {
-      Logger.error(`ConfigManager: Failed to write to config file: ${error.message}`);
-      throw error;
+      Logger.error(`ConfigManager: Failed to write to localStorage: ${error.message}`);
+      // Don't throw in browser context, as it could break the app
     }
   }
 

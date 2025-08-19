@@ -147,6 +147,15 @@ ConversationManager --> ConversationSocket
 
 AgentCore --> ObservationManager
 
+%% A2A Delegation
+subgraph "A2A Delegation"
+   direction LR
+   AgentDiscoveryService["AgentDiscoveryService"]
+   TaskDelegationService["TaskDelegationService"]
+end
+AgentCore --> AgentDiscoveryService
+AgentCore --> TaskDelegationService
+
 %% Key Data Flow Items
 
 ArtStandardPrompt["ArtStandardPrompt"] -.-> ReasoningEngine
@@ -275,10 +284,24 @@ The ART framework is organized into several distinct subsystems, each with a cle
         *   `UISystem`: A central service that instantiates and provides access to various `TypedSocket`s.
         *   Specialized Sockets (`ConversationSocket`, `ObservationSocket`, `LLMStreamSocket`): Extend `TypedSocket` to broadcast specific data types (`ConversationMessage`s, `Observation`s, `StreamEvent`s).
     *   **Interaction:** Core components like the `AgentCore` (for LLM streams), `ObservationManager`, and `ConversationManager` use these sockets (obtained from `UISystem`) to `notify` subscribers of updates.
-
-## Configuration: `ArtInstanceConfig`
-
-The entire framework is initialized and wired together based on the `ArtInstanceConfig` object passed to the `createArtInstance` function. This single configuration object dictates:
+ 
+8.  **A2A Delegation System:**
+    *   **Role:** Facilitates one agent delegating a task to another, more specialized agent.
+    *   **Components:**
+        *   `AgentDiscoveryService`: Programmatically filters and ranks potential delegate agents based on the task description.
+        *   `TaskDelegationService`: Handles the actual delegation process once an agent has been selected.
+    *   **Interaction:** The `PESAgent` uses the `AgentDiscoveryService` to find suitable candidates, which are then presented to the LLM. If the LLM decides to delegate, the `PESAgent` uses the `TaskDelegationService` to initiate the task on the chosen agent. See [A2A Task Delegation](./a2a-delegation.md) for more details.
+ 
+9.  **Authentication:**
+    *   **Role:** Manages authentication and authorization for the agent.
+    *   **Components:**
+        *   `AuthManager`: The central service for handling authentication.
+        *   `PKCEOAuthStrategy`: An implementation of the Authorization Code Flow with PKCE, suitable for browser-based applications.
+    *   **Interaction:** The `AuthManager` is configured with a specific strategy. When the agent needs to make an authenticated request, the `AuthManager` provides the necessary credentials. See [PKCEOAuthStrategy](./pkce-oauth-strategy.md) for more details.
+ 
+ ## Configuration: `ArtInstanceConfig`
+ 
+ The entire framework is initialized and wired together based on the `ArtInstanceConfig` object passed to the `createArtInstance` function. This single configuration object dictates:
 
 *   The choice of `StorageAdapter`.
 *   The setup of the `ProviderManager` (defining all available LLM providers).

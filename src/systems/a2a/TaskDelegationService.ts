@@ -2,9 +2,9 @@
 
 import { Logger } from '../../utils/logger';
 import { ARTError, ErrorCode } from '../../errors';
-import { A2ATask, A2ATaskStatus, A2AAgentInfo, A2ATaskResult, UpdateA2ATaskRequest, A2ATaskMetadata } from '../../types';
+import { A2ATask, A2ATaskStatus, A2AAgentInfo, A2ATaskResult, A2ATaskMetadata } from '../../types';
 import { IA2ATaskRepository } from '../../core/interfaces';
-import { AgentDiscoveryService } from './AgentDiscoveryService';
+// AgentDiscoveryService is no longer used here; discovery is handled by PESAgent.
 
 /**
  * Configuration options for the TaskDelegationService
@@ -17,7 +17,9 @@ export interface TaskDelegationConfig {
   /** Base delay between retry attempts in milliseconds */
   retryDelayMs?: number;
   /** Whether to use exponential backoff for retries */
-  useExponentialBackoff?: boolean;
+ useExponentialBackoff?: boolean;
+ /** The base callback URL for receiving A2A task updates. */
+ callbackUrl?: string;
 }
 
 /**
@@ -70,15 +72,12 @@ export interface TaskStatusResponse {
  */
 export class TaskDelegationService {
   private readonly config: Required<TaskDelegationConfig>;
-  private readonly discoveryService: AgentDiscoveryService;
   private readonly taskRepository: IA2ATaskRepository;
 
   constructor(
-    discoveryService: AgentDiscoveryService,
     taskRepository: IA2ATaskRepository,
     config: TaskDelegationConfig = {}
   ) {
-    this.discoveryService = discoveryService;
     this.taskRepository = taskRepository;
     
     // Set default configuration
@@ -86,7 +85,8 @@ export class TaskDelegationService {
       defaultTimeoutMs: config.defaultTimeoutMs ?? 30000, // 30 seconds
       maxRetries: config.maxRetries ?? 3,
       retryDelayMs: config.retryDelayMs ?? 1000, // 1 second
-      useExponentialBackoff: config.useExponentialBackoff ?? true
+      useExponentialBackoff: config.useExponentialBackoff ?? true,
+      callbackUrl: config.callbackUrl ?? 'http://localhost:3000/api/a2a/callback'
     };
 
     Logger.debug('TaskDelegationService initialized with config:', this.config);
@@ -136,18 +136,16 @@ export class TaskDelegationService {
     Logger.debug(`[${traceId}] Delegating task ${task.taskId} of type "${task.payload.taskType}"`);
 
     try {
-      // Step 1: Find suitable agent for the task
-      const targetAgent = await this.discoveryService.findAgentForTask(
-        task.payload.taskType, 
-        traceId
-      );
-
+      // Step 1: Validate that a target agent has been assigned to the task
+      const targetAgent = task.targetAgent;
       if (!targetAgent) {
-        Logger.warn(`[${traceId}] No suitable agent found for task ${task.taskId} (type: ${task.payload.taskType})`);
-        return null;
+        throw new ARTError(
+          `Task ${task.taskId} cannot be delegated without a targetAgent.`,
+          ErrorCode.VALIDATION_ERROR
+        );
       }
 
-      Logger.debug(`[${traceId}] Selected agent "${targetAgent.agentName}" for task ${task.taskId}`);
+      Logger.debug(`[${traceId}] Confirmed target agent "${targetAgent.agentName}" for task ${task.taskId}`);
 
       // Step 2: Submit task to the remote agent
       const submissionResponse = await this.submitTaskToAgent(task, targetAgent, traceId);
@@ -157,7 +155,7 @@ export class TaskDelegationService {
       const updatedTask: A2ATask = {
         ...task,
         status: submissionResponse.status,
-        targetAgent: targetAgent,
+        // targetAgent is already set
         metadata: {
           ...task.metadata,
           updatedAt: now,
@@ -169,7 +167,8 @@ export class TaskDelegationService {
       };
 
       // Step 4: Persist the updated task
-      await this.taskRepository.createTask(updatedTask);
+      // Note: The task should already exist in a PENDING state. We update it.
+      await this.taskRepository.updateTask(updatedTask.taskId, updatedTask);
       
       Logger.info(`[${traceId}] Successfully delegated task ${task.taskId} to agent "${targetAgent.agentName}" (status: ${submissionResponse.status})`);
       return updatedTask;
@@ -197,9 +196,10 @@ export class TaskDelegationService {
         Logger.error(`[${traceId}] Failed to persist task failure for ${task.taskId}:`, persistError);
       }
 
-      throw new ARTError(
+      // Re-throw the original error to be handled by the caller (e.g., PESAgent)
+      throw error instanceof ARTError ? error : new ARTError(
         `Failed to delegate task ${task.taskId}: ${error.message}`,
-        ErrorCode.UNKNOWN_ERROR,
+        ErrorCode.DELEGATION_FAILED,
         error
       );
     }
@@ -439,9 +439,8 @@ export class TaskDelegationService {
    * @returns The callback URL string
    */
   private generateCallbackUrl(taskId: string): string {
-    // In a real implementation, this would be configurable
-    // For now, return a placeholder URL
-    return `http://localhost:3000/api/a2a/callback/${taskId}`;
+    const baseUrl = this.config.callbackUrl.replace(/\/$/, ''); // Remove trailing slash
+    return `${baseUrl}/${taskId}`;
   }
 
   /**

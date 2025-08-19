@@ -1,12 +1,9 @@
-import { EventEmitter } from 'events';
-import { spawn, ChildProcess } from 'child_process';
 import { Logger } from '../../utils/logger';
 import { ARTError, ErrorCode } from '../../errors';
 import { AuthManager } from '../../systems/auth/AuthManager';
 
-/**
- * JSON-RPC 2.0 message types for MCP communication
- */
+// --- JSON-RPC and MCP Interfaces ---
+
 interface JsonRpcRequest {
   jsonrpc: '2.0';
   id: number | string;
@@ -33,26 +30,14 @@ interface JsonRpcNotification {
 
 type JsonRpcMessage = JsonRpcRequest | JsonRpcResponse | JsonRpcNotification;
 
-/**
- * MCP transport configuration
- */
 export interface McpTransportConfig {
-  type: 'stdio' | 'sse' | 'http';
-  // For stdio transport
-  command?: string;
-  args?: string[];
-  cwd?: string;
-  env?: Record<string, string>;
-  // For SSE/HTTP transport
-  url?: string;
+  type: 'streamable-http';
+  url: string;
   authStrategyId?: string;
   headers?: Record<string, string>;
   timeout?: number;
 }
 
-/**
- * MCP server capabilities
- */
 export interface McpServerCapabilities {
   resources?: {
     subscribe?: boolean;
@@ -68,9 +53,6 @@ export interface McpServerCapabilities {
   sampling?: Record<string, unknown>;
 }
 
-/**
- * MCP server information
- */
 export interface McpServerInfo {
   name: string;
   version: string;
@@ -78,18 +60,12 @@ export interface McpServerInfo {
   capabilities?: McpServerCapabilities;
 }
 
-/**
- * MCP tool definition (from MCP server)
- */
 export interface McpTool {
   name: string;
   description?: string;
-  inputSchema: any; // JSON Schema for tool input
+  inputSchema: any;
 }
 
-/**
- * MCP resource definition
- */
 export interface McpResource {
   uri: string;
   name?: string;
@@ -97,9 +73,6 @@ export interface McpResource {
   mimeType?: string;
 }
 
-/**
- * MCP prompt definition
- */
 export interface McpPrompt {
   name: string;
   description?: string;
@@ -111,37 +84,34 @@ export interface McpPrompt {
 }
 
 /**
- * MCP client implementation that communicates with MCP servers using JSON-RPC 2.0
- * over stdio or SSE/HTTP transports as specified in the Model Context Protocol.
+ * MCP client implementation for the browser, using the Streamable HTTP transport.
  */
-export class McpClient extends EventEmitter {
+export class McpClient {
   private config: McpTransportConfig;
   private authManager?: AuthManager;
-  
+
+  // Event handling
+  private listeners: Map<string, ((...args: any[]) => void)[]> = new Map();
+
   // Connection state
   private connected: boolean = false;
   private nextRequestId: number = 1;
   private pendingRequests: Map<string | number, {
     resolve: (value: any) => void;
     reject: (error: Error) => void;
-    timeout: NodeJS.Timeout;
+    timeout: any;
   }> = new Map();
-  
-  // Transport-specific state
-  private childProcess?: ChildProcess;
-  private eventSource?: EventSource;
-  private httpUrl?: string;
+
+  // Streamable HTTP state
+  private requestWriter?: WritableStreamDefaultWriter<Uint8Array>;
+  private responseReader?: ReadableStreamDefaultReader<Uint8Array>;
   private serverInfo?: McpServerInfo;
 
   constructor(config: McpTransportConfig, authManager?: AuthManager) {
-    super();
     this.config = config;
     this.authManager = authManager;
   }
 
-  /**
-   * Connects to the MCP server using the configured transport
-   */
   async connect(): Promise<void> {
     if (this.connected) {
       throw new ARTError('MCP client is already connected', ErrorCode.ALREADY_CONNECTED);
@@ -150,21 +120,7 @@ export class McpClient extends EventEmitter {
     Logger.info(`McpClient: Connecting using ${this.config.type} transport...`);
 
     try {
-      switch (this.config.type) {
-        case 'stdio':
-          await this._connectStdio();
-          break;
-        case 'sse':
-          await this._connectSSE();
-          break;
-        case 'http':
-          await this._connectHTTP();
-          break;
-        default:
-          throw new ARTError(`Unsupported transport type: ${this.config.type}`, ErrorCode.UNSUPPORTED_TRANSPORT);
-      }
-
-      // Perform MCP initialization handshake
+      await this._connectStreamableHttp();
       await this._initialize();
       
       this.connected = true;
@@ -177,32 +133,31 @@ export class McpClient extends EventEmitter {
     }
   }
 
-  /**
-   * Disconnects from the MCP server
-   */
   async disconnect(): Promise<void> {
-    if (!this.connected) {
+    if (!this.connected && !this.requestWriter) {
       return;
     }
 
     Logger.info('McpClient: Disconnecting...');
 
-    // Clear pending requests
     for (const [, pending] of this.pendingRequests) {
       clearTimeout(pending.timeout);
       pending.reject(new Error('Connection closed'));
     }
     this.pendingRequests.clear();
 
-    // Close transport
-    if (this.childProcess) {
-      this.childProcess.kill('SIGTERM');
-      this.childProcess = undefined;
+    if (this.requestWriter) {
+      try {
+        await this.requestWriter.close();
+      } catch (e) { /* Ignore */ }
+      this.requestWriter = undefined;
     }
-    
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = undefined;
+
+    if (this.responseReader) {
+        try {
+            await this.responseReader.cancel();
+        } catch(e) { /* Ignore */ }
+        this.responseReader = undefined;
     }
 
     this.connected = false;
@@ -211,252 +166,155 @@ export class McpClient extends EventEmitter {
     Logger.info('McpClient: Disconnected');
   }
 
-  /**
-   * Sends a ping to the MCP server
-   */
   async ping(): Promise<void> {
     await this._sendRequest('ping', {});
     Logger.debug('McpClient: Ping successful');
   }
 
-  /**
-   * Lists available tools from the MCP server
-   */
   async listTools(): Promise<McpTool[]> {
     const result = await this._sendRequest('tools/list', {});
     return result.tools || [];
   }
 
-  /**
-   * Calls a tool on the MCP server
-   */
-  async callTool(name: string, arguments_: any): Promise<any> {
-    const result = await this._sendRequest('tools/call', {
-      name,
-      arguments: arguments_
-    });
-    return result;
+  async callTool(name: string, args: any): Promise<any> {
+    return this._sendRequest('tools/call', { name, arguments: args });
   }
 
-  /**
-   * Lists available resources from the MCP server
-   */
   async listResources(): Promise<McpResource[]> {
     const result = await this._sendRequest('resources/list', {});
     return result.resources || [];
   }
 
-  /**
-   * Reads a resource from the MCP server
-   */
   async readResource(uri: string): Promise<any> {
-    const result = await this._sendRequest('resources/read', { uri });
-    return result;
+    return this._sendRequest('resources/read', { uri });
   }
 
-  /**
-   * Lists available prompts from the MCP server
-   */
   async listPrompts(): Promise<McpPrompt[]> {
     const result = await this._sendRequest('prompts/list', {});
     return result.prompts || [];
   }
 
-  /**
-   * Gets a prompt from the MCP server
-   */
-  async getPrompt(name: string, arguments_?: Record<string, any>): Promise<any> {
-    const result = await this._sendRequest('prompts/get', {
-      name,
-      arguments: arguments_
-    });
-    return result;
+  async getPrompt(name: string, args?: Record<string, any>): Promise<any> {
+    return this._sendRequest('prompts/get', { name, arguments: args });
   }
 
-  /**
-   * Gets server information
-   */
   getServerInfo(): McpServerInfo | undefined {
     return this.serverInfo;
   }
 
-  /**
-   * Checks if the client is connected
-   */
   isConnected(): boolean {
     return this.connected;
   }
 
-  // ========== Private Methods ==========
-
-  /**
-   * Connects using stdio transport
-   * @private
-   */
-  private async _connectStdio(): Promise<void> {
-    // TODO: The McpManager currently does not support dynamic management (add/remove)
-    // of local stdio-based MCP servers. To enable this, the following is needed:
-    // 1.  Update McpManager's configuration to allow defining stdio-based servers, not just URL-based ones.
-    // 2.  Implement logic in McpManager to dynamically spawn and kill these subprocesses using McpClient.
-    // 3.  Ensure that the UI can reflect the state of these local servers and provide controls to manage them.
-    if (!this.config.command) {
-      throw new ARTError('Command is required for stdio transport', ErrorCode.MISSING_CONFIG);
+  // --- Event Emitter Implementation ---
+  
+  public on(event: string, listener: (...args: any[]) => void): this {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, []);
     }
-
-    Logger.debug(`McpClient: Spawning process: ${this.config.command} ${this.config.args?.join(' ') || ''}`);
-
-    this.childProcess = spawn(this.config.command, this.config.args || [], {
-      cwd: this.config.cwd,
-      env: { ...process.env, ...this.config.env },
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
-
-    // Handle process events
-    this.childProcess.on('error', (error) => {
-      Logger.error(`McpClient: Process error: ${error.message}`);
-      this.emit('error', error);
-    });
-
-    this.childProcess.on('close', (code) => {
-      Logger.debug(`McpClient: Process closed with code ${code}`);
-      this.connected = false;
-      this.emit('disconnected');
-    });
-
-    // Handle stderr for logging
-    this.childProcess.stderr?.on('data', (data) => {
-      Logger.debug(`McpClient: Process stderr: ${data.toString()}`);
-    });
-
-    // Handle stdout for JSON-RPC messages
-    let buffer = '';
-    this.childProcess.stdout?.on('data', (data) => {
-      buffer += data.toString();
-      
-      // Process complete lines
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || ''; // Keep incomplete line in buffer
-      
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed) {
-          try {
-            const message = JSON.parse(trimmed) as JsonRpcMessage;
-            this._handleMessage(message);
-          } catch (error) {
-            Logger.error(`McpClient: Failed to parse JSON-RPC message: ${trimmed}`);
-          }
-        }
-      }
-    });
-
-    // Wait for process to be ready
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Process startup timeout'));
-      }, 5000);
-
-      this.childProcess!.once('spawn', () => {
-        clearTimeout(timeout);
-        resolve();
-      });
-
-      this.childProcess!.once('error', (error) => {
-        clearTimeout(timeout);
-        reject(error);
-      });
-    });
+    this.listeners.get(event)!.push(listener);
+    return this;
   }
 
-  /**
-   * Connects using SSE transport
-   * @private
-   */
-  private async _connectSSE(): Promise<void> {
-    if (!this.config.url) {
-      throw new ARTError('URL is required for SSE transport', ErrorCode.MISSING_CONFIG);
+  public off(event: string, listener: (...args: any[]) => void): this {
+    if (this.listeners.has(event)) {
+      const eventListeners = this.listeners.get(event)!.filter(l => l !== listener);
+      this.listeners.set(event, eventListeners);
     }
+    return this;
+  }
 
-    const headers: Record<string, string> = { ...this.config.headers };
+  private emit(event: string, ...args: any[]): void {
+    if (this.listeners.has(event)) {
+      this.listeners.get(event)!.forEach(listener => listener(...args));
+    }
+  }
 
-    // Add authentication headers if needed
+  // ========== Private Methods ==========
+
+  private async _connectStreamableHttp(): Promise<void> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json-rpc+stream',
+      ...this.config.headers,
+    };
+
     if (this.config.authStrategyId && this.authManager) {
       const authHeaders = await this.authManager.getHeaders(this.config.authStrategyId);
       Object.assign(headers, authHeaders);
     }
 
-    // Create EventSource for receiving messages
-    // Note: EventSource doesn't support custom headers in standard implementation
-    // Authentication would need to be handled via URL parameters or cookies
-    this.eventSource = new EventSource(this.config.url);
+    const requestStream = new TransformStream();
+    this.requestWriter = requestStream.writable.getWriter();
 
-    this.httpUrl = this.config.url.replace('/sse', '/messages'); // Assume messages endpoint
+    try {
+      const response = await fetch(this.config.url, {
+        method: 'POST',
+        headers,
+        body: requestStream.readable,
+        // @ts-expect-error - duplex is a standard but not yet fully typed option in all environments
+        duplex: 'half',
+      });
 
-    this.eventSource.onopen = () => {
-      Logger.debug('McpClient: SSE connection opened');
-    };
-
-    this.eventSource.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data) as JsonRpcMessage;
-        this._handleMessage(message);
-      } catch (error) {
-        Logger.error(`McpClient: Failed to parse SSE message: ${event.data}`);
+      if (!response.ok || !response.body) {
+        throw new ARTError(`Streamable HTTP connection failed: ${response.status} ${response.statusText}`, ErrorCode.NETWORK_ERROR);
       }
-    };
 
-    this.eventSource.onerror = (error) => {
-      Logger.error('McpClient: SSE error:', error);
-      this.emit('error', new Error('SSE connection error'));
-    };
+      this.responseReader = response.body.getReader();
+      this._listenForMessages(this.responseReader);
 
-    // Wait for connection to be established
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('SSE connection timeout'));
-      }, 5000);
-
-      this.eventSource!.addEventListener('open', () => {
-        clearTimeout(timeout);
-        resolve();
-      });
-
-      this.eventSource!.addEventListener('error', () => {
-        clearTimeout(timeout);
-        reject(new Error('SSE connection failed'));
-      });
-    });
+    } catch (error) {
+      Logger.error('McpClient: fetch error during connection:', error);
+      throw new ARTError('Failed to establish Streamable HTTP connection.', ErrorCode.NETWORK_ERROR, error as Error);
+    }
   }
 
-  /**
-   * Connects using HTTP transport (for future use)
-   * @private
-   */
-  private async _connectHTTP(): Promise<void> {
-    // HTTP transport would be implemented here for bidirectional communication
-    // This is a placeholder for future HTTP transport implementation
-    throw new ARTError('HTTP transport not yet implemented', ErrorCode.NOT_IMPLEMENTED);
+  private async _listenForMessages(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<void> {
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (this.connected) {
+        const { done, value } = await reader.read();
+        if (done) {
+          Logger.info('McpClient: Response stream closed.');
+          this.disconnect();
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.trim()) {
+            try {
+              const message = JSON.parse(line.trim()) as JsonRpcMessage;
+              this._handleMessage(message);
+            } catch (error) {
+              Logger.error(`McpClient: Failed to parse JSON-RPC message: ${line}`);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      Logger.error('McpClient: Error reading from response stream:', error);
+      this.emit('error', error);
+      this.disconnect();
+    }
   }
 
-  /**
-   * Performs MCP initialization handshake
-   * @private
-   */
   private async _initialize(): Promise<void> {
     Logger.debug('McpClient: Starting MCP initialization...');
-
-    // Send initialization request
     const result = await this._sendRequest('initialize', {
-      protocolVersion: '2024-11-05',
+      protocolVersion: '2025-03-26',
       capabilities: {
         resources: { subscribe: true },
         tools: {},
         prompts: {},
-        logging: {}
       },
       clientInfo: {
         name: 'ART Framework MCP Client',
-        version: '1.0.0'
+        version: '1.0.0' // Replace with dynamic version if available
       }
     });
 
@@ -468,27 +326,16 @@ export class McpClient extends EventEmitter {
     };
 
     Logger.debug(`McpClient: Initialized with server "${this.serverInfo.name}" v${this.serverInfo.version}`);
-
-    // Send initialized notification to complete handshake
     await this._sendNotification('notifications/initialized', {});
   }
 
-  /**
-   * Sends a JSON-RPC request and waits for response
-   * @private
-   */
   private async _sendRequest(method: string, params: any, timeout: number = 30000): Promise<any> {
     if (!this.connected && method !== 'initialize') {
       throw new ARTError('MCP client is not connected', ErrorCode.NOT_CONNECTED);
     }
 
     const id = this.nextRequestId++;
-    const request: JsonRpcRequest = {
-      jsonrpc: '2.0',
-      id,
-      method,
-      params
-    };
+    const request: JsonRpcRequest = { jsonrpc: '2.0', id, method, params };
 
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -506,80 +353,33 @@ export class McpClient extends EventEmitter {
     });
   }
 
-  /**
-   * Sends a JSON-RPC notification (no response expected)
-   * @private
-   */
   private async _sendNotification(method: string, params: any): Promise<void> {
-    const notification: JsonRpcNotification = {
-      jsonrpc: '2.0',
-      method,
-      params
-    };
-
+    const notification: JsonRpcNotification = { jsonrpc: '2.0', method, params };
     await this._sendMessage(notification);
   }
 
-  /**
-   * Sends a JSON-RPC message over the configured transport
-   * @private
-   */
   private async _sendMessage(message: JsonRpcMessage): Promise<void> {
-    const serialized = JSON.stringify(message);
-    Logger.debug(`McpClient: Sending message: ${'method' in message ? message.method : 'response'}`);
+    if (!this.requestWriter) {
+      throw new ARTError('Request stream is not available.', ErrorCode.NOT_CONNECTED);
+    }
 
-    switch (this.config.type) {
-      case 'stdio':
-        if (!this.childProcess?.stdin) {
-          throw new ARTError('Child process stdin not available', ErrorCode.NO_STDIN);
-        }
-        this.childProcess.stdin.write(serialized + '\n');
-        break;
+    const serialized = JSON.stringify(message) + '\n';
+    const encoder = new TextEncoder();
+    const chunk = encoder.encode(serialized);
 
-      case 'sse': {
-        if (!this.httpUrl) {
-          throw new ARTError('HTTP URL not configured for SSE transport', ErrorCode.NO_HTTP_URL);
-        }
-        
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-          ...this.config.headers
-        };
-
-        // Add authentication headers if needed
-        if (this.config.authStrategyId && this.authManager) {
-          const authHeaders = await this.authManager.getHeaders(this.config.authStrategyId);
-          Object.assign(headers, authHeaders);
-        }
-
-        const response = await fetch(this.httpUrl, {
-          method: 'POST',
-          headers,
-          body: serialized
-        });
-
-        if (!response.ok) {
-          throw new ARTError(`HTTP request failed: ${response.status} ${response.statusText}`, ErrorCode.HTTP_ERROR);
-        }
-        break;
-      }
-
-      case 'http':
-        throw new ARTError('HTTP transport not yet implemented', ErrorCode.NOT_IMPLEMENTED);
-
-      default:
-        throw new ARTError(`Unsupported transport: ${this.config.type}`, ErrorCode.UNSUPPORTED_TRANSPORT);
+    try {
+      await this.requestWriter.write(chunk);
+      Logger.debug(`McpClient: Sending message: ${'method' in message ? message.method : 'response'}`);
+    } catch (error) {
+      Logger.error('McpClient: Failed to write to request stream:', error);
+      this.disconnect();
+      throw new ARTError('Failed to send message.', ErrorCode.NETWORK_ERROR, error as Error);
     }
   }
 
-  /**
-   * Handles incoming JSON-RPC messages
-   * @private
-   */
   private _handleMessage(message: JsonRpcMessage): void {
     Logger.debug(`McpClient: Received message: ${JSON.stringify(message).substring(0, 200)}...`);
 
-    // Handle responses
     if ('id' in message && ('result' in message || 'error' in message)) {
       const response = message as JsonRpcResponse;
       const pending = this.pendingRequests.get(response.id);
@@ -589,10 +389,7 @@ export class McpClient extends EventEmitter {
         this.pendingRequests.delete(response.id);
         
         if (response.error) {
-          pending.reject(new ARTError(
-            `MCP server error: ${response.error.message}`,
-            ErrorCode.EXTERNAL_SERVICE_ERROR
-          ));
+          pending.reject(new ARTError(`MCP server error: ${response.error.message}`, ErrorCode.EXTERNAL_SERVICE_ERROR));
         } else {
           pending.resolve(response.result);
         }
@@ -600,12 +397,10 @@ export class McpClient extends EventEmitter {
       return;
     }
 
-    // Handle notifications
     if ('method' in message && !('id' in message)) {
       const notification = message as JsonRpcNotification;
       this.emit('notification', notification.method, notification.params);
       
-      // Handle specific notification types
       switch (notification.method) {
         case 'notifications/message':
           this.emit('message', notification.params);
@@ -623,10 +418,9 @@ export class McpClient extends EventEmitter {
       return;
     }
 
-    // Handle requests (for sampling, etc.)
     if ('method' in message && 'id' in message) {
       const request = message as JsonRpcRequest;
       this.emit('request', request.method, request.params, request.id);
     }
   }
-} 
+}

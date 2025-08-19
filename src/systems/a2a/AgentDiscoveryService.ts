@@ -65,8 +65,8 @@ export interface DiscoveryResponse {
  * Configuration for the AgentDiscoveryService
  */
 export interface AgentDiscoveryConfig {
-  /** Base URL for the discovery endpoint */
-  discoveryEndpoint: string;
+  /** Base URL for the discovery endpoint. If not provided, a default will be used. */
+  discoveryEndpoint?: string;
   /** Timeout for discovery requests in milliseconds */
   timeoutMs?: number;
   /** Whether to cache discovered agents */
@@ -83,8 +83,9 @@ export class AgentDiscoveryService {
   private readonly config: Required<AgentDiscoveryConfig>;
   private agentCache: Map<string, { agents: A2AAgentInfo[]; timestamp: number }> = new Map();
 
-  constructor(config: AgentDiscoveryConfig) {
+  constructor(config?: Partial<AgentDiscoveryConfig>) {
     this.config = {
+      discoveryEndpoint: 'https://api.zyntopia.com/a2a/discover', // Default endpoint
       timeoutMs: 10000, // 10 seconds default
       enableCaching: true,
       cacheTtlMs: 300000, // 5 minutes default
@@ -181,19 +182,28 @@ export class AgentDiscoveryService {
   }
 
   /**
-   * Finds the best A2A agent for a specific task type based on capabilities.
-   * Uses flexible capability matching without hardcoded mappings to support any agent type.
+   * Finds the top K A2A agents for a specific task type, ranked by suitability.
+   * This method acts as a pre-filter, returning a list of the most promising candidates
+   * for an LLM to make the final selection from.
    * @param taskType - The type of task (e.g., 'analysis', 'research', 'generation')
-   * @param traceId - Optional trace ID for request tracking
-   * @returns Promise resolving to the best matching agent or null if none found
+   * @param topK - The maximum number of agents to return.
+   * @param traceId - Optional trace ID for request tracking.
+   * @returns Promise resolving to a ranked array of matching agents.
    */
-  async findAgentForTask(taskType: string, traceId?: string): Promise<A2AAgentInfo | null> {
+  async findTopAgentsForTask(taskType: string, topK: number = 3, traceId?: string): Promise<A2AAgentInfo[]> {
     const agents = await this.discoverAgents(traceId);
     
     if (agents.length === 0) {
       Logger.warn(`[${traceId}] No A2A agents available for task type: ${taskType}`);
-      return null;
+      return [];
     }
+
+    // TODO: This scoring algorithm is a foundational heuristic. Revisit and enhance this
+    // frequently. Future optimizations could include:
+    // 1. LLM-based semantic scoring for more nuanced understanding.
+    // 2. Incorporating a "specialization score" to reward agents with fewer, more focused capabilities.
+    // 3. Factoring in agent metadata (name, description, tags) for contextual relevance.
+    // 4. Caching individual agent scores for performance.
 
     // Score agents based on capability relevance to the task type
     const scoredAgents = agents.map(agent => {
@@ -238,17 +248,23 @@ export class AgentDiscoveryService {
       };
     });
 
-    // Sort by score (highest first) and get the best match
-    scoredAgents.sort((a, b) => b.score - a.score);
-    const bestMatch = scoredAgents[0];
+    // Filter out agents with no score, sort by score (highest first), and take the top K
+    const topMatches = scoredAgents
+      .filter(a => a.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topK);
 
-    if (bestMatch.score === 0) {
-      Logger.warn(`[${traceId}] No A2A agent found with capabilities for task type: ${taskType}`);
-      return null;
+    if (topMatches.length === 0) {
+      Logger.warn(`[${traceId}] No suitable A2A agent found for task type: ${taskType}`);
+      return [];
     }
 
-    Logger.debug(`[${traceId}] Selected agent "${bestMatch.agent.agentName}" for task type "${taskType}" (score: ${bestMatch.score}, capabilities: ${bestMatch.matchedCapabilities.join(', ')})`);
-    return bestMatch.agent;
+    Logger.debug(`[${traceId}] Found ${topMatches.length} candidate agents for task type "${taskType}":`);
+    topMatches.forEach(match => {
+      Logger.debug(`  - ${match.agent.agentName} (Score: ${match.score}, Matched: ${match.matchedCapabilities.join(', ')})`);
+    });
+
+    return topMatches.map(match => match.agent);
   }
 
   /**

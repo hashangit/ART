@@ -20,6 +20,9 @@ export interface OAuthConfig {
   tokenRequestHeaders?: Record<string, string>;
   /** Custom timeout for token requests in milliseconds (default: 30000) */
   tokenTimeoutMs?: number;
+/**
+ * @deprecated This strategy is not recommended for browser-based applications as it uses the insecure client_credentials grant type. Please use PKCEOAuthStrategy instead.
+ */
   /** Buffer time before token expiry to trigger refresh (default: 300000 = 5 minutes) */
   tokenRefreshBufferMs?: number;
 }

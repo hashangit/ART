@@ -671,6 +671,13 @@ export interface ArtInstanceConfig {
     /** Pre-configured authentication strategies to register at startup. */
     strategies?: Array<{ id: string; strategy: any }>;
   };
+  /** Optional: Configuration for A2A services. */
+  a2aConfig?: {
+    /** The endpoint for discovering A2A agents. */
+    discoveryEndpoint?: string;
+    /** The callback URL for receiving A2A task updates. */
+    callbackUrl?: string;
+  };
   // Add other top-level configuration properties as needed, e.g.:
   // defaultThreadConfig?: Partial<ThreadConfig>;
 }
