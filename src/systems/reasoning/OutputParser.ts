@@ -35,22 +35,10 @@ export class OutputParser implements IOutputParser {
    * This method performs the following steps:
    * 1. Uses `XmlMatcher` to identify and extract content within `<think>...</think>` tags.
    *    This extracted content is aggregated into the `thoughts` field of the result.
-   * 2. The remaining content (outside of `<think>` tags) is then parsed for sections
-   *    explicitly marked with "Intent:", "Plan:", and "Tool Calls:".
-   * 3. It attempts to find and parse a JSON array within the "Tool Calls:" section, handling
-   *    potential markdown fences (e.g., \`\`\`json ... \`\`\`) and validating the structure using Zod.
-   *
-   * @param output - The raw string response from the planning LLM call, which may include
-   *                 text, `<think>` tags, and sections for Intent, Plan, and Tool Calls.
-   * @returns A promise resolving to an object containing:
-   *          - `thoughts?`: An optional string aggregating content from all `<think>` tags, separated by "\\n\\n---\\n\\n".
-   *          - `intent?`: An optional string for the parsed intent.
-   *          - `plan?`: An optional string for the parsed plan.
-   *          - `toolCalls?`: An optional array of `ParsedToolCall` objects. This will be an empty array `[]`
-   *                        if the "Tool Calls:" section is present in the non-thinking content but is empty,
-   *                        or if the JSON is invalid/fails validation. It remains `undefined` if the
-   *                        "Tool Calls:" section itself is missing from the non-thinking content.
-   *          Fields will be `undefined` if the corresponding section is not found or cannot be parsed correctly.
+   * 2. Attempts a JSON-first parse (Option 2): tries to parse a single JSON object containing
+   *    { intent, plan, toolCalls, payload? }. If successful, returns immediately.
+   * 3. Falls back to the section-based parser (Option 1): parses Intent:, Plan:, and Tool Calls:
+   *    sections from the remaining content. Includes tolerant fallbacks for common wrappers.
    */
   async parsePlanningOutput(output: string): Promise<{
     intent?: string;
@@ -90,6 +78,51 @@ export class OutputParser implements IOutputParser {
    // Now parse Intent, Plan, Tool Calls from the non-thinking content
    processedOutput = nonThinkingContent;
 
+   // --- Option 2: JSON-first parsing for a single object ---
+   const tryParsePlanningJson = (raw: string): { intent?: string; plan?: string; toolCalls?: ParsedToolCall[] } | null => {
+     if (!raw) return null;
+     let s = raw.trim();
+     // Remove code fences if present
+     s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+     // Remove a leading 'json' token on its own line
+     s = s.replace(/^json\s*/i, '').trim();
+     // If it doesn't start with {, try to slice between first { and last }
+     if (!s.startsWith('{') && s.includes('{') && s.includes('}')) {
+       const first = s.indexOf('{');
+       const last = s.lastIndexOf('}');
+       if (first >= 0 && last > first) {
+         s = s.slice(first, last + 1);
+       }
+     }
+     try {
+       const obj: any = JSON.parse(s);
+       if (!obj || (typeof obj !== 'object')) return null;
+       const out: { intent?: string; plan?: string; toolCalls?: ParsedToolCall[] } = {};
+       if (typeof obj.intent === 'string') out.intent = obj.intent;
+       if (Array.isArray(obj.plan)) out.plan = obj.plan.join('\n');
+       else if (typeof obj.plan === 'string') out.plan = obj.plan;
+       if (Array.isArray(obj.toolCalls)) {
+         const validation = toolCallsSchema.safeParse(obj.toolCalls);
+         if (validation.success) out.toolCalls = validation.data as ParsedToolCall[];
+         else out.toolCalls = [];
+       }
+       // Accept if at least one of the expected fields exists
+       if (out.intent || out.plan || out.toolCalls) return out;
+       return null;
+     } catch {
+       return null;
+     }
+   };
+
+   const jsonParsed = tryParsePlanningJson(processedOutput);
+   if (jsonParsed) {
+     result.intent = jsonParsed.intent;
+     result.plan = jsonParsed.plan;
+     result.toolCalls = jsonParsed.toolCalls;
+     return result;
+   }
+
+   // --- Fallback: section-based parsing (Option 1) ---
    // Robustly extract sections from the processedOutput (non-thinking part)
    const intentMatch = processedOutput.match(/Intent:\s*([\s\S]*?)(Plan:|Tool Calls:|$)/i);
    result.intent = intentMatch?.[1]?.trim();
@@ -158,74 +191,6 @@ export class OutputParser implements IOutputParser {
              result.toolCalls = [];
         }
         // If the "Tool Calls:" section doesn't exist at all, toolCalls remains undefined
-    }
-
-    // Fallback extraction: recover tool calls embedded in other sections or wrappers
-    if (result.toolCalls === undefined || (Array.isArray(result.toolCalls) && result.toolCalls.length === 0)) {
-      const tryParseArray = (raw: string): any | null => {
-        if (!raw) return null;
-        let s = raw.trim();
-        // Strip code fences if present
-        s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-        // Strip json(...) wrapper
-        const jsonArrayWrapper = /^json\(\s*([\s\S]*)\s*\)$/i;
-        const wrapperMatch = s.match(jsonArrayWrapper);
-        if (wrapperMatch) {
-          s = wrapperMatch[1].trim();
-        }
-        // If single object, coerce into array
-        const looksLikeObject = /^\{[\s\S]*\}$/.test(s);
-        if (looksLikeObject) {
-          s = `[${s}]`;
-        }
-        try {
-          s = s.replace(/,\s*(?=]$)/, '');
-          return JSON.parse(s);
-        } catch {
-          return null;
-        }
-      };
-
-      let parsedJson: any = null;
-      // 1) json([...]) anywhere
-      const jsonArrayWrapperAnywhere = /json\(\s*(\[[\s\S]*?\])\s*\)/i;
-      const w1 = processedOutput.match(jsonArrayWrapperAnywhere);
-      if (w1 && w1[1]) {
-        parsedJson = tryParseArray(w1[1]);
-      }
-      // 2) Any array containing toolName or callId
-      if (parsedJson === null) {
-        const anyArrayWithToolKeys = /(\[[\s\S]*?("toolName"|"callId")[\s\S]*?\])/i;
-        const w2 = processedOutput.match(anyArrayWithToolKeys);
-        if (w2 && w2[1]) {
-          parsedJson = tryParseArray(w2[1]);
-        }
-      }
-      // 3) json({ ... }) or a lone object with tool keys → coerce to array
-      if (parsedJson === null) {
-        const jsonObjectWrapper = /json\(\s*(\{[\s\S]*?("toolName"|"callId")[\s\S]*?\})\s*\)/i;
-        const w3 = processedOutput.match(jsonObjectWrapper);
-        if (w3 && w3[1]) {
-          parsedJson = tryParseArray(w3[1]);
-        } else {
-          const loneObject = /(\{[\s\S]*?("toolName"|"callId")[\s\S]*?\})/i;
-          const w4 = processedOutput.match(loneObject);
-          if (w4 && w4[1]) {
-            parsedJson = tryParseArray(w4[1]);
-          }
-        }
-      }
-
-      if (parsedJson !== null) {
-        const validationResult = toolCallsSchema.safeParse(parsedJson);
-        if (validationResult.success) {
-          result.toolCalls = validationResult.data as ParsedToolCall[];
-          Logger.debug(`OutputParser: Parsed Tool Calls via fallback extraction.`);
-        } else {
-          Logger.warn(`OutputParser: Fallback Tool Calls validation failed. Errors: ${validationResult.error.toString()}`);
-          result.toolCalls = [];
-        }
-      }
     }
 
      // Handle cases where sections might be missing entirely from the non-thinking content

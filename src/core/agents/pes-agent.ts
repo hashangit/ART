@@ -416,36 +416,38 @@ ${
 Agent Delegation:
 ${a2aPromptSection}
 
---- Planning Instructions ---
-1) Analyze the query and history using the custom guidance above.
-2) Decide whether tools are needed and which.
-3) Produce intent, plan, and tool calls.
+--- Primary Output Mode (JSON-Only) ---
+Output EXACTLY ONE JSON object and nothing else. No prose, no XML, no markdown fences. The object MUST follow this schema:
+{
+  "intent": string,          // short summary of the user's goal
+  "plan": string | string[], // steps to solve the task
+  "toolCalls": [             // empty array if no tools are needed
+    { "callId": string, "toolName": string, "arguments": object }
+  ]
+}
 
---- Output Contract (STRICT) ---
-You MUST output the following sections exactly:
+Requirements for toolCalls:
+- arguments MUST be a JSON object (not a string) that matches the tool's inputSchema.
+- toolName MUST match one of the Available Capabilities by schema name.
+- If no tools are required, set toolCalls to [].
+
+Example (JSON only):
+{
+  "intent": "Compute 5 * 6",
+  "plan": ["Use calculator to multiply 5 and 6", "Return result"],
+  "toolCalls": [
+    { "callId": "calc_1", "toolName": "calculator", "arguments": { "expression": "5 * 6" } }
+  ]
+}
+
+--- Fallback Output Mode (Sections) ---
+If you cannot produce the JSON object above, then output these sections instead:
 
 Intent: [One or two sentences]
 
 Plan: [Bullet or numbered steps]
 
 Tool Calls: [A JSON array only. Each item MUST be of the exact form {"callId": "unique_id", "toolName": "tool_schema_name", "arguments": { /* JSON object matching the tool's inputSchema */ }}. If no tools are needed, return []].
-
-Rules:
-- The Tool Calls array MUST be valid JSON, no markdown fences.
-- arguments MUST be a JSON object (not a string).
-- toolName MUST match one of the available tools by schema name.
-- If no tools are required, return an empty array [].
-- Do not include any other sections or annotations in Tool Calls.
-
-Valid Example (single call):
-Intent: Compute the product.
-Plan: 1) Use calculator to multiply 5 and 6. 2) Return result.
-Tool Calls: [{"callId": "calc_1", "toolName": "calculator", "arguments": {"expression": "5 * 6"}}]
-
-Valid Example (no tools):
-Intent: Greet the user.
-Plan: 1) Respond directly.
-Tool Calls: []
 
 Invalid Examples (do NOT do these):
 - Wrapping with markdown code fences or any fences
