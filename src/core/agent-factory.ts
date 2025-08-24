@@ -49,6 +49,7 @@ import { ToolRegistry as ToolRegistryImpl } from '../systems/tool/ToolRegistry';
 import { ToolSystem as ToolSystemImpl } from '../systems/tool/ToolSystem'; // Correct path
 // Reasoning System
 import { PromptManager as PromptManagerImpl } from '../systems/reasoning/PromptManager'; // Correct path
+import { SystemPromptResolver as SystemPromptResolverImpl } from '../systems/reasoning/SystemPromptResolver';
 import { ReasoningEngine as ReasoningEngineImpl } from '../systems/reasoning/ReasoningEngine'; // Correct path
 import { OutputParser as OutputParserImpl } from '../systems/reasoning/OutputParser'; // Correct path
 // Provider Adapters are now managed by ProviderManagerImpl
@@ -140,6 +141,7 @@ export class AgentFactory {
     private reasoningEngine: ReasoningEngine | null = null;
     private promptManager: PromptManager | null = null;
     private outputParser: OutputParser | null = null;
+    private systemPromptResolver: any | null = null;
     private toolSystem: ToolSystem | null = null;
     private authManager: AuthManager | null = null;
     private mcpManager: McpManager | null = null;
@@ -228,6 +230,9 @@ export class AgentFactory {
         // --- Initialize Reasoning Components ---
         this.reasoningEngine = new ReasoningEngineImpl(this.providerManager!); // Pass ProviderManager
         this.promptManager = new PromptManagerImpl(); // Basic implementation for now
+        // Initialize SystemPromptResolver with registry from config if provided
+        const registry = (this.config as any).systemPrompts as import('../types').SystemPromptsRegistry | undefined;
+        this.systemPromptResolver = new SystemPromptResolverImpl(this.promptManager as any, registry);
         this.outputParser = new OutputParserImpl(); // Basic implementation for now
 
         // --- Initialize Tool System ---
@@ -303,6 +308,7 @@ export class AgentFactory {
             observationManager: this.observationManager,
             toolSystem: this.toolSystem,
             uiSystem: this.uiSystem!, // Include the UI System (non-null assertion)
+            systemPromptResolver: this.systemPromptResolver,
             a2aTaskRepository: this.a2aTaskRepository, // Include A2A task repository
             authManager: this.authManager, // Include Auth Manager (may be null if not configured)
             mcpManager: this.mcpManager, // Include MCP Manager (may be null if not configured)

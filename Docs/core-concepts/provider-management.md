@@ -131,7 +131,7 @@ The `ReasoningEngine` is the primary consumer of the `ProviderManager`.
 ```typescript
 // Simplified flow in ReasoningEngine.call()
 
-async call(prompt: FormattedPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
+async call(prompt: ArtStandardPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
     const providerConfig = options.providerConfig; // Must be present
     if (!providerConfig) {
         throw new Error("CallOptions must include 'providerConfig'.");
@@ -141,7 +141,6 @@ async call(prompt: FormattedPrompt, options: CallOptions): Promise<AsyncIterable
     try {
         accessor = await this.providerManager.getAdapter(providerConfig);
     } catch (error) {
-        // Handle or re-throw error from getAdapter
         throw error;
     }
 
@@ -159,7 +158,7 @@ async call(prompt: FormattedPrompt, options: CallOptions): Promise<AsyncIterable
             }
         })();
     } catch (error) {
-        accessor.release(); // Ensure release even if initial call to adapter fails
+        accessor.release();
         throw error;
     }
 }

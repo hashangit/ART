@@ -51,7 +51,7 @@ You can find their definitions in `src/types/index.ts`.
 
 ## How `PESAgent` Constructs `ArtStandardPrompt`
 
-The `PESAgent` (Plan-Execute-Synthesize Agent) is responsible for constructing `ArtStandardPrompt` objects during its planning and synthesis phases. It does this directly by creating JavaScript arrays of `ArtStandardMessage` objects.
+The `PESAgent` (Plan-Execute-Synthesize Agent) constructs `ArtStandardPrompt` objects during its planning and synthesis phases by creating JavaScript arrays of `ArtStandardMessage` objects. It no longer relies on `PromptManager.assemblePrompt` for rendering the full prompt. Optionally, an assembled prompt can be validated via `PromptManager.validatePrompt`.
 
 **Example: Planning Phase in `PESAgent` (Conceptual)**
 

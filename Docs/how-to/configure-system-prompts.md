@@ -4,115 +4,86 @@ This guide explains how to configure and customize system prompts for your agent
 
 ## Understanding the System Prompt Layers
 
-As detailed in the "Core Concept: System Prompt Hierarchy and Customization" document, system prompts are resolved in the following order of precedence (highest to lowest), with each level's custom prompt part (if present) being appended to the agent's internal base prompt:
+As detailed in the "Core Concept: System Prompt Hierarchy and Customization" document, system prompts are resolved in the following order of precedence (highest to lowest), with composition at each level using a merge strategy (append | prepend | replace):
 
-1.  **Call-Level**: Via `AgentProps.options.systemPrompt`
-2.  **Thread-Level**: Via `ThreadConfig.systemPrompt`
-3.  **Instance-Level**: Via `ArtInstanceConfig.defaultSystemPrompt`
+1.  **Call-Level**: Via `AgentProps.options.systemPrompt` (string or `{ tag?, variables?, content?, strategy? }`)
+2.  **Thread-Level**: Via `ThreadConfig.systemPrompt` (string or `{ tag?, variables?, content?, strategy? }`)
+3.  **Instance-Level**: Prefer `ArtInstanceConfig.systemPrompts` registry; `defaultSystemPrompt` remains supported for backward compatibility.
 4.  **Agent Base Prompt**: Internal to the agent (e.g., `PESAgent.defaultSystemPrompt`)
 
-The final system prompt is effectively: `Agent Base Prompt + "\n\n" + Highest Precedence Custom Prompt Part`.
+## Composition
 
-## 1. Setting an Instance-Level Default System Prompt
+Composition applies in order: base → instance override → thread override → call override, using the specified `strategy`.
 
-This sets a default custom prompt for all agents created by a specific ART instance, unless overridden at a more specific level.
+## 1. Setting Instance-Level Presets (Recommended)
 
-**File**: Your ART instance creation script (e.g., `main.ts`, `index.ts`)
-**Property**: `defaultSystemPrompt` in `ArtInstanceConfig`
+Define a registry of named presets at instance creation.
 
 ```typescript
 // Example: main.ts
-import { createArtInstance, ArtInstanceConfig } from '@art-framework/core'; // Adjust import path
-// ... other imports
+import { createArtInstance, ArtInstanceConfig } from 'art-framework';
 
 async function initializeMyAgent() {
   const config: ArtInstanceConfig = {
     storage: { type: 'memory' },
     providers: { /* ... your provider manager config ... */ },
-    // ... other instance configurations ...
-    defaultSystemPrompt: "You are a witty and slightly sarcastic assistant. You always try to find humor in the user's query."
+    systemPrompts: {
+      defaultTag: 'default',
+      specs: {
+        default: { template: "{{fragment:pes_system_default}}\nTone: {{tone}}", defaultVariables: { tone: 'neutral' } },
+        legal_advisor: { template: "You are a legal advisor. Jurisdiction: {{jurisdiction}}", defaultVariables: { jurisdiction: 'US' } }
+      }
+    }
   };
 
   const art = await createArtInstance(config);
   return art;
 }
-
-// When an agent (e.g., PESAgent) is created by this 'art' instance,
-// and no thread or call-level system prompt is set, its system prompt will be:
-// "You are a helpful AI assistant... (PESAgent's base)
-//
-// You are a witty and slightly sarcastic assistant. You always try to find humor in the user's query."
 ```
+
+Legacy fallback:
+- `defaultSystemPrompt: string` is still accepted and treated as `{ content, strategy: 'append' }`.
 
 ## 2. Setting a Thread-Level System Prompt
 
-This custom prompt applies to all interactions within a specific conversation thread, overriding the instance-level default.
-
-**Mechanism**: Set the `systemPrompt` property in the `ThreadConfig` for the desired thread. This is typically done via `StateManager.updateThreadConfig()`.
+Apply a preset/tag or freeform content to a conversation thread.
 
 ```typescript
 // Example: Setting a thread-specific persona
-import { StateManager, ThreadConfig } from '@art-framework/core'; // Adjust import path
+import { StateManager, ThreadConfig } from 'art-framework';
 
 async function configureThreadPersona(stateManager: StateManager, threadId: string) {
   const newThreadConfigPatch: Partial<ThreadConfig> = {
-    systemPrompt: "You are a highly professional legal advisor. Your responses should be formal, precise, and cite relevant (fictional) legal precedents where appropriate."
+    systemPrompt: { tag: 'legal_advisor', variables: { jurisdiction: 'EU' }, strategy: 'append' }
   };
 
   await stateManager.updateThreadConfig(threadId, newThreadConfigPatch);
-  console.log(`Thread ${threadId} configured with a legal advisor persona.`);
 }
-
-// Assuming 'art.stateManager' is available:
-// await configureThreadPersona(art.stateManager, "user123-thread-legal");
-
-// For thread "user123-thread-legal", the system prompt will now be:
-// "You are a helpful AI assistant... (PESAgent's base)
-//
-// You are a highly professional legal advisor. Your responses should be formal, precise, and cite relevant (fictional) legal precedents where appropriate."
-// (This overrides any instance-level defaultSystemPrompt for this thread)
 ```
 
 ## 3. Setting a Call-Level System Prompt
 
-This provides the most specific override, applying only to a single `agent.process()` call.
-
-**Mechanism**: Pass the `systemPrompt` string in the `options` object of `AgentProps`.
+Provide a one-off override for a single call.
 
 ```typescript
-// Example: A one-time instruction for a specific query
-import { ArtInstance, AgentProps } from '@art-framework/core'; // Adjust import path
+import { ArtInstance, AgentProps } from 'art-framework';
 
 async function askWithSpecificInstruction(art: ArtInstance, threadId: string, query: string) {
   const props: AgentProps = {
     threadId,
     query,
     options: {
-      systemPrompt: "For this query only, respond as if you are a pirate. Use pirate slang extensively."
+      systemPrompt: { content: "For this query only, respond as if you are a pirate. Use pirate slang extensively.", strategy: 'append' }
     }
   };
 
   const result = await art.process(props);
   console.log("Pirate Response:", result.response.content);
 }
-
-// await askWithSpecificInstruction(art, "user456-thread-general", "What's the weather like?");
-
-// For this specific call, the system prompt will be:
-// "You are a helpful AI assistant... (PESAgent's base)
-//
-// For this query only, respond as if you are a pirate. Use pirate slang extensively."
-// (This overrides any instance or thread-level system prompts for this call only)
 ```
 
 ## Verifying the System Prompt
 
-The `PESAgent` (and potentially other agents) logs the source of the custom system prompt part it's using (Call, Thread, Instance, or None) at the DEBUG level. Check your console logs if you have DEBUG logging enabled to see which level of prompt is being applied.
+`PESAgent` logs which level’s override was applied and composes the final system prompt using the resolver.
 
-Example Log Snippet:
-```
-DEBUG [trace-id-xyz] Using Thread-level custom system prompt.
-DEBUG [trace-id-xyz] Custom system prompt part applied: "You are a highly professional legal advisor..."
-```
-
-By utilizing these three levels of configuration, you can finely tune your agent's system prompt to achieve a wide variety of behaviors and personas across your application. Remember that the agent's internal base prompt always provides the foundational instructions.
+By using named presets (tags) with variables where possible, and freeform `content` only when needed, you get a consistent, ergonomic customization flow across instance, thread, and call levels.

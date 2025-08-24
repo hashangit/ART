@@ -1,6 +1,6 @@
 # How-To: Use Prompt Fragments with `PromptManager`
 
-In ART Framework `v0.2.7`, the `PromptManager`'s role has been streamlined. While agent logic (like `PESAgent`) is now directly responsible for assembling the final `ArtStandardPrompt` object (an array of `ArtStandardMessage`s), the `PromptManager` still offers a useful utility: providing reusable, named **prompt fragments** via its `getFragment()` method.
+In ART Framework `v0.2.7+`, the `PromptManager`'s role has been streamlined. Agent logic (like `PESAgent`) is directly responsible for assembling the final `ArtStandardPrompt` object (an array of `ArtStandardMessage`s). The `PromptManager` provides reusable, named **prompt fragments** via its `getFragment()` method and can **validate** assembled prompts via `validatePrompt()`.
 
 These fragments are pre-defined pieces of text, potentially with simple template variables, that can be embedded into the `content` of your `ArtStandardMessage` objects. This promotes consistency and reduces redundancy in your prompt construction logic.
 
@@ -33,6 +33,7 @@ const PROMPT_FRAGMENTS: Record<string, string> = {
 1.  Modify this `PROMPT_FRAGMENTS` object in `PromptManager.ts` or consider a more dynamic loading mechanism if you have many fragments (though this is not built-in for `v0.2.7`).
 2.  Choose a unique, descriptive name for your fragment.
 3.  Write the fragment text. You can use `{{variableName}}` for simple substitutions.
+4.  Optionally, after assembling your `ArtStandardPrompt`, call `promptManager.validatePrompt(prompt)` to catch structural errors early.
 
 ## 3. Using Fragments in Agent Logic (e.g., Custom Agent or `PESAgent` Customization)
 

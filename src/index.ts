@@ -48,6 +48,10 @@ export type { OllamaAdapterOptions } from './adapters/reasoning/ollama';
 export { CalculatorTool } from './tools/CalculatorTool';
 // export { WebSearchTool } from './tools/WebSearchTool'; // Example for future
 
+// --- Prompt Utilities ---
+/** PromptManager provides access to prompt fragments and prompt validation. */
+export { PromptManager } from './systems/reasoning/PromptManager';
+
 // --- Authentication Components ---
 /** Manages authentication strategies and token lifecycle. */
 export { AuthManager } from './systems/auth/AuthManager';

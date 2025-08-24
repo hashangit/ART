@@ -125,6 +125,22 @@ export interface PromptManager {
     // - loadFragmentsFromDir(directoryPath: string): Promise<void>;
     // - registerFragment(name: string, content: string): void;
 }
+// --- SystemPromptResolver Interface ---
+/**
+ * Resolves the final system prompt from base + instance/thread/call overrides
+ * using tag+variables and merge strategies.
+ */
+export interface SystemPromptResolver {
+  resolve(
+    input: {
+      base: string;
+      instance?: string | import('../types').SystemPromptOverride;
+      thread?: string | import('../types').SystemPromptOverride;
+      call?: string | import('../types').SystemPromptOverride;
+    },
+    traceId?: string
+  ): Promise<string>;
+}
 // --- END PromptManager Interface ---
 
 

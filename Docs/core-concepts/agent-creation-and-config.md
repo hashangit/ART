@@ -11,6 +11,8 @@ Found in `src/core/agent-factory.ts` (and exported from `art-framework`), `creat
     *   `process(props: AgentProps): Promise<AgentFinalResponse>`: The main method to interact with the configured agent.
     *   Access to key managers and systems like `uiSystem`, `stateManager`, `conversationManager`, `toolRegistry`, and `observationManager`, allowing for more direct interaction if needed (e.g., subscribing to UI sockets, managing tools).
 
+Always import from the public package entry (e.g., `import { createArtInstance } from 'art-framework'`). Avoid deep/internal imports.
+
 **Basic Usage:**
 
 ```typescript
@@ -89,7 +91,26 @@ The `ArtInstanceConfig` interface (defined in `src/types/index.ts`) is the corne
     };
     ```
 
-3.  **`agentCore?: new (dependencies: any) => IAgentCore`** (Optional)
+3.  **`systemPrompts?: SystemPromptsRegistry`** (Recommended)
+    *   Registry of named presets (tags) for system prompts.
+    *   `defaultTag` sets a default preset; each spec provides a `template`, optional `defaultVariables`, and an optional default `mergeStrategy`.
+    *   The resolver composes the base prompt with instance/thread/call overrides.
+
+    ```typescript
+    const config: ArtInstanceConfig = {
+      storage: { type: 'memory' },
+      providers: providersConfig,
+      systemPrompts: {
+        defaultTag: 'default',
+        specs: {
+          default: { template: "{{fragment:pes_system_default}}\nTone: {{tone}}", defaultVariables: { tone: 'neutral' } },
+          legal_advisor: { template: "You are a legal advisor. Jurisdiction: {{jurisdiction}}", defaultVariables: { jurisdiction: 'US' } }
+        }
+      }
+    };
+    ```
+
+4.  **`agentCore?: new (dependencies: any) => IAgentCore`** (Optional)
     *   Specifies the agent core implementation class to use.
     *   If omitted, it defaults to `PESAgent`.
     *   Useful if you create a custom agent class implementing the `IAgentCore` interface.
@@ -99,7 +120,7 @@ The `ArtInstanceConfig` interface (defined in `src/types/index.ts`) is the corne
     // const agentCoreConfig = { agentCore: MyCustomAgent };
     ```
 
-4.  **`tools?: IToolExecutor[]`** (Optional)
+5.  **`tools?: IToolExecutor[]`** (Optional)
     *   An array of pre-instantiated tool executor objects (classes implementing `IToolExecutor`).
     *   These tools will be automatically registered with the `ToolRegistry` during initialization.
 
@@ -108,7 +129,7 @@ The `ArtInstanceConfig` interface (defined in `src/types/index.ts`) is the corne
     // const toolsConfig = { tools: [new CalculatorTool(), new MyCustomSearchTool()] };
     ```
 
-5.  **`stateSavingStrategy?: StateSavingStrategy`** (Optional)
+6.  **`stateSavingStrategy?: StateSavingStrategy`** (Optional)
     *   Determines how `AgentState` is persisted. Can be `'explicit'` (default) or `'implicit'`.
     *   `'explicit'`: Agent state is only saved when `StateManager.setAgentState()` is explicitly called. `StateManager.saveStateIfModified()` will be a no-op for agent state.
     *   `'implicit'`: `StateManager.loadThreadContext()` caches the loaded agent state. If the agent modifies this state, `StateManager.saveStateIfModified()` (called by `PESAgent` at the end of `process`) will automatically persist the changes by comparing it to the initial snapshot. `setAgentState()` still works for explicit saves.
@@ -118,7 +139,7 @@ The `ArtInstanceConfig` interface (defined in `src/types/index.ts`) is the corne
     const stateStrategyConfig = { stateSavingStrategy: 'implicit' };
     ```
 
-6.  **`logger?: { level?: LogLevel }`** (Optional)
+7.  **`logger?: { level?: LogLevel }`** (Optional)
     *   Configures the framework's internal `Logger`.
     *   `level`: Sets the minimum log level (e.g., `LogLevel.DEBUG`, `LogLevel.INFO`, `LogLevel.WARN`, `LogLevel.ERROR`). Defaults to `LogLevel.INFO`.
 
@@ -161,6 +182,12 @@ const fullConfig: ArtInstanceConfig = {
     stateSavingStrategy: 'implicit',
     logger: {
         level: LogLevel.INFO,
+    },
+    systemPrompts: {
+      defaultTag: 'default',
+      specs: {
+        default: { template: "{{fragment:pes_system_default}}\nTone: {{tone}}", defaultVariables: { tone: 'neutral' } }
+      }
     }
 };
 ```
@@ -177,7 +204,7 @@ While `createArtInstance` is the recommended public API, it internally uses the 
     5.  Instantiating all managers (`ConversationManager`, `StateManager`, `ObservationManager`) with their dependencies (repositories, sockets, strategy).
     6.  Initializing the `ToolRegistry` (and `StateManager` if provided) and registering any initial tools.
     7.  Initializing the `ProviderManager` with the `providers` configuration.
-    8.  Setting up reasoning components (`ReasoningEngine`, `PromptManager`, `OutputParser`).
+    8.  Setting up reasoning components (`ReasoningEngine`, `PromptManager`, `OutputParser`, `SystemPromptResolver`).
     9.  Initializing the `ToolSystem`.
     10. Finally, creating an instance of the specified `IAgentCore` (e.g., `PESAgent`) and injecting all the initialized components as dependencies.
 

@@ -363,7 +363,8 @@ export function useArtChat(props: ArtWebChatConfig) {
          },
          enabledTools: [],
          historyLimit: 200,
-         systemPrompt: `You are a helpful AI assistant powered by the ART Framework.
+         systemPrompt: {
+           content: `You are a helpful AI assistant powered by the ART Framework.
 
 Your entire output MUST strictly follow the format below, using XML-style tags. Do not include any other text, headers, or explanations outside of this structure.
 
@@ -385,7 +386,8 @@ Your entire output MUST strictly follow the format below, using XML-style tags. 
 
 <Response>
 [The final, user-facing answer, formatted in clear and readable markdown.]
-</Response>`,
+</Response>`
+         }
        });
      }
    };

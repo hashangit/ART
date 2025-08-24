@@ -45,16 +45,16 @@ The long-term vision for `ContextProvider` is to be the central component for RA
 // ...
 // const dynamicContext = await this.deps.contextProvider.getDynamicContext(props.threadId, props.query);
 //
-// const planningPromptContext = {
-//   query: props.query,
-//   history: formattedHistory,
-//   availableTools: formattedTools,
-//   systemPrompt: systemPrompt,
-//   retrievedKnowledge: dynamicContext.knowledgeSnippets // Example field
-// };
+// // Agent assembles the ArtStandardPrompt array directly, optionally embedding dynamicContext
+// const planningPrompt: ArtStandardPrompt = [
+//   { role: 'system', content: systemPrompt },
+//   ...formattedHistory,
+//   { role: 'user', content: `User Query: ${props.query}\n\nRetrieved Knowledge: ${dynamicContext.knowledgeSnippets}` }
+// ];
 //
-// const planningPrompt = await this.deps.promptManager.assemblePrompt("planning_blueprint_with_rag", planningPromptContext);
-// ...
+// // Optional: If using Mustache templates, assemblePrompt can be used, then validate:
+// // const planningPrompt = await this.deps.promptManager.assemblePrompt(blueprintWithRag, planningPromptContext);
+// // const validated = this.deps.promptManager.validatePrompt(planningPrompt);
 ```
 
 ## Summary for ART v0.2.7

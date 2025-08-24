@@ -11,8 +11,8 @@ Below is a summary of the key public interfaces found in this file. For detailed
 
 *   **`ReasoningEngine`**:
     *   **Purpose:** Handles interaction with Large Language Models (LLMs). In ART `v0.2.7+`, this interface is primarily fulfilled by the `ReasoningEngineImpl` which uses `IProviderManager` to get specific provider adapters.
-    *   **Key Method:** `call(prompt: FormattedPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>>`
-        *   Note: `FormattedPrompt` is an alias for `ArtStandardPrompt`.
+    *   **Key Method:** `call(prompt: ArtStandardPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>>`
+        *   The prompt is the standardized array of `ArtStandardMessage`.
     *   **Implementations:** `ReasoningEngineImpl` which delegates to `ProviderAdapter`s.
 
 *   **`PromptManager`**:

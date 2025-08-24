@@ -261,6 +261,51 @@ export interface ToolResult {
   metadata?: Record<string, any>;
 }
 
+// --- SYSTEM PROMPT STANDARDIZATION TYPES ---
+/**
+ * Strategy for combining custom system prompt content across precedence levels.
+ */
+export type SystemPromptMergeStrategy = 'append' | 'prepend' | 'replace';
+
+/**
+ * Named preset for system prompts, supporting variables and a default merge strategy.
+ */
+export interface SystemPromptSpec {
+  /** Optional explicit ID; when in a registry map, the key is typically the tag. */
+  id?: string;
+  /** Template string. Supports simple {{variable}} placeholders and {{fragment:name}} for PromptManager fragments. */
+  template: string;
+  /** Default variables applied if not provided at use time. */
+  defaultVariables?: Record<string, any>;
+  /** Default strategy to combine this spec with lower levels. Defaults to 'append'. */
+  mergeStrategy?: SystemPromptMergeStrategy;
+}
+
+/**
+ * Registry of available system prompt presets (tags) at the instance level.
+ */
+export interface SystemPromptsRegistry {
+  /** Tag to use when no other tag is specified. */
+  defaultTag?: string;
+  /** Mapping of tag -> spec. */
+  specs: Record<string, SystemPromptSpec>;
+}
+
+/**
+ * Override provided at instance/thread/call level to select a tag and/or provide variables,
+ * or to provide freeform content and a merge strategy.
+ */
+export interface SystemPromptOverride {
+  /** Preset tag from the registry (e.g., 'default', 'legal_advisor'). */
+  tag?: string;
+  /** Variables to substitute in the selected template. */
+  variables?: Record<string, any>;
+  /** Freeform content to apply directly (escape hatch). */
+  content?: string;
+  /** Merge behavior against previous level: append | prepend | replace. */
+  strategy?: SystemPromptMergeStrategy;
+}
+
 /**
  * Represents a parsed request from the LLM to call a specific tool.
  */
@@ -283,8 +328,8 @@ export interface ParsedToolCall {
    enabledTools: string[];
    /** The maximum number of past messages (`ConversationMessage` objects) to retrieve for context. */
    historyLimit: number;
-   /** Optional system prompt string to be used for this thread, overriding instance or agent defaults. */
-   systemPrompt?: string;
+   /** Optional system prompt override to be used for this thread, overriding instance or agent defaults. */
+   systemPrompt?: string | SystemPromptOverride;
    // TODO: Add other potential thread-specific settings (e.g., RAG configuration, default timeouts)
  }
 
@@ -347,8 +392,8 @@ export interface AgentProps {
    stream?: boolean;
    /** Override the prompt template used for this specific call. */
    promptTemplateId?: string;
-   /** Optional system prompt string to override thread, instance, or agent defaults for this specific call. */
-   systemPrompt?: string;
+   /** Optional system prompt override/tag to override thread, instance, or agent defaults for this specific call. */
+   systemPrompt?: string | SystemPromptOverride;
    // TODO: Add other potential runtime overrides (e.g., history length).
  }
 
@@ -497,8 +542,9 @@ export interface ArtStandardMessage {
 
 /**
  * Represents the entire prompt as an array of standardized messages (`ArtStandardMessage`).
- * This is the standard format produced by `PromptManager.assemblePrompt` and consumed
- * by `ProviderAdapter.call` for translation into provider-specific API formats.
+ * Constructed by agent logic (e.g., `PESAgent`) and optionally validated via
+ * `PromptManager.validatePrompt` before being sent to the `ReasoningEngine` and
+ * translated by a `ProviderAdapter` for provider-specific API formats.
  */
 export type ArtStandardPrompt = ArtStandardMessage[];
 

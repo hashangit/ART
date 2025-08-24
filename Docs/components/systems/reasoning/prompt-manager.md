@@ -1,6 +1,6 @@
 # Deep Dive: `PromptManager`
 
-In ART Framework `v0.2.7`, the `PromptManager` serves a more focused role compared to traditional template-based prompt management systems. Its primary responsibilities are to provide access to pre-defined **prompt fragments** and to **validate** fully constructed `ArtStandardPrompt` objects. The actual assembly of the `ArtStandardPrompt` (the array of `ArtStandardMessage` objects) is now handled directly by the agent logic (e.g., within `PESAgent`).
+In ART Framework `v0.2.7+`, the `PromptManager` serves a more focused role compared to traditional template-based prompt management systems. Its primary responsibilities are to provide access to pre-defined **prompt fragments** and to **validate** fully constructed `ArtStandardPrompt` objects. The actual assembly of the `ArtStandardPrompt` (the array of `ArtStandardMessage` objects) is now handled directly by the agent logic (e.g., within `PESAgent`).
 
 *   **Source:** `src/systems/reasoning/PromptManager.ts`
 *   **Implements:** `PromptManager` interface from `src/core/interfaces.ts`
@@ -61,11 +61,16 @@ In ART Framework `v0.2.7`, the `PromptManager` serves a more focused role compar
             // }
             ```
 
+3.  **Optional Template Assembly:**
+    *   **`assemblePrompt(blueprint: PromptBlueprint, context: PromptContext): Promise<ArtStandardPrompt>`**
+        *   Provided as a utility for teams that prefer Mustache-style templates for assembling prompts. Not used by `PESAgent` by default.
+        *   If used, you should still call `validatePrompt()` before sending the prompt.
+
 ## Shift in Responsibility for Prompt Assembly
 
 In earlier design concepts or other frameworks, a `PromptManager` might be responsible for taking a template name and a large context object, and then rendering a complete, complex prompt.
 
-In ART `v0.2.7`, this responsibility is shifted:
+In ART `v0.2.7+`, this responsibility is shifted:
 
 *   **Agent Logic (e.g., `PESAgent`)** is responsible for the **assembly** of the `ArtStandardPrompt` object. This means the agent code itself defines the sequence of `ArtStandardMessage`s and constructs their `role` and `content` fields. This approach offers greater flexibility and direct control over the prompt structure within the agent's specific workflow (like the distinct planning and synthesis phases of `PESAgent`).
 *   **`PromptManager`** acts as a **utility** to:

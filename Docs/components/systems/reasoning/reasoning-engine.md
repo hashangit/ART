@@ -16,10 +16,10 @@ constructor(providerManager: IProviderManager)
 
 ## Core Method: `call`
 
-*   **`async call(prompt: FormattedPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>>`**
+*   **`async call(prompt: ArtStandardPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>>`**
     *   **Purpose:** To execute an LLM call using the provider and model specified in `options.providerConfig`.
     *   **Parameters:**
-        *   `prompt: FormattedPrompt` (which is an alias for `ArtStandardPrompt`): The standardized prompt object (an array of `ArtStandardMessage`s) constructed by the agent logic.
+        *   `prompt: ArtStandardPrompt`: The standardized prompt object (an array of `ArtStandardMessage`s) constructed by the agent logic.
         *   `options: CallOptions`: An object containing crucial information for the call:
             *   `threadId: string` (Required): The ID of the current conversation thread.
             *   `traceId?: string`: Optional trace ID for logging and correlation.

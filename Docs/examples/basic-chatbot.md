@@ -23,7 +23,6 @@ import {
     // OllamaAdapter,
     // For a mock provider (as in Quick Start):
     ProviderAdapter,
-    FormattedPrompt,
     CallOptions,
     StreamEvent
 } from 'art-framework';
@@ -32,18 +31,18 @@ import {
 class SimpleEchoAdapter implements ProviderAdapter {
     providerName = 'echo-adapter';
     constructor(private options: any) {}
-    async call(prompt: FormattedPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
-        const userMessage = prompt.find(m => m.role === 'user');
+    async call(prompt: any, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
+        const userMessage = prompt.find((m: any) => m.role === 'user');
         const query = userMessage ? String(userMessage.content) : "no query provided";
         const responseText = `Echo: "${query}". My config: ${JSON.stringify(this.options)}`;
         async function* generateStream(): AsyncIterable<StreamEvent> {
-            yield { type: 'TOKEN', data: responseText, threadId: options.threadId, traceId: options.traceId! };
-            yield { type: 'METADATA', data: { inputTokens: 5, outputTokens: 10, stopReason: 'stop' }, threadId: options.threadId, traceId: options.traceId! };
-            yield { type: 'END', data: null, threadId: options.threadId, traceId: options.traceId! };
+            yield { type: 'TOKEN', data: responseText, threadId: options.threadId, traceId: options.traceId! } as any;
+            yield { type: 'METADATA', data: { inputTokens: 5, outputTokens: 10, stopReason: 'stop' }, threadId: options.threadId, traceId: options.traceId! } as any;
+            yield { type: 'END', data: null, threadId: options.threadId, traceId: options.traceId! } as any;
         }
         return generateStream();
     }
-    async shutdown() { console.log(`${this.providerName} shutting down.`); }
+    async shutdown() { /* noop */ }
 }
 // --- End Mock Adapter ---
 
@@ -53,31 +52,23 @@ async function runBasicChatbot() {
 
     // --- Configuration ---
     const artConfig: ArtInstanceConfig = {
-        storage: {
-            type: 'memory' // Conversation history will not persist
-        },
+        storage: { type: 'memory' },
         providers: {
             availableProviders: [
                 // Option 1: Use the Mock Echo Adapter
-                {
-                    name: 'mock-echo',
-                    adapter: SimpleEchoAdapter,
-                    isLocal: true, // Treat as local for simplicity
-                },
-                // Option 2: Use OpenAI (requires OPENAI_API_KEY environment variable)
-                /*
-                {
-                    name: 'openai-chat',
-                    adapter: OpenAIAdapter,
-                    isLocal: false,
-                }
-                */
+                { name: 'mock-echo', adapter: SimpleEchoAdapter, isLocal: true },
+                // Option 2: Use OpenAI (requires OPENAI_API_KEY)
+                // { name: 'openai-chat', adapter: OpenAIAdapter, isLocal: false }
             ],
         },
-        logger: {
-            level: LogLevel.INFO // Set to DEBUG for more verbose output
+        logger: { level: LogLevel.INFO },
+        // Optional: define system prompt presets
+        systemPrompts: {
+          defaultTag: 'default',
+          specs: {
+            default: { template: "{{fragment:pes_system_default}}" }
+          }
         }
-        // No tools, default PESAgent, default 'explicit' stateSavingStrategy
     };
 
     // Create and initialize the ART instance
@@ -88,7 +79,6 @@ async function runBasicChatbot() {
     const threadId = "basic-chat-thread-001";
     const userId = "test-user";
 
-    // Helper function to send a query and log the response
     async function sendQuery(query: string) {
         console.log(`\nYOU: ${query}`);
 
@@ -97,7 +87,6 @@ async function runBasicChatbot() {
             threadId,
             userId,
             options: {
-                // Specify which provider configuration to use
                 providerConfig: {
                     // Option 1: Mock Echo Adapter
                     providerName: 'mock-echo',
@@ -105,36 +94,20 @@ async function runBasicChatbot() {
                     adapterOptions: { customGreeting: "Hi from basic chatbot" }
 
                     // Option 2: OpenAI
-                    /*
-                    providerName: 'openai-chat',
-                    modelId: 'gpt-3.5-turbo', // Or 'gpt-4o-mini', etc.
-                    adapterOptions: { apiKey: process.env.OPENAI_API_KEY }
-                    */
+                    // providerName: 'openai-chat',
+                    // modelId: 'gpt-4o-mini',
+                    // adapterOptions: { apiKey: process.env.OPENAI_API_KEY }
                 },
-                stream: false // For simplicity in this console example, disable streaming
-                            // Set to true to see token-by-token (would need UI stream handling)
+                // Optional: one-off guidance
+                systemPrompt: { content: "Be friendly and concise for this reply.", strategy: 'append' },
+                stream: false
             }
         };
-
-        // Validate API key if using OpenAI
-        /*
-        if (agentProps.options?.providerConfig?.providerName === 'openai-chat' && !process.env.OPENAI_API_KEY) {
-            console.error("ERROR: OPENAI_API_KEY environment variable is not set. Skipping OpenAI call.");
-            return;
-        }
-        */
 
         try {
             const finalResponse = await art.process(agentProps);
             console.log(`AGENT: ${finalResponse.response.content}`);
             console.log(`  (Metadata: Status=${finalResponse.metadata.status}, LLM Calls=${finalResponse.metadata.llmCalls}, Duration=${finalResponse.metadata.totalDurationMs}ms)`);
-
-            // You can also inspect observations or full conversation history:
-            // const history = await art.conversationManager.getMessages(threadId);
-            // console.log("Current History:", history);
-            // const observations = await art.observationManager.getObservations(threadId);
-            // console.log("Last few Observations:", observations.slice(-3));
-
         } catch (error) {
             console.error("Error during agent processing:", error);
         }
@@ -163,43 +136,25 @@ runBasicChatbot().catch(console.error);
 
 *   **If using `OpenAIAdapter` (or another cloud provider):**
     1.  Uncomment the OpenAI parts in the code.
-    2.  Make sure you have the provider's SDK/adapter installed if it's not a core ART export (though `OpenAIAdapter` is).
-    3.  Set the required API key as an environment variable (e.g., `OPENAI_API_KEY`). You can use a `.env` file with the `dotenv` package for local development:
-        *   Install `dotenv`: `npm install dotenv`
-        *   Create a `.env` file in your project root:
-            ```
-            OPENAI_API_KEY=your_openai_api_key_here
-            ```
-        *   Add `require('dotenv').config();` at the very top of your `basic-chatbot.ts` file.
-    4.  Run the script:
-        ```bash
-        npx ts-node src/basic-chatbot.ts
-        ```
+    2.  Set the required API key as an environment variable (e.g., `OPENAI_API_KEY`).
+    3.  Run the script.
 
 ## Expected Output (with `SimpleEchoAdapter`)
 
 ```
 Setting up Basic Chatbot...
-[ART] InMemoryStorageAdapter initialized.
-[ART] AgentFactory initialized with config: ...
-... (other initialization logs) ...
+... initialization logs ...
 ART Instance initialized.
 
 YOU: Hello there!
-[ART] PESAgent processing query for thread basic-chat-thread-001: "Hello there!"
-... (PESAgent flow logs) ...
 AGENT: Echo: "Hello there!". My config: {"customGreeting":"Hi from basic chatbot"}
   (Metadata: Status=success, LLM Calls=2, Duration=...ms)
 
 YOU: What is the ART Framework?
-[ART] PESAgent processing query for thread basic-chat-thread-001: "What is the ART Framework?"
-... (PESAgent flow logs) ...
 AGENT: Echo: "What is the ART Framework?". My config: {"customGreeting":"Hi from basic chatbot"}
   (Metadata: Status=success, LLM Calls=2, Duration=...ms)
 
 YOU: Thanks!
-[ART] PESAgent processing query for thread basic-chat-thread-001: "Thanks!"
-... (PESAgent flow logs) ...
 AGENT: Echo: "Thanks!". My config: {"customGreeting":"Hi from basic chatbot"}
   (Metadata: Status=success, LLM Calls=2, Duration=...ms)
 
@@ -208,9 +163,8 @@ Chatbot session finished.
 
 ## Key Concepts Illustrated
 
-*   **`ArtInstanceConfig`:** Minimal configuration for `storage` (using `'memory'`) and `providers`.
+*   **`ArtInstanceConfig`:** Minimal configuration for `storage`, `providers`, and optional `systemPrompts` presets.
 *   **`createArtInstance`:** The main function to initialize the framework.
-*   **`AgentProps`:** How to structure input for `art.process()`, including `query`, `threadId`, and `options.providerConfig` for runtime LLM selection.
-*   **`RuntimeProviderConfig`:** Specifying `providerName`, `modelId`, and `adapterOptions` (like API keys or mock adapter settings) for each call.
+*   **`AgentProps`:** Use `options.providerConfig` per call and optionally `options.systemPrompt` override.
 *   **Basic Interaction:** A simple loop to send queries and receive responses.
-*   **Non-Persistent History:** Because `InMemoryStorageAdapter` is used, the conversation context (history) is maintained during the `runBasicChatbot` execution but would be lost if the script were run again. For persistence, see the [Persistent Agent example](persistent-agent.md).
+*   **Non-Persistent History:** With `InMemoryStorageAdapter`, history is not persisted across runs. For persistence, see the [Persistent Agent example](persistent-agent.md).

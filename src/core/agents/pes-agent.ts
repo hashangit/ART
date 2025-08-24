@@ -79,6 +79,8 @@ interface PESAgentDependencies {
     agentDiscoveryService?: AgentDiscoveryService | null;
     /** Service for delegating A2A tasks. */
     taskDelegationService?: TaskDelegationService | null;
+    /** Resolver for standardized system prompt composition. */
+    systemPromptResolver: import('../interfaces').SystemPromptResolver;
 }
 
 // Default system prompt remains
@@ -285,36 +287,14 @@ export class PESAgent implements IAgentCore {
             throw new ARTError(`Thread context not found for threadId: ${props.threadId}`, ErrorCode.THREAD_NOT_FOUND);
         }
 
-        // Resolve system prompt based on hierarchy
+        // Resolve system prompt using standardized override model via resolver
         const agentInternalBaseSystemPrompt = this.defaultSystemPrompt;
-        let customSystemPromptPart: string | undefined = undefined;
-
-        // Check Call-level (AgentProps.options.systemPrompt)
-        if (props.options?.systemPrompt) {
-            customSystemPromptPart = props.options.systemPrompt;
-            Logger.debug(`[${traceId}] Using Call-level custom system prompt.`);
-        }
-        // Else, check Thread-level (ThreadConfig.systemPrompt)
-        else {
-            const threadSystemPrompt = await this.deps.stateManager.getThreadConfigValue<string>(props.threadId, 'systemPrompt');
-            if (threadSystemPrompt) {
-                customSystemPromptPart = threadSystemPrompt;
-                Logger.debug(`[${traceId}] Using Thread-level custom system prompt.`);
-            }
-            // Else, check Instance-level
-            else if (this.instanceDefaultCustomSystemPrompt) {
-                customSystemPromptPart = this.instanceDefaultCustomSystemPrompt;
-                Logger.debug(`[${traceId}] Using Instance-level custom system prompt.`);
-            }
-        }
-
-        let finalSystemPrompt = agentInternalBaseSystemPrompt;
-        if (customSystemPromptPart) {
-            finalSystemPrompt = `${agentInternalBaseSystemPrompt}\n\n${customSystemPromptPart}`;
-            Logger.debug(`[${traceId}] Custom system prompt part applied: "${customSystemPromptPart.substring(0, 100)}..."`);
-        } else {
-            Logger.debug(`[${traceId}] No custom system prompt part found. Using agent internal base prompt only.`);
-        }
+        const finalSystemPrompt = await this.deps.systemPromptResolver.resolve({
+            base: agentInternalBaseSystemPrompt,
+            instance: this.instanceDefaultCustomSystemPrompt,
+            thread: await this.deps.stateManager.getThreadConfigValue<any>(props.threadId, 'systemPrompt'),
+            call: props.options?.systemPrompt
+        }, traceId);
 
         // Determine RuntimeProviderConfig
         const runtimeProviderConfig: RuntimeProviderConfig | undefined =

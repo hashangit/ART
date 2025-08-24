@@ -11,5 +11,6 @@
 Defined in: [src/types/index.ts:502](https://github.com/hashangit/ART/blob/a8524de337702d2ec210d86aff2464ac0aeed73e/src/types/index.ts#L502)
 
 Represents the entire prompt as an array of standardized messages (`ArtStandardMessage`).
-This is the standard format produced by `PromptManager.assemblePrompt` and consumed
-by `ProviderAdapter.call` for translation into provider-specific API formats.
+Constructed by agent logic (e.g., `PESAgent`) and optionally validated via
+`PromptManager.validatePrompt` before being sent to the `ReasoningEngine` and
+translated by a `ProviderAdapter` for provider-specific API formats.

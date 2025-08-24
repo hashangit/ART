@@ -84,7 +84,7 @@ This glossary defines key terms and concepts used within the ART (Agent-Reasonin
     *   Generic options for querying data from a `StorageAdapter`, including `filter`, `sort`, `limit`, and `skip`.
 
 *   **`FormattedPrompt`**
-    *   An alias for `ArtStandardPrompt` in `v0.2.7`. Represents the prompt ready to be sent to `ReasoningEngine.call()`.
+    *   Deprecated name for `ArtStandardPrompt`. Prefer `ArtStandardPrompt` in all code and docs. Existing references should be read as `ArtStandardPrompt`.
 
 **I**
 

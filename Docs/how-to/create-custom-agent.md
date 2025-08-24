@@ -37,26 +37,26 @@ import {
     ConversationMessage,
     MessageRole,
     ExecutionMetadata,
-    // Import any dependencies your agent will need from ART's core interfaces
     StateManager,
     ConversationManager,
     ReasoningEngine,
     ObservationManager,
-    ToolRegistry, // If your agent uses tools
-    OutputParser, // If your agent parses LLM output
-    ToolSystem,   // If your agent executes tools
-    UISystem
+    ToolRegistry,
+    OutputParser,
+    ToolSystem,
+    UISystem,
+    ArtStandardPrompt,
+    PromptManager
 } from 'art-framework';
-import { generateUUID } from 'art-framework'; // Assuming generateUUID is exported
+import { generateUUID } from 'art-framework';
 
-// Define the structure of dependencies your agent expects in its constructor
 interface MyCustomAgentDependencies {
     stateManager: StateManager;
     conversationManager: ConversationManager;
     reasoningEngine: ReasoningEngine;
     observationManager: ObservationManager;
     uiSystem: UISystem;
-    // Add other dependencies like ToolRegistry, OutputParser, ToolSystem if needed
+    promptManager: PromptManager;
 }
 
 export class MyCustomAgent implements IAgentCore {
@@ -64,192 +64,87 @@ export class MyCustomAgent implements IAgentCore {
 
     constructor(dependencies: MyCustomAgentDependencies) {
         this.deps = dependencies;
-        // Initialize any internal state for your agent if necessary
     }
 
     async process(props: AgentProps): Promise<AgentFinalResponse> {
-        const startTime = Date.now();
         const traceId = props.traceId || generateUUID();
-        let status: ExecutionMetadata['status'] = 'success';
-        let errorMessage: string | undefined;
-        let llmCalls = 0;
 
-        console.log(`MyCustomAgent processing query for thread ${props.threadId}: "${props.query}"`);
+        // Load config/history
+        const threadContext = await this.deps.stateManager.loadThreadContext(props.threadId, props.userId);
+        const history = await this.deps.conversationManager.getMessages(props.threadId);
+        const mappedHistory: ArtStandardPrompt = history.map(m => {
+          const role = m.role === MessageRole.USER ? 'user' : m.role === MessageRole.AI ? 'assistant' : m.role === MessageRole.SYSTEM ? 'system' : 'tool';
+          return { role, content: m.content };
+        });
 
-        // --- 1. Load Context (Example) ---
-        // You'll likely need thread configuration and history
-        let threadContext;
-        try {
-            threadContext = await this.deps.stateManager.loadThreadContext(props.threadId, props.userId);
-            if (!threadContext) {
-                throw new Error("Thread context not found.");
-            }
-        } catch (e: any) {
-            // Handle error loading context
-            errorMessage = `Failed to load context: ${e.message}`;
-            status = 'error';
-            // Construct and return an error response
-            const errorMsg: ConversationMessage = { /* ... */ messageId: generateUUID(), threadId: props.threadId, role: MessageRole.AI, content: errorMessage, timestamp: Date.now() };
-            return { response: errorMsg, metadata: { /* fill metadata */ threadId: props.threadId, traceId, status, totalDurationMs: Date.now() - startTime, llmCalls, toolCalls: 0, error: errorMessage } };
+        // Compose system prompt (simple example; you can use tags/variables via thread/call overrides)
+        const base = this.deps.promptManager.getFragment('pes_system_default');
+        const systemPrompt = base;
+
+        const prompt: ArtStandardPrompt = [
+          { role: 'system', content: systemPrompt },
+          ...mappedHistory,
+          { role: 'user', content: props.query }
+        ];
+
+        // Optional: validate
+        const validated = this.deps.promptManager.validatePrompt(prompt);
+
+        // Call LLM
+        const stream = await this.deps.reasoningEngine.call(validated, {
+          threadId: props.threadId,
+          traceId,
+          stream: true,
+          callContext: 'MY_AGENT',
+          providerConfig: props.options!.providerConfig
+        });
+
+        let content = '';
+        for await (const ev of stream) {
+          this.deps.uiSystem.getLLMStreamSocket().notify(ev, { targetThreadId: props.threadId, targetSessionId: props.sessionId });
+          if (ev.type === 'TOKEN') content += ev.data;
         }
 
-        // --- 2. Implement Your Agent's Core Logic ---
-        // This is where your custom reasoning pattern goes.
-        // For example, a simple agent that calls an LLM once:
-
-        let finalContent = `MyCustomAgent processed: "${props.query}".`;
-
-        if (props.options?.providerConfig) { // Check if providerConfig is available
-            try {
-                const systemPrompt = "You are MyCustomAgent. Be brief.";
-                const promptForLLM: FormattedPrompt = [ // FormattedPrompt is ArtStandardPrompt
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: props.query }
-                ];
-
-                const llmCallOptions = {
-                    threadId: props.threadId,
-                    traceId,
-                    stream: false, // Or true if you handle streaming
-                    callContext: 'CUSTOM_AGENT_CALL',
-                    providerConfig: props.options.providerConfig,
-                    // Add any other LLM parameters from props.options.llmParams or threadContext.config
-                };
-
-                const llmResponseStream = await this.deps.reasoningEngine.call(promptForLLM, llmCallOptions);
-                llmCalls++;
-
-                let streamedText = "";
-                for await (const event of llmResponseStream) {
-                    this.deps.uiSystem.getLLMStreamSocket().notify(event, { targetThreadId: props.threadId, targetSessionId: props.sessionId });
-                    if (event.type === 'TOKEN') {
-                        streamedText += event.data;
-                    } else if (event.type === 'ERROR') {
-                        throw event.data instanceof Error ? event.data : new Error(String(event.data));
-                    }
-                }
-                finalContent = streamedText.trim();
-
-            } catch (e: any) {
-                console.error(`MyCustomAgent LLM call failed: ${e.message}`);
-                errorMessage = `LLM interaction failed: ${e.message}`;
-                status = 'error'; // Or 'partial' if some steps succeeded
-                finalContent = errorMessage; // Use error as content
-            }
-        } else {
-            finalContent = "MyCustomAgent: No LLM provider configured for this call.";
-            status = 'partial';
-            errorMessage = "Missing providerConfig in AgentProps.options";
-        }
-
-
-        // --- 3. Finalization (Example) ---
-        const finalTimestamp = Date.now();
-        const aiResponseMessage: ConversationMessage = {
-            messageId: generateUUID(),
-            threadId: props.threadId,
-            role: MessageRole.AI,
-            content: finalContent,
-            timestamp: finalTimestamp,
-            metadata: { traceId },
+        const aiMsg: ConversationMessage = {
+          messageId: generateUUID(),
+          threadId: props.threadId,
+          role: MessageRole.AI,
+          content,
+          timestamp: Date.now(),
+          metadata: { traceId }
         };
+        await this.deps.conversationManager.addMessages(props.threadId, [aiMsg]);
 
-        // Save user query and AI response to history
-        const userQueryMessage: ConversationMessage = {
-            messageId: generateUUID(), // Or a more specific ID if available
-            threadId: props.threadId,
-            role: MessageRole.USER,
-            content: props.query,
-            timestamp: startTime, // Approximate start time of user query
-            metadata: { traceId },
-        };
-        try {
-            await this.deps.conversationManager.addMessages(props.threadId, [userQueryMessage, aiResponseMessage]);
-        } catch (e: any) {
-            // Log error, but might still return the response
-            console.error(`MyCustomAgent: Failed to save messages: ${e.message}`);
-            if (status !== 'error') { // Don't overwrite a more critical error
-                status = 'partial';
-                errorMessage = (errorMessage ? errorMessage + "; " : "") + "Failed to save conversation history.";
-            }
-        }
-
-        // Save state if modified (respecting StateSavingStrategy)
-        try {
-            await this.deps.stateManager.saveStateIfModified(props.threadId);
-        } catch (e: any) {
-            console.error(`MyCustomAgent: Failed to save state: ${e.message}`);
-             if (status !== 'error') {
-                status = 'partial';
-                errorMessage = (errorMessage ? errorMessage + "; " : "") + "Failed to save agent state.";
-            }
-        }
-
-        // Record observations (example)
-        // await this.deps.observationManager.record({ type: ObservationType.FINAL_RESPONSE, ... });
-
-
-        // --- 4. Return AgentFinalResponse ---
-        const metadata: ExecutionMetadata = {
-            threadId: props.threadId,
-            traceId: traceId,
-            userId: props.userId,
-            status: status,
-            totalDurationMs: Date.now() - startTime,
-            llmCalls: llmCalls,
-            toolCalls: 0, // Update if your agent uses tools
-            error: errorMessage,
-            // llmMetadata: aggregatedLlmMetadata // Collect if streaming and multiple calls
-        };
-
-        return {
-            response: aiResponseMessage,
-            metadata: metadata,
-        };
+        return { response: aiMsg, metadata: { threadId: props.threadId, traceId, status: 'success', totalDurationMs: 0, llmCalls: 1, toolCalls: 0 } };
     }
 }
 ```
 
 **Key Considerations for Your Custom Agent:**
 
-*   **Dependencies:** Define a constructor that accepts an object of dependencies. The `AgentFactory` will inject instances of `StateManager`, `ConversationManager`, `ReasoningEngine`, `ObservationManager`, `UISystem`, and potentially `ToolRegistry`, `OutputParser`, `ToolSystem` if your agent needs them.
-*   **Context Management:** Use `StateManager` to load `ThreadContext` (config and state) and `ConversationManager` to get message history.
-*   **Prompt Construction:** You are responsible for creating the `ArtStandardPrompt` array of `ArtStandardMessage` objects to send to the `ReasoningEngine`. You can use `PromptManager.getFragment()` for reusable text pieces.
-*   **LLM Interaction:** Use `ReasoningEngine.call(prompt, callOptions)`.
-    *   Provide `CallOptions` including `stream` preference, `callContext`, and the crucial `providerConfig` (from `AgentProps.options.providerConfig` or resolved from `ThreadConfig`).
-    *   Handle the `AsyncIterable<StreamEvent>` returned, especially if streaming.
-*   **Tool Usage (If Applicable):**
-    *   Get available tools from `ToolRegistry`.
-    *   If your LLM plan indicates tool use, parse it (perhaps using `OutputParser` or custom logic).
-    *   Execute tools using `ToolSystem.executeTools()`.
-    *   Incorporate `ToolResult`s into subsequent LLM prompts.
-*   **State Saving:**
-    *   If using `'implicit'` `StateSavingStrategy`, modifications to `threadContext.state` will be auto-saved when `stateManager.saveStateIfModified()` is called (you should call this, typically in a `finally` block or at the end).
-    *   If using `'explicit'` strategy, you **must** call `stateManager.setAgentState()` to persist any changes to agent state.
-*   **Observation Recording:** Use `ObservationManager.record()` to log significant events.
-*   **UI Notifications:** Use sockets from `UISystem` (`llmStreamSocket`, `conversationSocket`, `observationSocket`) to `notify` the UI of real-time events.
-*   **Error Handling:** Implement robust error handling. Catch errors from dependencies, set appropriate `status` and `errorMessage` in `ExecutionMetadata`, and potentially return an error message as the AI's content.
-*   **Final Response:** Ensure you construct and return a valid `AgentFinalResponse`.
+*   **Dependencies:** The factory injects `StateManager`, `ConversationManager`, `ReasoningEngine`, `ObservationManager`, `UISystem`, and `PromptManager` (and optionally `ToolRegistry`, `OutputParser`, `ToolSystem` if needed).
+*   **Prompt Construction:** Assemble `ArtStandardPrompt` (array of `{ role, content, ... }`), and use `promptManager.validatePrompt(prompt)` before LLM calls. Use `promptManager.getFragment('...')` for reusable text.
+*   **System Prompt Overrides:** Prefer using thread/call overrides (tag + variables + strategy) in `ThreadConfig.systemPrompt` and `AgentProps.options.systemPrompt` rather than hardcoding strings in the agent.
+*   **LLM Interaction:** Use `reasoningEngine.call(validated, callOptions)`; handle the `AsyncIterable<StreamEvent>`.
+*   **Tooling/State/Observations/UI:** Same guidance as before.
 
 ## 4. Configure ART to Use Your Custom Agent
 
-In your `ArtInstanceConfig`, set the `agentCore` property to your custom agent class:
+In your `ArtInstanceConfig`, set the `agentCore` property to your custom agent class and, optionally, define a `systemPrompts` registry for consistent overrides.
 
 ```typescript
-// src/config/art-config.ts
-import { ArtInstanceConfig /* ... */ } from 'art-framework';
-import { MyCustomAgent } from '../agents/my-custom-agent'; // Adjust path
+import { ArtInstanceConfig } from 'art-framework';
+import { MyCustomAgent } from '../agents/my-custom-agent';
 
 export const myAppArtConfig: ArtInstanceConfig = {
-    // ... storage and provider config ...
-    agentCore: MyCustomAgent, // Specify your custom agent
-    // ... tools, stateSavingStrategy, logger ...
+    storage: { type: 'memory' },
+    providers: { availableProviders: [/* ... */] },
+    agentCore: MyCustomAgent,
+    systemPrompts: { defaultTag: 'default', specs: { default: { template: "{{fragment:pes_system_default}}" } } }
 };
 ```
 
-Now, when you call `createArtInstance(myAppArtConfig)`, the `AgentFactory` will instantiate `MyCustomAgent` and inject the necessary dependencies. Calls to `art.process()` will invoke your custom agent's logic.
-
-Creating a custom agent core gives you maximum flexibility to define unique agent behaviors and reasoning patterns within the ART Framework's structured environment.
+This ensures your custom agent stays aligned with the framework’s standard prompt/message model and the new system prompt override flow.
 ```
 
 ```markdown
