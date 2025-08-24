@@ -1,6 +1,6 @@
 import ReactDOM from 'react-dom/client';
 import ArtWebChat from './ArtWebChat';
-import { SupabaseStorageAdapter, GeminiAdapter, OpenAIAdapter } from 'art-framework';
+import { SupabaseStorageAdapter, GeminiAdapter, OpenAIAdapter, CalculatorTool } from 'art-framework';
 import { ArtMessage } from './lib/types';
 import './styles/globals.css';
 import { supabase } from './supabaseClient';
@@ -50,7 +50,7 @@ artConfig: {
     
     // Tool configurations
     tools: [
-      // Built-in tools will be included by default
+      new CalculatorTool(),
     ],
     
     // A2A Configuration - enable with localhost:4200

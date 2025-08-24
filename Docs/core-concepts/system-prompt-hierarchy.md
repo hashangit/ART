@@ -1,3 +1,17 @@
+### System Prompt Hierarchy and Merge Strategy
+
+ART composes the final system prompt from multiple levels:
+- Instance-level default (optional)
+- Thread-level override (optional)
+- Call-level override (optional)
+
+Merge strategy is append/prepend only. The 'replace' strategy is intentionally not supported to avoid overriding framework-required structural contracts.
+
+During the planning phase, custom prompts are wrapped in a protective block by the agent to ensure:
+- The custom guidance shapes knowledge, tone, and domain context.
+- It cannot alter the required planning Output Contract structure (Intent, Plan, Tool Calls with strict JSON schema).
+
+Developers can still use rigid formatting in the synthesis phase for the final user-facing response. In planning, the agent wraps the custom system prompt in a protective block so that guidance influences content/perspective but cannot modify the Output Contract.
 # Core Concept: System Prompt Hierarchy and Customization
 
 The ART Framework (`v0.2.8` and later) provides a flexible and layered approach to defining the system prompt used by agents like `PESAgent`. This allows for a base level of instruction inherent to the agent, with multiple levels of customization to tailor the agent's persona, behavior, and domain-specific knowledge for different instances, threads, or even individual calls.

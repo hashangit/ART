@@ -265,7 +265,7 @@ export interface ToolResult {
 /**
  * Strategy for combining custom system prompt content across precedence levels.
  */
-export type SystemPromptMergeStrategy = 'append' | 'prepend' | 'replace';
+export type SystemPromptMergeStrategy = 'append' | 'prepend';
 
 /**
  * Named preset for system prompts, supporting variables and a default merge strategy.
@@ -302,7 +302,7 @@ export interface SystemPromptOverride {
   variables?: Record<string, any>;
   /** Freeform content to apply directly (escape hatch). */
   content?: string;
-  /** Merge behavior against previous level: append | prepend | replace. */
+  /** Merge behavior against previous level: append | prepend. */
   strategy?: SystemPromptMergeStrategy;
 }
 

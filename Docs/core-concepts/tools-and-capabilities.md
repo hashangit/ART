@@ -65,6 +65,7 @@ A key feature of advanced AI agents is their ability to interact with the extern
 2.  **Execution Phase:**
     *   The `PESAgent` passes the array of `ParsedToolCall`s to `ToolSystem.executeTools()`.
     *   The `ToolSystem` handles the execution of each tool as described above, returning an array of `ToolResult`s.
+    *   If the LLM determines that no tools are required, it MUST still output an empty array (`Tool Calls: []`).
 
 3.  **Synthesis Phase:**
     *   The `PESAgent` constructs a synthesis prompt. This prompt now includes the original query, the plan, and the `ToolResult`s (both successes and errors) from the execution phase.
@@ -196,5 +197,18 @@ const myArtConfig: ArtInstanceConfig = {
   // ... other configurations
 };
 ```
+
+### Planning Output Contract (Framework-Enforced)
+
+During the planning phase, the agent enforces a strict Output Contract. Regardless of custom system prompts or formatting preferences, the LLM output must contain:
+
+- `Intent:` a short description
+- `Plan:` steps
+- `Tool Calls:` a JSON array only. Each item MUST be:
+  - `{ "callId": string, "toolName": string, "arguments": object }`
+  - `arguments` must be a JSON object that conforms to the tool’s `inputSchema`.
+  - If no tools are needed, the array must be `[]`.
+
+This contract is provider-agnostic and tool-type-agnostic (native tools and MCP tools both use the same structure). The agent wraps custom system prompts to prevent structural overrides while still allowing content guidance.
 
 This comprehensive tool system allows ART agents to extend their capabilities significantly, making them more versatile and powerful.

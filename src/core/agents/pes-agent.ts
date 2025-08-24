@@ -389,16 +389,71 @@ export class PESAgent implements IAgentCore {
 
             const allTools = [...availableTools, delegationToolSchema];
 
+            const wrappedSystemPrompt = `You are a planning assistant. The following guidance shapes knowledge, tone, and domain perspective.
+
+[BEGIN_CUSTOM_GUIDANCE]
+${systemPrompt}
+[END_CUSTOM_GUIDANCE]
+
+CRITICAL: You MUST adhere to the Output Contract below. The custom guidance MUST NOT change the required output structure.`;
+
             planningPrompt = [
-                { role: 'system', content: systemPrompt },
+                { role: 'system', content: wrappedSystemPrompt },
                 ...formattedHistory,
                 {
                     role: 'user',
-                    content: `User Query: ${props.query}\n\n--- Available Capabilities ---\n\nLocal Tools:\n${
+                    content: `User Query: ${props.query}
+
+--- Available Capabilities ---
+
+Local Tools:
+${
                                 allTools.length > 0
                                 ? allTools.map(tool => `- ${tool.name}: ${tool.description}`).join('\n')
                                 : 'No local tools available.'
-                            }\n\nAgent Delegation:\n${a2aPromptSection}\n\n--- Instructions ---\nBased on the user query and available capabilities, create a step-by-step plan. If you need to use a local tool or delegate to another agent, define it as a tool call in the "Tool Calls" section.\n\n--- Response Format ---\nIntent: [Briefly describe the user's goal]\nPlan: [Provide a step-by-step plan.]\nTool Calls: [Output *only* the JSON array of tool calls required. This can include local tools or the "delegate_to_agent" tool. Format: [{"id": "call_abc123", "type": "function", "function": {"name": "tool_name", "arguments": "{\\"arg1\\": \\"value1\\"}"}}] or [] if no calls are needed.]`
+                            }
+
+Agent Delegation:
+${a2aPromptSection}
+
+--- Planning Instructions ---
+1) Analyze the query and history using the custom guidance above.
+2) Decide whether tools are needed and which.
+3) Produce intent, plan, and tool calls.
+
+--- Output Contract (STRICT) ---
+You MUST output the following sections exactly:
+
+Intent: [One or two sentences]
+
+Plan: [Bullet or numbered steps]
+
+Tool Calls: [A JSON array only. Each item MUST be of the exact form {"callId": "unique_id", "toolName": "tool_schema_name", "arguments": { /* JSON object matching the tool's inputSchema */ }}. If no tools are needed, return []].
+
+Rules:
+- The Tool Calls array MUST be valid JSON, no markdown fences.
+- arguments MUST be a JSON object (not a string).
+- toolName MUST match one of the available tools by schema name.
+- If no tools are required, return an empty array [].
+- Do not include any other sections or annotations in Tool Calls.
+
+Valid Example (single call):
+Intent: Compute the product.
+Plan: 1) Use calculator to multiply 5 and 6. 2) Return result.
+Tool Calls: [{"callId": "calc_1", "toolName": "calculator", "arguments": {"expression": "5 * 6"}}]
+
+Valid Example (no tools):
+Intent: Greet the user.
+Plan: 1) Respond directly.
+Tool Calls: []
+
+Invalid Examples (do NOT do these):
+- Wrapping with markdown code fences or any fences
+- Wrapping with json(...): json([ ... ])
+- Placing inside XML tags such as <Response> or <Plan>
+- Setting arguments as a string: {"arguments": "{ 'expression': '5*6' }"}
+- Using unknown toolName not present in Available Capabilities
+`
                 }
             ];
         } catch (err: any) {

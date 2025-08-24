@@ -9,8 +9,6 @@ function applyStrategy(base: string, addition: string, strategy: SystemPromptMer
   switch (s) {
     case 'prepend':
       return `${addition}\n\n${base}`;
-    case 'replace':
-      return addition;
     case 'append':
     default:
       return `${base}\n\n${addition}`;
@@ -25,6 +23,11 @@ function normalizeOverride(input?: string | SystemPromptOverride): SystemPromptO
   return input;
 }
 
+/**
+ * Resolves layered system prompts using append/prepend-only merge.
+ * Note: 'replace' is intentionally unsupported to prevent custom prompts
+ * from overriding framework-required structural contracts.
+ */
 export class SystemPromptResolver implements ISystemPromptResolver {
   private readonly registry?: SystemPromptsRegistry;
   private readonly promptManager: PromptManager;

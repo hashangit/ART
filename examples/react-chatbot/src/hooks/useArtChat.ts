@@ -343,6 +343,7 @@ export function useArtChat(props: ArtWebChatConfig) {
      if (props.authRequired && !isAuthenticated) return;
 
      const stateManager = artInstanceRef.current.stateManager;
+     const toolRegistry = artInstanceRef.current.toolRegistry;
      const selectedModelEntry = availableModels.find(m => m.name === selectedModel);
 
      if (stateManager && selectedModelEntry) {
@@ -354,6 +355,15 @@ export function useArtChat(props: ArtWebChatConfig) {
            toast.error('Selected model is misconfigured.');
            return;
        }
+
+       // Enable all available tools for this thread
+       let enabledTools: string[] = [];
+       try {
+         const availableTools = await toolRegistry.getAvailableTools();
+         enabledTools = availableTools.map(t => t.name).filter(Boolean);
+       } catch (e) {
+         console.warn('Failed to load available tools; proceeding with no tools enabled.', e);
+       }
        
        await stateManager.setThreadConfig(threadId, {
          providerConfig: {
@@ -361,7 +371,7 @@ export function useArtChat(props: ArtWebChatConfig) {
            modelId: modelId,
            adapterOptions: {},
          },
-         enabledTools: [],
+         enabledTools: enabledTools,
          historyLimit: 200,
          systemPrompt: {
            content: `You are a helpful AI assistant powered by the ART Framework.

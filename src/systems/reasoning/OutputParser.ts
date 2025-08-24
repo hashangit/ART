@@ -17,9 +17,14 @@ const toolCallsSchema = z.array(parsedToolCallSchema);
 
 /**
  * Default implementation of the `OutputParser` interface.
- * Responsible for extracting structured data (intent, plan, tool calls) from the planning phase
- * LLM response and the final response content from the synthesis phase response.
- * Includes robust parsing for tool call JSON arrays and Zod validation.
+ * - Planning: Extracts Intent, Plan, and Tool Calls from the LLM output while ignoring any
+ *   custom formatting constraints that apps may add. Tool Calls MUST be a JSON array where each
+ *   item conforms to { callId: string, toolName: string, arguments: object }. If Tool Calls
+ *   appears but contains no items, returns []. If the section is absent, leaves `toolCalls` undefined.
+ * - Synthesis: Returns the final response text (trimmed).
+ *
+ * This enforces the framework-level Output Contract and keeps the structure provider-agnostic
+ * and tool-type-agnostic (native and MCP tools share the same interface).
  *
  * @implements {IOutputParser}
  */
@@ -153,6 +158,74 @@ export class OutputParser implements IOutputParser {
              result.toolCalls = [];
         }
         // If the "Tool Calls:" section doesn't exist at all, toolCalls remains undefined
+    }
+
+    // Fallback extraction: recover tool calls embedded in other sections or wrappers
+    if (result.toolCalls === undefined || (Array.isArray(result.toolCalls) && result.toolCalls.length === 0)) {
+      const tryParseArray = (raw: string): any | null => {
+        if (!raw) return null;
+        let s = raw.trim();
+        // Strip code fences if present
+        s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+        // Strip json(...) wrapper
+        const jsonArrayWrapper = /^json\(\s*([\s\S]*)\s*\)$/i;
+        const wrapperMatch = s.match(jsonArrayWrapper);
+        if (wrapperMatch) {
+          s = wrapperMatch[1].trim();
+        }
+        // If single object, coerce into array
+        const looksLikeObject = /^\{[\s\S]*\}$/.test(s);
+        if (looksLikeObject) {
+          s = `[${s}]`;
+        }
+        try {
+          s = s.replace(/,\s*(?=]$)/, '');
+          return JSON.parse(s);
+        } catch {
+          return null;
+        }
+      };
+
+      let parsedJson: any = null;
+      // 1) json([...]) anywhere
+      const jsonArrayWrapperAnywhere = /json\(\s*(\[[\s\S]*?\])\s*\)/i;
+      const w1 = processedOutput.match(jsonArrayWrapperAnywhere);
+      if (w1 && w1[1]) {
+        parsedJson = tryParseArray(w1[1]);
+      }
+      // 2) Any array containing toolName or callId
+      if (parsedJson === null) {
+        const anyArrayWithToolKeys = /(\[[\s\S]*?("toolName"|"callId")[\s\S]*?\])/i;
+        const w2 = processedOutput.match(anyArrayWithToolKeys);
+        if (w2 && w2[1]) {
+          parsedJson = tryParseArray(w2[1]);
+        }
+      }
+      // 3) json({ ... }) or a lone object with tool keys → coerce to array
+      if (parsedJson === null) {
+        const jsonObjectWrapper = /json\(\s*(\{[\s\S]*?("toolName"|"callId")[\s\S]*?\})\s*\)/i;
+        const w3 = processedOutput.match(jsonObjectWrapper);
+        if (w3 && w3[1]) {
+          parsedJson = tryParseArray(w3[1]);
+        } else {
+          const loneObject = /(\{[\s\S]*?("toolName"|"callId")[\s\S]*?\})/i;
+          const w4 = processedOutput.match(loneObject);
+          if (w4 && w4[1]) {
+            parsedJson = tryParseArray(w4[1]);
+          }
+        }
+      }
+
+      if (parsedJson !== null) {
+        const validationResult = toolCallsSchema.safeParse(parsedJson);
+        if (validationResult.success) {
+          result.toolCalls = validationResult.data as ParsedToolCall[];
+          Logger.debug(`OutputParser: Parsed Tool Calls via fallback extraction.`);
+        } else {
+          Logger.warn(`OutputParser: Fallback Tool Calls validation failed. Errors: ${validationResult.error.toString()}`);
+          result.toolCalls = [];
+        }
+      }
     }
 
      // Handle cases where sections might be missing entirely from the non-thinking content
