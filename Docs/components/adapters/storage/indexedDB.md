@@ -29,7 +29,7 @@ export interface IndexedDBConfig {
     *   Defaults to `1`.
     *   **Important:** You **must increment** this version number whenever you change the `objectStores` (e.g., add a new store, add an index to an existing store) to trigger the `onupgradeneeded` event, which is where schema modifications occur.
 *   **`objectStores: string[]` (Required by constructor, though `AgentFactory` might provide defaults):** An array of strings specifying the names of the object stores (collections) your application requires.
-    *   The `AgentFactory` typically ensures that core stores like `'conversations'`, `'observations'`, and `'state'` are included if you use the simple `{ type: 'indexedDB', dbName: 'MyDB' }` config. If you provide an `objectStores` array yourself, ensure these core stores are present if your application uses the default repositories.
+    *   The `AgentFactory` typically ensures that core stores like `'conversations'`, `'observations'`, `'state'`, and `'a2a_tasks'` are included if you use the simple `{ type: 'indexedDB', dbName: 'MyDB' }` config. If you provide an `objectStores` array yourself, ensure these core stores are present if your application uses the default repositories (including A2A task delegation).
     *   Each object store created by the current adapter implementation uses `'id'` as its `keyPath`. This means that objects stored in these collections **must** have an `id` property that serves as their unique key.
 
 **Example Configuration (`ArtInstanceConfig.storage`):**
@@ -51,7 +51,7 @@ const artConfig = {
 *   **`init()` Method:**
     *   This method **must be called and awaited** successfully before any other database operations (`get`, `set`, `delete`, `query`) can be performed. `AgentFactory` handles this during ART instance initialization.
     *   It opens the IndexedDB database connection.
-    *   It handles the `onupgradeneeded` event: If the `dbVersion` provided in the config is higher than the existing database version, this event fires. The adapter uses this opportunity to create any object stores listed in `config.objectStores` that do not already exist.
+    *   It handles the `onupgradeneeded` event: If the `dbVersion` provided in the config is higher than the existing database version, this event fires. The adapter uses this opportunity to create any object stores listed in `config.objectStores` that do not already exist. If you add `'a2a_tasks'` to your stores, remember to bump `dbVersion`.
     *   Current implementation creates object stores with `{ keyPath: 'id' }`.
 *   **Asynchronous Operations:** All database operations are asynchronous and return Promises.
 *   **Transactions:** Each operation (`get`, `set`, `delete`, `query` using `getAll`) is performed within an IndexedDB transaction.

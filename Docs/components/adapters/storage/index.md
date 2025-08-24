@@ -58,7 +58,7 @@ export interface StorageAdapter {
 
 ## Built-in Storage Adapters
 
-ART `v0.2.7` provides two built-in storage adapters:
+ART `v0.2.7` provides these built-in storage adapters:
 
 1.  **[`InMemoryStorageAdapter`](inMemory.md):**
     *   Stores all data in JavaScript Maps within the current process's memory.
@@ -68,6 +68,10 @@ ART `v0.2.7` provides two built-in storage adapters:
     *   Uses the browser's IndexedDB API for persistent client-side storage.
     *   **Pros:** Data persists across browser sessions, suitable for web applications needing to remember conversation history, user preferences, etc.
     *   **Cons:** Only available in browser environments. Querying capabilities are limited by IndexedDB's own features and the adapter's current implementation (which relies on `getAll()` and client-side filtering for complex queries).
+3.  **[`SupabaseStorageAdapter`](supabase.md):**
+    *   Uses Supabase (Postgres) tables for persistence with optional Row Level Security.
+    *   **Pros:** Cloud-ready, scalable, first-class SQL querying via indexes, usable server-side or client-side with RLS.
+    *   **Cons:** Requires a Supabase project and network connectivity.
 
 ## Creating a Custom Storage Adapter
 

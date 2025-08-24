@@ -548,6 +548,7 @@ export class PESAgent implements IAgentCore {
                 const now = Date.now();
                 const a2aTask: A2ATask = {
                     taskId: call.callId, // Use the tool call ID as the task ID for traceability
+                    threadId: threadId,
                     status: A2ATaskStatus.PENDING,
                     payload: { taskType, input, instructions, parameters: { threadId, traceId } },
                     sourceAgent: { agentId: 'pes-agent', agentName: 'PES Agent', agentType: 'orchestrator' },

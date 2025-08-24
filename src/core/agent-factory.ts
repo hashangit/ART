@@ -174,7 +174,7 @@ export class AgentFactory {
                 case 'indexedDB':
                     this.storageAdapter = new IndexedDBStorageAdapter({
                         dbName: storageConfig.dbName || 'ARTDB',
-                        objectStores: storageConfig.objectStores || ['conversations', 'observations', 'state']
+                        objectStores: storageConfig.objectStores || ['conversations', 'observations', 'state', 'a2a_tasks']
                     });
                     break;
                 case 'memory':

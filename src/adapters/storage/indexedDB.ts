@@ -50,6 +50,7 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
         'conversations', // Used by ConversationRepository
         'observations',  // Used by ObservationRepository
         'state',         // Used by StateRepository
+        'a2a_tasks',     // Used by TaskStatusRepository
         ...(config.objectStores || []) // Add any user-defined stores
     ]);
   }

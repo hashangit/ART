@@ -794,6 +794,8 @@ export interface A2ATaskResult {
 export interface A2ATask {
   /** Unique identifier for the task. */
   taskId: string;
+  /** The thread this task belongs to (top-level for efficient filtering). */
+  threadId: string;
   
   /** Current status of the task. */
   status: A2ATaskStatus;

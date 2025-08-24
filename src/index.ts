@@ -25,6 +25,8 @@ export { PESAgent } from './core/agents/pes-agent';
 export { InMemoryStorageAdapter } from './adapters/storage/inMemory';
 /** Persists data in the browser's IndexedDB. Recommended for web apps. */
 export { IndexedDBStorageAdapter } from './adapters/storage/indexedDB';
+/** Persists data in Supabase (Postgres). Useful for cloud or server-side environments. */
+export { SupabaseStorageAdapter } from './adapters/storage/supabase';
 
 // --- Reasoning Provider Adapters (Implementations of `ProviderAdapter`) ---
 /** Adapter for Google Gemini models. */

@@ -64,6 +64,7 @@
     "@anthropic-ai/sdk": "^0.51.0",
     "@google/genai": "^0.10.0",
     "@modelcontextprotocol/sdk": "^1.12.3",
+    "@supabase/supabase-js": "^2.56.0",
     "@types/mathjs": "^9.4.1",
     "@types/mustache": "^4.2.5",
     "ajv": "^8.17.1",
