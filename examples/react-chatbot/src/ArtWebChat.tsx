@@ -27,7 +27,6 @@ import {
   Clock,
   ArrowRight,
   Trash2,
-  X,
   PlusCircle
 } from 'lucide-react';
 
@@ -38,24 +37,33 @@ import { useFileUpload } from './hooks/useFileUpload';
 import { ChatMessage } from './components/webchat/ChatMessage';
 import { FindingCard } from './components/webchat/FindingCard';
 import { ChatHistory } from './components/webchat/ChatHistory';
+import ProviderSettings from './components/ProviderSettings';
+import { Input } from './components/ui/input';
 
 // Main ART WebChat Component
 export const ArtWebChat: React.FC<ArtWebChatConfig> = (props) => {
   const [input, setInput] = useState('');
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const {
     uploadedFiles,
     fileInputRef,
     handleFileUpload,
     handleAddDocuments,
-    removeUploadedFile,
     getFileContext,
     clearUploadedFiles,
   } = useFileUpload();
   
   const {
     isInitialized,
+    isAuthenticated,
+    handleLogin,
+    handleLogout,
+    loginWithEmailPassword,
+    signUpWithEmailPassword,
+    sendMagicLink,
     isLoading,
     error,
     messages,
@@ -111,6 +119,8 @@ export const ArtWebChat: React.FC<ArtWebChatConfig> = (props) => {
     );
   }
 
+  const isEmailFlow = (import.meta as any).env.VITE_AUTH_PROVIDER?.toLowerCase?.() === 'email';
+
   return (
     <div className="flex h-screen w-screen overflow-hidden text-slate-900 dark:text-slate-50 bg-white dark:bg-slate-950">
       <Toaster position="top-right" />
@@ -130,7 +140,14 @@ export const ArtWebChat: React.FC<ArtWebChatConfig> = (props) => {
                   <p className="text-sm text-muted-foreground truncate">{currentThreadTitle}</p>
               </div>
           </div>
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
+              {props.authRequired && (
+                isAuthenticated ? (
+                  <Button variant="outline" size="sm" onClick={handleLogout}>Logout</Button>
+                ) : (
+                  isEmailFlow ? null : <Button variant="default" size="sm" onClick={handleLogin}>Login</Button>
+                )
+              )}
               <TooltipProvider>
                   <Tooltip>
                       <TooltipTrigger asChild>
@@ -180,7 +197,7 @@ export const ArtWebChat: React.FC<ArtWebChatConfig> = (props) => {
         </div>
         
         <Tabs defaultValue="chat" className="flex-grow flex flex-col overflow-hidden">
-          <TabsList className="grid w-full grid-cols-2 rounded-none border-b shrink-0">
+          <TabsList className="grid w-full grid-cols-3 rounded-none border-b shrink-0">
             <TabsTrigger value="chat" className="text-xs py-2 data-[state=active]:shadow-none">
               <MessageSquare className="mr-1 h-3.5 w-3.5" />
               Chat
@@ -193,6 +210,9 @@ export const ArtWebChat: React.FC<ArtWebChatConfig> = (props) => {
                   {observations.length}
                 </span>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="text-xs py-2 data-[state=active]:shadow-none">
+              Settings
             </TabsTrigger>
           </TabsList>
           
@@ -224,22 +244,15 @@ export const ArtWebChat: React.FC<ArtWebChatConfig> = (props) => {
                   </ScrollArea>
                   <div className="border-t bg-slate-50 dark:bg-slate-900 flex-shrink-0">
                       <div className="max-w-4xl mx-auto px-4 pt-3 pb-1">
-                        {uploadedFiles.length > 0 && (
-                          <div className="mb-3 flex flex-wrap gap-2">
-                            {uploadedFiles.map(({ file }, index) => (
-                              <div key={index} className="flex items-center gap-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-sm">
-                                <Paperclip className="h-3 w-3" />
-                                <span className="truncate max-w-32">{file.name}</span>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-4 w-4 p-0 hover:bg-blue-200 dark:hover:bg-blue-800"
-                                  onClick={() => removeUploadedFile(index)}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ))}
+                        {props.authRequired && !isAuthenticated && isEmailFlow && (
+                          <div className="mb-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <Input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
+                            <Input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={() => loginWithEmailPassword(email, password)} disabled={!email || !password}>Sign In</Button>
+                              <Button size="sm" variant="outline" onClick={() => signUpWithEmailPassword(email, password)} disabled={!email || !password}>Sign Up</Button>
+                              <Button size="sm" variant="ghost" onClick={() => sendMagicLink(email)} disabled={!email}>Magic Link</Button>
+                            </div>
                           </div>
                         )}
                         <form onSubmit={handleSendMessage} className="relative mb-2">
@@ -331,6 +344,12 @@ export const ArtWebChat: React.FC<ArtWebChatConfig> = (props) => {
                   ))
                 )}
               </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="settings" className="flex-grow overflow-auto p-4 bg-slate-50 dark:bg-slate-900">
+             <div className="max-w-2xl mx-auto">
+               <ProviderSettings />
+             </div>
           </TabsContent>
         </Tabs>
       </div>

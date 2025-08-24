@@ -55,7 +55,8 @@ export class ProviderManagerImpl implements IProviderManager {
     private _getConfigSignature(config: RuntimeProviderConfig): string {
         const sortedAdapterOptions = config.adapterOptions
             ? Object.keys(config.adapterOptions).sort().reduce((obj: any, key) => {
-                  obj[key] = config.adapterOptions[key];
+                  // Never include secrets in signature logs; signature remains internal only
+                  obj[key] = key.toLowerCase().includes('key') ? '***' : config.adapterOptions[key];
                   return obj;
               }, {})
             : {};
@@ -79,18 +80,17 @@ export class ProviderManagerImpl implements IProviderManager {
         if (existingInstance && existingInstance.state === 'idle') {
             // Reuse idle instance
             existingInstance.state = 'active';
-            // Clear idle timer when reusing (checklist item 12 part of 95)
+            // Clear idle timer when reusing
             if (existingInstance.idleTimer) {
                 clearTimeout(existingInstance.idleTimer);
                 existingInstance.idleTimer = undefined;
             }
-            console.log(`Reusing idle instance for signature: ${configSignature}`); // Temporary log
 
             const release = () => this._releaseAdapter(configSignature);
             return { adapter: existingInstance.adapter, release };
         }
 
-        // 2. Check local provider constraints (checklist item 12 part of 97-102)
+        // 2. Check local provider constraints
         const providerEntry = this.availableProviders.get(config.providerName);
         if (!providerEntry) {
             throw new UnknownProviderError(config.providerName);
@@ -100,53 +100,44 @@ export class ProviderManagerImpl implements IProviderManager {
             let idleLocalProviderDifferentSignature: ManagedInstance | undefined = undefined;
 
             for (const [sig, instance] of this.managedInstances.entries()) {
-                const entry = this.availableProviders.get(instance.configSignature.split('"providerName":"')[1].split('"')[0]); // Extract providerName from signature - TODO: Better way?
+                const entry = this.availableProviders.get(instance.configSignature.split('"providerName":"')[1].split('"')[0]);
                  if (entry?.isLocal) {
                     if (instance.state === 'active') {
                         if (sig !== configSignature) {
-                            // Another local provider is active
                             throw new LocalProviderConflictError(config.providerName, entry.name);
                         } else {
-                            // The same local instance is busy
                             throw new LocalInstanceBusyError(config.providerName, config.modelId);
                         }
                     } else if (instance.state === 'idle' && sig !== configSignature) {
-                         // Found an idle local provider with a different signature
                          idleLocalProviderDifferentSignature = instance;
                     }
                  }
             }
 
-            // If a different idle local provider exists, evict it
             if (idleLocalProviderDifferentSignature) {
-                console.log(`Evicting idle local instance with different signature: ${idleLocalProviderDifferentSignature.configSignature}`); // Temporary log
                 await this._evictInstance(idleLocalProviderDifferentSignature.configSignature);
             }
         }
 
-        // 3. Check API provider concurrency limits (checklist item 12 part of 89-90)
+        // 3. Check API provider concurrency limits
         if (!providerEntry.isLocal) {
             const activeApiInstancesCount = Array.from(this.managedInstances.values()).filter(
                 instance => {
-                    const entry = this.availableProviders.get(instance.configSignature.split('"providerName":"')[1].split('"')[0]); // Extract providerName - TODO: Better way?
+                    const entry = this.availableProviders.get(instance.configSignature.split('"providerName":"')[1].split('"')[0]);
                     return entry && !entry.isLocal && instance.state === 'active' && entry.name === config.providerName;
                 }
             ).length;
 
             if (activeApiInstancesCount >= this.maxParallelApiInstancesPerProvider) {
-                console.log(`API limit reached for ${config.providerName}. Queueing request.`); // Temporary log
-                // 4. If limits reached, queue request (checklist item 12 part of 90)
                 return new Promise<ManagedAdapterAccessor>((resolve, reject) => {
-                    // Store config, resolve, and reject in the queue
                     this.requestQueue.push({ config, resolve, reject });
                 });
             }
         }
 
-        // 5. If no limits, create new instance (checklist item 12 part of 360)
+        // 4. Create new instance
         let adapterInstance: ProviderAdapter;
         try {
-            // Pass provider name along with adapter options
             const adapterOptions = { 
                 ...config.adapterOptions, 
                 providerName: config.providerName 
@@ -156,18 +147,15 @@ export class ProviderManagerImpl implements IProviderManager {
             throw new AdapterInstantiationError(config.providerName, error);
         }
 
-
-        // 6. Store new instance (checklist item 12 part of 361)
+        // 5. Store new instance
         const newManagedInstance: ManagedInstance = {
             adapter: adapterInstance,
             configSignature: configSignature,
             state: 'active',
         };
         this.managedInstances.set(configSignature, newManagedInstance);
-        console.log(`Created new instance for signature: ${configSignature}`); // Temporary log
 
-
-        // 7. Return ManagedAdapterAccessor for new instance (checklist item 12 part of 362)
+        // 6. Return accessor
         const release = () => this._releaseAdapter(configSignature);
         return { adapter: newManagedInstance.adapter, release };
     }
@@ -177,19 +165,17 @@ export class ProviderManagerImpl implements IProviderManager {
      * @param configSignature The signature of the instance to release.
      */
     private _releaseAdapter(configSignature: string): void {
-        console.log(`Release called for signature: ${configSignature}`); // Temporary log
         const instance = this.managedInstances.get(configSignature);
         if (!instance) {
-            console.warn(`Attempted to release unknown instance with signature: ${configSignature}`);
             return;
         }
 
         instance.state = 'idle';
         instance.lastUsedTimestamp = Date.now();
 
-        const providerEntry = this.availableProviders.get(instance.configSignature.split('"providerName":"')[1].split('"')[0]); // Extract providerName - TODO: Better way?
+        const providerEntry = this.availableProviders.get(instance.configSignature.split('"providerName":"')[1].split('"')[0]);
 
-        // Start idle timer for API instances (checklist item 13 part of 366)
+        // Start idle timer for API instances
         if (providerEntry && !providerEntry.isLocal) {
             if (instance.idleTimer) {
                 clearTimeout(instance.idleTimer);
@@ -199,18 +185,13 @@ export class ProviderManagerImpl implements IProviderManager {
             }, this.apiInstanceIdleTimeoutMs);
         }
 
-        // Check request queue (checklist item 13 part of 367)
+        // Check request queue
         if (this.requestQueue.length > 0) {
-            // Dequeue the oldest request
             const nextRequest = this.requestQueue.shift();
             if (nextRequest) {
-                 console.log(`Dequeuing request for provider: ${nextRequest.config.providerName}`); // Temporary log
-                 // Attempt to fulfill the dequeued request by recursively calling getAdapter
-                 // This will either find an idle instance (potentially the one just released)
-                 // or create a new one if allowed, or re-queue if limits are still hit.
                  this.getAdapter(nextRequest.config)
-                     .then(nextRequest.resolve) // Resolve the original promise with the obtained accessor
-                     .catch(nextRequest.reject); // Reject the original promise if getting the adapter fails
+                     .then(nextRequest.resolve)
+                     .catch(nextRequest.reject);
             }
         }
     }
@@ -220,34 +201,22 @@ export class ProviderManagerImpl implements IProviderManager {
      * @param configSignature The signature of the instance to evict.
      */
     private async _evictInstance(configSignature: string): Promise<void> {
-        console.log(`Attempting to evict instance with signature: ${configSignature}`); // Temporary log
         const instance = this.managedInstances.get(configSignature);
 
-        // Only evict if the instance exists and is currently idle
         if (instance && instance.state === 'idle') {
-            console.log(`Evicting idle instance with signature: ${configSignature}`); // Temporary log
-            // Call adapter.shutdown?.() (checklist item 14 part of 371)
             if (instance.adapter.shutdown) {
                 try {
                     await instance.adapter.shutdown();
-                    console.log(`Adapter shutdown successful for ${configSignature}`);
-                } catch (error) {
-                    console.error(`Error during adapter shutdown for ${configSignature}:`, error);
+                } catch (_error) {
+                    // swallow adapter shutdown errors
                 }
             }
 
             this.managedInstances.delete(configSignature);
-            // Clear timer reference if it exists (checklist item 14 part of 373)
             if (instance.idleTimer) {
                 clearTimeout(instance.idleTimer);
                 instance.idleTimer = undefined;
             }
-        } else if (instance && instance.state === 'active') {
-             console.log(`Instance with signature ${configSignature} is active, not evicting.`); // Temporary log
-        } else {
-             console.log(`Instance with signature ${configSignature} not found, cannot evict.`); // Temporary log
         }
     }
-
-    // Note: Queue processing is handled in _releaseAdapter. Idle eviction is handled by timers set in _releaseAdapter calling _evictInstance.
 }

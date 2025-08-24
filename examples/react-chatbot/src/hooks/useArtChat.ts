@@ -8,10 +8,12 @@ import {
   MessageRole, 
   ObservationType, 
   ConversationMessage,
- AuthManager
+  AuthManager
 } from 'art-framework';
 import { ArtMessage, ArtObservation, ArtWebChatConfig, ChatHistoryItem } from '../lib/types';
 import { mapObservationToFinding, parseArtResponse, safeJsonParse } from '@/lib/utils.tsx';
+import { loadProviderKey } from '../lib/credentials';
+import { supabase } from '../supabaseClient';
 
 const CHAT_HISTORY_KEY = 'art_chat_history';
 const CURRENT_THREAD_ID_KEY = 'art_current_thread_id';
@@ -33,6 +35,53 @@ export function useArtChat(props: ArtWebChatConfig) {
  const artInstanceRef = useRef<ArtInstance | null>(null);
  const authManagerRef = useRef<AuthManager | null>(null);
  const observationSocketUnsubscribe = useRef<() => void | undefined>();
+
+ // Track Supabase auth state
+ useEffect(() => {
+   let mounted = true;
+   (async () => {
+     const { data } = await supabase.auth.getSession();
+     if (mounted) setIsAuthenticated(!!data.session);
+   })();
+   const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+     setIsAuthenticated(!!session);
+   });
+   return () => {
+     mounted = false;
+     sub.subscription.unsubscribe();
+   };
+ }, []);
+
+ const loginWithEmailPassword = async (email: string, password: string) => {
+   const { error } = await supabase.auth.signInWithPassword({ email, password });
+   if (error) {
+     toast.error(error.message);
+     return false;
+   }
+   toast.success('Signed in');
+   return true;
+ };
+
+ const signUpWithEmailPassword = async (email: string, password: string) => {
+   const { error } = await supabase.auth.signUp({ email, password });
+   if (error) {
+     toast.error(error.message);
+     return false;
+   }
+   toast.success('Sign up successful. Check your email to confirm.');
+   return true;
+ };
+
+ const sendMagicLink = async (email: string) => {
+   const redirectTo = (import.meta as any).env.VITE_SUPABASE_REDIRECT_URL as string | undefined;
+   const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
+   if (error) {
+     toast.error(error.message);
+     return false;
+   }
+   toast.success('Magic link sent. Check your email.');
+   return true;
+ };
 
  const loadHistoryForThread = useCallback(async (instance: ArtInstance, tid: string) => {
    const historicalMessages = await instance.conversationManager.getMessages(tid, { limit: 100 });
@@ -127,15 +176,8 @@ export function useArtChat(props: ArtWebChatConfig) {
        const artInstance = await createArtInstance(artConfig);
        artInstanceRef.current = artInstance;
 
-       if (artInstance.authManager) {
-         authManagerRef.current = artInstance.authManager;
-         if (window.location.search.includes('code=')) {
-           await authManagerRef.current.handleRedirect('pkce');
-           window.history.replaceState({}, document.title, window.location.pathname);
-         }
-         const authStatus = await authManagerRef.current.isAuthenticated('pkce');
-         setIsAuthenticated(authStatus);
-       }
+       // AuthManager remains for MCP/A2A PKCE flows, but user auth is via Supabase
+       authManagerRef.current = artInstance.authManager || null;
        
        if (artConfig?.providers?.availableProviders) {
            const models = artConfig.providers.availableProviders;
@@ -161,7 +203,12 @@ export function useArtChat(props: ArtWebChatConfig) {
            localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(newHistory));
        }
 
-       await switchThread(initialThreadId);
+       // Only load history when not requiring auth or when authenticated
+       if (!props.authRequired || isAuthenticated) {
+         await switchThread(initialThreadId);
+       } else {
+         setThreadId(initialThreadId);
+       }
        
        toast.success('ART Framework initialized successfully!');
        
@@ -181,7 +228,13 @@ export function useArtChat(props: ArtWebChatConfig) {
        observationSocketUnsubscribe.current();
      }
    };
- }, [artConfig, onError, defaultModel, switchThread]);
+ }, [artConfig, onError, defaultModel, switchThread, isAuthenticated, props.authRequired]);
+
+ // After login, load current thread history if needed
+ useEffect(() => {
+   if (!isInitialized || !props.authRequired || !isAuthenticated || !threadId || !artInstanceRef.current) return;
+   switchThread(threadId);
+ }, [isAuthenticated, isInitialized, props.authRequired, threadId, switchThread]);
 
  useEffect(() => {
    if (!lastResponseData) return;
@@ -287,6 +340,7 @@ export function useArtChat(props: ArtWebChatConfig) {
  useEffect(() => {
    const updateThreadConfig = async () => {
      if (!isInitialized || !artInstanceRef.current || !selectedModel || !threadId) return;
+     if (props.authRequired && !isAuthenticated) return;
 
      const stateManager = artInstanceRef.current.stateManager;
      const selectedModelEntry = availableModels.find(m => m.name === selectedModel);
@@ -301,19 +355,11 @@ export function useArtChat(props: ArtWebChatConfig) {
            return;
        }
        
-       const authHeaders = authManagerRef.current ? await authManagerRef.current.getHeaders('pkce') : null;
-       const token = authHeaders?.Authorization?.split(' ')[1];
-
-       if (props.auth && !token) {
-         toast.error("Authentication token is missing. Please log in again.");
-         return;
-       }
-       
        await stateManager.setThreadConfig(threadId, {
          providerConfig: {
            providerName: selectedModel,
            modelId: modelId,
-           adapterOptions: { apiKey: token },
+           adapterOptions: {},
          },
          enabledTools: [],
          historyLimit: 200,
@@ -345,14 +391,14 @@ Your entire output MUST strictly follow the format below, using XML-style tags. 
    };
 
    updateThreadConfig();
- }, [selectedModel, isInitialized, availableModels, threadId, props.auth]);
+ }, [selectedModel, isInitialized, availableModels, threadId, props.authRequired, isAuthenticated]);
 
  const sendMessage = async (query: string, userMessageContent: string) => {
    if (!isInitialized || !artInstanceRef.current || isLoading || !threadId) {
      return;
    }
 
-   if (props.auth && !isAuthenticated) {
+   if (props.authRequired && !isAuthenticated) {
      toast.error("Please log in to send a message.");
      return;
    }
@@ -379,9 +425,40 @@ Your entire output MUST strictly follow the format below, using XML-style tags. 
 
    const obsStartIndex = observations.length;
    try {
+    // Persist the user message so it appears in history upon reload
+    await artInstanceRef.current.conversationManager.addMessages(threadId, [{
+      messageId: userMessage.id,
+      threadId,
+      role: MessageRole.USER,
+      content: userMessageContent,
+      timestamp: Date.now(),
+      metadata: {}
+    }]);
+
+     const selectedModelEntry = availableModels.find(m => m.name === selectedModel);
+     const modelId = selectedModelEntry?.baseOptions?.modelId;
+     const providerName = selectedModelEntry?.baseOptions?.provider as string | undefined;
+     const adapterOptions: any = {};
+     if (providerName) {
+       const key = await loadProviderKey(providerName);
+       if (!key) {
+         toast.error(`Missing API key for provider '${providerName}'. Please add it in Settings.`);
+         setIsLoading(false);
+         return;
+       }
+       adapterOptions.apiKey = key;
+     }
+
      const response = await artInstanceRef.current.process({
        query,
        threadId,
+       options: {
+         providerConfig: {
+           providerName: selectedModel!,
+           modelId: modelId!,
+           adapterOptions,
+         },
+       },
      });
      setLastResponseData({ response, obsStartIndex });
    } catch (err) {
@@ -449,14 +526,27 @@ Your entire output MUST strictly follow the format below, using XML-style tags. 
  }, [threadId, deleteConversation]);
 
  const handleLogin = async () => {
-   if (authManagerRef.current) {
-     await authManagerRef.current.login('pkce');
+   const provider = (import.meta as any).env.VITE_AUTH_PROVIDER as string | undefined;
+   const redirectTo = (import.meta as any).env.VITE_SUPABASE_REDIRECT_URL as string | undefined;
+   if (!provider || provider.toLowerCase() === 'email') {
+     toast('Use the email login form.');
+     return;
+   }
+   if (!redirectTo) {
+     toast.error('Redirect URL not configured.');
+     return;
+   }
+   const { error } = await supabase.auth.signInWithOAuth({ provider: provider as any, options: { redirectTo } });
+   if (error) {
+     toast.error(error.message);
    }
  };
 
  const handleLogout = async () => {
-   if (authManagerRef.current) {
-     authManagerRef.current.logout('pkce');
+   const { error } = await supabase.auth.signOut();
+   if (error) {
+     toast.error(error.message);
+   } else {
      setIsAuthenticated(false);
    }
  };
@@ -481,6 +571,9 @@ Your entire output MUST strictly follow the format below, using XML-style tags. 
    isAuthenticated,
    handleLogin,
    handleLogout,
+   loginWithEmailPassword,
+   signUpWithEmailPassword,
+   sendMagicLink,
    delegateTask,
    isLoading,
    error,

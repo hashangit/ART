@@ -1,15 +1,20 @@
 import ReactDOM from 'react-dom/client';
 import ArtWebChat from './ArtWebChat';
-import { IndexedDBStorageAdapter, GeminiAdapter, OpenAIAdapter } from 'art-framework';
+import { SupabaseStorageAdapter, GeminiAdapter, OpenAIAdapter } from 'art-framework';
 import { ArtMessage } from './lib/types';
 import './styles/globals.css';
+import { supabase } from './supabaseClient';
 
 // Demo configuration for the ART Framework with ART UI
 const artConfig = {
 // Core ART Framework configuration
 artConfig: {
   // Storage configuration
-  storage: new IndexedDBStorageAdapter({ objectStores: [] }),
+  storage: new SupabaseStorageAdapter({
+    url: import.meta.env.VITE_SUPABASE_URL as string,
+    apiKey: import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+    client: supabase,
+  }),
   
   // Provider configuration - using correct ProviderManagerConfig format
   providers: {
@@ -78,6 +83,7 @@ artConfig: {
   title: 'ART WebChat',
   subtitle: 'Powered by ART Framework',
   defaultModel: 'Gemini 2.5 Flash', // Match the 'name' from availableProviders
+  authRequired: true,
   
   // Event handlers
   onMessage: (message: ArtMessage) => {
@@ -97,4 +103,4 @@ function App() {
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root')!);
-root.render(<App />); 
+root.render(<App />);  
