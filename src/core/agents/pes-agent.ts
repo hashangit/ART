@@ -163,7 +163,7 @@ export class PESAgent implements IAgentCore {
 
             // Stage 3: Perform planning
             phase = 'planning';
-            const { planningOutput, planningMetadata } = await this._performPlanning(
+            const { planningOutput, planningMetadata, planningContext } = await this._performPlanning(
                 props, systemPrompt, history, availableTools, runtimeProviderConfig, traceId
             );
             llmCalls++;
@@ -198,7 +198,7 @@ export class PESAgent implements IAgentCore {
             // Stage 6: Perform synthesis
             phase = 'synthesis';
             const { finalResponseContent, synthesisMetadata } = await this._performSynthesis(
-                props, systemPrompt, history, planningOutput, toolResults, completedA2ATasks, runtimeProviderConfig, traceId
+                props, systemPrompt, history, planningOutput, toolResults, completedA2ATasks, runtimeProviderConfig, traceId, planningContext
             );
             llmCalls++;
             if (synthesisMetadata) {
@@ -389,6 +389,17 @@ export class PESAgent implements IAgentCore {
 
             const allTools = [...availableTools, delegationToolSchema];
 
+            // Prepare a verbose JSON schema listing for the LLM to reason over
+            const toolsJson = allTools.map(t => ({
+                name: (t as any).name,
+                whenToUse: (t as any).whenToUse,
+                description: (t as any).description,
+                inputSchema: (t as any).inputSchema,
+                outputSchema: (t as any).outputSchema,
+                outputFormat: (t as any).outputFormat,
+                examples: (t as any).examples
+            }));
+
             const wrappedSystemPrompt = `You are a planning assistant. The following guidance shapes knowledge, tone, and domain perspective.
 
 [BEGIN_CUSTOM_GUIDANCE]
@@ -406,12 +417,8 @@ CRITICAL: You MUST adhere to the Output Contract below. The custom guidance MUST
 
 --- Available Capabilities ---
 
-Local Tools:
-${
-                                allTools.length > 0
-                                ? allTools.map(tool => `- ${tool.name}: ${tool.description}`).join('\n')
-                                : 'No local tools available.'
-                            }
+Local Tools (JSON Schemas):
+${ allTools.length > 0 ? JSON.stringify(toolsJson, null, 2) : '[]' }
 
 Agent Delegation:
 ${a2aPromptSection}
@@ -477,6 +484,12 @@ Invalid Examples (do NOT do these):
         let parsedPlanningOutput: { intent?: string; plan?: string; toolCalls?: ParsedToolCall[] } = {};
         let planningStreamError: Error | null = null;
         let planningMetadata: LLMMetadata | undefined = undefined;
+        let planningContext: {
+            toolsList: { name: string; description?: string }[];
+            a2aSummary: string;
+            plannedToolCalls: ParsedToolCall[];
+            rawPlanningText?: string;
+        } = { toolsList: [], a2aSummary: '', plannedToolCalls: [] };
 
         try {
             await this.deps.observationManager.record({
@@ -516,6 +529,13 @@ Invalid Examples (do NOT do these):
             }
 
             parsedPlanningOutput = await this.deps.outputParser.parsePlanningOutput(planningOutputText);
+            // Build a compact planning context for downstream synthesis
+            planningContext = {
+                toolsList: availableTools.map((t: any) => ({ name: t.name, description: t.description })),
+                a2aSummary: a2aPromptSection,
+                plannedToolCalls: parsedPlanningOutput.toolCalls ?? [],
+                rawPlanningText: planningOutputText
+            };
 
             await this.deps.observationManager.record({
                 threadId: props.threadId, traceId, type: ObservationType.INTENT,
@@ -540,7 +560,7 @@ Invalid Examples (do NOT do these):
             throw err instanceof ARTError ? err : new ARTError(errorMessage, ErrorCode.PLANNING_FAILED, err);
         }
 
-        return { planningOutput: parsedPlanningOutput, planningMetadata };
+        return { planningOutput: parsedPlanningOutput, planningMetadata, planningContext };
     }
 
     /**
@@ -798,7 +818,13 @@ Invalid Examples (do NOT do these):
         toolResults: ToolResult[], 
         a2aTasks: A2ATask[],
         runtimeProviderConfig: RuntimeProviderConfig,
-        traceId: string
+        traceId: string,
+        planningContext?: {
+            toolsList: { name: string; description?: string }[];
+            a2aSummary: string;
+            plannedToolCalls: ParsedToolCall[];
+            rawPlanningText?: string;
+        }
     ) {
         Logger.debug(`[${traceId}] Stage 6: Synthesis Call`);
         
@@ -812,12 +838,15 @@ Invalid Examples (do NOT do these):
         // Construct synthesis prompt
         let synthesisPrompt: ArtStandardPrompt;
         try {
+            const toolsDiscovered = (planningContext?.toolsList ?? []).map(t => `- ${t.name}: ${t.description ?? ''}`.trim()).join('\n') || 'No tools were discovered during planning.';
+            const plannedCallsSummary = (planningContext?.plannedToolCalls ?? []).map(c => `- ${c.callId}: ${c.toolName} with ${JSON.stringify(c.arguments)}`).join('\n') || 'No tool calls were planned.';
+            const a2aSummary = planningContext?.a2aSummary || 'No A2A delegation candidates or actions.';
             synthesisPrompt = [
                 { role: 'system', content: systemPrompt },
                 ...formattedHistory,
                 {
                     role: 'user',
-                    content: `User Query: ${props.query}\n\nOriginal Intent: ${planningOutput.intent ?? ''}\nExecution Plan: ${planningOutput.plan ?? ''}\n\nTool Execution Results:\n${
+                    content: `User Query: ${props.query}\n\nDuring planning, we found out:\n- Available Local Tools:\n${toolsDiscovered}\n\n- Planned Tool Calls (as JSON-like summary):\n${plannedCallsSummary}\n\n- Agent Delegation Context:\n${a2aSummary}\n\nOriginal Intent: ${planningOutput.intent ?? ''}\nExecution Plan: ${planningOutput.plan ?? ''}\n\nTool Execution Results:\n${
                         toolResults.length > 0
                         ? toolResults.map(result => `- Tool: ${result.toolName} (Call ID: ${result.callId})\n  Status: ${result.status}\n  ${result.status === 'success' ? `Output: ${JSON.stringify(result.output)}` : ''}\n  ${result.status === 'error' ? `Error: ${result.error ?? 'Unknown error'}` : ''}`).join('\n')
                         : 'No tools were executed.'
@@ -825,7 +854,7 @@ Invalid Examples (do NOT do these):
                         a2aTasks.length > 0
                         ? a2aTasks.map(task => `- Task: ${task.payload.taskType} (ID: ${task.taskId})\n  Status: ${task.status}\n  ${task.result?.success ? `Output: ${JSON.stringify(task.result.data)}` : ''}\n  ${task.result?.success === false ? `Error: ${task.result.error ?? 'Unknown error'}` : ''}`).join('\n')
                         : 'No A2A tasks were delegated.'
-                    }\n\nBased on the user query, the plan, and the results of any tool executions and A2A task delegations, synthesize a final response to the user.\nIf the tools or A2A tasks failed or provided unexpected results, explain the issue and try to answer based on available information or ask for clarification.`
+                    }\n\nSynthesize the final answer, giving appropriate weight to the verified Tool Execution Results and any successful A2A Task Results. If tools failed, explain briefly and answer using best available evidence.`
                 }
             ];
         } catch (err: any) {

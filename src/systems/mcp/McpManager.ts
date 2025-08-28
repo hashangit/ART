@@ -6,6 +6,7 @@ import { McpProxyTool } from './McpProxyTool';
 import { ConfigManager } from './ConfigManager';
 import { McpServerConfig, StreamableHttpConnection } from './types';
 import { McpClient, McpTransportConfig } from './McpClient';
+import { CORSAccessManager } from './web/CORSAccessManager';
 
 /**
  * Manages MCP (Model Context Protocol) server connections and tool registration.
@@ -73,22 +74,22 @@ export class McpManager {
       }
     }
     
-    // 4. Register proxy tools for all enabled servers
+    // 4. Register proxy tools based on current card hints only (non-blocking).
+    // Live discovery and PKCE prompting can happen later during explicit install or first use.
     let registeredToolCount = 0;
     for (const [, card] of allServerConfigs) {
-        if (card.enabled) {
-            // Defensive check: ensure tools array exists and is iterable
-            if (card.tools && Array.isArray(card.tools)) {
-                for (const toolDef of card.tools) {
-                    const proxyTool = new McpProxyTool(card, toolDef, this);
-                    await this.toolRegistry.registerTool(proxyTool);
-                    registeredToolCount++;
-                }
-            }
+      if (!card.enabled) continue;
+      const toolsToRegister = card.tools || [];
+      if (Array.isArray(toolsToRegister)) {
+        for (const toolDef of toolsToRegister) {
+          const proxyTool = new McpProxyTool(card, toolDef as any, this);
+          await this.toolRegistry.registerTool(proxyTool);
+          registeredToolCount++;
         }
+      }
     }
-    
-    Logger.info(`McpManager: Initialization complete. Registered ${registeredToolCount} lazy proxy tools from ${allServerConfigs.size} total servers.`);
+
+    Logger.info(`McpManager: Initialization complete. Registered ${registeredToolCount} proxy tools from ${allServerConfigs.size} total servers.`);
   }
 
   async shutdown(): Promise<void> {
@@ -122,6 +123,37 @@ export class McpManager {
     }
 
     const conn = card.connection as StreamableHttpConnection;
+
+    // Ensure CORS helper extension access before attempting browser fetch
+    const cors = new CORSAccessManager();
+    await cors.ensureAccess(conn.url);
+
+    // Auto-register PKCE strategy per server if oauth block is present and no explicit authStrategyId
+    if (!conn.authStrategyId && conn.oauth?.type === 'pkce' && this.authManager) {
+      try {
+        const strategyId = `mcp_pkce_${card.id}`;
+        if (!this.authManager.hasStrategy(strategyId)) {
+          const { PKCEOAuthStrategy } = await import('../../auth/PKCEOAuthStrategy');
+          const channelName = conn.oauth.channelName || `art-auth:mcp_pkce_${card.id}`;
+          const openInNewTab = conn.oauth.openInNewTab !== false; // default true
+          const scopesValue = Array.isArray(conn.oauth.scopes) ? (conn.oauth.scopes as unknown as string[]).join(' ') : (conn.oauth.scopes as unknown as string);
+          this.authManager.registerStrategy(strategyId, new PKCEOAuthStrategy({
+            authorizationEndpoint: conn.oauth.authorizationEndpoint,
+            tokenEndpoint: conn.oauth.tokenEndpoint,
+            clientId: conn.oauth.clientId,
+            redirectUri: conn.oauth.redirectUri,
+            scopes: scopesValue || '',
+            resource: conn.oauth.resource,
+            openInNewTab,
+            channelName,
+          } as any));
+          Logger.info(`McpManager: Auto-registered PKCE strategy '${strategyId}' for server '${serverId}'.`);
+        }
+        conn.authStrategyId = strategyId;
+      } catch (e: any) {
+        Logger.warn(`McpManager: Failed to auto-register PKCE for '${serverId}': ${e?.message || e}`);
+      }
+    }
     const transportConfig: McpTransportConfig = {
       type: 'streamable-http',
       url: conn.url,
@@ -223,4 +255,86 @@ export class McpManager {
 
   // The generateAndInstallCard method is removed as it is based on the stdio transport,
   // which is not supported in a browser-only environment.
+
+  /**
+   * Installs a server by persisting its config, discovering tools via MCP, and
+   * registering proxy tools. Returns the finalized config with accurate tools.
+   */
+  public async installServer(server: McpServerConfig): Promise<McpServerConfig> {
+    // Save initial config
+    this.configManager.setServerConfig(server.id, server);
+    try {
+      let client: McpClient;
+      try {
+        client = await this.getOrCreateConnection(server.id);
+      } catch (e: any) {
+        // If login was initiated, wait for auth and retry connection
+        if (e?.code === ErrorCode.NOT_CONNECTED && this.authManager) {
+          const conn = (this.configManager.getConfig().mcpServers[server.id].connection as StreamableHttpConnection);
+          const strategyId = conn.authStrategyId || `mcp_pkce_${server.id}`;
+          Logger.info(`McpManager: Waiting for PKCE auth to complete for '${server.id}'...`);
+          await this.waitForAuth(strategyId, 180000); // up to 3 minutes
+          client = await this.getOrCreateConnection(server.id);
+        } else {
+          throw e;
+        }
+      }
+      const liveTools = await client.listTools();
+      const normalized = (liveTools || []).map(t => ({ name: t.name, description: t.description, inputSchema: t.inputSchema } as any));
+      const updated = { ...server, tools: normalized } as McpServerConfig;
+      this.configManager.setServerConfig(server.id, updated);
+      for (const t of normalized) {
+        await this.toolRegistry.registerTool(new McpProxyTool(updated, t as any, this));
+      }
+      Logger.info(`McpManager: Installed server "${server.id}" with ${normalized.length} discovered tool(s).`);
+      return updated;
+    } catch (e: any) {
+      Logger.warn(`McpManager: Could not complete live discovery during install for "${server.id}": ${e?.message || e}. Falling back to provided tools.`);
+      const fallback = server.tools || [];
+      for (const t of fallback) {
+        await this.toolRegistry.registerTool(new McpProxyTool(server, t as any, this));
+      }
+      return server;
+    }
+  }
+
+  private async waitForAuth(strategyId: string, timeoutMs: number): Promise<void> {
+    if (!this.authManager) return;
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      try {
+        const ok = await this.authManager.isAuthenticated(strategyId);
+        if (ok) return;
+      } catch { /* ignore */ }
+      await new Promise(r => setTimeout(r, 1000));
+    }
+    throw new ARTError('Authentication window timed out.', ErrorCode.TIMEOUT);
+  }
+
+  /**
+   * Uninstalls a server: disconnects, removes registered proxy tools, and deletes config.
+   */
+  public async uninstallServer(serverId: string): Promise<void> {
+    try {
+      // Unregister tools by name prefix
+      const prefix = `mcp_${serverId}_`;
+      if ((this.toolRegistry as any).unregisterTools) {
+        await (this.toolRegistry as any).unregisterTools((schema: any) => typeof schema?.name === 'string' && schema.name.startsWith(prefix));
+      }
+
+      // Disconnect
+      const client = this.activeConnections.get(serverId);
+      if (client) {
+        await client.disconnect();
+        this.activeConnections.delete(serverId);
+      }
+
+      // Remove config
+      this.configManager.removeServerConfig(serverId);
+      Logger.info(`McpManager: Server "${serverId}" uninstalled.`);
+    } catch (e: any) {
+      Logger.warn(`McpManager: Uninstall encountered issues for "${serverId}": ${e?.message || e}`);
+      this.configManager.removeServerConfig(serverId);
+    }
+  }
 }

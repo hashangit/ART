@@ -8,12 +8,16 @@ import {
   MessageRole, 
   ObservationType, 
   ConversationMessage,
-  AuthManager
+  AuthManager,
+  ConfigManager,
+  McpManager,
+  McpProxyTool
 } from 'art-framework';
 import { ArtMessage, ArtObservation, ArtWebChatConfig, ChatHistoryItem } from '../lib/types';
 import { mapObservationToFinding, parseArtResponse, safeJsonParse } from '@/lib/utils.tsx';
 import { loadProviderKey } from '../lib/credentials';
 import { supabase } from '../supabaseClient';
+import { syncUserMcpConfigsToLocal, upsertUserMcpConfiguration } from '../lib/mcpConfigBridge';
 
 const CHAT_HISTORY_KEY = 'art_chat_history';
 const CURRENT_THREAD_ID_KEY = 'art_current_thread_id';
@@ -173,8 +177,14 @@ export function useArtChat(props: ArtWebChatConfig) {
      try {
        setIsLoading(true);
 
-       const artInstance = await createArtInstance(artConfig);
-       artInstanceRef.current = artInstance;
+       // Inject MCP discovery endpoint per requirements
+      const withMcpConfig = { 
+        ...(artConfig as any), 
+        mcpConfig: { enabled: true, discoveryEndpoint: 'http://localhost:3001/api/services', ...(artConfig as any).mcpConfig },
+        authConfig: { enabled: true, ...(artConfig as any).authConfig }
+      } as any;
+      const artInstance = await createArtInstance(withMcpConfig);
+      artInstanceRef.current = artInstance;
 
        // AuthManager remains for MCP/A2A PKCE flows, but user auth is via Supabase
        authManagerRef.current = artInstance.authManager || null;
@@ -194,6 +204,17 @@ export function useArtChat(props: ArtWebChatConfig) {
        setIsInitialized(true);
        setError(null);
 
+       // Merge user-specific MCP configs from Supabase rows if logged in
+       try {
+         const { data } = await supabase.auth.getUser();
+         const userId = data.user?.id;
+         if (userId) {
+           await syncUserMcpConfigsToLocal(userId);
+         }
+       } catch (e) {
+         console.warn('MCP Supabase sync skipped:', e);
+       }
+
        const savedThreadId = localStorage.getItem(CURRENT_THREAD_ID_KEY);
        const initialThreadId = savedThreadId || generateUUID();
        
@@ -211,6 +232,102 @@ export function useArtChat(props: ArtWebChatConfig) {
        }
        
        toast.success('ART Framework initialized successfully!');
+
+       // Listen for MCP Add-to-Chat requests from UI
+       const handler = async (evt: any) => {
+         try {
+           if (!artInstanceRef.current) return;
+           const detail = evt.detail || {};
+           const toolRegistry = artInstanceRef.current.toolRegistry;
+           const stateManager = artInstanceRef.current.stateManager;
+           const authManager = artInstanceRef.current.authManager || undefined;
+
+           const server = detail.server;
+           const toolDefs = detail.toolDefs || [];
+           const tid = detail.threadId || threadId;
+
+           // Ensure server is installed locally
+           const cm = new ConfigManager();
+           cm.setServerConfig(server.id, server as any);
+
+           // Register proxies now
+           const manager = new McpManager(toolRegistry as any, stateManager as any, authManager as any);
+           for (const def of toolDefs) {
+             const proxy = new McpProxyTool(server as any, def, manager);
+             await toolRegistry.registerTool(proxy);
+           }
+           // Proactively initiate connection to trigger PKCE preflight if needed
+           try {
+             await manager.getOrCreateConnection(server.id);
+           } catch (e) {
+             // First attempt may throw a NOT_CONNECTED after initiating login; ignore here
+           }
+
+           if (tid) {
+             const names = toolDefs.map((t: any) => `mcp_${server.id}_${t.name}`);
+             await stateManager.enableToolsForThread(tid, names);
+             toast.success(`Enabled ${names.length} tool(s) for this chat.`);
+           }
+         } catch (e) {
+           console.error('Failed to add MCP tools to chat', e);
+           toast.error('Failed to add tools to chat.');
+         }
+       };
+       window.addEventListener('art-mcp-add-to-chat', handler);
+       // store for cleanup
+      (initializeART as unknown as { _cleanupHandler?: (e: any) => void })._cleanupHandler = handler;
+      
+      // Begin: Additional MCP runtime event listeners for install/uninstall
+      const installHandler = async (evt: any) => {
+        try {
+          if (!artInstanceRef.current) return;
+          const detail = evt.detail || {};
+          const card = detail.card;
+          const cm = new ConfigManager();
+          const server = cm.getConfig().mcpServers[card?.id];
+          if (!server) return;
+          const manager = new McpManager(
+            artInstanceRef.current.toolRegistry as any,
+            artInstanceRef.current.stateManager as any,
+            artInstanceRef.current.authManager as any
+          );
+          await (manager as any).installServer(server);
+          // Persist updated credentials (tools are runtime, but protocol extract remains the same)
+          try {
+            const { data } = await supabase.auth.getUser();
+            const userId = data.user?.id;
+            if (userId) {
+              // Keep credentials as protocol extract; runtime tools are saved locally via ConfigManager
+              await upsertUserMcpConfiguration({ userId, mcpServiceId: server.id, credentials: (server as any).installation?.configurationExtract || { mcpServers: {} } });
+            }
+          } catch (e) {
+            console.warn('Supabase upsert after install failed', e);
+          }
+        } catch (e) {
+          console.warn('MCP install handler failed', e);
+        }
+      };
+      window.addEventListener('art-mcp-install', installHandler);
+      (initializeART as unknown as { _cleanupInstall?: (e: any) => void })._cleanupInstall = installHandler;
+
+      const uninstallHandler = async (evt: any) => {
+        try {
+          if (!artInstanceRef.current) return;
+          const detail = evt.detail || {};
+          const serverId = detail.serverId;
+          const manager = new McpManager(
+            artInstanceRef.current.toolRegistry as any,
+            artInstanceRef.current.stateManager as any,
+            artInstanceRef.current.authManager as any
+          );
+          await (manager as any).uninstallServer(serverId);
+        } catch (e) {
+          console.warn('MCP uninstall handler failed', e);
+        }
+      };
+      window.addEventListener('art-mcp-uninstall', uninstallHandler);
+      (initializeART as unknown as { _cleanupUninstall?: (e: any) => void })._cleanupUninstall = uninstallHandler;
+      // End: Additional MCP runtime event listeners
        
      } catch (err) {
        console.error('Failed to initialize ART Framework:', err);
@@ -226,6 +343,19 @@ export function useArtChat(props: ArtWebChatConfig) {
    return () => {
      if (observationSocketUnsubscribe.current) {
        observationSocketUnsubscribe.current();
+     }
+     // Cleanup MCP handler
+     const cleanupHandler = (initializeART as unknown as { _cleanupHandler?: (e: any) => void })._cleanupHandler;
+     if (cleanupHandler) {
+       window.removeEventListener('art-mcp-add-to-chat', cleanupHandler);
+     }
+     const cleanupInstall = (initializeART as unknown as { _cleanupInstall?: (e: any) => void })._cleanupInstall;
+     if (cleanupInstall) {
+       window.removeEventListener('art-mcp-install', cleanupInstall);
+     }
+     const cleanupUninstall = (initializeART as unknown as { _cleanupUninstall?: (e: any) => void })._cleanupUninstall;
+     if (cleanupUninstall) {
+       window.removeEventListener('art-mcp-uninstall', cleanupUninstall);
      }
    };
  }, [artConfig, onError, defaultModel, switchThread, isAuthenticated, props.authRequired]);

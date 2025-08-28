@@ -225,6 +225,18 @@ export interface ToolRegistry {
    * @returns A promise resolving to an array of `ToolSchema` objects.
    */
   getAvailableTools(filter?: { enabledForThreadId?: string }): Promise<ToolSchema[]>;
+
+  /**
+   * Unregisters a tool by its unique name.
+   * Implementations should silently succeed if the tool does not exist.
+   */
+  unregisterTool?(toolName: string): Promise<void>;
+
+  /**
+   * Unregisters multiple tools that match a predicate. Returns the number of tools removed.
+   * This is useful for removing all tools belonging to a specific MCP server by name prefix.
+   */
+  unregisterTools?(predicate: (schema: ToolSchema) => boolean): Promise<number>;
 }
 
 /**

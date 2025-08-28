@@ -234,20 +234,40 @@ export class McpClient {
 
   private async _connectStreamableHttp(): Promise<void> {
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json-rpc+stream',
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
       ...this.config.headers,
     };
 
+    // Preflight auth: if a strategy is configured but user is not authenticated, initiate login in a new tab
+    let loginAttempted = false;
     if (this.config.authStrategyId && this.authManager) {
+      Logger.debug(`McpClient: Preflight auth check using strategy '${this.config.authStrategyId}'`);
+      const isAuthed = await this.authManager.isAuthenticated(this.config.authStrategyId);
+      if (!isAuthed) {
+        loginAttempted = true;
+        try {
+          Logger.info('McpClient: Not authenticated. Initiating PKCE login flow...');
+          await this.authManager.login(this.config.authStrategyId);
+        } catch (e) {
+          throw new ARTError('Authentication required. Login failed to start.', ErrorCode.NETWORK_ERROR, e as Error);
+        }
+        // Stop here; caller should retry after login completes
+        throw new ARTError('Authentication required. Login initiated.', ErrorCode.NOT_CONNECTED);
+      }
+
       const authHeaders = await this.authManager.getHeaders(this.config.authStrategyId);
+      Logger.debug('McpClient: Retrieved auth headers for request.');
       Object.assign(headers, authHeaders);
     }
 
+    // Create the request stream up-front so we can write immediately after fetch returns
     const requestStream = new TransformStream();
     this.requestWriter = requestStream.writable.getWriter();
 
     try {
-      const response = await fetch(this.config.url, {
+      Logger.debug(`McpClient: Issuing fetch to '${this.config.url}' with stream body...`);
+      const responsePromise = fetch(this.config.url, {
         method: 'POST',
         headers,
         body: requestStream.readable,
@@ -255,12 +275,34 @@ export class McpClient {
         duplex: 'half',
       });
 
+      // Immediately send initialize frame without waiting for response headers
+      await this._sendMessage({ jsonrpc: '2.0', id: 0, method: 'initialize', params: {
+        protocolVersion: '2025-03-26',
+        capabilities: { resources: { subscribe: true }, tools: {}, prompts: {} },
+        clientInfo: { name: 'ART Framework MCP Client', version: '1.0.0' }
+      }} as any);
+
+      const response = await responsePromise;
+      Logger.debug(`McpClient: Fetch returned status=${response.status} ${response.statusText}, hasBody=${!!response.body}`);
+
+      if (response.status === 401 && this.config.authStrategyId && this.authManager && !loginAttempted) {
+        try {
+          await this.authManager.login(this.config.authStrategyId);
+        } catch (e) {
+          throw new ARTError('Authentication required. Login failed to start after 401.', ErrorCode.NETWORK_ERROR, e as Error);
+        }
+        throw new ARTError('Authentication required. Login initiated after 401.', ErrorCode.NOT_CONNECTED);
+      }
+
       if (!response.ok || !response.body) {
         throw new ARTError(`Streamable HTTP connection failed: ${response.status} ${response.statusText}`, ErrorCode.NETWORK_ERROR);
       }
 
       this.responseReader = response.body.getReader();
+      Logger.debug('McpClient: Response body reader acquired. Starting listener.');
       this._listenForMessages(this.responseReader);
+
+      // initialize already sent before awaiting response headers
 
     } catch (error) {
       Logger.error('McpClient: fetch error during connection:', error);
@@ -271,14 +313,21 @@ export class McpClient {
   private async _listenForMessages(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<void> {
     const decoder = new TextDecoder();
     let buffer = '';
+    let firstChunkLogged = false;
 
     try {
-      while (this.connected) {
+      for (;;) {
         const { done, value } = await reader.read();
         if (done) {
           Logger.info('McpClient: Response stream closed.');
           this.disconnect();
           break;
+        }
+
+        if (!firstChunkLogged && value && value.byteLength) {
+          firstChunkLogged = true;
+          const preview = new TextDecoder().decode(value.slice(0, Math.min(120, value.byteLength)));
+          Logger.debug(`McpClient: First bytes received (${value.byteLength}B): ${preview.replace(/\n/g, '\\n').substring(0, 200)}...`);
         }
 
         buffer += decoder.decode(value, { stream: true });
@@ -289,6 +338,9 @@ export class McpClient {
           if (line.trim()) {
             try {
               const message = JSON.parse(line.trim()) as JsonRpcMessage;
+              if ((message as any).method) {
+                Logger.debug(`McpClient: Dispatching JSON-RPC method='${(message as any).method}'`);
+              }
               this._handleMessage(message);
             } catch (error) {
               Logger.error(`McpClient: Failed to parse JSON-RPC message: ${line}`);

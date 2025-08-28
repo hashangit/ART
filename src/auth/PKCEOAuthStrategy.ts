@@ -18,6 +18,10 @@ export interface PKCEOAuthConfig {
   scopes: string;
   /** Optional: The resource parameter to specify the target audience (for MCP servers). */
   resource?: string;
+  /** Open login in a new tab (default true for ART MCP flows). */
+  openInNewTab?: boolean;
+  /** BroadcastChannel name used to receive auth codes from callback tab (default 'art-auth'). */
+  channelName?: string;
 }
 
 interface CachedToken {
@@ -33,6 +37,9 @@ interface CachedToken {
 export class PKCEOAuthStrategy implements IAuthStrategy {
   private config: PKCEOAuthConfig;
   private cachedToken: CachedToken | null = null;
+  private codeVerifierForPendingLogin: string | null = null;
+  private loginWaiter: { resolve: () => void; reject: (e: any) => void } | null = null;
+  private channel?: BroadcastChannel;
 
   constructor(config: PKCEOAuthConfig) {
     if (!config.authorizationEndpoint || !config.tokenEndpoint || !config.clientId || !config.redirectUri || !config.scopes) {
@@ -41,7 +48,27 @@ export class PKCEOAuthStrategy implements IAuthStrategy {
         ErrorCode.INVALID_CONFIG,
       );
     }
-    this.config = config;
+    this.config = { openInNewTab: true, channelName: 'art-auth', ...config };
+
+    // Setup BroadcastChannel to receive auth codes from the callback tab (new-tab flow)
+    try {
+      this.channel = new BroadcastChannel(this.config.channelName!);
+      this.channel.onmessage = async (evt: MessageEvent) => {
+        const msg = evt.data || {};
+        if (msg?.type === 'art-auth-code' && typeof msg?.code === 'string') {
+          try {
+            await this.exchangeCodeForToken(msg.code);
+            if (this.loginWaiter) this.loginWaiter.resolve();
+          } catch (e) {
+            if (this.loginWaiter) this.loginWaiter.reject(e);
+          } finally {
+            this.loginWaiter = null;
+          }
+        }
+      };
+    } catch {
+      // BroadcastChannel not available; new-tab flow will not work in this environment
+    }
   }
 
   /**
@@ -51,7 +78,9 @@ export class PKCEOAuthStrategy implements IAuthStrategy {
     const codeVerifier = this.generateCodeVerifier();
     const codeChallenge = await this.generateCodeChallenge(codeVerifier);
 
+    // Store verifier for same-tab fallback and keep in-memory for new-tab token exchange
     sessionStorage.setItem('pkce_code_verifier', codeVerifier);
+    this.codeVerifierForPendingLogin = codeVerifier;
 
     const params = new URLSearchParams({
       client_id: this.config.clientId,
@@ -66,8 +95,35 @@ export class PKCEOAuthStrategy implements IAuthStrategy {
       params.append('resource', this.config.resource);
     }
 
+    // Include a minimal state that carries the BroadcastChannel name for the callback tab
+    try {
+      const statePayload = { ch: this.config.channelName };
+      const state = btoa(unescape(encodeURIComponent(JSON.stringify(statePayload)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      params.append('state', state);
+    } catch {/* ignore */}
+
     const authorizationUrl = `${this.config.authorizationEndpoint}?${params.toString()}`;
-    Logger.info('Redirecting to authorization endpoint.');
+    Logger.info('Starting PKCE login at authorization endpoint.');
+
+    if (this.config.openInNewTab) {
+      const popup = window.open(authorizationUrl, '_blank', 'noopener,noreferrer');
+      if (!popup) {
+        throw new ARTError('Popup blocked. Please allow popups to continue login.', ErrorCode.INVALID_CONFIG);
+      }
+      // Wait for token acquisition via BroadcastChannel
+      await new Promise<void>((resolve, reject) => {
+        this.loginWaiter = { resolve, reject };
+        setTimeout(() => {
+          if (this.loginWaiter) {
+            this.loginWaiter = null;
+            reject(new ARTError('Login timed out. Please try again.', ErrorCode.TIMEOUT));
+          }
+        }, 180000); // 3 minutes
+      });
+      return;
+    }
+
+    // Same-tab redirect fallback (not preferred for ART MCP flows)
     window.location.assign(authorizationUrl);
   }
 
@@ -240,5 +296,40 @@ export class PKCEOAuthStrategy implements IAuthStrategy {
       Logger.error('Error during token refresh:', error);
       throw new ARTError('An unexpected error occurred during the token refresh process.', ErrorCode.UNKNOWN_ERROR, error as Error);
     }
+  }
+
+  // --- Private: Exchange code to token using stored verifier (new-tab flow) ---
+  private async exchangeCodeForToken(code: string): Promise<void> {
+    if (!this.codeVerifierForPendingLogin) {
+      throw new ARTError('Missing code verifier for PKCE exchange.', ErrorCode.INVALID_CONFIG);
+    }
+
+    const tokenResponse = await fetch(this.config.tokenEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: this.config.clientId,
+        redirect_uri: this.config.redirectUri,
+        code,
+        code_verifier: this.codeVerifierForPendingLogin,
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      throw new ARTError(`Failed to exchange authorization code for token: ${errorText}`, ErrorCode.NETWORK_ERROR);
+    }
+
+    const tokenData = await tokenResponse.json();
+    this.cachedToken = {
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token,
+      expiresAt: Date.now() + (tokenData.expires_in || 3600) * 1000,
+    };
+
+    // Clear pending verifier
+    this.codeVerifierForPendingLogin = null;
+    sessionStorage.removeItem('pkce_code_verifier');
   }
 }

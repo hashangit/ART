@@ -39,6 +39,11 @@ import { FindingCard } from './components/webchat/FindingCard';
 import { ChatHistory } from './components/webchat/ChatHistory';
 import ProviderSettings from './components/ProviderSettings';
 import { Input } from './components/ui/input';
+import DiscoverModal from './components/webchat/DiscoverModal';
+import { ConfigManager } from 'art-framework';
+import { upsertUserMcpConfiguration, mergeIntoLocalRawProtocolConfig, installRuntimeServerFromProtocolExtract, removeFromLocalRawProtocolConfig, deleteUserMcpConfiguration } from './lib/mcpConfigBridge';
+import { hasInstall as corsHasInstall, install as corsInstall, requestHosts as corsRequestHosts } from 'art-mcp-permission-manager';
+import { supabase } from './supabaseClient';
 
 // Main ART WebChat Component
 export const ArtWebChat: React.FC<ArtWebChatConfig> = (props) => {
@@ -46,6 +51,7 @@ export const ArtWebChat: React.FC<ArtWebChatConfig> = (props) => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isDiscoverOpen, setIsDiscoverOpen] = useState(false);
 
   const {
     uploadedFiles,
@@ -81,6 +87,167 @@ export const ArtWebChat: React.FC<ArtWebChatConfig> = (props) => {
     deleteConversation,
     currentThreadTitle,
   } = useArtChat(props);
+
+  // Lightweight MCP helpers using runtime-exposed components
+  const loadServers = async () => {
+    try {
+      // Use the same endpoint defined by user requirements
+      const res = await fetch('http://localhost:3001/api/services', { headers: { 'Accept': 'application/json' } });
+      const data = await res.json();
+      const services = Array.isArray(data) ? data : (data.services || []);
+      return services
+        .filter((s: any) => s.service_type === 'MCP_SERVICE')
+        .map((service: any) => {
+          const tools = (service.spec?.tools || []).map((t: any) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema }));
+          // Prefer top-level install_config, else spec.installation.configurationExtract.mcpServers
+          const installExtract = service.install_config || service.spec?.installation?.configurationExtract?.mcpServers || {};
+          const firstKey = Object.keys(installExtract || {})[0];
+          const url = firstKey ? installExtract[firstKey]?.url : undefined;
+          const firstVal = firstKey ? installExtract[firstKey] : undefined;
+          const oauth = firstVal?.oauth || service.connection?.oauth || service.spec?.oauth || service.spec?.installation?.oauth;
+          const headers = firstVal?.headers || service.connection?.headers || service.spec?.headers;
+          return {
+            id: service.id,
+            displayName: service.display_name || service.name,
+            description: service.description,
+            connection: { url, oauth, headers },
+            enabled: service.registry_status !== 'inactive',
+            tools,
+            installExtract,
+          } as any;
+        });
+    } catch (e) {
+      console.error('Discover loadServers error', e);
+      return [];
+    }
+  };
+
+  const isInstalled = (serverId: string) => {
+    try {
+      const cm = new ConfigManager();
+      const cfg = cm.getConfig();
+      return !!cfg.mcpServers[serverId];
+    } catch {
+      return false;
+    }
+  };
+
+  const onUninstall = async (serverId: string) => {
+    try {
+      // Remove from raw protocol config (local) using the exact extract keys stored on install
+      try {
+        const cm = new ConfigManager();
+        const cfg = cm.getConfig();
+        const server = cfg.mcpServers[serverId];
+        const extract = (server as any)?.installation?.configurationExtract?.mcpServers;
+        if (extract && typeof extract === 'object') {
+          removeFromLocalRawProtocolConfig(extract);
+        }
+      } catch (e) {
+        console.warn('Local raw protocol cleanup skipped:', e);
+      }
+
+      // Remove from runtime config (disconnect + unregister + remove runtime entry)
+      window.dispatchEvent(new CustomEvent('art-mcp-uninstall', { detail: { serverId } }));
+      // Remove Supabase row for this user/service
+      const { data } = await supabase.auth.getUser();
+      const userId = data.user?.id;
+      if (userId) {
+        await deleteUserMcpConfiguration({ userId, mcpServiceId: serverId });
+      }
+    } catch (e) {
+      console.warn('Uninstall cleanup failed:', e);
+    }
+  };
+
+  const onInstall = async (card: any) => {
+    // 1) Save raw protocol extract to localStorage without altering structure
+    const extract = card.installExtract || {};
+    if (extract && Object.keys(extract).length > 0) {
+      mergeIntoLocalRawProtocolConfig(extract);
+    }
+
+    // 2) Install minimal runtime server mapping for ART usage immediately
+    installRuntimeServerFromProtocolExtract({
+      serviceId: card.id,
+      displayName: card.displayName,
+      description: card.description,
+      tools: card.tools || [],
+      extract,
+      // pass through oauth and custom headers if provided by discovery
+      oauth: card.connection?.oauth || card.oauth,
+      headers: card.connection?.headers || card.headers,
+    });
+
+    // 3) Ensure CORS helper extension host permission prior to runtime connect
+    try {
+      const url = (card.installExtract && Object.keys(card.installExtract || {}).length > 0)
+        ? card.installExtract[Object.keys(card.installExtract)[0]]?.url
+        : card.connection?.url;
+      if (url) {
+        const host = new URL(url).hostname;
+        if (!corsHasInstall()) {
+          corsInstall(); // open store
+          throw new Error('Please install the CORS helper extension and retry install.');
+        }
+        await corsRequestHosts({ hosts: [host] });
+      }
+    } catch (e) {
+      console.warn('CORS helper permission flow:', e);
+    }
+
+    // 4) Ask runtime to connect to the server, discover tools, and (if OAuth PKCE present) initiate login
+    window.dispatchEvent(new CustomEvent('art-mcp-install', { detail: { card } }));
+
+    // 5) Persist initial install extract to Supabase now (will be updated by hook after discovery)
+    try {
+      const { data } = await supabase.auth.getUser();
+      const userId = data.user?.id;
+      if (userId && extract && Object.keys(extract).length > 0) {
+        await upsertUserMcpConfiguration({
+          userId,
+          mcpServiceId: card.id,
+          credentials: { mcpServers: extract },
+        });
+      }
+    } catch (e) {
+      console.warn('Supabase save skipped:', e);
+    }
+  };
+
+  const onAddToChat = async (card: any, toolNames: string[]) => {
+    // Ensure runtime server exists (using extract if available)
+    if (card.installExtract && Object.keys(card.installExtract).length > 0) {
+      installRuntimeServerFromProtocolExtract({
+        serviceId: card.id,
+        displayName: card.displayName,
+        description: card.description,
+        tools: card.tools || [],
+        extract: card.installExtract,
+      });
+    } else {
+      const cm = new ConfigManager();
+      const normalized = {
+        id: card.id,
+        type: 'streamable-http' as const,
+        enabled: card.enabled !== false,
+        displayName: card.displayName || card.id,
+        description: card.description,
+        connection: card.connection,
+        timeout: 15000,
+        tools: card.tools || [],
+        resources: [],
+        resourceTemplates: [],
+      };
+      cm.setServerConfig(card.id, normalized as any);
+    }
+    const selected = (card.tools || []).filter((t: any) => toolNames.length === 0 || toolNames.includes(t.name));
+    // Ask the hook (which holds art instance) to register and enable tools for current thread
+    const cm = new ConfigManager();
+    const cfg = cm.getConfig();
+    const server = cfg.mcpServers[card.id];
+    window.dispatchEvent(new CustomEvent('art-mcp-add-to-chat', { detail: { server, toolDefs: selected, threadId } }));
+  };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -307,7 +474,21 @@ export const ArtWebChat: React.FC<ArtWebChatConfig> = (props) => {
                                </TooltipContent>
                              </Tooltip> 
                            </TooltipProvider>
-                           <TooltipProvider key="tip-globe" delayDuration={100}> <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"> <Globe className="h-4 w-4" /> </Button></TooltipTrigger><TooltipContent className="bg-black text-white"><p>Discover</p></TooltipContent></Tooltip> </TooltipProvider>
+                           <TooltipProvider key="tip-globe" delayDuration={100}>
+                             <Tooltip>
+                               <TooltipTrigger asChild>
+                                 <Button
+                                   variant="ghost"
+                                   size="icon"
+                                   className="h-7 w-7 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"
+                                   onClick={() => setIsDiscoverOpen(true)}
+                                 >
+                                   <Globe className="h-4 w-4" />
+                                 </Button>
+                               </TooltipTrigger>
+                               <TooltipContent className="bg-black text-white"><p>Discover</p></TooltipContent>
+                             </Tooltip>
+                           </TooltipProvider>
                            <div className="flex-grow"></div>
                            <div className="flex items-center gap-2">
                               <span className="text-xs text-muted-foreground">Model:</span>
@@ -361,6 +542,15 @@ export const ArtWebChat: React.FC<ArtWebChatConfig> = (props) => {
         onDeleteConversation={deleteConversation}
         listConversations={listConversations}
         currentChatId={threadId}
+      />
+      <DiscoverModal
+        isOpen={isDiscoverOpen}
+        onClose={() => setIsDiscoverOpen(false)}
+        loadServers={loadServers}
+        isInstalled={isInstalled}
+        onInstall={onInstall}
+        onUninstall={onUninstall}
+        onAddToChat={onAddToChat}
       />
     </div>
   );

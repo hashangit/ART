@@ -82,3 +82,21 @@ export { generateUUID } from './utils/uuid';
 // --- Framework Version ---
 /** The current version of the ART Framework package. */
 export const VERSION = '0.2.8';
+
+// --- MCP Runtime Exports ---
+// Expose MCP manager, proxy tool, client, config manager, and types for runtime usage in apps
+export {
+  McpManager,
+  McpProxyTool,
+  ConfigManager,
+} from './systems/mcp';
+export type {
+  ArtMcpConfig,
+  McpServerConfig,
+  StreamableHttpConnection,
+  McpToolDefinition,
+  McpResource,
+  McpResourceTemplate,
+  McpServerStatus,
+} from './systems/mcp';
+export { McpClient } from './systems/mcp/McpClient';
