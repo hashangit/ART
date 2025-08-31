@@ -9,7 +9,8 @@ import { McpClientController } from './McpClient';
 import { hasInstall, install, getAllowedInfo, requestHosts, getInstallUrl } from 'art-mcp-permission-manager'
 
 /**
- * Manages MCP (Model Context Protocol) server connections and tool registration.
+ * @class McpManager
+ * @description Manages MCP (Model Context Protocol) server connections and tool registration.
  * 
  * The McpManager is responsible for:
  * - Connecting to configured MCP servers
@@ -28,6 +29,12 @@ export class McpManager {
   private authManager?: AuthManager;
   private activeConnections: Map<string, McpClientController> = new Map();
 
+  /**
+   * @constructor
+   * @param {ToolRegistry} toolRegistry - The tool registry to register proxy tools with.
+   * @param {StateManager} _stateManager - The state manager (not currently used).
+   * @param {AuthManager} [authManager] - The authentication manager.
+   */
   constructor(toolRegistry: ToolRegistry, _stateManager: StateManager, authManager?: AuthManager) {
     this.configManager = new ConfigManager();
     this.toolRegistry = toolRegistry;
@@ -35,6 +42,14 @@ export class McpManager {
     Logger.info(`McpManager: Hub initialized. Will load tools from config catalog.`);
   }
 
+  /**
+   * @method initialize
+   * @description Initializes the McpManager, discovers and registers tools from configured servers.
+   * @param {object} [mcpConfig] - The MCP configuration.
+   * @param {boolean} [mcpConfig.enabled=true] - Whether MCP is enabled.
+   * @param {string} [mcpConfig.discoveryEndpoint] - The endpoint for discovering MCP servers.
+   * @returns {Promise<void>}
+   */
   async initialize(mcpConfig?: { enabled?: boolean; discoveryEndpoint?: string }): Promise<void> {
     if (!mcpConfig?.enabled) {
       Logger.info('McpManager: MCP is disabled. Skipping initialization.');
@@ -92,6 +107,11 @@ export class McpManager {
     Logger.info(`McpManager: Initialization complete. Registered ${registeredToolCount} proxy tools from ${allServerConfigs.size} total servers.`);
   }
 
+  /**
+   * @method shutdown
+   * @description Shuts down all active MCP connections.
+   * @returns {Promise<void>}
+   */
   async shutdown(): Promise<void> {
     Logger.info('McpManager: Shutting down all active connections...');
     const disconnectionPromises = Array.from(this.activeConnections.values()).map(client => client.logout());
@@ -100,6 +120,12 @@ export class McpManager {
     Logger.info('McpManager: Shutdown complete.');
   }
 
+  /**
+   * @method getOrCreateConnection
+   * @description Gets an existing connection or creates a new one for a given server ID.
+   * @param {string} serverId - The ID of the server to connect to.
+   * @returns {Promise<McpClientController>} A promise that resolves to the MCP client controller.
+   */
   public async getOrCreateConnection(serverId: string): Promise<McpClientController> {
     if (this.activeConnections.has(serverId)) {
       const existingClient = this.activeConnections.get(serverId)!;
@@ -147,6 +173,12 @@ export class McpManager {
     return client;
   }
   
+  /**
+   * @method ensureCorsAccess
+   * @description Ensures that the application has CORS access to the target URL.
+   * @param {string} targetUrl - The URL to check for CORS access.
+   * @returns {Promise<void>}
+   */
   private async ensureCorsAccess(targetUrl: string): Promise<void> {
     if (!hasInstall()) {
         const opened = install({ browser: 'auto' });
@@ -173,9 +205,10 @@ export class McpManager {
   // --- Discovery & Installation (Future Implementation) ---
 
   /**
-   * Searches a discovery service for available MCP servers.
-   * @param discoveryEndpoint The URL of the discovery service.
-   * @returns A promise resolving to an array of MCPCards.
+   * @method discoverAvailableServers
+   * @description Searches a discovery service for available MCP servers.
+   * @param {string} [discoveryEndpoint] - The URL of the discovery service.
+   * @returns {Promise<McpServerConfig[]>} A promise resolving to an array of McpServerConfig.
    */
   async discoverAvailableServers(discoveryEndpoint?: string): Promise<McpServerConfig[]> {
     const url = discoveryEndpoint || 'http://localhost:4200/api/services'; // Default Zyntopia endpoint
@@ -216,7 +249,10 @@ export class McpManager {
   }
   
   /**
-   * Converts a Zyntopia service entry to an MCPCard.
+   * @method convertServiceToMcpCard
+   * @description Converts a Zyntopia service entry to an McpServerConfig.
+   * @param {any} service - The service entry to convert.
+   * @returns {McpServerConfig | null} The converted McpServerConfig or null if conversion fails.
    */
   private convertServiceToMcpCard(service: any): McpServerConfig | null {
     try {
@@ -253,8 +289,11 @@ export class McpManager {
   // which is not supported in a browser-only environment.
 
   /**
-   * Installs a server by persisting its config, discovering tools via MCP, and
+   * @method installServer
+   * @description Installs a server by persisting its config, discovering tools via MCP, and
    * registering proxy tools. Returns the finalized config with accurate tools.
+   * @param {McpServerConfig} server - The server configuration to install.
+   * @returns {Promise<McpServerConfig>} The finalized server configuration.
    */
   public async installServer(server: McpServerConfig): Promise<McpServerConfig> {
     // Save initial config
@@ -296,6 +335,14 @@ export class McpManager {
     }
   }
 
+  /**
+   * @method waitForAuth
+   * @description Waits for the client to be authenticated.
+   * @param {McpClientController} client - The MCP client controller.
+   * @param {number} timeoutMs - The timeout in milliseconds.
+   * @returns {Promise<void>}
+   * @throws {ARTError} If the authentication window times out.
+   */
   private async waitForAuth(client: McpClientController, timeoutMs: number): Promise<void> {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
@@ -308,7 +355,10 @@ export class McpManager {
   }
 
   /**
-   * Uninstalls a server: disconnects, removes registered proxy tools, and deletes config.
+   * @method uninstallServer
+   * @description Uninstalls a server: disconnects, removes registered proxy tools, and deletes config.
+   * @param {string} serverId - The ID of the server to uninstall.
+   * @returns {Promise<void>}
    */
   public async uninstallServer(serverId: string): Promise<void> {
     try {

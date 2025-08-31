@@ -1,14 +1,30 @@
 import { Logger } from '../../utils/logger';
 import { ArtMcpConfig, McpServerConfig } from './types';
 
+/**
+ * @class ConfigManager
+ * @description Manages the MCP configuration, handling loading, validation, and saving to localStorage.
+ * This class ensures that the application always has a valid MCP configuration to work with,
+ * creating a default configuration if one doesn't exist.
+ */
 export class ConfigManager {
   private configKey = 'art_mcp_config';
   private config: ArtMcpConfig;
 
+  /**
+   * @constructor
+   * @description Initializes the ConfigManager by loading the configuration from localStorage.
+   */
   constructor() {
     this.config = this.loadConfig();
   }
 
+  /**
+   * @method loadConfig
+   * @description Loads the MCP configuration from localStorage, creating a default if none exists.
+   * @private
+   * @returns {ArtMcpConfig} The loaded or created MCP configuration.
+   */
   private loadConfig(): ArtMcpConfig {
     try {
       const storedConfig = localStorage.getItem(this.configKey);
@@ -33,6 +49,13 @@ export class ConfigManager {
     return defaultConfig;
   }
 
+  /**
+   * @method validateAndFixConfig
+   * @description Validates the loaded configuration and fixes any inconsistencies.
+   * @private
+   * @param {ArtMcpConfig} config - The configuration to validate.
+   * @returns {ArtMcpConfig} The validated and fixed configuration.
+   */
   private validateAndFixConfig(config: ArtMcpConfig): ArtMcpConfig {
     const cleanConfig: ArtMcpConfig = {
       mcpServers: {}
@@ -102,6 +125,12 @@ export class ConfigManager {
     return cleanConfig;
   }
 
+  /**
+   * @method createDefaultConfig
+   * @description Creates a default MCP configuration.
+   * @private
+   * @returns {ArtMcpConfig} The default MCP configuration.
+   */
   private createDefaultConfig(): ArtMcpConfig {
     // Default to a remote, streamable-http Tavily server
     const tavilyCard: McpServerConfig = {
@@ -132,6 +161,12 @@ export class ConfigManager {
     return { mcpServers: { "tavily_search_remote": tavilyCard } };
   }
 
+  /**
+   * @method writeConfig
+   * @description Writes the MCP configuration to localStorage.
+   * @private
+   * @param {ArtMcpConfig} config - The configuration to write.
+   */
   private writeConfig(config: ArtMcpConfig): void {
     try {
       localStorage.setItem(this.configKey, JSON.stringify(config, null, 2));
@@ -142,16 +177,32 @@ export class ConfigManager {
     }
   }
 
+  /**
+   * @method getConfig
+   * @description Gets the current MCP configuration.
+   * @returns {ArtMcpConfig} The current MCP configuration.
+   */
   public getConfig(): ArtMcpConfig {
     return this.config;
   }
 
+  /**
+   * @method setServerConfig
+   * @description Sets the configuration for a specific server and saves it.
+   * @param {string} serverId - The ID of the server to configure.
+   * @param {McpServerConfig} serverConfig - The configuration for the server.
+   */
   public setServerConfig(serverId: string, serverConfig: McpServerConfig): void {
     this.config.mcpServers[serverId] = serverConfig;
     this.writeConfig(this.config);
     Logger.info(`ConfigManager: Updated configuration for server "${serverId}"`);
   }
 
+  /**
+   * @method removeServerConfig
+   * @description Removes the configuration for a specific server and saves the changes.
+   * @param {string} serverId - The ID of the server to remove.
+   */
   public removeServerConfig(serverId: string): void {
     if (this.config.mcpServers[serverId]) {
       delete this.config.mcpServers[serverId];

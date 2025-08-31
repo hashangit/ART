@@ -6,8 +6,10 @@ import { McpServerConfig, McpToolDefinition } from './types';
 import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 
 /**
- * A proxy tool that wraps an MCP server tool and implements the IToolExecutor interface.
+ * @class McpProxyTool
+ * @description A proxy tool that wraps an MCP server tool and implements the IToolExecutor interface.
  * This allows MCP server tools to be used seamlessly within the ART Framework.
+ * @implements {IToolExecutor}
  */
 export class McpProxyTool implements IToolExecutor {
   public readonly schema: ToolSchema;
@@ -17,10 +19,11 @@ export class McpProxyTool implements IToolExecutor {
   private mcpManager: McpManager;
 
   /**
-   * Creates a new MCP proxy tool.
-   * @param card - Configuration for the MCP server hosting this tool
-   * @param toolDefinition - The tool definition from the MCP server
-   * @param mcpManager - The MCP manager for managing connections
+   * @constructor
+   * @description Creates a new MCP proxy tool.
+   * @param {McpServerConfig} card - Configuration for the MCP server hosting this tool.
+   * @param {McpToolDefinition} toolDefinition - The tool definition from the MCP server.
+   * @param {McpManager} mcpManager - The MCP manager for managing connections.
    */
   constructor(card: McpServerConfig, toolDefinition: McpToolDefinition, mcpManager: McpManager) {
     this.card = card;
@@ -39,10 +42,11 @@ export class McpProxyTool implements IToolExecutor {
   }
 
   /**
-   * Executes the tool by making a request to the MCP server.
-   * @param input - Validated input arguments for the tool
-   * @param context - Execution context containing threadId, traceId, etc.
-   * @returns Promise resolving to the tool result
+   * @method execute
+   * @description Executes the tool by making a request to the MCP server.
+   * @param {any} input - Validated input arguments for the tool.
+   * @param {ExecutionContext} context - Execution context containing threadId, traceId, etc.
+   * @returns {Promise<ToolResult>} A promise resolving to the tool result.
    */
   async execute(input: any, context: ExecutionContext): Promise<ToolResult> {
     const startTime = Date.now();
@@ -56,10 +60,14 @@ export class McpProxyTool implements IToolExecutor {
       
       const duration = Date.now() - startTime;
       
+      // Validate the raw response against the SDK's schema for robustness.
+      // If validation fails, it will throw an error that is caught below.
+      const validatedResponse = CallToolResultSchema.parse(response);
+      
       // Adapt the response to the ToolResult format
       // This is a generic adaptation, specific tools might require more tailored logic
       // based on the shape of their response.
-      const output = typeof response === 'object' && response !== null ? response : { value: response };
+      const output = typeof validatedResponse === 'object' && validatedResponse !== null ? validatedResponse : { value: validatedResponse };
 
       return {
         callId: context.traceId || 'unknown',
@@ -86,24 +94,27 @@ export class McpProxyTool implements IToolExecutor {
   }
 
   /**
-   * Gets the original tool name from the MCP server.
-   * @returns The original tool name
+   * @method getOriginalToolName
+   * @description Gets the original tool name from the MCP server.
+   * @returns {string} The original tool name.
    */
   getOriginalToolName(): string {
     return this.toolDefinition.name;
   }
 
   /**
-   * Gets the MCP server configuration.
-   * @returns The server configuration
+   * @method getServerConfig
+   * @description Gets the MCP server configuration.
+   * @returns {McpServerConfig} The server configuration.
    */
   getServerConfig(): McpServerConfig {
     return { ...this.card };
   }
 
   /**
-   * Gets the MCP tool definition.
-   * @returns The tool definition
+   * @method getToolDefinition
+   * @description Gets the MCP tool definition.
+   * @returns {McpToolDefinition} The tool definition.
    */
   getToolDefinition(): McpToolDefinition {
     return { ...this.toolDefinition };

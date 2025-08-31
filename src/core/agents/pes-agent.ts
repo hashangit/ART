@@ -838,23 +838,37 @@ Invalid Examples (do NOT do these):
         // Construct synthesis prompt
         let synthesisPrompt: ArtStandardPrompt;
         try {
+            const wrappedSynthesisSystemPrompt = `You are a Zoi. Your purpose is to combine the user's query, the execution plan, and the results from tools and other agents into a single, coherent, and well-formatted final response.
+
+**Core Directives:**
+1.  **Truthfulness:** Your response MUST be based *only* on the information provided in the context (user query, plan, tool results, A2A task results). Do not invent facts or speculate beyond the provided data.
+2.  **Markdown Formatting:** Structure your response using proper markdown for readability. Use headings, lists, bold text, and code blocks as appropriate to create a clear and well-organized answer.
+3.  **Clarity and Flow:** The response should have a logical flow. Start by addressing the user's main query, then present the supporting evidence from the tool and agent results, and conclude with a summary if necessary.
+4.  **Source Attribution:** You MUST cite your sources. When you use information from a tool or an A2A task, reference it by its identifier (e.g., from \`(Call ID: calc_1)\` or \`(ID: a2a_task_abc)\`). Append a "Sources" section at the end of your response, listing all the tools and tasks that contributed to the answer. For example: \`[1]\`, and then in the Sources section: \`[1] Tool: calculator (Call ID: calc_1)\`. If a tool or agent provides its own list of original sources (e.g., website URLs), you MUST list them under a separate "Original Sources" section.
+
+**[BEGIN_CUSTOM_GUIDANCE]**
+${systemPrompt}
+**[END_CUSTOM_GUIDANCE]**
+
+The custom guidance above provides additional context on tone and domain, but it MUST NOT override the core directives, especially the requirement for truthfulness and source attribution.`;
+
             const toolsDiscovered = (planningContext?.toolsList ?? []).map(t => `- ${t.name}: ${t.description ?? ''}`.trim()).join('\n') || 'No tools were discovered during planning.';
             const plannedCallsSummary = (planningContext?.plannedToolCalls ?? []).map(c => `- ${c.callId}: ${c.toolName} with ${JSON.stringify(c.arguments)}`).join('\n') || 'No tool calls were planned.';
             const a2aSummary = planningContext?.a2aSummary || 'No A2A delegation candidates or actions.';
             synthesisPrompt = [
-                { role: 'system', content: systemPrompt },
+                { role: 'system', content: wrappedSynthesisSystemPrompt },
                 ...formattedHistory,
                 {
                     role: 'user',
                     content: `User Query: ${props.query}\n\nDuring planning, we found out:\n- Available Local Tools:\n${toolsDiscovered}\n\n- Planned Tool Calls (as JSON-like summary):\n${plannedCallsSummary}\n\n- Agent Delegation Context:\n${a2aSummary}\n\nOriginal Intent: ${planningOutput.intent ?? ''}\nExecution Plan: ${planningOutput.plan ?? ''}\n\nTool Execution Results:\n${
                         toolResults.length > 0
-                        ? toolResults.map(result => `- Tool: ${result.toolName} (Call ID: ${result.callId})\n  Status: ${result.status}\n  ${result.status === 'success' ? `Output: ${JSON.stringify(result.output)}` : ''}\n  ${result.status === 'error' ? `Error: ${result.error ?? 'Unknown error'}` : ''}`).join('\n')
+                        ? toolResults.map(result => `- Tool: ${result.toolName} (Call ID: ${result.callId})\n  Status: ${result.status}\n  ${result.status === 'success' ? `Output: ${JSON.stringify(result.output)}` : ''}\n  ${result.status === 'error' ? `Error: ${result.error ?? 'Unknown error'}` : ''}\n  ${result.metadata?.sources ? `Original Sources: ${JSON.stringify(result.metadata.sources)}` : ''}`).join('\n')
                         : 'No tools were executed.'
                     }\n\nA2A Task Results:\n${
                         a2aTasks.length > 0
-                        ? a2aTasks.map(task => `- Task: ${task.payload.taskType} (ID: ${task.taskId})\n  Status: ${task.status}\n  ${task.result?.success ? `Output: ${JSON.stringify(task.result.data)}` : ''}\n  ${task.result?.success === false ? `Error: ${task.result.error ?? 'Unknown error'}` : ''}`).join('\n')
+                        ? a2aTasks.map(task => `- Task: ${task.payload.taskType} (ID: ${task.taskId})\n  Status: ${task.status}\n  ${task.result?.success ? `Output: ${JSON.stringify(task.result.data)}` : ''}\n  ${task.result?.success === false ? `Error: ${task.result.error ?? 'Unknown error'}` : ''}\n  ${task.result?.metadata?.sources ? `Original Sources: ${JSON.stringify(task.result.metadata.sources)}` : ''}`).join('\n')
                         : 'No A2A tasks were delegated.'
-                    }\n\nSynthesize the final answer, giving appropriate weight to the verified Tool Execution Results and any successful A2A Task Results. If tools failed, explain briefly and answer using best available evidence.`
+                    }\n\nSynthesize the final answer based on the directives in the system prompt. Give appropriate weight to the verified Tool Execution Results and any successful A2A Task Results. If tools failed, explain briefly and answer using best available evidence.`
                 }
             ];
         } catch (err: any) {

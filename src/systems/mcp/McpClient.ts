@@ -4,24 +4,46 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { Logger } from '../../utils/logger';
 import { ARTError, ErrorCode } from '../../errors';
 
+/**
+ * @function base64UrlEncode
+ * @description Encodes a buffer into a Base64URL string.
+ * @param {Uint8Array} buffer - The buffer to encode.
+ * @returns {string} The Base64URL encoded string.
+ */
 function base64UrlEncode(buffer: Uint8Array): string {
   let s = ''
   for (let i = 0; i < buffer.length; i++) s += String.fromCharCode(buffer[i])
   return btoa(s).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
 }
 
+/**
+ * @function sha256Base64Url
+ * @description Hashes a string using SHA-256 and encodes it as Base64URL.
+ * @param {string} input - The string to hash.
+ * @returns {Promise<string>} A promise that resolves to the Base64URL encoded hash.
+ */
 async function sha256Base64Url(input: string): Promise<string> {
   const data = new TextEncoder().encode(input)
   const digest = await crypto.subtle.digest('SHA-256', data)
   return base64UrlEncode(new Uint8Array(digest))
 }
 
+/**
+ * @function generateRandomString
+ * @description Generates a random string of a given length.
+ * @param {number} [length=64] - The length of the string to generate.
+ * @returns {string} The generated random string.
+ */
 function generateRandomString(length = 64): string {
   const array = new Uint8Array(length)
   crypto.getRandomValues(array)
   return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('')
 }
 
+/**
+ * @class TokenManager
+ * @description Manages OAuth tokens, including loading, updating, clearing, and refreshing them.
+ */
 export class TokenManager {
   private accessToken: string | null = null
   private refreshToken: string | null = null
@@ -29,6 +51,10 @@ export class TokenManager {
   private clientId: string | null = null
   constructor(private oauthConfig: { token_endpoint?: string }) {}
 
+  /**
+   * @method load
+   * @description Loads tokens from session storage.
+   */
   load() {
     this.accessToken = sessionStorage.getItem('access_token')
     this.refreshToken = sessionStorage.getItem('refresh_token')
@@ -37,8 +63,18 @@ export class TokenManager {
     this.clientId = localStorage.getItem('mcp_client_id')
   }
 
+  /**
+   * @method setClientId
+   * @description Sets the client ID.
+   * @param {string} id - The client ID.
+   */
   setClientId(id: string) { this.clientId = id }
 
+  /**
+   * @method update
+   * @description Updates the tokens and stores them in session storage.
+   * @param {any} token - The token object.
+   */
   update(token: any) {
     this.accessToken = token.access_token
     if (token.refresh_token) this.refreshToken = token.refresh_token
@@ -48,6 +84,10 @@ export class TokenManager {
     if (this.expiresAt) sessionStorage.setItem('token_expires_at', String(this.expiresAt))
   }
 
+  /**
+   * @method clear
+   * @description Clears the tokens from memory and session storage.
+   */
   clear() {
     this.accessToken = null
     this.refreshToken = null
@@ -57,13 +97,28 @@ export class TokenManager {
     sessionStorage.removeItem('token_expires_at')
   }
 
+  /**
+   * @method getAccessToken
+   * @description Gets the access token.
+   * @returns {string | null} The access token.
+   */
   getAccessToken() { return this.accessToken }
 
+  /**
+   * @method needsRefresh
+   * @description Checks if the token needs to be refreshed.
+   * @returns {boolean} True if the token needs to be refreshed, false otherwise.
+   */
   needsRefresh(): boolean {
     if (!this.expiresAt) return false
     return Date.now() >= this.expiresAt - 5 * 60 * 1000
   }
 
+  /**
+   * @method refresh
+   * @description Refreshes the access token using the refresh token.
+   * @returns {Promise<void>}
+   */
   async refresh(): Promise<void> {
     if (!this.refreshToken) throw new Error('No refresh token available')
     if (!this.oauthConfig.token_endpoint) throw new Error('Missing token endpoint')
@@ -85,11 +140,20 @@ export class TokenManager {
     this.update(token)
   }
 
+  /**
+   * @method isAuthenticated
+   * @description Checks if the user is authenticated.
+   * @returns {boolean} True if the user is authenticated, false otherwise.
+   */
   isAuthenticated(): boolean {
     return !!this.accessToken && (this.expiresAt ? this.expiresAt > Date.now() : true)
   }
 }
 
+/**
+ * @class McpClientController
+ * @description Controls the MCP client, including OAuth flow, connection, and tool calls.
+ */
 export class McpClientController {
   public baseUrl: URL
   private scopes: string[]
@@ -105,10 +169,23 @@ export class McpClientController {
     this.scopes = scopes ?? ['read', 'write']
   }
 
+  /**
+   * @method create
+   * @description Creates a new instance of McpClientController.
+   * @param {string} baseUrl - The base URL of the MCP server.
+   * @param {string[]} [scopes] - The OAuth scopes to request.
+   * @returns {McpClientController} A new instance of McpClientController.
+   */
   static create(baseUrl: string, scopes?: string[]): McpClientController {
     return new McpClientController(baseUrl, scopes)
   }
 
+  /**
+   * @method discoverAuthorizationServer
+   * @description Discovers the authorization server metadata.
+   * @private
+   * @returns {Promise<void>}
+   */
   private async discoverAuthorizationServer(): Promise<void> {
     if (this.oauthDiscovery) return
 
@@ -152,6 +229,12 @@ export class McpClientController {
     */
   }
 
+  /**
+   * @method registerClient
+   * @description Registers the client with the authorization server.
+   * @private
+   * @returns {Promise<string>} A promise that resolves to the client ID.
+   */
   private async registerClient(): Promise<string> {
     if (!this.oauthDiscovery?.registration_endpoint) {
       // Assume pre-registered public client if dynamic registration not available
@@ -178,6 +261,11 @@ export class McpClientController {
     return data.client_id
   }
 
+  /**
+   * @method startOAuth
+   * @description Starts the OAuth flow by redirecting the user to the authorization server.
+   * @returns {Promise<void>}
+   */
   async startOAuth() {
     await this.discoverAuthorizationServer()
     if (!this.oauthDiscovery) throw new ARTError('Could not discover OAuth server details.', ErrorCode.INVALID_CONFIG)
@@ -199,6 +287,11 @@ export class McpClientController {
     window.location.href = authUrl.toString()
   }
 
+  /**
+   * @method maybeHandleCallback
+   * @description Handles the OAuth callback, exchanging the authorization code for an access token.
+   * @returns {Promise<boolean>} A promise that resolves to true if the callback was handled, false otherwise.
+   */
   async maybeHandleCallback(): Promise<boolean> {
     const url = new URL(window.location.href)
     const isCallback = url.pathname === '/callback' && (url.searchParams.get('code') || url.searchParams.get('error'))
@@ -243,6 +336,10 @@ export class McpClientController {
     return true
   }
 
+  /**
+   * @method loadExistingSession
+   * @description Loads an existing session from session storage.
+   */
   loadExistingSession() {
     const discoveryDoc = sessionStorage.getItem('mcp_oauth_discovery')
     if (discoveryDoc) this.oauthDiscovery = JSON.parse(discoveryDoc)
@@ -251,11 +348,21 @@ export class McpClientController {
     this.sessionId = sessionStorage.getItem('mcp_session_id')
   }
 
+  /**
+   * @method isAuthenticated
+   * @description Checks if the user is authenticated.
+   * @returns {boolean} True if the user is authenticated, false otherwise.
+   */
   isAuthenticated(): boolean {
     if (!this.tokenManager) return false
     return this.tokenManager.isAuthenticated()
   }
 
+  /**
+   * @method connect
+   * @description Connects to the MCP server.
+   * @returns {Promise<void>}
+   */
   async connect(): Promise<void> {
     if (!this.client) {
       const customFetch = async (url: RequestInfo | URL, options?: RequestInit): Promise<Response> => {
@@ -292,16 +399,33 @@ export class McpClientController {
     }
   }
 
+  /**
+   * @method ensureConnected
+   * @description Ensures that the client is connected to the MCP server.
+   * @returns {Promise<void>}
+   */
   async ensureConnected(): Promise<void> {
     if (!this.client) await this.connect()
   }
 
+  /**
+   * @method listTools
+   * @description Lists the available tools on the MCP server.
+   * @returns {Promise<{ name: string; description?: string }[]>} A promise that resolves to a list of tools.
+   */
   async listTools(): Promise<{ name: string; description?: string }[]> {
     if (!this.client) throw new ARTError('Not connected', ErrorCode.NOT_CONNECTED)
     const res = await this.client.listTools()
     return res.tools?.map((t: any) => ({ name: t.name, description: t.description })) ?? []
   }
 
+  /**
+   * @method callTool
+   * @description Calls a tool on the MCP server.
+   * @param {string} name - The name of the tool to call.
+   * @param {any} args - The arguments to pass to the tool.
+   * @returns {Promise<any>} A promise that resolves to the result of the tool call.
+   */
   async callTool(name: string, args: any): Promise<any> {
     if (!this.client) throw new ARTError('Not connected', ErrorCode.NOT_CONNECTED)
     try {
@@ -321,6 +445,11 @@ export class McpClientController {
     }
   }
 
+  /**
+   * @method logout
+   * @description Logs out from the MCP server and clears the session.
+   * @returns {Promise<void>}
+   */
   async logout(): Promise<void> {
     try {
       if (this.transport) {

@@ -258,7 +258,14 @@ export interface ToolResult {
   /** A descriptive error message if the execution failed (`status` is 'error'). */
   error?: string;
   /** Optional metadata about the execution (e.g., duration, cost, logs). */
-  metadata?: Record<string, any>;
+  metadata?: {
+    sources?: Array<{
+      sourceName: string;
+      url?: string;
+      [key: string]: any;
+    }>;
+    [key: string]: any;
+  };
 }
 
 // --- SYSTEM PROMPT STANDARDIZATION TYPES ---
@@ -828,7 +835,14 @@ export interface A2ATaskResult {
   /** Error message if the task failed. */
   error?: string;
   /** Additional metadata about the execution. */
-  metadata?: Record<string, any>;
+  metadata?: {
+    sources?: Array<{
+      sourceName: string;
+      url?: string;
+      [key: string]: any;
+    }>;
+    [key: string]: any;
+  };
   /** Execution duration in milliseconds. */
   durationMs?: number;
 }
