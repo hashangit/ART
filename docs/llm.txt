@@ -1,9 +1,308 @@
-# ART (Agentic Runtime Framework) - Comprehensive AI Developer Documentation
+# ART (Agentic Runtime Framework) - Comprehensive Developer Documentation
 
-This document provides a high-level overview of the ART framework.
+This document provides a definitive, highly detailed overview of the ART (Agentic Runtime) Framework. It is designed to be the single source of truth for developers building with ART and for AI models assisting in that process. It covers the framework's architecture, core concepts, API reference, and practical usage examples.
 
-For a complete and detailed guide intended for AI developers and for providing context to AI coding assistants, please refer to the full documentation file:
+## 1. Introduction & Core Value Proposition
 
-**[./llm-full.txt](./llm-full.txt)**
+The ART Framework is a modular, extensible, and browser-first TypeScript library for building advanced AI agents. It provides a robust, structured foundation for creating agentic systems that can reason, use tools, and interact with users in real-time.
 
-The full documentation contains a detailed breakdown of the framework's architecture, core components, key concepts, a comprehensive API reference, and practical usage examples.
+**Key Features at a Glance:**
+*   **Multi-Provider LLM Support:** Abstracted interface for OpenAI, Anthropic, Gemini, Ollama, and more.
+*   **Advanced Agent Orchestration:** Built-in Plan-Execute-Synthesize (`PESAgent`) logic for robust, multi-step reasoning.
+*   **Extensible Tool System:** Equip agents with custom capabilities to interact with any API or data source.
+*   **Dynamic Tool Loading (MCP):** Discover and use tools from remote servers at runtime via the Model Context Protocol.
+*   **Agent-to-Agent (A2A) Communication:** Build complex systems where agents can delegate tasks to each other.
+*   **Pluggable Persistence:** Store agent memory and conversation history in-browser (`IndexedDB`) or in the cloud (`Supabase`).
+*   **First-Class Observability:** Deeply inspect an agent's thought process through a structured `Observation` system.
+*   **Real-time UI Integration:** A dedicated `UISystem` with event sockets for streaming tokens, thoughts, and messages to any front-end.
+*   **Secure Authentication:** Pluggable auth strategies (`OAuth 2.0 PKCE`) for secure tool and service access.
+
+## 2. Core Concepts & Design Philosophy
+
+Understanding these concepts is key to mastering the ART Framework.
+
+*   **Separation of Concerns:** Each component has a single, well-defined responsibility. The `StateManager` handles state, the `ToolSystem` handles tools, and `ProviderAdapters` handle LLM communication. This makes the system predictable and easy to debug.
+*   **Orchestration vs. Capability:** The `Agent Core` (like `PESAgent`) is the *orchestrator*. It makes decisions but has no inherent capabilities. *Capabilities* are provided by `Tools` and the `ReasoningEngine`. This separation allows you to swap out the agent's "brain" without changing its abilities.
+*   **Standardized Interfaces:** The framework relies on a set of core interfaces (`IAgentCore`, `IToolExecutor`, `StorageAdapter`, `ProviderAdapter`). This allows developers to replace any part of the system with a custom implementation without breaking the rest of the framework.
+*   **Immutable Context (Per-Turn):** During a single `process()` call, the agent's context (history, configuration) is loaded once. This ensures that each turn is deterministic and avoids race conditions. State changes are explicitly saved at the end of the cycle.
+*   **Observability by Default:** Every significant action an agent takes—forming a plan, calling a tool, receiving an LLM response—is recorded as a structured `Observation`. This is not an afterthought; it's a core feature for debugging, analysis, and building transparent AI systems.
+
+## 3. High-Level Architecture & Data Flow
+
+The ART Framework is composed of several interconnected subsystems. A typical user request flows through the system as follows:
+
+1.  **Entry Point:** A user query enters the system via `art.process()`.
+2.  **Agent Core (`PESAgent`):** The `PESAgent` takes control.
+3.  **Context Loading:** It uses the `StateManager` to load the `ThreadContext` (configuration and state) for the given `threadId`.
+4.  **Planning:** The agent constructs a prompt (using history from `ConversationManager` and available tools from `ToolRegistry`) and sends it to the `ReasoningEngine`. The LLM returns a plan, which the `OutputParser` extracts into structured data (intent, plan text, tool calls). These events are recorded via the `ObservationManager`.
+5.  **Execution:** The `ToolSystem` is invoked with the parsed tool calls. It validates each call against the `ToolRegistry` and the thread's enabled tools (`StateManager`), then executes them. Results are recorded as `Observations`.
+6.  **Synthesis:** The agent constructs a final prompt containing the original query and tool results, sending it to the `ReasoningEngine`. The LLM generates the final, user-facing response.
+7.  **Finalization:** The final user and AI messages are saved via the `ConversationManager`, and any modified `AgentState` is persisted. The final response is returned.
+8.  **Real-time Events:** Throughout this process, the `UISystem`'s sockets (`LLMStreamSocket`, `ObservationSocket`, etc.) emit events to any subscribed UI components.
+
+```mermaid
+flowchart TD
+    User([User Query]) --> ArtInstance["art.process(query, threadId)"]
+    ArtInstance --> AgentCore["Agent Core (PESAgent)"]
+
+    subgraph "1. Context Loading"
+        AgentCore -- "Loads ThreadContext" --> StateManager["StateManager"]
+        StateManager -- "Gets data from" --> Repositories["Repositories\n(State, Conversation)"]
+        Repositories -- "Read/Write" --> StorageAdapter["StorageAdapter\n(IndexedDB, etc.)"]
+    end
+
+    subgraph "2. Planning & Reasoning"
+        AgentCore -- "Sends planning prompt" --> ReasoningEngine["ReasoningEngine"]
+        ReasoningEngine -- "Uses" --> ProviderAdapter["ProviderAdapter\n(e.g., OpenAIAdapter)"]
+        ProviderAdapter -- "Calls" --> ExternalLLM["External LLM API"]
+        ExternalLLM -- "Streams response" --> ProviderAdapter
+        ProviderAdapter -- "Yields StreamEvents" --> ReasoningEngine
+        ReasoningEngine -- "Returns full text" --> OutputParser["OutputParser"]
+        OutputParser -- "Extracts tool calls" --> AgentCore
+    end
+
+    subgraph "3. Tool Execution"
+        AgentCore -- "Executes tool calls via" --> ToolSystem["ToolSystem"]
+        ToolSystem -- "Validates against" --> ToolRegistry["ToolRegistry"]
+        ToolSystem -- "Executes" --> IToolExecutor["IToolExecutor\n(e.g., CalculatorTool)"]
+        IToolExecutor -- "Returns ToolResult" --> ToolSystem
+    end
+
+    subgraph "4. Synthesis"
+        AgentCore -- "Sends synthesis prompt\n(with tool results)" --> ReasoningEngine
+    end
+
+    subgraph "5. Finalization & UI"
+        AgentCore -- "Saves messages" --> ConversationManager["ConversationManager"]
+        AgentCore -- "Returns AgentFinalResponse" --> ArtInstance
+        ReasoningEngine -- "Notifies UI of tokens" --> LLMStreamSocket["LLMStreamSocket"]
+        AgentCore -- "Records events via" --> ObservationManager["ObservationManager"]
+        ObservationManager -- "Notifies UI of thoughts" --> ObservationSocket["ObservationSocket"]
+    end
+```
+
+## 4. How-To Guides (Practical Scenarios)
+
+### 4.1. Building a Persistent Chatbot
+**Goal:** Create a conversational agent that remembers history across browser sessions.
+
+```typescript
+import { createArtInstance, ArtInstanceConfig } from 'art-framework';
+
+const config: ArtInstanceConfig = {
+  // Use IndexedDB for persistence in the browser.
+  storage: {
+    type: 'indexedDB',
+    dbName: 'MyChatAppDB',
+    dbVersion: 1,
+  },
+  providers: {
+    // Configure Ollama for local, private reasoning.
+    ollama: {
+      adapter: 'ollama',
+      defaultModel: 'llama3',
+      ollamaBaseUrl: 'http://localhost:11434',
+    },
+  },
+};
+
+// This only needs to be done once in your application.
+const art = await createArtInstance(config);
+
+// In your chat component:
+async function sendMessage(query: string, threadId: string) {
+  const result = await art.process({
+    query,
+    threadId,
+    // This config is saved for the thread. It only needs to be set once.
+    threadConfig: {
+      providerConfig: {
+        providerName: 'ollama',
+        modelId: 'llama3',
+        adapterOptions: {}, // No API key needed for local Ollama
+      },
+      enabledTools: [], // No tools enabled for this simple chat
+      historyLimit: 20,
+    },
+  });
+  console.log('Agent Response:', result.response.content);
+}
+```
+
+### 4.2. Creating and Using a Custom Tool
+**Goal:** Give the agent the ability to fetch real-time weather data.
+
+**1. Define the Tool (`WeatherTool.ts`)**
+```typescript
+import { IToolExecutor, ToolSchema, ToolResult, ExecutionContext } from 'art-framework';
+
+export class WeatherTool implements IToolExecutor {
+  public readonly schema: ToolSchema = {
+    name: 'get_weather',
+    description: 'Gets the current weather for a specified location.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        location: {
+          type: 'string',
+          description: 'The city and state, e.g., "San Francisco, CA"',
+        },
+      },
+      required: ['location'],
+    },
+  };
+
+  async execute(input: { location: string }, context: ExecutionContext): Promise<ToolResult> {
+    try {
+      // In a real app, you would call a weather API here.
+      const temperature = Math.floor(Math.random() * 30) + 50; // Fake temperature
+      const conditions = ['Sunny', 'Cloudy', 'Rainy'][Math.floor(Math.random() * 3)];
+      
+      return {
+        callId: '', // The ToolSystem will populate this
+        toolName: this.schema.name,
+        status: 'success',
+        output: { temperature, conditions, location: input.location },
+      };
+    } catch (error) {
+      return {
+        callId: '',
+        toolName: this.schema.name,
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+}
+```
+
+**2. Configure the ART Instance to Use the Tool**
+```typescript
+import { WeatherTool } from './WeatherTool';
+
+const config: ArtInstanceConfig = {
+  // ... storage and provider config ...
+  tools: [new WeatherTool()], // Register an instance of the tool
+  defaultSystemPrompt: `You are a helpful assistant. You have access to the following tools. Use them when necessary to answer user questions. Tools: {{availableTools}}`,
+};
+
+const art = await createArtInstance(config);
+
+// Now, enable the tool for a specific thread
+await art.process({
+  query: "What's the weather like in Boston?",
+  threadId: 'weather-thread-1',
+  threadConfig: {
+    // ... providerConfig ...
+    enabledTools: ['get_weather'], // Explicitly enable the tool for this thread
+    historyLimit: 10,
+  },
+});
+```
+
+### 4.3. Integrating with a UI for Real-Time Updates
+**Goal:** Display the agent's streaming response and thought process in a web UI.
+
+```typescript
+// In your front-end code (e.g., a React component)
+import { art } from './artInstance'; // Assuming you've initialized ART elsewhere
+
+function ChatComponent({ threadId }) {
+  const [streamingResponse, setStreamingResponse] = useState('');
+  const [observations, setObservations] = useState([]);
+
+  useEffect(() => {
+    // Subscribe to LLM token stream
+    const unsubscribeStream = art.uiSystem.getLLMStreamSocket().subscribe(
+      (event) => {
+        if (event.type === 'TOKEN' && event.tokenType?.startsWith('FINAL_SYNTHESIS')) {
+          setStreamingResponse((prev) => prev + event.data);
+        }
+        if (event.type === 'END') {
+          // Stream finished, you might want to save the full message here
+        }
+      },
+      null, // No filter
+      { threadId } // Only listen for events on this thread
+    );
+
+    // Subscribe to observations (agent's thoughts)
+    const unsubscribeObs = art.uiSystem.getObservationSocket().subscribe(
+      (observation) => {
+        setObservations((prev) => [...prev, observation]);
+      },
+      null,
+      { threadId }
+    );
+
+    return () => {
+      unsubscribeStream();
+      unsubscribeObs();
+    };
+  }, [threadId]);
+
+  // ... render streamingResponse and observations ...
+}
+```
+
+## 5. Advanced Topics
+
+### 5.1. Agent-to-Agent (A2A) Communication
+The A2A system allows you to build sophisticated, multi-agent workflows.
+*   **Concept:** An agent can act as a "manager" that receives a complex task. It can then use the `AgentDiscoveryService` to find "specialist" agents with specific capabilities (e.g., a "DataAnalysisAgent"). The manager then uses the `TaskDelegationService` to send a structured `A2ATask` to the specialist. It can monitor the task's progress via the `A2ATaskSocket` and use the result in its final synthesis.
+*   **Use Case:** A research agent receives a query like "Summarize recent AI trends and create a presentation." It delegates the "summarize trends" task to a web-research agent and the "create presentation" task to a document-generation agent, then combines the results.
+
+### 5.2. Model Context Protocol (MCP)
+MCP allows your agent to dynamically expand its capabilities without requiring a redeployment.
+*   **Concept:** The `McpManager` can be configured to connect to one or more MCP servers. On connection, it fetches a list of available tools from the server. For each remote tool, it creates a local `McpProxyTool` instance and registers it in the `ToolRegistry`. When the agent decides to use one of these tools, the proxy tool handles the secure API call to the MCP server to execute the tool and returns the result, making the entire process seamless.
+*   **Use Case:** A company maintains a central MCP server with proprietary tools (e.g., `query_internal_database`, `get_customer_details`). Any ART agent, with the right configuration and credentials, can connect to this server and instantly gain access to these tools.
+
+## 6. Comprehensive API Reference
+
+This section details the purpose and relationships of the most important public components.
+
+#### **Core Factory**
+*   **`createArtInstance(config: ArtInstanceConfig)`**: **(Function)** The primary entry point. Initializes all managers, systems, and adapters based on the provided configuration and returns a ready-to-use `ArtInstance`.
+*   **`ArtInstance`**: **(Interface)** The object returned by the factory. Provides the main `process()` method and accessors to all major public systems like `uiSystem`, `stateManager`, and `toolRegistry`.
+
+#### **Agent Orchestration**
+*   **`IAgentCore`**: **(Interface)** The contract for an agent's central reasoning logic.
+*   **`PESAgent`**: **(Class)** The default `IAgentCore` implementation. Orchestrates the Plan-Execute-Synthesize cycle. It *uses* nearly all other managers and systems to accomplish its goal.
+
+#### **Reasoning & LLM Interaction**
+*   **`ReasoningEngine`**: **(Interface)** Defines the `call()` method for interacting with an LLM.
+*   **`ProviderAdapter`**: **(Interface)** The contract for a specific LLM provider (e.g., OpenAI). It translates `ArtStandardPrompt` to the provider's format and provider responses into `StreamEvent`s.
+*   **`ProviderManager`**: **(Class)** Manages the lifecycle of `ProviderAdapter` instances, including pooling and concurrency limits. Used by the `ReasoningEngine`.
+*   **`ArtStandardPrompt` / `ArtStandardMessage`**: **(Type/Interface)** The universal, provider-agnostic format for prompts used internally by ART. This is what agents build before passing to the `ReasoningEngine`.
+*   **`StreamEvent`**: **(Interface)** A standardized object representing a chunk of data from an LLM stream (`TOKEN`, `METADATA`, `ERROR`, `END`). This is the primary output of the `ReasoningEngine`.
+*   **`OutputParser`**: **(Class)** A utility used by `PESAgent` to parse the raw string output from an LLM into structured data, like an array of `ParsedToolCall` objects.
+
+#### **Tools**
+*   **`IToolExecutor`**: **(Interface)** The contract that all tools must implement. Requires a `schema` and an `execute` method.
+*   **`ToolSchema`**: **(Interface)** The definition of a tool (name, description, input schema) that is shown to the LLM.
+*   **`ToolRegistry`**: **(Class)** A singleton that holds all registered `IToolExecutor` instances. The `ToolSystem` queries it to find the correct tool to execute.
+*   **`ToolSystem`**: **(Class)** The orchestrator for tool execution. It receives `ParsedToolCall`s from the agent, validates them, finds the executor in the `ToolRegistry`, and runs it.
+
+#### **State & Persistence**
+*   **`StorageAdapter`**: **(Interface)** The low-level contract for a key-value persistence layer.
+*   **`InMemoryStorageAdapter` / `IndexedDBStorageAdapter`**: **(Classes)** Concrete implementations of the `StorageAdapter`.
+*   **`IStateRepository` / `IConversationRepository`**: **(Interfaces)** Higher-level repositories that define methods for storing and retrieving specific data types (`ThreadConfig`, `ConversationMessage`). They are backed by a `StorageAdapter`.
+*   **`StateManager` / `ConversationManager`**: **(Classes)** The primary interfaces for the agent to interact with state and history. They use the repositories to persist data.
+*   **`ThreadConfig`**: **(Interface)** The configuration for a single conversation thread (e.g., which model to use, which tools are enabled).
+*   **`AgentState`**: **(Interface)** A flexible data structure for an agent to store its own persistent memory for a thread.
+
+#### **Observability & UI**
+*   **`Observation`**: **(Interface)** A structured log entry representing a significant event in the agent's lifecycle (e.g., `PLAN`, `TOOL_CALL`, `ERROR`).
+*   **`ObservationManager`**: **(Class)** The service used by the agent and other systems to record `Observation`s.
+*   **`UISystem`**: **(Class)** The entry point to access the various real-time event sockets.
+*   **`LLMStreamSocket` / `ObservationSocket` / `ConversationSocket`**: **(Classes)** Typed event emitters that allow external code (like a UI) to subscribe to framework events with filtering.
+
+## 7. Glossary of Terms
+
+*   **A2A (Agent-to-Agent):** A protocol and set of services enabling agents to delegate tasks to one another.
+*   **Agent Core:** The central component that orchestrates the agent's reasoning and action loop (e.g., `PESAgent`).
+*   **MCP (Model Context Protocol):** A standard for servers to expose tools and resources that can be dynamically discovered and used by agents.
+*   **Observation:** A structured record of a significant internal event during an agent's execution, used for debugging and observability.
+*   **PES (Plan-Execute-Synthesize):** A robust agent orchestration pattern where the agent first plans its steps, then executes necessary actions (like using tools), and finally synthesizes a final response.
+*   **Provider Adapter:** A component that translates between ART's standard prompt format and the specific API format of an LLM provider (like OpenAI or Anthropic).
+*   **Thread:** A single, continuous conversation. It is identified by a `threadId` and has its own associated history, configuration, and state.
