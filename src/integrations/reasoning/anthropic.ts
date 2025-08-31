@@ -50,7 +50,8 @@ type AnthropicSDKToolUseBlock = Anthropic.ToolUseBlock; // This is a received bl
  *
  * Handles formatting requests, parsing responses, streaming, and tool use.
  *
- * @implements {ProviderAdapter}
+ * @see {@link ProviderAdapter} for the interface definition.
+ * @see {@link AnthropicAdapterOptions} for configuration options.
  */
 export class AnthropicAdapter implements ProviderAdapter {
   readonly providerName = 'anthropic';

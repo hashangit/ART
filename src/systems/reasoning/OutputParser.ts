@@ -26,7 +26,11 @@ const toolCallsSchema = z.array(parsedToolCallSchema);
  * This enforces the framework-level Output Contract and keeps the structure provider-agnostic
  * and tool-type-agnostic (native and MCP tools share the same interface).
  *
- * @implements {IOutputParser}
+ * It is responsible for parsing the raw string output from a Large Language Model (LLM)
+ * and converting it into a structured format that the ART agent can understand and act upon.
+ * This includes extracting the agent's intent, the plan, and any tool calls it intends to make.
+ *
+ * @see {@link IOutputParser} for the interface definition.
  */
 export class OutputParser implements IOutputParser {
   /**

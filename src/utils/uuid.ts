@@ -1,8 +1,6 @@
 /**
  * @module utils/uuid
- * @description Provides a utility function for generating Version 4 UUIDs.
- * This is a simple wrapper around the 'uuid' library to ensure consistent
- * UUID generation throughout the framework.
+ * Provides a utility function for generating Version 4 UUIDs.
  */
 import { v4 as uuidv4 } from 'uuid';
 

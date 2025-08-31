@@ -57,7 +57,13 @@ const allowedFunctions: Record<string, any> = {
  * An ART Framework tool that safely evaluates mathematical expressions using the mathjs library.
  * It supports basic arithmetic, variables via a scope, complex numbers, and a predefined list of safe functions.
  *
- * @implements {IToolExecutor}
+ * This tool is designed to be used within the ART framework's `ToolSystem`.
+ * It provides a safe way to perform mathematical calculations by leveraging
+ * the `mathjs` library. The tool validates the input expression to ensure it's a
+ * single, valid mathematical expression before evaluation.
+ *
+ * @see {@link IToolExecutor} for the interface it implements.
+ * @see {@link ToolSystem} for the system that manages and executes tools.
  */
 export class CalculatorTool implements IToolExecutor {
   /** The unique name identifier for this tool. */

@@ -1,11 +1,7 @@
 /**
  * @module types/schemas
- * @description This module defines Zod schemas for validating the core data structures of the ART framework,
- * particularly the standardized prompt and message formats. These schemas ensure data integrity and consistency
- * when creating and processing prompts.
- *
- * @see {@link ArtStandardMessage} for the interface being validated.
- * @see {@link ArtStandardPrompt} for the array structure being validated.
+ * This module defines Zod schemas for validating the core data structures of the ART framework,
+ * ensuring type safety and data integrity at runtime.
  */
 import { z } from 'zod';
 import { ArtStandardMessageRole } from '@/types'; // Import role type from main types

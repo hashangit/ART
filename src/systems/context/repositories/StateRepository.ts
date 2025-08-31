@@ -10,7 +10,12 @@ type StoredThreadContext = ThreadContext & { id: string };
  * underlying `StorageAdapter`. It stores the entire context object for each thread
  * under a key equal to the `threadId` within a designated collection (default: 'state').
  *
- * @implements {IStateRepository}
+ * It uses a `StorageAdapter` to abstract the underlying storage, allowing for
+ * flexibility in choosing storage backends (e.g., in-memory, IndexedDB, Supabase).
+ * This repository is responsible for CRUD operations on thread state and configuration.
+ *
+ * @see {@link IStateRepository} for the interface it implements.
+ * @see {@link StorageAdapter} for the storage backend interface.
  */
 export class StateRepository implements IStateRepository {
   private adapter: StorageAdapter;

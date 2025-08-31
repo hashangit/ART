@@ -15,7 +15,6 @@ import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
  * @see {@link IToolExecutor} for the interface it implements.
  *
  * @class McpProxyTool
- * @implements {IToolExecutor}
  */
 export class McpProxyTool implements IToolExecutor {
   public readonly schema: ToolSchema;

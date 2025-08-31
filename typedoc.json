@@ -1,8 +1,8 @@
 {
   "$schema": "https://typedoc.org/schema.json",
   "entryPoints": ["src/index.ts"],
-  "out": "Docs/API",
-  "name": "ART Framework API Reference",
+  "out": "docs/components",
+  "name": "ART Framework Component Reference",
   "readme": "none",
   "excludePrivate": true,
   "excludeProtected": true,

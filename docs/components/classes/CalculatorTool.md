@@ -1,0 +1,100 @@
+[**ART Framework Component Reference**](../README.md)
+
+***
+
+[ART Framework Component Reference](../README.md) / CalculatorTool
+
+# Class: CalculatorTool
+
+Defined in: [src/tools/CalculatorTool.ts:68](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/tools/CalculatorTool.ts#L68)
+
+An ART Framework tool that safely evaluates mathematical expressions using the mathjs library.
+It supports basic arithmetic, variables via a scope, complex numbers, and a predefined list of safe functions.
+
+This tool is designed to be used within the ART framework's `ToolSystem`.
+It provides a safe way to perform mathematical calculations by leveraging
+the `mathjs` library. The tool validates the input expression to ensure it's a
+single, valid mathematical expression before evaluation.
+
+## See
+
+ - [IToolExecutor](../interfaces/IToolExecutor.md) for the interface it implements.
+ - [ToolSystem](../interfaces/ToolSystem.md) for the system that manages and executes tools.
+
+## Implements
+
+- [`IToolExecutor`](../interfaces/IToolExecutor.md)
+
+## Constructors
+
+### Constructor
+
+> **new CalculatorTool**(): `CalculatorTool`
+
+#### Returns
+
+`CalculatorTool`
+
+## Properties
+
+### schema
+
+> `readonly` **schema**: [`ToolSchema`](../interfaces/ToolSchema.md)
+
+Defined in: [src/tools/CalculatorTool.ts:81](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/tools/CalculatorTool.ts#L81)
+
+The schema definition for the CalculatorTool, conforming to the `ToolSchema` interface.
+It defines the tool's name, description, input parameters (expression and optional scope),
+and provides examples for the LLM.
+
+#### Implementation of
+
+[`IToolExecutor`](../interfaces/IToolExecutor.md).[`schema`](../interfaces/IToolExecutor.md#schema)
+
+***
+
+### toolName
+
+> `readonly` `static` **toolName**: `"calculator"` = `"calculator"`
+
+Defined in: [src/tools/CalculatorTool.ts:70](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/tools/CalculatorTool.ts#L70)
+
+The unique name identifier for this tool.
+
+## Methods
+
+### execute()
+
+> **execute**(`input`, `context`): `Promise`\<[`ToolResult`](../interfaces/ToolResult.md)\>
+
+Defined in: [src/tools/CalculatorTool.ts:134](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/tools/CalculatorTool.ts#L134)
+
+Executes the calculator tool by evaluating the provided mathematical expression.
+It uses a restricted scope including only allowed mathjs functions and any variables
+passed in the `input.scope`. Handles basic number and complex number results.
+
+#### Parameters
+
+##### input
+
+`any`
+
+An object containing the `expression` (string) and optional `scope` (object). Must match `inputSchema`.
+
+##### context
+
+[`ExecutionContext`](../interfaces/ExecutionContext.md)
+
+The execution context containing `threadId`, `traceId`, etc.
+
+#### Returns
+
+`Promise`\<[`ToolResult`](../interfaces/ToolResult.md)\>
+
+A promise resolving to a `ToolResult` object.
+         On success, `status` is 'success' and `output` is `{ result: number | string }`.
+         On failure, `status` is 'error' and `error` contains the error message.
+
+#### Implementation of
+
+[`IToolExecutor`](../interfaces/IToolExecutor.md).[`execute`](../interfaces/IToolExecutor.md#execute)

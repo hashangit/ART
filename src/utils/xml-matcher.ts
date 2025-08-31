@@ -1,8 +1,8 @@
 /**
  * @module utils/xml-matcher
- * @description Provides a utility class for incrementally parsing and extracting content
- * from within specific XML tags from a stream of text. This is particularly useful for
- * handling LLM responses that embed structured data (like thoughts or plans) within XML tags.
+ * Provides a utility class for incrementally parsing and extracting content
+ * from XML-like text streams. It's designed to be robust against malformed or
+ * incomplete XML.
  */
 
 /**

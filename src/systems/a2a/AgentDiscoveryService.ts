@@ -194,7 +194,7 @@ export class AgentDiscoveryService {
    * @param topK - The maximum number of agents to return.
    * @param traceId - Optional trace ID for request tracking.
    * @returns Promise resolving to a ranked array of matching agents.
-   * @todo Revisit and enhance the scoring algorithm.
+   * @remarks TODO: Revisit and enhance the scoring algorithm.
    */
   async findTopAgentsForTask(taskType: string, topK: number = 3, traceId?: string): Promise<A2AAgentInfo[]> {
     const agents = await this.discoverAgents(traceId);

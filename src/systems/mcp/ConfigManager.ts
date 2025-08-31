@@ -2,10 +2,8 @@ import { Logger } from '@/utils/logger';
 import { ArtMcpConfig, McpServerConfig } from './types';
 
 /**
- * @class ConfigManager
- * @description Manages the MCP configuration, handling loading, validation, and saving to localStorage.
- * This class ensures that the application always has a valid MCP configuration to work with,
- * creating a default configuration if one doesn't exist.
+ * Manages the MCP configuration, handling loading, validation, and saving to localStorage.
+ * It ensures that the MCP connection details are always available and well-formed.
  */
 export class ConfigManager {
   private configKey = 'art_mcp_config';

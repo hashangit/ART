@@ -6,7 +6,7 @@ import { ARTError, ErrorCode } from '@/errors';
 
 /**
  * @function base64UrlEncode
- * @description Encodes a buffer into a Base64URL string.
+ * Encodes a buffer into a Base64URL string.
  * @param {Uint8Array} buffer - The buffer to encode.
  * @returns {string} The Base64URL encoded string.
  */
@@ -18,7 +18,7 @@ function base64UrlEncode(buffer: Uint8Array): string {
 
 /**
  * @function sha256Base64Url
- * @description Hashes a string using SHA-256 and encodes it as Base64URL.
+ * Hashes a string using SHA-256 and encodes it as Base64URL.
  * @param {string} input - The string to hash.
  * @returns {Promise<string>} A promise that resolves to the Base64URL encoded hash.
  */
@@ -30,7 +30,7 @@ async function sha256Base64Url(input: string): Promise<string> {
 
 /**
  * @function generateRandomString
- * @description Generates a random string of a given length.
+ * Generates a random string of a given length.
  * @param {number} [length=64] - The length of the string to generate.
  * @returns {string} The generated random string.
  */
@@ -42,7 +42,7 @@ function generateRandomString(length = 64): string {
 
 /**
  * @class TokenManager
- * @description Manages OAuth tokens, including loading, updating, clearing, and refreshing them.
+ * Manages OAuth tokens, including loading, updating, clearing, and refreshing them.
  */
 export class TokenManager {
   private accessToken: string | null = null
@@ -144,7 +144,7 @@ export class TokenManager {
 
 /**
  * @class McpClientController
- * @description Controls the MCP client, including OAuth flow, connection, and tool calls.
+ * Controls the MCP client, including OAuth flow, connection, and tool calls.
  */
 export class McpClientController {
   public baseUrl: URL

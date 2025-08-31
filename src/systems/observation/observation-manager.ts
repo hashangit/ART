@@ -8,11 +8,12 @@ import { Logger } from '@/utils/logger'; // Import Logger
  * Manages the lifecycle of agent observations: creation, persistence, retrieval, and notification.
  *
  * @remarks
- * It acts as the central service for logging significant events during agent execution.
- * Implements the {@link ObservationManager} interface defined in core interfaces.
+ * It provides methods to record and retrieve observations, which are crucial for
+ * debugging, monitoring, and analyzing agent behavior. The manager uses a
+ * repository pattern to abstract the underlying storage mechanism.
  *
- * @class ObservationManager
- * @implements {ObservationManagerInterface}
+ * @see {@link ObservationManagerInterface} for the interface definition.
+ * @see {@link IObservationRepository} for the storage repository interface.
  */
 export class ObservationManager implements ObservationManagerInterface { // Implement the imported interface
     private observationRepository: IObservationRepository;

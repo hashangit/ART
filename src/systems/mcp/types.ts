@@ -1,9 +1,7 @@
 /**
  * @module systems/mcp/types
- * @description This module defines the public and internal types used for configuring
- * and managing the MCP (Model-Connector Protocol) system within the ART framework.
- * These types are essential for defining server configurations, tool definitions,
- * and managing the internal state of MCP connections.
+ * This module defines the public and internal types used for configuring
+ * and managing the state of the MCP (Multi-Capability Provider) system.
  */
 
 /**

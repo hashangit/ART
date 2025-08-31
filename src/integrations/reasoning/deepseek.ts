@@ -75,13 +75,11 @@ interface OpenAIChatCompletionResponse {
 }
 
 /**
- * Implements the `ProviderAdapter` interface for interacting with the DeepSeek API,
- * which uses an OpenAI-compatible Chat Completions endpoint.
+ * This adapter provides a consistent interface for ART agents to use DeepSeek models,
+ * handling the conversion of standard ART prompts to the DeepSeek API format and
+ * parsing the responses into the ART `StreamEvent` format.
  *
- * Handles formatting requests and parsing responses for DeepSeek models.
- * Note: Streaming is **not yet implemented** for this adapter. Calls requesting streaming will yield an error and end.
- *
- * @implements {ProviderAdapter}
+ * @see {@link ProviderAdapter} for the interface it implements.
  */
 export class DeepSeekAdapter implements ProviderAdapter {
   readonly providerName = 'deepseek';

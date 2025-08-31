@@ -1,7 +1,6 @@
 /**
  * @module utils/validation
- * @description Provides a utility function for validating data against JSON schemas using the Ajv library.
- * It includes caching for compiled schemas to improve performance.
+ * Provides a utility function for validating data against JSON schemas using the Ajv library.
  */
 import Ajv, { ValidateFunction, ErrorObject } from 'ajv';
 import { Logger } from '@/utils/logger';

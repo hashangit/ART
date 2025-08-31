@@ -62,7 +62,8 @@ interface OpenAIToolCall {
  *
  * Handles formatting requests, parsing responses, streaming, and tool use.
  *
- * @implements {ProviderAdapter}
+ * @see {@link ProviderAdapter} for the interface definition.
+ * @see {@link OllamaAdapterOptions} for configuration options.
  */
 export class OllamaAdapter implements ProviderAdapter {
   readonly providerName = 'ollama';

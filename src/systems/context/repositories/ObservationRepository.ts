@@ -9,7 +9,12 @@ import { Observation, ObservationFilter } from '@/types';
  * manage `Observation` objects using an underlying `StorageAdapter`.
  * Handles adding and retrieving observations for specific threads.
  *
- * @implements {IObservationRepository}
+ * It relies on a `StorageAdapter` to abstract the actual storage mechanism,
+ * making it compatible with different backends like IndexedDB, Supabase, or
+ * in-memory storage.
+ *
+ * @see {@link IObservationRepository} for the interface it implements.
+ * @see {@link StorageAdapter} for the storage backend interface.
  */
 export class ObservationRepository implements IObservationRepository {
   private adapter: StorageAdapter;

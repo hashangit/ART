@@ -9,7 +9,12 @@ type StoredConversationMessage = ConversationMessage & { id: string };
  * manage `ConversationMessage` objects using an underlying `StorageAdapter`.
  * Handles adding and retrieving conversation history for specific threads.
  *
- * @implements {IConversationRepository}
+ * It abstracts the underlying storage mechanism through the `StorageAdapter` interface,
+ * allowing for different storage backends (e.g., in-memory, IndexedDB, Supabase)
+ * to be used interchangeably.
+ *
+ * @see {@link IConversationRepository} for the interface it implements.
+ * @see {@link StorageAdapter} for the storage backend interface.
  */
 export class ConversationRepository implements IConversationRepository {
   private adapter: StorageAdapter;

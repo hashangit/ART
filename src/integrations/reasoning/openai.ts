@@ -84,7 +84,7 @@ interface OpenAIChatCompletionResponse {
  * Handles formatting requests and parsing responses for OpenAI.
  * Uses raw `fetch` for now.
  *
- * @implements {ProviderAdapter}
+ * @see {@link ProviderAdapter} for the interface definition.
  */
 // TODO: Refactor to use the official OpenAI SDK for better error handling, types, and features.
 export class OpenAIAdapter implements ProviderAdapter {

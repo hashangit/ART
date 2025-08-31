@@ -80,14 +80,11 @@ interface OpenAIChatCompletionResponse {
 }
 
 /**
- * Implements the `ProviderAdapter` interface for interacting with the OpenRouter API,
- * which provides access to various LLMs through an OpenAI-compatible interface.
+ * This adapter provides a unified interface for various LLM providers through OpenRouter,
+ * handling prompt conversion and response parsing into the ART `StreamEvent` format.
  *
- * Handles formatting requests and parsing responses for OpenRouter's chat completions endpoint.
- * Handles formatting requests and parsing responses for OpenRouter's chat completions endpoint.
- * Note: Streaming is **not yet implemented** for this adapter. Calls requesting streaming will yield an error and end.
- *
- * @implements {ProviderAdapter}
+ * @see {@link ProviderAdapter} for the interface it implements.
+ * @see {@link OpenRouterAdapterOptions} for configuration options.
  */
 export class OpenRouterAdapter implements ProviderAdapter {
   readonly providerName = 'openrouter';

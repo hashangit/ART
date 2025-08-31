@@ -11,7 +11,10 @@ import { FilterOptions } from '@/types';
  * - Simple demos or examples where persistence isn't needed.
  * - Ephemeral agents that don't require long-term memory.
  *
- * @implements {StorageAdapter}
+ * It provides a simple key-value store for various data types used within the
+ * ART framework, such as conversation history, agent state, and observations.
+ *
+ * @see {@link StorageAdapter} for the interface definition.
  */
 export class InMemoryStorageAdapter implements StorageAdapter {
   private storage: Map<string, Map<string, any>> = new Map();

@@ -16,10 +16,18 @@ export {
 
 /**
  * @module types
- * @description This module aggregates and exports the core data structures, enums, and type definitions
- * used throughout the ART framework. It serves as the central hub for types related to conversation state,
- * agent execution, tool definitions, and system configuration. By providing a unified set of types,
- * it enables consistent data handling across different components of the ART system.
+ *
+ * This module aggregates and exports the core data structures, enums, and type definitions
+ * used throughout the ART framework. It serves as the single source of truth for
+ * a majority of the framework's types.
+ *
+ * Key exports include:
+ * - {@link AgentProps}: Input properties for agent execution.
+ * - {@link AgentFinalResponse}: Standardized output from an agent.
+ * - {@link ConversationMessage}: Structure for a single message in a conversation.
+ * - {@link ToolSchema}: Definition for a tool's capabilities.
+ * - {@link A2ATask}: Structure for Agent-to-Agent tasks.
+ * - Various enums like {@link MessageRole}, {@link ModelCapability}, etc.
  */
 
 // --- UI Socket Related Types ---

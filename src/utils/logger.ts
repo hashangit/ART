@@ -1,7 +1,7 @@
 /**
  * @module utils/logger
- * @description Provides a simple, static, and configurable logger for the ART framework.
- * It supports different log levels and allows for global configuration.
+ * Provides a simple, static, and configurable logger for the ART framework.
+ * It supports different log levels and can be enabled or disabled globally.
  */
 
 /**

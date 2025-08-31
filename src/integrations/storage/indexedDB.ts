@@ -28,7 +28,8 @@ export interface IndexedDBConfig {
  * **Important:** The `init()` method *must* be called and awaited before performing
  * any other database operations (get, set, delete, query).
  *
- * @implements {StorageAdapter}
+ * @see {@link StorageAdapter} for the interface it implements.
+ * @see {@link IndexedDBConfig} for configuration options.
  */
 export class IndexedDBStorageAdapter implements StorageAdapter {
   private db: IDBDatabase | null = null;
@@ -317,7 +318,8 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
    * @param filterOptions - Options for filtering, sorting, skipping, and limiting results.
    * @returns A promise resolving to an array of deep copies of the matching items.
    * @throws {Error} If the database is not initialized, the store doesn't exist, or a database error occurs.
-   * @todo Implement more advanced querying using IndexedDB indexes and cursors.
+   * @remarks TODO: Implement more advanced querying using IndexedDB indexes and cursors.
+   * This will improve performance for large datasets.
    */
   async query<T>(collection: string, filterOptions: FilterOptions): Promise<T[]> {
      await this.init(); // Ensure DB is ready

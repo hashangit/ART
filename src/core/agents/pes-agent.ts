@@ -48,7 +48,7 @@ import { Logger } from '@/utils/logger'; // Added Logger import
 import { AgentDiscoveryService } from '@/systems/a2a/AgentDiscoveryService';
 import { TaskDelegationService } from '@/systems/a2a/TaskDelegationService';
 
-interface PESAgentDependencies {
+export interface PESAgentDependencies {
     /** Manages thread configuration and state. */
     stateManager: StateManager;
     /**
@@ -98,7 +98,6 @@ const DEFAULT_PES_SYSTEM_PROMPT = `You are a helpful AI assistant. You need to u
  * It constructs standardized prompts (`ArtStandardPrompt`) directly as JavaScript objects
  * for the `ReasoningEngine`. It processes the `StreamEvent` output from the reasoning engine for both planning and synthesis.
  *
- * @implements {IAgentCore}
  * // @see {PromptManager} // Removed
  * @see {ReasoningEngine}
  * @see {ArtStandardPrompt}

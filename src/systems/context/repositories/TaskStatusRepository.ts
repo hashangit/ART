@@ -10,7 +10,8 @@ type StoredA2ATask = A2ATask & { id: string };
  * retrieving, updating, and deleting A2A (Agent-to-Agent) tasks, as well as
  * filtering tasks by various criteria such as thread, agent, and status.
  *
- * @implements {IA2ATaskRepository}
+ * @see {@link IA2ATaskRepository} for the interface it implements.
+ * @see {@link StorageAdapter} for the storage backend interface.
  */
 export class TaskStatusRepository implements IA2ATaskRepository {
   private adapter: StorageAdapter;
