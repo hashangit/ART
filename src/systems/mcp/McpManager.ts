@@ -5,8 +5,8 @@ import { AuthManager } from '../auth/AuthManager';
 import { McpProxyTool } from './McpProxyTool';
 import { ConfigManager } from './ConfigManager';
 import { McpServerConfig, StreamableHttpConnection } from './types';
-import { McpClient, McpTransportConfig } from './McpClient';
-import { CORSAccessManager } from './web/CORSAccessManager';
+import { McpClientController } from './McpClient';
+import { hasInstall, install, getAllowedInfo, requestHosts, getInstallUrl } from 'art-mcp-permission-manager'
 
 /**
  * Manages MCP (Model Context Protocol) server connections and tool registration.
@@ -26,7 +26,7 @@ export class McpManager {
   private configManager: ConfigManager;
   private toolRegistry: ToolRegistry;
   private authManager?: AuthManager;
-  private activeConnections: Map<string, McpClient> = new Map();
+  private activeConnections: Map<string, McpClientController> = new Map();
 
   constructor(toolRegistry: ToolRegistry, _stateManager: StateManager, authManager?: AuthManager) {
     this.configManager = new ConfigManager();
@@ -94,22 +94,19 @@ export class McpManager {
 
   async shutdown(): Promise<void> {
     Logger.info('McpManager: Shutting down all active connections...');
-    const disconnectionPromises = Array.from(this.activeConnections.values()).map(client => client.disconnect());
+    const disconnectionPromises = Array.from(this.activeConnections.values()).map(client => client.logout());
     await Promise.allSettled(disconnectionPromises);
     this.activeConnections.clear();
     Logger.info('McpManager: Shutdown complete.');
   }
 
-  public async getOrCreateConnection(serverId: string): Promise<McpClient> {
+  public async getOrCreateConnection(serverId: string): Promise<McpClientController> {
     if (this.activeConnections.has(serverId)) {
       const existingClient = this.activeConnections.get(serverId)!;
-      if (existingClient.isConnected()) {
+      if (existingClient.isAuthenticated()) {
+        await existingClient.ensureConnected();
         return existingClient;
       }
-      // Attempt to reconnect if disconnected
-      Logger.info(`McpManager: Reconnecting to server "${serverId}"...`);
-      await existingClient.connect();
-      return existingClient;
     }
 
     Logger.info(`McpManager: No active connection for "${serverId}". Creating one on-demand...`);
@@ -124,55 +121,53 @@ export class McpManager {
 
     const conn = card.connection as StreamableHttpConnection;
 
-    // Ensure CORS helper extension access before attempting browser fetch
-    const cors = new CORSAccessManager();
-    await cors.ensureAccess(conn.url);
+    await this.ensureCorsAccess(conn.url);
 
-    // Auto-register PKCE strategy per server if oauth block is present and no explicit authStrategyId
-    if (!conn.authStrategyId && conn.oauth?.type === 'pkce' && this.authManager) {
-      try {
-        const strategyId = `mcp_pkce_${card.id}`;
-        if (!this.authManager.hasStrategy(strategyId)) {
-          const { PKCEOAuthStrategy } = await import('../../auth/PKCEOAuthStrategy');
-          const channelName = conn.oauth.channelName || `art-auth:mcp_pkce_${card.id}`;
-          const openInNewTab = conn.oauth.openInNewTab !== false; // default true
-          const scopesValue = Array.isArray(conn.oauth.scopes) ? (conn.oauth.scopes as unknown as string[]).join(' ') : (conn.oauth.scopes as unknown as string);
-          this.authManager.registerStrategy(strategyId, new PKCEOAuthStrategy({
-            authorizationEndpoint: conn.oauth.authorizationEndpoint,
-            tokenEndpoint: conn.oauth.tokenEndpoint,
-            clientId: conn.oauth.clientId,
-            redirectUri: conn.oauth.redirectUri,
-            scopes: scopesValue || '',
-            resource: conn.oauth.resource,
-            openInNewTab,
-            channelName,
-          } as any));
-          Logger.info(`McpManager: Auto-registered PKCE strategy '${strategyId}' for server '${serverId}'.`);
-        }
-        conn.authStrategyId = strategyId;
-      } catch (e: any) {
-        Logger.warn(`McpManager: Failed to auto-register PKCE for '${serverId}': ${e?.message || e}`);
-      }
+    const scopes = conn.oauth?.scopes;
+    const client = McpClientController.create(conn.url, Array.isArray(scopes) ? scopes : (scopes ? [scopes] : undefined));
+
+    const handled = await client.maybeHandleCallback();
+    if(handled) {
+      Logger.info(`McpManager: OAuth callback for server "${serverId}" handled successfully.`);
     }
-    const transportConfig: McpTransportConfig = {
-      type: 'streamable-http',
-      url: conn.url,
-      headers: conn.headers,
-      authStrategyId: conn.authStrategyId,
-      timeout: card.timeout,
-    };
 
-    const client = new McpClient(transportConfig, this.authManager);
+    client.loadExistingSession();
 
-    client.on('disconnected', () => {
-      Logger.warn(`McpManager: Connection for server "${serverId}" closed. It will be re-established on next use.`);
-      this.activeConnections.delete(serverId);
-    });
-
+    if(!client.isAuthenticated()) {
+        await client.startOAuth();
+        // The above call will redirect, so the code below might not be reached in that flow.
+        // If it is (e.g. pop-up), we need to wait for authentication.
+        await this.waitForAuth(client, 180000); // Wait for up to 3 minutes
+    }
+    
     await client.connect();
+
     this.activeConnections.set(serverId, client);
     Logger.info(`McpManager: On-demand connection for "${serverId}" established successfully.`);
     return client;
+  }
+  
+  private async ensureCorsAccess(targetUrl: string): Promise<void> {
+    if (!hasInstall()) {
+        const opened = install({ browser: 'auto' });
+        if (!opened) {
+            const url = getInstallUrl();
+            // In a real app, you'd show this in a dialog, not an alert
+            alert('ART MCP requires a companion browser extension for CORS. Please install it: ' + url);
+            throw new ARTError('Companion extension not installed.', ErrorCode.CORS_EXTENSION_REQUIRED);
+        }
+        throw new ARTError('Companion extension installation started. Please complete it and retry.', ErrorCode.CORS_EXTENSION_REQUIRED);
+    }
+
+    const { hostname } = new URL(targetUrl);
+    const info = await getAllowedInfo();
+
+    if (!info.enabled || (info.type === 'specific' && !info.hosts?.includes(hostname))) {
+        const res = await requestHosts({ hosts: [hostname] });
+        if (res !== 'accept') {
+            throw new ARTError(`User did not grant permission for ${hostname}.`, ErrorCode.CORS_PERMISSION_REQUIRED);
+        }
+    }
   }
 
   // --- Discovery & Installation (Future Implementation) ---
@@ -187,6 +182,7 @@ export class McpManager {
     Logger.info(`McpManager: Discovering servers from ${url}...`);
     
     try {
+      await this.ensureCorsAccess(url);
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -264,48 +260,48 @@ export class McpManager {
     // Save initial config
     this.configManager.setServerConfig(server.id, server);
     try {
-      let client: McpClient;
-      try {
-        client = await this.getOrCreateConnection(server.id);
-      } catch (e: any) {
-        // If login was initiated, wait for auth and retry connection
-        if (e?.code === ErrorCode.NOT_CONNECTED && this.authManager) {
-          const conn = (this.configManager.getConfig().mcpServers[server.id].connection as StreamableHttpConnection);
-          const strategyId = conn.authStrategyId || `mcp_pkce_${server.id}`;
-          Logger.info(`McpManager: Waiting for PKCE auth to complete for '${server.id}'...`);
-          await this.waitForAuth(strategyId, 180000); // up to 3 minutes
-          client = await this.getOrCreateConnection(server.id);
-        } else {
-          throw e;
+        const conn = server.connection as StreamableHttpConnection;
+        await this.ensureCorsAccess(conn.url);
+
+        let client: McpClientController;
+        try {
+            client = await this.getOrCreateConnection(server.id);
+        } catch (e: any) {
+            // This might happen if startOAuth redirects. The user will need to try again.
+            Logger.warn(`McpManager: Could not connect during install for "${server.id}": ${e?.message || e}. The user may need to complete authentication and retry.`);
+            // We still save the server config, just without the live tools.
+            return server;
         }
-      }
-      const liveTools = await client.listTools();
-      const normalized = (liveTools || []).map(t => ({ name: t.name, description: t.description, inputSchema: t.inputSchema } as any));
-      const updated = { ...server, tools: normalized } as McpServerConfig;
-      this.configManager.setServerConfig(server.id, updated);
-      for (const t of normalized) {
-        await this.toolRegistry.registerTool(new McpProxyTool(updated, t as any, this));
-      }
-      Logger.info(`McpManager: Installed server "${server.id}" with ${normalized.length} discovered tool(s).`);
-      return updated;
+
+        const liveTools = await client.listTools();
+        const normalized = (liveTools || []).map(t => ({ name: t.name, description: t.description } as any));
+        const updated = { ...server, tools: normalized } as McpServerConfig;
+        
+        this.configManager.setServerConfig(server.id, updated);
+        
+        for (const t of normalized) {
+            await this.toolRegistry.registerTool(new McpProxyTool(updated, t as any, this));
+        }
+        
+        Logger.info(`McpManager: Installed server "${server.id}" with ${normalized.length} discovered tool(s).`);
+        return updated;
+
     } catch (e: any) {
-      Logger.warn(`McpManager: Could not complete live discovery during install for "${server.id}": ${e?.message || e}. Falling back to provided tools.`);
-      const fallback = server.tools || [];
-      for (const t of fallback) {
-        await this.toolRegistry.registerTool(new McpProxyTool(server, t as any, this));
-      }
-      return server;
+        Logger.warn(`McpManager: Could not complete live discovery during install for "${server.id}": ${e?.message || e}. Falling back to provided tools.`);
+        const fallback = server.tools || [];
+        for (const t of fallback) {
+            await this.toolRegistry.registerTool(new McpProxyTool(server, t as any, this));
+        }
+        return server;
     }
   }
 
-  private async waitForAuth(strategyId: string, timeoutMs: number): Promise<void> {
-    if (!this.authManager) return;
+  private async waitForAuth(client: McpClientController, timeoutMs: number): Promise<void> {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
-      try {
-        const ok = await this.authManager.isAuthenticated(strategyId);
-        if (ok) return;
-      } catch { /* ignore */ }
+      if (client.isAuthenticated()) {
+        return;
+      }
       await new Promise(r => setTimeout(r, 1000));
     }
     throw new ARTError('Authentication window timed out.', ErrorCode.TIMEOUT);
@@ -325,7 +321,7 @@ export class McpManager {
       // Disconnect
       const client = this.activeConnections.get(serverId);
       if (client) {
-        await client.disconnect();
+        await client.logout();
         this.activeConnections.delete(serverId);
       }
 

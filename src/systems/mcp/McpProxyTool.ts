@@ -52,19 +52,25 @@ export class McpProxyTool implements IToolExecutor {
       const client = await this.mcpManager.getOrCreateConnection(this.card.id);
 
       Logger.debug(`McpProxyTool: Connection ready. Executing tool "${this.toolDefinition.name}" on server "${this.card.displayName}"`);
-      const response = await client.request(
-        { method: "tools/call", params: { name: this.toolDefinition.name, arguments: input } },
-        CallToolResultSchema,
-        { timeout: this.card.timeout || 30000 }
-      );
+      const response = await client.callTool(this.toolDefinition.name, input);
       
       const duration = Date.now() - startTime;
+      
+      // Adapt the response to the ToolResult format
+      // This is a generic adaptation, specific tools might require more tailored logic
+      // based on the shape of their response.
+      const output = typeof response === 'object' && response !== null ? response : { value: response };
+
       return {
         callId: context.traceId || 'unknown',
         toolName: this.schema.name,
         status: 'success',
-        output: response.content || [],
-        metadata: { executionTime: duration, mcpServer: { id: this.card.id, name: this.card.displayName }, ...response._meta }
+        output: [output], // Assuming the output should be wrapped in an array
+        metadata: { 
+          executionTime: duration, 
+          mcpServer: { id: this.card.id, name: this.card.displayName },
+          rawResponse: response 
+        }
       };
     } catch (error: any) {
       const duration = Date.now() - startTime;

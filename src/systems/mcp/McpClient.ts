@@ -1,478 +1,342 @@
+// Lazy import to avoid SSR/bundling path issues if SDK evolves
+import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { Logger } from '../../utils/logger';
 import { ARTError, ErrorCode } from '../../errors';
-import { AuthManager } from '../../systems/auth/AuthManager';
 
-// --- JSON-RPC and MCP Interfaces ---
-
-interface JsonRpcRequest {
-  jsonrpc: '2.0';
-  id: number | string;
-  method: string;
-  params?: any;
+function base64UrlEncode(buffer: Uint8Array): string {
+  let s = ''
+  for (let i = 0; i < buffer.length; i++) s += String.fromCharCode(buffer[i])
+  return btoa(s).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
 }
 
-interface JsonRpcResponse {
-  jsonrpc: '2.0';
-  id: number | string;
-  result?: any;
-  error?: {
-    code: number;
-    message: string;
-    data?: any;
-  };
+async function sha256Base64Url(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input)
+  const digest = await crypto.subtle.digest('SHA-256', data)
+  return base64UrlEncode(new Uint8Array(digest))
 }
 
-interface JsonRpcNotification {
-  jsonrpc: '2.0';
-  method: string;
-  params?: any;
+function generateRandomString(length = 64): string {
+  const array = new Uint8Array(length)
+  crypto.getRandomValues(array)
+  return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-type JsonRpcMessage = JsonRpcRequest | JsonRpcResponse | JsonRpcNotification;
+export class TokenManager {
+  private accessToken: string | null = null
+  private refreshToken: string | null = null
+  private expiresAt: number | null = null
+  private clientId: string | null = null
+  constructor(private oauthConfig: { token_endpoint?: string }) {}
 
-export interface McpTransportConfig {
-  type: 'streamable-http';
-  url: string;
-  authStrategyId?: string;
-  headers?: Record<string, string>;
-  timeout?: number;
+  load() {
+    this.accessToken = sessionStorage.getItem('access_token')
+    this.refreshToken = sessionStorage.getItem('refresh_token')
+    const exp = sessionStorage.getItem('token_expires_at')
+    if (exp) this.expiresAt = parseInt(exp, 10)
+    this.clientId = localStorage.getItem('mcp_client_id')
+  }
+
+  setClientId(id: string) { this.clientId = id }
+
+  update(token: any) {
+    this.accessToken = token.access_token
+    if (token.refresh_token) this.refreshToken = token.refresh_token
+    if (token.expires_in) this.expiresAt = Date.now() + token.expires_in * 1000
+    sessionStorage.setItem('access_token', this.accessToken || '')
+    if (this.refreshToken) sessionStorage.setItem('refresh_token', this.refreshToken)
+    if (this.expiresAt) sessionStorage.setItem('token_expires_at', String(this.expiresAt))
+  }
+
+  clear() {
+    this.accessToken = null
+    this.refreshToken = null
+    this.expiresAt = null
+    sessionStorage.removeItem('access_token')
+    sessionStorage.removeItem('refresh_token')
+    sessionStorage.removeItem('token_expires_at')
+  }
+
+  getAccessToken() { return this.accessToken }
+
+  needsRefresh(): boolean {
+    if (!this.expiresAt) return false
+    return Date.now() >= this.expiresAt - 5 * 60 * 1000
+  }
+
+  async refresh(): Promise<void> {
+    if (!this.refreshToken) throw new Error('No refresh token available')
+    if (!this.oauthConfig.token_endpoint) throw new Error('Missing token endpoint')
+    const body = new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: this.refreshToken,
+    })
+    if (this.clientId) body.set('client_id', this.clientId)
+    const res = await fetch(this.oauthConfig.token_endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    })
+    if (!res.ok) {
+      this.clear()
+      throw new Error('Token refresh failed')
+    }
+    const token = await res.json()
+    this.update(token)
+  }
+
+  isAuthenticated(): boolean {
+    return !!this.accessToken && (this.expiresAt ? this.expiresAt > Date.now() : true)
+  }
 }
 
-export interface McpServerCapabilities {
-  resources?: {
-    subscribe?: boolean;
-    listChanged?: boolean;
-  };
-  tools?: {
-    listChanged?: boolean;
-  };
-  prompts?: {
-    listChanged?: boolean;
-  };
-  logging?: Record<string, unknown>;
-  sampling?: Record<string, unknown>;
-}
+export class McpClientController {
+  public baseUrl: URL
+  private scopes: string[]
+  private client: Client | null = null
+  private transport: StreamableHTTPClientTransport | null = null
+  private oauthDiscovery: any = null
+  private tokenManager: TokenManager | null = null
+  private sessionId: string | null = null
+  private readonly protocolVersion: string = '2025-06-18'
 
-export interface McpServerInfo {
-  name: string;
-  version: string;
-  protocolVersion?: string;
-  capabilities?: McpServerCapabilities;
-}
+  private constructor(baseUrl: string, scopes?: string[]) {
+    this.baseUrl = new URL(baseUrl)
+    this.scopes = scopes ?? ['read', 'write']
+  }
 
-export interface McpTool {
-  name: string;
-  description?: string;
-  inputSchema: any;
-}
+  static create(baseUrl: string, scopes?: string[]): McpClientController {
+    return new McpClientController(baseUrl, scopes)
+  }
 
-export interface McpResource {
-  uri: string;
-  name?: string;
-  description?: string;
-  mimeType?: string;
-}
+  private async discoverAuthorizationServer(): Promise<void> {
+    if (this.oauthDiscovery) return
 
-export interface McpPrompt {
-  name: string;
-  description?: string;
-  arguments?: Array<{
-    name: string;
-    description?: string;
-    required?: boolean;
-  }>;
-}
+    // HACK: Bypassing full discovery flow to avoid WWW-Authenticate CORS issues.
+    // This assumes the MCP server itself hosts the AS metadata endpoint.
+    const asMetadataUrl = new URL('/.well-known/oauth-authorization-server', this.baseUrl).toString()
+    const asMetadataRes = await fetch(asMetadataUrl)
+    if (!asMetadataRes.ok) throw new ARTError(`Failed to fetch authorization server metadata from ${asMetadataUrl}`, ErrorCode.NETWORK_ERROR)
+    this.oauthDiscovery = await asMetadataRes.json()
+    sessionStorage.setItem('mcp_oauth_discovery', JSON.stringify(this.oauthDiscovery))
 
-/**
- * MCP client implementation for the browser, using the Streamable HTTP transport.
- */
-export class McpClient {
-  private config: McpTransportConfig;
-  private authManager?: AuthManager;
+    /*
+    const probeRes = await fetch(this.baseUrl.toString(), { method: 'GET' })
 
-  // Event handling
-  private listeners: Map<string, ((...args: any[]) => void)[]> = new Map();
+    if (probeRes.status !== 401) {
+      throw new Error('MCP server did not respond with 401 Unauthorized. Cannot discover authorization server.')
+    }
 
-  // Connection state
-  private connected: boolean = false;
-  private nextRequestId: number = 1;
-  private pendingRequests: Map<string | number, {
-    resolve: (value: any) => void;
-    reject: (error: Error) => void;
-    timeout: any;
-  }> = new Map();
+    const wwwAuthHeader = probeRes.headers.get('WWW-Authenticate')
+    if (!wwwAuthHeader) throw new Error('Missing WWW-Authenticate header in 401 response')
 
-  // Streamable HTTP state
-  private requestWriter?: WritableStreamDefaultWriter<Uint8Array>;
-  private responseReader?: ReadableStreamDefaultReader<Uint8Array>;
-  private serverInfo?: McpServerInfo;
+    const metadataUrlMatch = /resource_metadata="([^"]+)"/.exec(wwwAuthHeader)
+    if (!metadataUrlMatch) throw new Error('Could not find resource_metadata in WWW-Authenticate header')
 
-  constructor(config: McpTransportConfig, authManager?: AuthManager) {
-    this.config = config;
-    this.authManager = authManager;
+    const resourceMetadataUrl = metadataUrlMatch[1]
+    const resourceMetadataRes = await fetch(resourceMetadataUrl)
+    if (!resourceMetadataRes.ok) throw new Error('Failed to fetch resource metadata')
+    const resourceMetadata = await resourceMetadataRes.json()
+
+    if (!resourceMetadata.authorization_servers || resourceMetadata.authorization_servers.length === 0) {
+      throw new Error('No authorization_servers found in resource metadata')
+    }
+
+    const authorizationServerUrl = resourceMetadata.authorization_servers[0]
+    const asMetadataUrl = new URL('/.well-known/oauth-authorization-server', authorizationServerUrl).toString()
+
+    const asMetadataRes = await fetch(asMetadataUrl)
+    if (!asMetadataRes.ok) throw new Error('Failed to fetch authorization server metadata')
+    this.oauthDiscovery = await asMetadataRes.json()
+    sessionStorage.setItem('mcp_oauth_discovery', JSON.stringify(this.oauthDiscovery))
+    */
+  }
+
+  private async registerClient(): Promise<string> {
+    if (!this.oauthDiscovery?.registration_endpoint) {
+      // Assume pre-registered public client if dynamic registration not available
+      const existing = localStorage.getItem('mcp_client_id')
+      if (existing) return existing
+      const randomId = 'public-' + generateRandomString(16)
+      localStorage.setItem('mcp_client_id', randomId)
+      return randomId
+    }
+    const body = {
+      client_name: 'MCP Browser Demo',
+      redirect_uris: [location.origin + '/callback'],
+      grant_types: ['authorization_code', 'refresh_token'],
+      response_types: ['code'],
+      token_endpoint_auth_method: 'none',
+      application_type: 'web',
+    }
+    const res = await fetch(this.oauthDiscovery.registration_endpoint, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    })
+    if (!res.ok) throw new ARTError('Client registration failed', ErrorCode.EXTERNAL_SERVICE_ERROR)
+    const data = await res.json()
+    localStorage.setItem('mcp_client_id', data.client_id)
+    return data.client_id
+  }
+
+  async startOAuth() {
+    await this.discoverAuthorizationServer()
+    if (!this.oauthDiscovery) throw new ARTError('Could not discover OAuth server details.', ErrorCode.INVALID_CONFIG)
+    const clientId = await this.registerClient()
+    const codeVerifier = base64UrlEncode(crypto.getRandomValues(new Uint8Array(64)))
+    const codeChallenge = await sha256Base64Url(codeVerifier)
+    sessionStorage.setItem('code_verifier', codeVerifier)
+    const state = generateRandomString(16)
+    sessionStorage.setItem('state', state)
+    const authUrl = new URL(this.oauthDiscovery.authorization_endpoint)
+    authUrl.searchParams.set('response_type', 'code')
+    authUrl.searchParams.set('client_id', clientId)
+    authUrl.searchParams.set('redirect_uri', location.origin + '/callback')
+    authUrl.searchParams.set('scope', this.scopes.join(' '))
+    authUrl.searchParams.set('code_challenge', codeChallenge)
+    authUrl.searchParams.set('code_challenge_method', 'S256')
+    authUrl.searchParams.set('state', state)
+    authUrl.searchParams.set('resource', this.baseUrl.toString().replace(/\/$/, ''))
+    window.location.href = authUrl.toString()
+  }
+
+  async maybeHandleCallback(): Promise<boolean> {
+    const url = new URL(window.location.href)
+    const isCallback = url.pathname === '/callback' && (url.searchParams.get('code') || url.searchParams.get('error'))
+    if (!isCallback) return false
+
+    // Load discovery doc from session storage, assuming it was stored during startOAuth
+    const discoveryDoc = sessionStorage.getItem('mcp_oauth_discovery')
+    if (discoveryDoc) this.oauthDiscovery = JSON.parse(discoveryDoc)
+    else await this.discoverAuthorizationServer() // Fallback just in case
+
+    if (!this.oauthDiscovery) throw new ARTError('Could not determine OAuth server details for callback.', ErrorCode.INVALID_CONFIG)
+
+    const code = url.searchParams.get('code')
+    const state = url.searchParams.get('state')
+    if (!code) throw new ARTError('Authorization code missing', ErrorCode.VALIDATION_ERROR)
+    if (state !== sessionStorage.getItem('state')) throw new ARTError('State mismatch', ErrorCode.VALIDATION_ERROR)
+    const clientId = localStorage.getItem('mcp_client_id') || (await this.registerClient())
+    const codeVerifier = sessionStorage.getItem('code_verifier') || ''
+    const body = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      code_verifier: codeVerifier,
+      redirect_uri: location.origin + '/callback',
+      client_id: clientId,
+    })
+    body.set('resource', this.baseUrl.toString().replace(/\/$/, ''))
+
+    const res = await fetch(this.oauthDiscovery.token_endpoint, {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new ARTError('Token exchange failed: ' + (err.error_description || err.error || res.status), ErrorCode.EXTERNAL_SERVICE_ERROR)
+    }
+    const token = await res.json()
+    this.tokenManager = new TokenManager(this.oauthDiscovery)
+    this.tokenManager.setClientId(clientId)
+    this.tokenManager.update(token)
+    sessionStorage.removeItem('code_verifier')
+    sessionStorage.removeItem('state')
+    history.replaceState({}, '', '/')
+    return true
+  }
+
+  loadExistingSession() {
+    const discoveryDoc = sessionStorage.getItem('mcp_oauth_discovery')
+    if (discoveryDoc) this.oauthDiscovery = JSON.parse(discoveryDoc)
+    this.tokenManager = new TokenManager(this.oauthDiscovery || {})
+    this.tokenManager.load()
+    this.sessionId = sessionStorage.getItem('mcp_session_id')
+  }
+
+  isAuthenticated(): boolean {
+    if (!this.tokenManager) return false
+    return this.tokenManager.isAuthenticated()
   }
 
   async connect(): Promise<void> {
-    if (this.connected) {
-      throw new ARTError('MCP client is already connected', ErrorCode.ALREADY_CONNECTED);
-    }
+    if (!this.client) {
+      const customFetch = async (url: RequestInfo | URL, options?: RequestInit): Promise<Response> => {
+        this.tokenManager?.load()
+        if (this.tokenManager?.needsRefresh()) {
+          await this.tokenManager.refresh().catch((err) => {
+            Logger.error('Token refresh failed:', err);
+            // Optionally, trigger a full re-authentication flow
+          })
+        }
 
-    Logger.info(`McpClient: Connecting using ${this.config.type} transport...`);
+        const headers = new Headers(options?.headers)
+        headers.set('Authorization', `Bearer ${this.tokenManager?.getAccessToken() || ''}`)
+        headers.set('Accept', 'application/json, text/event-stream')
+        headers.set('MCP-Protocol-Version', this.protocolVersion)
+        if (this.sessionId) {
+          headers.set('Mcp-Session-Id', this.sessionId)
+        }
 
-    try {
-      await this._connectStreamableHttp();
-      await this._initialize();
-      
-      this.connected = true;
-      this.emit('connected');
-      Logger.info('McpClient: Successfully connected and initialized');
-    } catch (error: any) {
-      Logger.error(`McpClient: Connection failed: ${error.message}`);
-      await this.disconnect();
-      throw error;
+        const newOptions: RequestInit = { ...options, headers }
+        const response = await fetch(url, newOptions)
+
+        const sessionIdHeader = response.headers.get('Mcp-Session-Id')
+        if (sessionIdHeader) {
+          this.sessionId = sessionIdHeader
+          sessionStorage.setItem('mcp_session_id', sessionIdHeader)
+        }
+        return response
+      }
+
+      this.transport = new StreamableHTTPClientTransport(this.baseUrl, { fetch: customFetch })
+      this.client = new Client({ name: 'mcp-browser-demo', version: '1.0.0' })
+      await this.client.connect(this.transport)
     }
   }
 
-  async disconnect(): Promise<void> {
-    if (!this.connected && !this.requestWriter) {
-      return;
-    }
-
-    Logger.info('McpClient: Disconnecting...');
-
-    for (const [, pending] of this.pendingRequests) {
-      clearTimeout(pending.timeout);
-      pending.reject(new Error('Connection closed'));
-    }
-    this.pendingRequests.clear();
-
-    if (this.requestWriter) {
-      try {
-        await this.requestWriter.close();
-      } catch (e) { /* Ignore */ }
-      this.requestWriter = undefined;
-    }
-
-    if (this.responseReader) {
-        try {
-            await this.responseReader.cancel();
-        } catch(e) { /* Ignore */ }
-        this.responseReader = undefined;
-    }
-
-    this.connected = false;
-    this.serverInfo = undefined;
-    this.emit('disconnected');
-    Logger.info('McpClient: Disconnected');
+  async ensureConnected(): Promise<void> {
+    if (!this.client) await this.connect()
   }
 
-  async ping(): Promise<void> {
-    await this._sendRequest('ping', {});
-    Logger.debug('McpClient: Ping successful');
-  }
-
-  async listTools(): Promise<McpTool[]> {
-    const result = await this._sendRequest('tools/list', {});
-    return result.tools || [];
+  async listTools(): Promise<{ name: string; description?: string }[]> {
+    if (!this.client) throw new ARTError('Not connected', ErrorCode.NOT_CONNECTED)
+    const res = await this.client.listTools()
+    return res.tools?.map((t: any) => ({ name: t.name, description: t.description })) ?? []
   }
 
   async callTool(name: string, args: any): Promise<any> {
-    return this._sendRequest('tools/call', { name, arguments: args });
-  }
-
-  async listResources(): Promise<McpResource[]> {
-    const result = await this._sendRequest('resources/list', {});
-    return result.resources || [];
-  }
-
-  async readResource(uri: string): Promise<any> {
-    return this._sendRequest('resources/read', { uri });
-  }
-
-  async listPrompts(): Promise<McpPrompt[]> {
-    const result = await this._sendRequest('prompts/list', {});
-    return result.prompts || [];
-  }
-
-  async getPrompt(name: string, args?: Record<string, any>): Promise<any> {
-    return this._sendRequest('prompts/get', { name, arguments: args });
-  }
-
-  getServerInfo(): McpServerInfo | undefined {
-    return this.serverInfo;
-  }
-
-  isConnected(): boolean {
-    return this.connected;
-  }
-
-  // --- Event Emitter Implementation ---
-  
-  public on(event: string, listener: (...args: any[]) => void): this {
-    if (!this.listeners.has(event)) {
-      this.listeners.set(event, []);
-    }
-    this.listeners.get(event)!.push(listener);
-    return this;
-  }
-
-  public off(event: string, listener: (...args: any[]) => void): this {
-    if (this.listeners.has(event)) {
-      const eventListeners = this.listeners.get(event)!.filter(l => l !== listener);
-      this.listeners.set(event, eventListeners);
-    }
-    return this;
-  }
-
-  private emit(event: string, ...args: any[]): void {
-    if (this.listeners.has(event)) {
-      this.listeners.get(event)!.forEach(listener => listener(...args));
-    }
-  }
-
-  // ========== Private Methods ==========
-
-  private async _connectStreamableHttp(): Promise<void> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      ...this.config.headers,
-    };
-
-    // Preflight auth: if a strategy is configured but user is not authenticated, initiate login in a new tab
-    let loginAttempted = false;
-    if (this.config.authStrategyId && this.authManager) {
-      Logger.debug(`McpClient: Preflight auth check using strategy '${this.config.authStrategyId}'`);
-      const isAuthed = await this.authManager.isAuthenticated(this.config.authStrategyId);
-      if (!isAuthed) {
-        loginAttempted = true;
-        try {
-          Logger.info('McpClient: Not authenticated. Initiating PKCE login flow...');
-          await this.authManager.login(this.config.authStrategyId);
-        } catch (e) {
-          throw new ARTError('Authentication required. Login failed to start.', ErrorCode.NETWORK_ERROR, e as Error);
-        }
-        // Stop here; caller should retry after login completes
-        throw new ARTError('Authentication required. Login initiated.', ErrorCode.NOT_CONNECTED);
-      }
-
-      const authHeaders = await this.authManager.getHeaders(this.config.authStrategyId);
-      Logger.debug('McpClient: Retrieved auth headers for request.');
-      Object.assign(headers, authHeaders);
-    }
-
-    // Create the request stream up-front so we can write immediately after fetch returns
-    const requestStream = new TransformStream();
-    this.requestWriter = requestStream.writable.getWriter();
-
+    if (!this.client) throw new ARTError('Not connected', ErrorCode.NOT_CONNECTED)
     try {
-      Logger.debug(`McpClient: Issuing fetch to '${this.config.url}' with stream body...`);
-      const responsePromise = fetch(this.config.url, {
-        method: 'POST',
-        headers,
-        body: requestStream.readable,
-        // @ts-expect-error - duplex is a standard but not yet fully typed option in all environments
-        duplex: 'half',
-      });
-
-      // Immediately send initialize frame without waiting for response headers
-      await this._sendMessage({ jsonrpc: '2.0', id: 0, method: 'initialize', params: {
-        protocolVersion: '2025-03-26',
-        capabilities: { resources: { subscribe: true }, tools: {}, prompts: {} },
-        clientInfo: { name: 'ART Framework MCP Client', version: '1.0.0' }
-      }} as any);
-
-      const response = await responsePromise;
-      Logger.debug(`McpClient: Fetch returned status=${response.status} ${response.statusText}, hasBody=${!!response.body}`);
-
-      if (response.status === 401 && this.config.authStrategyId && this.authManager && !loginAttempted) {
-        try {
-          await this.authManager.login(this.config.authStrategyId);
-        } catch (e) {
-          throw new ARTError('Authentication required. Login failed to start after 401.', ErrorCode.NETWORK_ERROR, e as Error);
-        }
-        throw new ARTError('Authentication required. Login initiated after 401.', ErrorCode.NOT_CONNECTED);
+      const result = await this.client.callTool({ name, arguments: args })
+      return result
+    } catch (e: any) {
+      // Retry once if unauthorized and refresh is possible
+      if (String(e?.message || '').includes('401') && this.tokenManager) {
+        await this.tokenManager.refresh().catch((err) => {
+           Logger.error('Token refresh failed during tool call:', err);
+           throw e; // Re-throw original error if refresh fails
+        })
+        const result = await this.client.callTool({ name, arguments: args })
+        return result
       }
-
-      if (!response.ok || !response.body) {
-        throw new ARTError(`Streamable HTTP connection failed: ${response.status} ${response.statusText}`, ErrorCode.NETWORK_ERROR);
-      }
-
-      this.responseReader = response.body.getReader();
-      Logger.debug('McpClient: Response body reader acquired. Starting listener.');
-      this._listenForMessages(this.responseReader);
-
-      // initialize already sent before awaiting response headers
-
-    } catch (error) {
-      Logger.error('McpClient: fetch error during connection:', error);
-      throw new ARTError('Failed to establish Streamable HTTP connection.', ErrorCode.NETWORK_ERROR, error as Error);
+      throw e
     }
   }
 
-  private async _listenForMessages(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<void> {
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let firstChunkLogged = false;
-
+  async logout(): Promise<void> {
     try {
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) {
-          Logger.info('McpClient: Response stream closed.');
-          this.disconnect();
-          break;
-        }
-
-        if (!firstChunkLogged && value && value.byteLength) {
-          firstChunkLogged = true;
-          const preview = new TextDecoder().decode(value.slice(0, Math.min(120, value.byteLength)));
-          Logger.debug(`McpClient: First bytes received (${value.byteLength}B): ${preview.replace(/\n/g, '\\n').substring(0, 200)}...`);
-        }
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.trim()) {
-            try {
-              const message = JSON.parse(line.trim()) as JsonRpcMessage;
-              if ((message as any).method) {
-                Logger.debug(`McpClient: Dispatching JSON-RPC method='${(message as any).method}'`);
-              }
-              this._handleMessage(message);
-            } catch (error) {
-              Logger.error(`McpClient: Failed to parse JSON-RPC message: ${line}`);
-            }
-          }
-        }
+      if (this.transport) {
+        const headers: Record<string, string> = {}
+        const token = this.tokenManager?.getAccessToken()
+        if (token) headers['Authorization'] = `Bearer ${token}`
+        if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId
+        await fetch(this.baseUrl.toString(), { method: 'DELETE', headers }).catch(() => {})
       }
-    } catch (error) {
-      Logger.error('McpClient: Error reading from response stream:', error);
-      this.emit('error', error);
-      this.disconnect();
-    }
-  }
-
-  private async _initialize(): Promise<void> {
-    Logger.debug('McpClient: Starting MCP initialization...');
-    const result = await this._sendRequest('initialize', {
-      protocolVersion: '2025-03-26',
-      capabilities: {
-        resources: { subscribe: true },
-        tools: {},
-        prompts: {},
-      },
-      clientInfo: {
-        name: 'ART Framework MCP Client',
-        version: '1.0.0' // Replace with dynamic version if available
-      }
-    });
-
-    this.serverInfo = {
-      name: result.serverInfo?.name || 'Unknown',
-      version: result.serverInfo?.version || 'Unknown',
-      protocolVersion: result.protocolVersion,
-      capabilities: result.capabilities
-    };
-
-    Logger.debug(`McpClient: Initialized with server "${this.serverInfo.name}" v${this.serverInfo.version}`);
-    await this._sendNotification('notifications/initialized', {});
-  }
-
-  private async _sendRequest(method: string, params: any, timeout: number = 30000): Promise<any> {
-    if (!this.connected && method !== 'initialize') {
-      throw new ARTError('MCP client is not connected', ErrorCode.NOT_CONNECTED);
-    }
-
-    const id = this.nextRequestId++;
-    const request: JsonRpcRequest = { jsonrpc: '2.0', id, method, params };
-
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pendingRequests.delete(id);
-        reject(new ARTError(`Request ${method} timed out after ${timeout}ms`, ErrorCode.REQUEST_TIMEOUT));
-      }, timeout);
-
-      this.pendingRequests.set(id, { resolve, reject, timeout: timer });
-
-      this._sendMessage(request).catch((error) => {
-        this.pendingRequests.delete(id);
-        clearTimeout(timer);
-        reject(error);
-      });
-    });
-  }
-
-  private async _sendNotification(method: string, params: any): Promise<void> {
-    const notification: JsonRpcNotification = { jsonrpc: '2.0', method, params };
-    await this._sendMessage(notification);
-  }
-
-  private async _sendMessage(message: JsonRpcMessage): Promise<void> {
-    if (!this.requestWriter) {
-      throw new ARTError('Request stream is not available.', ErrorCode.NOT_CONNECTED);
-    }
-
-    const serialized = JSON.stringify(message) + '\n';
-    const encoder = new TextEncoder();
-    const chunk = encoder.encode(serialized);
-
-    try {
-      await this.requestWriter.write(chunk);
-      Logger.debug(`McpClient: Sending message: ${'method' in message ? message.method : 'response'}`);
-    } catch (error) {
-      Logger.error('McpClient: Failed to write to request stream:', error);
-      this.disconnect();
-      throw new ARTError('Failed to send message.', ErrorCode.NETWORK_ERROR, error as Error);
-    }
-  }
-
-  private _handleMessage(message: JsonRpcMessage): void {
-    Logger.debug(`McpClient: Received message: ${JSON.stringify(message).substring(0, 200)}...`);
-
-    if ('id' in message && ('result' in message || 'error' in message)) {
-      const response = message as JsonRpcResponse;
-      const pending = this.pendingRequests.get(response.id);
-      
-      if (pending) {
-        clearTimeout(pending.timeout);
-        this.pendingRequests.delete(response.id);
-        
-        if (response.error) {
-          pending.reject(new ARTError(`MCP server error: ${response.error.message}`, ErrorCode.EXTERNAL_SERVICE_ERROR));
-        } else {
-          pending.resolve(response.result);
-        }
-      }
-      return;
-    }
-
-    if ('method' in message && !('id' in message)) {
-      const notification = message as JsonRpcNotification;
-      this.emit('notification', notification.method, notification.params);
-      
-      switch (notification.method) {
-        case 'notifications/message':
-          this.emit('message', notification.params);
-          break;
-        case 'notifications/resources/list_changed':
-          this.emit('resourcesChanged');
-          break;
-        case 'notifications/tools/list_changed':
-          this.emit('toolsChanged');
-          break;
-        case 'notifications/prompts/list_changed':
-          this.emit('promptsChanged');
-          break;
-      }
-      return;
-    }
-
-    if ('method' in message && 'id' in message) {
-      const request = message as JsonRpcRequest;
-      this.emit('request', request.method, request.params, request.id);
+    } finally {
+      this.client = null
+      this.transport = null
+      this.tokenManager?.clear()
+      this.sessionId = null
+      sessionStorage.removeItem('mcp_session_id')
+      sessionStorage.removeItem('mcp_oauth_discovery')
     }
   }
 }

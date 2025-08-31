@@ -278,6 +278,44 @@ export function useArtChat(props: ArtWebChatConfig) {
       (initializeART as unknown as { _cleanupHandler?: (e: any) => void })._cleanupHandler = handler;
       
       // Begin: Additional MCP runtime event listeners for install/uninstall
+      // Pre-auth handler: invoked within user click gesture to open PKCE login tab if needed
+      const preauthHandler = async (evt: any) => {
+        try {
+          if (!artInstanceRef.current) return;
+          const detail = evt.detail || {};
+          const card = detail.card;
+          const cm = new ConfigManager();
+          // Temporarily stage minimal server for auth usage
+          cm.setServerConfig(card.id, {
+            id: card.id,
+            type: 'streamable-http',
+            enabled: true,
+            displayName: card.displayName || card.id,
+            description: card.description,
+            connection: card.connection,
+            tools: [], resources: [], resourceTemplates: [], timeout: 30000,
+          } as any);
+          const manager = new McpManager(
+            artInstanceRef.current.toolRegistry as any,
+            artInstanceRef.current.stateManager as any,
+            artInstanceRef.current.authManager as any
+          );
+          try {
+            // Trigger connection to invoke preflight auth which opens a new tab if required
+            await manager.getOrCreateConnection(card.id);
+          } catch (e: any) {
+            const code = (e && e.code) || (e?.constructor?.name === 'ARTError' ? e.code : undefined);
+            if (code !== 'NOT_CONNECTED' && code !== 'NETWORK_ERROR') {
+              // Ignore NOT_CONNECTED which is thrown after initiating login
+              console.warn('Preauth error (ignored if login initiated):', e);
+            }
+          }
+        } catch (e) {
+          console.warn('Preauth handler failed', e);
+        }
+      };
+      window.addEventListener('art-mcp-preauth', preauthHandler);
+      (initializeART as unknown as { _cleanupPreauth?: (e: any) => void })._cleanupPreauth = preauthHandler;
       const installHandler = async (evt: any) => {
         try {
           if (!artInstanceRef.current) return;
@@ -291,7 +329,20 @@ export function useArtChat(props: ArtWebChatConfig) {
             artInstanceRef.current.stateManager as any,
             artInstanceRef.current.authManager as any
           );
-          await (manager as any).installServer(server);
+          try {
+            await (manager as any).installServer(server);
+          } catch (e: any) {
+            // If the failure is due to missing extension/permission, wait and retry once the permission UI resolves
+            const code = (e && e.code) || (e?.constructor?.name === 'ARTError' ? e.code : undefined);
+            if (code === 'CORS_EXTENSION_REQUIRED' || code === 'CORS_PERMISSION_REQUIRED') {
+              // The example app triggers ensureAccess before dispatching the event; if a race occurs, re-dispatch after a short delay
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('art-mcp-install', { detail: { card } }));
+              }, 1000);
+              return;
+            }
+            throw e;
+          }
           // Persist updated credentials (tools are runtime, but protocol extract remains the same)
           try {
             const { data } = await supabase.auth.getUser();
@@ -328,6 +379,30 @@ export function useArtChat(props: ArtWebChatConfig) {
       window.addEventListener('art-mcp-uninstall', uninstallHandler);
       (initializeART as unknown as { _cleanupUninstall?: (e: any) => void })._cleanupUninstall = uninstallHandler;
       // End: Additional MCP runtime event listeners
+
+      // CORS handler
+      const corsHandler = async (evt: any) => {
+        try {
+            if (!artInstanceRef.current) return;
+            const detail = evt.detail || {};
+            const url = detail.url;
+            if (!url) return;
+
+            const manager = new McpManager(
+                artInstanceRef.current.toolRegistry as any,
+                artInstanceRef.current.stateManager as any,
+                artInstanceRef.current.authManager as any
+            );
+            await (manager as any).ensureCorsAccess(url);
+        } catch (e) {
+            console.warn('CORS handler failed', e);
+            // Propagate error so the UI can display it.
+            toast.error((e as Error).message || 'CORS permission failed.');
+            throw e;
+        }
+      };
+      window.addEventListener('art-mcp-ensure-cors', corsHandler);
+      (initializeART as unknown as { _cleanupCors?: (e: any) => void })._cleanupCors = corsHandler;
        
      } catch (err) {
        console.error('Failed to initialize ART Framework:', err);
@@ -349,6 +424,10 @@ export function useArtChat(props: ArtWebChatConfig) {
      if (cleanupHandler) {
        window.removeEventListener('art-mcp-add-to-chat', cleanupHandler);
      }
+     const cleanupPreauth = (initializeART as unknown as { _cleanupPreauth?: (e: any) => void })._cleanupPreauth;
+     if (cleanupPreauth) {
+       window.removeEventListener('art-mcp-preauth', cleanupPreauth);
+     }
      const cleanupInstall = (initializeART as unknown as { _cleanupInstall?: (e: any) => void })._cleanupInstall;
      if (cleanupInstall) {
        window.removeEventListener('art-mcp-install', cleanupInstall);
@@ -357,6 +436,10 @@ export function useArtChat(props: ArtWebChatConfig) {
      if (cleanupUninstall) {
        window.removeEventListener('art-mcp-uninstall', cleanupUninstall);
      }
+     const cleanupCors = (initializeART as unknown as { _cleanupCors?: (e: any) => void })._cleanupCors;
+      if (cleanupCors) {
+        window.removeEventListener('art-mcp-ensure-cors', cleanupCors);
+      }
    };
  }, [artConfig, onError, defaultModel, switchThread, isAuthenticated, props.authRequired]);
 

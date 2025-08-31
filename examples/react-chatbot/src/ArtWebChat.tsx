@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 // UI Components
 import { Avatar, AvatarFallback } from "./components/ui/avatar";
@@ -42,11 +43,15 @@ import { Input } from './components/ui/input';
 import DiscoverModal from './components/webchat/DiscoverModal';
 import { ConfigManager } from 'art-framework';
 import { upsertUserMcpConfiguration, mergeIntoLocalRawProtocolConfig, installRuntimeServerFromProtocolExtract, removeFromLocalRawProtocolConfig, deleteUserMcpConfiguration } from './lib/mcpConfigBridge';
-import { hasInstall as corsHasInstall, install as corsInstall, requestHosts as corsRequestHosts } from 'art-mcp-permission-manager';
+// Using framework-level manager; import of package helpers not needed here
 import { supabase } from './supabaseClient';
 
 // Main ART WebChat Component
 export const ArtWebChat: React.FC<ArtWebChatConfig> = (props) => {
+  // Proactively preload permission manager packages to ensure the library's dynamic import resolves in dev/build
+  // This mirrors the web extractor sample which imports the package in app code.
+  void import(/* @vite-ignore */ 'art-mcp-permission-manager').catch(() => {});
+  void import(/* @vite-ignore */ 'cors-unblock').catch(() => {});
   const [input, setInput] = useState('');
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [email, setEmail] = useState('');
@@ -122,11 +127,27 @@ export const ArtWebChat: React.FC<ArtWebChatConfig> = (props) => {
     }
   };
 
-  const isInstalled = (serverId: string) => {
+  const isInstalled = async (serverId: string) => {
     try {
       const cm = new ConfigManager();
       const cfg = cm.getConfig();
-      return !!cfg.mcpServers[serverId];
+      const installedInApp = !!cfg.mcpServers[serverId];
+      // Consider extension presence for the Installed badge to avoid confusion
+      let extensionPresent = false;
+      try {
+        const mod: any = await import(/* @vite-ignore */ 'art-mcp-permission-manager');
+        const api = mod?.default ?? mod;
+        extensionPresent = !!api?.hasInstall?.();
+      } catch {
+        try {
+          const mod: any = await import(/* @vite-ignore */ 'cors-unblock');
+          const api = mod?.default ?? mod;
+          extensionPresent = !!api?.hasInstall?.();
+        } catch {
+          extensionPresent = false;
+        }
+      }
+      return installedInApp && extensionPresent;
     } catch {
       return false;
     }
@@ -161,40 +182,54 @@ export const ArtWebChat: React.FC<ArtWebChatConfig> = (props) => {
   };
 
   const onInstall = async (card: any) => {
-    // 1) Save raw protocol extract to localStorage without altering structure
+    // 0) Fire a synchronous pre-auth event so PKCE can open a login tab within user gesture
+    try {
+      const oauth = card.connection?.oauth || card.oauth;
+      if (oauth && oauth.type === 'pkce') {
+        window.dispatchEvent(new CustomEvent('art-mcp-preauth', { detail: { card } }));
+      }
+    } catch {/* ignore */}
+
+    // 1) Ensure extension present and host permission granted BEFORE mutating config/UI
+    const url = (card.installExtract && Object.keys(card.installExtract || {}).length > 0)
+      ? card.installExtract[Object.keys(card.installExtract)[0]]?.url
+      : card.connection?.url;
+    try {
+      if (url) {
+        // The functionality of CORSAccessManager is now handled by McpManager.
+        // We can dispatch an event to trigger the same logic.
+        window.dispatchEvent(new CustomEvent('art-mcp-ensure-cors', { detail: { url } }));
+      }
+    } catch (e) {
+      const code = (e as any)?.code;
+      const host = url ? new URL(url).hostname : 'the target host';
+      if (code === 'CORS_EXTENSION_REQUIRED') {
+        toast.error('Install the AMPM/CORS extension, then click Install again.');
+      } else if (code === 'CORS_PERMISSION_REQUIRED') {
+        toast('Please allow access for ' + host + ' in the extension, then click Install again.');
+      } else {
+        toast.error('Permission flow failed. Check the extension and try again.');
+      }
+      console.warn('MCP permission manager flow:', e);
+      throw e; // Propagate so UI does not mark as installed
+    }
+
+    // 2) Save raw protocol extract to localStorage without altering structure
     const extract = card.installExtract || {};
     if (extract && Object.keys(extract).length > 0) {
       mergeIntoLocalRawProtocolConfig(extract);
     }
 
-    // 2) Install minimal runtime server mapping for ART usage immediately
+    // 3) Install minimal runtime server mapping for ART usage immediately
     installRuntimeServerFromProtocolExtract({
       serviceId: card.id,
       displayName: card.displayName,
       description: card.description,
       tools: card.tools || [],
       extract,
-      // pass through oauth and custom headers if provided by discovery
       oauth: card.connection?.oauth || card.oauth,
       headers: card.connection?.headers || card.headers,
     });
-
-    // 3) Ensure CORS helper extension host permission prior to runtime connect
-    try {
-      const url = (card.installExtract && Object.keys(card.installExtract || {}).length > 0)
-        ? card.installExtract[Object.keys(card.installExtract)[0]]?.url
-        : card.connection?.url;
-      if (url) {
-        const host = new URL(url).hostname;
-        if (!corsHasInstall()) {
-          corsInstall(); // open store
-          throw new Error('Please install the CORS helper extension and retry install.');
-        }
-        await corsRequestHosts({ hosts: [host] });
-      }
-    } catch (e) {
-      console.warn('CORS helper permission flow:', e);
-    }
 
     // 4) Ask runtime to connect to the server, discover tools, and (if OAuth PKCE present) initiate login
     window.dispatchEvent(new CustomEvent('art-mcp-install', { detail: { card } }));

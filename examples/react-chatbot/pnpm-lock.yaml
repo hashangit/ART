@@ -68,6 +68,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      cors-unblock:
+        specifier: ^0.1.1
+        version: 0.1.1
       lucide-react:
         specifier: ^0.515.0
         version: 0.515.0(react@18.3.1)
@@ -1621,6 +1624,9 @@ packages:
   cookie@0.7.2:
     resolution: {integrity: sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==}
     engines: {node: '>= 0.6'}
+
+  cors-unblock@0.1.1:
+    resolution: {integrity: sha512-0kTPp1P5ff8Wq0Uzni6Eyc64xVuMtOZufRh7bHfJWi/gXRAU1u1/0HQwxK5hrqKKM5indKenXbY8knLZbQ9LVQ==}
 
   cors@2.8.5:
     resolution: {integrity: sha512-KIHbLJqu73RGr/hnbrO9uBeixNGuvSQjul/jdFvS/KFSIH1hWVd1ng7zOHx+YrEfInLG7q4n6GHQ9cDtxv/P6g==}
@@ -5038,6 +5044,10 @@ snapshots:
   cookie-signature@1.2.2: {}
 
   cookie@0.7.2: {}
+
+  cors-unblock@0.1.1:
+    dependencies:
+      '@webext-core/messaging': 2.3.0
 
   cors@2.8.5:
     dependencies:

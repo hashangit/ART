@@ -99,4 +99,4 @@ export type {
   McpResourceTemplate,
   McpServerStatus,
 } from './systems/mcp';
-export { McpClient } from './systems/mcp/McpClient';
+export { McpClientController as McpClient } from './systems/mcp/McpClient';

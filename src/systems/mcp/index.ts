@@ -4,7 +4,6 @@
 export { McpManager } from './McpManager';
 export { McpProxyTool } from './McpProxyTool';
 export { ConfigManager } from './ConfigManager';
-export { CORSAccessManager } from './web/CORSAccessManager';
 // McpInstaller is removed as it is not applicable in a browser-only environment.
 
 // Type Definitions
