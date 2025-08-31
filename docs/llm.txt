@@ -1,0 +1,9 @@
+# ART (Agentic Runtime Framework) - Comprehensive AI Developer Documentation
+
+This document provides a high-level overview of the ART framework.
+
+For a complete and detailed guide intended for AI developers and for providing context to AI coding assistants, please refer to the full documentation file:
+
+**[./llm-full.txt](./llm-full.txt)**
+
+The full documentation contains a detailed breakdown of the framework's architecture, core components, key concepts, a comprehensive API reference, and practical usage examples.

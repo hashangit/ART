@@ -1,0 +1,303 @@
+# ART (Agentic Runtime Framework) - Comprehensive AI Developer Documentation
+
+This document provides a highly detailed overview of the ART (Agentic Runtime) Framework, a comprehensive TypeScript library designed to simplify the development of sophisticated AI agents. It covers the framework's architecture, core components, key concepts, API reference, and practical usage examples.
+
+## 1. Introduction & Use Cases
+
+The ART Framework is a modular, extensible, and browser-first TypeScript library for building advanced AI agents. It provides the building blocks for creating robust agentic systems that can run entirely client-side, emphasizing user privacy, offline capability, and deep observability, while also supporting server-side deployments.
+
+**Typical Use Cases:**
+- **Complex Chatbots:** Go beyond simple Q&A bots to create assistants that can use tools to answer questions (e.g., "What's the weather in Paris?").
+- **In-Browser Automation:** Build agents that can perform tasks within a web application, like filling out forms or summarizing content, without sending user data to a server.
+- **AI-Powered UI Experiences:** Create dynamic, responsive user interfaces that react to the agent's real-time thought process and streaming outputs.
+- **Collaborative Agent Systems:** Develop multi-agent systems where agents can discover each other and delegate tasks to accomplish more complex goals.
+
+## 2. Core Philosophy & Design Principles
+
+- **Separation of Concerns:** Each component has a well-defined, single responsibility.
+- **Extensibility:** Interfaces are designed to be implemented and extended, allowing developers to plug in custom components.
+- **Developer Experience:** Focus on clear APIs, good documentation, and tools that make agent development faster and more reliable.
+- **Standardization:** Promote common patterns and data structures (like `ArtStandardPrompt`) to reduce boilerplate and improve interoperability.
+
+## 3. High-Level Architecture
+
+The ART Framework is composed of several interconnected subsystems:
+
+```mermaid
+flowchart TD
+
+%% Main Components
+User([User Input/External Triggers]) --> ArtInstance["ArtInstance\n(process method)"]
+
+%% Agent Core as the central orchestrator
+ArtInstance --> AgentCore["Agent Core (IAgentCore)\n(Swappable Component)\n(e.g., PESAgent)"]
+
+%% Major Subsystems
+subgraph ReasoningSystem ["Reasoning System"]
+    ReasoningEngine["ReasoningEngine"]
+    ProviderManager["ProviderManager"]
+    ProviderAdapters["ProviderAdapters\n(OpenAI, Anthropic, Ollama)"]
+    PromptManager["PromptManager\n(fragments/validation)"]
+    OutputParser["OutputParser"]
+    ExternalLLM["External LLM APIs"]
+
+    ReasoningEngine --> ProviderManager
+    ProviderManager --> ProviderAdapters
+    ProviderAdapters <--> ExternalLLM
+    PromptManager -.-> ReasoningEngine
+    ReasoningEngine -.-> OutputParser
+end
+
+subgraph ToolSystem ["Tool System"]
+    ToolSystemMain["ToolSystem"]
+    ToolRegistry["ToolRegistry"]
+    ToolExecutor["IToolExecutor\n(specific tools)"]
+
+    ToolSystemMain --> ToolRegistry
+    ToolSystemMain --> ToolExecutor
+end
+
+subgraph ContextSystem ["Context System"]
+    StateManager["StateManager\n(ThreadConfig, AgentState)"]
+    ConversationManager["ConversationManager\n(message history)"]
+    ContextProvider["ContextProvider\n(future: RAG)"]
+    StateRepository["StateRepository"]
+    ConversationRepository["ConversationRepository"]
+
+    StateManager --> StateRepository
+    ConversationManager --> ConversationRepository
+    ContextProvider -.-> AgentCore
+end
+
+subgraph ObservationSystem ["Observation System"]
+    ObservationManager["ObservationManager"]
+    ObservationRepository["ObservationRepository"]
+
+    ObservationManager --> ObservationRepository
+end
+
+subgraph StorageSystem ["Storage System"]
+    StorageAdapter["StorageAdapter\n(InMemory, IndexedDB, etc.)"]
+
+    StateRepository --> StorageAdapter
+    ConversationRepository --> StorageAdapter
+    ObservationRepository --> StorageAdapter
+end
+
+subgraph UISystem ["UI System"]
+    UISystemMain["UISystem"]
+    LLMStreamSocket["LLMStreamSocket"]
+    ObservationSocket["ObservationSocket"]
+    ConversationSocket["ConversationSocket"]
+    ExternalUI["External UI/Subscribers"]
+
+    UISystemMain --> LLMStreamSocket
+    UISystemMain --> ObservationSocket
+    UISystemMain --> ConversationSocket
+    LLMStreamSocket --> ExternalUI
+    ObservationSocket --> ExternalUI
+    ConversationSocket --> ExternalUI
+end
+
+subgraph AdvancedSystems ["Advanced Systems"]
+    AuthManager["AuthManager"]
+    McpManager["MCP Manager"]
+    A2AServices["A2A Services"]
+end
+
+%% Connections between Agent Core and Subsystems
+AgentCore --> ReasoningEngine
+AgentCore --> ToolSystemMain
+AgentCore --> StateManager
+AgentCore --> ConversationManager
+AgentCore --> AdvancedSystems
+
+%% Cross-system connections
+ReasoningEngine --> LLMStreamSocket
+ToolSystemMain --> ObservationManager
+ToolSystemMain <--> StateManager
+ObservationManager --> ObservationSocket
+ConversationManager --> ConversationSocket
+AgentCore --> ObservationManager
+```
+
+## 4. Detailed Subsystems and Their Roles
+
+This section provides a more detailed breakdown of each major component shown in the architecture diagram.
+
+#### 4.1. Agent Core (`IAgentCore`)
+- **Role:** The central brain and orchestrator. It defines the high-level logic for processing user queries.
+- **Default Implementation:** `src/core/agents/pes-agent.ts` (Plan-Execute-Synthesize Agent). This agent follows a cycle of planning its steps, executing tools, and then synthesizing a final answer.
+
+#### 4.2. Reasoning System
+- **Role:** Handles all interactions with LLMs.
+- **Key Components:**
+    - `ReasoningEngine`: The central point for making LLM calls.
+    - `ProviderManager`: Manages the lifecycle of different LLM provider adapters.
+    - `ProviderAdapter`: Concrete implementations for services like OpenAI, Anthropic, etc.
+    - `OutputParser`: Extracts structured information (like tool calls) from the raw LLM output.
+
+#### 4.3. Tool System
+- **Role:** Enables the agent to use external capabilities.
+- **Key Components:**
+    - `IToolExecutor`: The interface that all tools must implement.
+    - `ToolRegistry`: Manages the registration and retrieval of all available tools.
+    - `ToolSystem`: Orchestrates the validation and execution of tool calls.
+
+#### 4.4. Context System
+- **Role:** Manages all contextual information for a conversation thread.
+- **Key Components:**
+    - `StateManager`: Manages thread-specific configuration and agent-specific state.
+    - `ConversationManager`: Manages the history of messages in a conversation.
+
+#### 4.5. Observation System
+- **Role:** Provides observability into the agent's internal workings.
+- **Key Components:** `ObservationManager` is a central service for recording significant events (`Observations`) like tool calls and state changes.
+
+#### 4.6. Storage System
+- **Role:** Provides a generic persistence layer for context, conversation, and observations.
+- **Interface:** `StorageAdapter`.
+- **Implementations:** `InMemoryStorageAdapter`, `IndexedDBStorageAdapter`, `SupabaseStorageAdapter`.
+
+#### 4.7. UI System
+- **Role:** Facilitates real-time communication to UIs or other subscribed services.
+- **Key Components:** Provides access to specialized sockets (`ConversationSocket`, `LLMStreamSocket`, `ObservationSocket`).
+
+#### 4.8. Advanced Systems
+- **Authentication (`AuthManager`):** Manages authentication strategies (e.g., OAuth2 via `PKCEOAuthStrategy`) for tools that require secure access.
+- **MCP (`McpManager`):** Implements the Model Context Protocol to allow agents to dynamically discover and use tools from external servers.
+- **A2A (`AgentDiscoveryService`, `TaskDelegationService`):** Enables Agent-to-Agent communication.
+
+## 5. Getting Started
+
+### 5.1. Installation
+`npm install art-framework`
+
+### 5.2. Quick Start Example
+This example demonstrates the simplest way to configure and run an ART agent.
+```typescript
+import { createArtInstance } from 'art-framework';
+import type { ArtInstanceConfig } from 'art-framework';
+
+async function runSimpleAgent() {
+  const config: ArtInstanceConfig = {
+    storage: { type: 'memory' },
+    providers: {
+      openai: {
+        adapter: 'openai',
+        apiKey: 'YOUR_OPENAI_API_KEY',
+      },
+    },
+  };
+
+  const art = await createArtInstance(config);
+
+  const result = await art.process({
+    query: 'What is the capital of France?',
+    threadConfig: {
+      runtimeProvider: {
+        provider: 'openai',
+        model: 'gpt-4o-mini',
+      },
+    },
+    threadId: 'quickstart-thread-1',
+  });
+
+  console.log('Agent Response:', result.responseText);
+}
+
+runSimpleAgent();
+```
+
+## 6. How-To Guides (Practical Scenarios)
+
+### 6.1. Building a Persistent Chatbot
+- **Goal:** Create a conversational agent that remembers history across browser sessions.
+- **Configuration:**
+    - `storage`: Use `{ type: 'indexedDB', dbName: 'MyChatAppHistory' }`.
+    - `providers`: Configure at least one LLM provider.
+- **Interaction:** Call `art.process()` for each user message, maintaining the same `threadId` to continue the conversation. The history will be automatically loaded and saved.
+
+### 6.2. Creating an Agent with Tools
+- **Goal:** Give the agent new capabilities, like searching the web.
+- **Steps:**
+    1.  Create a tool class implementing `IToolExecutor`.
+    2.  Define the `schema` with a name, description, and JSON schema for its inputs.
+    3.  Implement the `async execute()` method.
+    4.  Register an instance in `ArtInstanceConfig.tools`.
+    5.  **Crucially**, update your system prompt to inform the LLM that the tool is available and when to use it.
+
+### 6.3. Integrating with a UI for Real-Time Updates
+- **Goal:** Display the agent's thoughts and final response as they happen.
+- **Steps:**
+    1.  Get the sockets from `art.uiSystem`.
+    2.  Use `art.uiSystem.getLLMStreamSocket().subscribe(...)` to receive token-by-token updates.
+    3.  Use `art.uiSystem.getObservationSocket().subscribe(...)` to display the agent's internal state (e.g., "Now using Calculator tool...").
+
+### 6.4. Handling Errors
+- **Goal:** Gracefully manage failures, such as a tool failing or an LLM API key being invalid.
+- **Method:** The `art.process()` method will throw an `ARTError` (or a subclass) if an unrecoverable error occurs. Wrap your `process` calls in a `try...catch` block to handle these exceptions. The `error.code` property can be used to identify the type of error (e.g., `TOOL_EXECUTION_FAILED`, `PROVIDER_AUTHENTICATION_ERROR`).
+
+### 6.5. Debugging an Agent
+- **Goal:** Understand why an agent is behaving unexpectedly.
+- **Methods:**
+    1.  **Logging:** Set `logger: { level: LogLevel.DEBUG }` in your `ArtInstanceConfig` to get verbose output from the framework's internal operations.
+    2.  **Observations:** Subscribe to the `ObservationSocket`. This provides a structured audit trail of the agent's entire reasoning process, including the final prompts sent to the LLM, tool calls, and state changes.
+
+### 6.6. Using Advanced Authentication (OAuth2)
+- **Goal:** Create a tool that needs to securely access a user's account on another service (e.g., Google Calendar).
+- **Steps:**
+    1.  Enable the `AuthManager` in `ArtInstanceConfig`: `authConfig: { enabled: true }`.
+    2.  Register an OAuth strategy: `authConfig.strategies: [new PKCEOAuthStrategy({ name: 'google', ...config })]`.
+    3.  Inside your tool's `execute` method, use `context.authManager.getAccessToken('google')` to retrieve the token. The framework will handle the OAuth flow (redirects, token storage) if a token is not available.
+
+## 7. API Reference (Comprehensive)
+
+This section details the most important public exports from the framework, mirroring `src/index.ts`.
+
+#### 7.1. Core
+- **`createArtInstance`**: The main factory function.
+- **`ArtInstance`**: The fully initialized ART Framework client instance.
+- **`IAgentCore`**, **`PESAgent`**: Defines the agent's reasoning logic.
+
+#### 7.2. Configuration
+- **`ArtInstanceConfig`**: The main configuration object for `createArtInstance`.
+- **`ProviderManagerConfig`**: For configuring available LLM providers.
+- **`RuntimeProviderConfig`**: For selecting an LLM provider at runtime.
+- **`PKCEOAuthConfig`**: For configuring the OAuth2 PKCE strategy.
+- **`McpManagerConfig`**: For configuring MCP.
+- **`AgentDiscoveryConfig`**, **`TaskDelegationConfig`**: For A2A communication.
+
+#### 7.3. Storage
+- **`StorageAdapter`**: The core interface for persistence.
+- **`InMemoryStorageAdapter`**, **`IndexedDBStorageAdapter`**, **`SupabaseStorageAdapter`**: Built-in implementations.
+
+#### 7.4. Reasoning & LLMs
+- **`ProviderAdapter`**: The core interface for LLM providers.
+- **`OpenAIAdapter`**, **`AnthropicAdapter`**, **`GeminiAdapter`**, **`OllamaAdapter`**, etc.: Built-in implementations.
+- **`ArtStandardPrompt`**, **`ArtStandardMessage`**: Universal format for LLM prompts.
+- **`StreamEvent`**: Represents a single event from an LLM stream.
+
+#### 7.5. Tools
+- **`IToolExecutor`**: The interface for creating executable tools.
+- **`ToolSchema`**: Defines a tool's contract.
+- **`ToolResult`**: The structured result of a tool execution.
+- **`CalculatorTool`**: A built-in example tool.
+
+#### 7.6. Advanced Systems
+- **`AuthManager`**: Manages authentication strategies.
+- **`PKCEOAuthStrategy`**: Implements OAuth2 PKCE flow.
+- **`McpManager`**: Core manager for MCP connections.
+- **`McpProxyTool`**: A tool that proxies to tools from an MCP server.
+- **`AgentDiscoveryService`**, **`TaskDelegationService`**: Services for A2A communication.
+
+#### 7.7. UI & Observability
+- **`ConversationSocket`**, **`ObservationSocket`**, **`LLMStreamSocket`**: Sockets for real-time UI updates.
+- **`Observation`**: A structured record of an agent's internal event.
+- **`Logger`**, **`LogLevel`**: For configurable logging.
+
+#### 7.8. Errors
+- **`ARTError`**: The base class for all framework-specific errors. Subclasses like `ToolExecutionError`, `ConfigurationError`, etc., provide more specific information.
+
+#### 7.9. Utilities
+- **`generateUUID`**: Generates a unique Version 4 UUID.
