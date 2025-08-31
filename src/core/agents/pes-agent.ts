@@ -12,7 +12,7 @@ import {
     UISystem, // Added UISystem import
     IA2ATaskRepository // Added A2A task repository interface
     // Assuming repository interfaces might be needed indirectly or for type safety, though not directly used
-} from '../interfaces';
+} from '@/core/interfaces';
 import {
     AgentProps,
     AgentFinalResponse,
@@ -35,18 +35,18 @@ import {
     // ThreadConfig, // Removed unused import (config accessed via ThreadContext)
     // ToolSchema, // Removed unused import
     // ThreadContext, // Removed unused import
-} from '../../types';
-import { RuntimeProviderConfig } from '../../types/providers'; // Import RuntimeProviderConfig
-import { generateUUID } from '../../utils/uuid';
-import { ARTError, ErrorCode } from '../../errors';
-import { Logger } from '../../utils/logger'; // Added Logger import
+} from '@/types';
+import { RuntimeProviderConfig } from '@/types/providers'; // Import RuntimeProviderConfig
+import { generateUUID } from '@/utils/uuid';
+import { ARTError, ErrorCode } from '@/errors';
+import { Logger } from '@/utils/logger'; // Added Logger import
 
 /**
  * Defines the dependencies required by the PESAgent constructor.
  * These are typically provided by the AgentFactory during instantiation.
  */
-import { AgentDiscoveryService } from '../../systems/a2a/AgentDiscoveryService';
-import { TaskDelegationService } from '../../systems/a2a/TaskDelegationService';
+import { AgentDiscoveryService } from '@/systems/a2a/AgentDiscoveryService';
+import { TaskDelegationService } from '@/systems/a2a/TaskDelegationService';
 
 interface PESAgentDependencies {
     /** Manages thread configuration and state. */
@@ -80,7 +80,7 @@ interface PESAgentDependencies {
     /** Service for delegating A2A tasks. */
     taskDelegationService?: TaskDelegationService | null;
     /** Resolver for standardized system prompt composition. */
-    systemPromptResolver: import('../interfaces').SystemPromptResolver;
+    systemPromptResolver: import('@/core/interfaces').SystemPromptResolver;
 }
 
 // Default system prompt remains

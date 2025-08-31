@@ -1,6 +1,6 @@
 // src/utils/validation.ts
 import Ajv, { ValidateFunction } from 'ajv';
-import { Logger } from './logger';
+import { Logger } from '@/utils/logger';
 
 // Initialize Ajv
 // We can configure Ajv options here if needed (e.g., strict mode, allErrors)

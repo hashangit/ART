@@ -1,8 +1,8 @@
-import { ObservationManager as ObservationManagerInterface, IObservationRepository } from '../../core/interfaces'; // Import the interface defined in core/interfaces
+import { ObservationManager as ObservationManagerInterface, IObservationRepository } from '@/core/interfaces'; // Import the interface defined in core/interfaces
 import { ObservationSocket } from '../ui/observation-socket'; // Import the class implementation
-import { Observation, ObservationFilter } from '../../types'; // Kept ObservationType and Omit removed
-import { generateUUID } from '../../utils/uuid'; // Assuming UUID utility exists as per Phase 0.9
-import { Logger } from '../../utils/logger'; // Import Logger
+import { Observation, ObservationFilter } from '@/types'; // Kept ObservationType and Omit removed
+import { generateUUID } from '@/utils/uuid'; // Assuming UUID utility exists as per Phase 0.9
+import { Logger } from '@/utils/logger'; // Import Logger
 
 /**
  * Manages the lifecycle of agent observations: creation, persistence, retrieval, and notification.

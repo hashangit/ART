@@ -1,7 +1,7 @@
 // src/systems/ui/llm-stream-socket.ts
 import { TypedSocket } from './typed-socket';
-import { StreamEvent } from '../../types';
-import { Logger } from '../../utils/logger';
+import { StreamEvent } from '@/types';
+import { Logger } from '@/utils/logger';
 
 // Define the type for the filter used in this specific socket
 type StreamEventTypeFilter = StreamEvent['type'] | Array<StreamEvent['type']>;

@@ -1,7 +1,7 @@
 // src/systems/tool/ToolRegistry.ts
-import { ToolRegistry as IToolRegistry, IToolExecutor, StateManager } from '../../core/interfaces'; // Added StateManager import
-import { ToolSchema } from '../../types';
-import { Logger } from '../../utils/logger';
+import { ToolRegistry as IToolRegistry, IToolExecutor, StateManager } from '@/core/interfaces'; // Added StateManager import
+import { ToolSchema } from '@/types';
+import { Logger } from '@/utils/logger';
 
 /**
  * A simple in-memory implementation of the `ToolRegistry` interface.

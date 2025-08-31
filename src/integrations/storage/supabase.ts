@@ -1,6 +1,6 @@
-import { StorageAdapter } from '../../core/interfaces';
-import { FilterOptions } from '../../types';
-import { Logger } from '../../utils/logger';
+import { StorageAdapter } from '@/core/interfaces';
+import { FilterOptions } from '@/types';
+import { Logger } from '@/utils/logger';
 
 export interface SupabaseConfig {
   /** Supabase project URL, e.g., https://xyzcompany.supabase.co */

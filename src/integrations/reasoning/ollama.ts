@@ -1,7 +1,7 @@
 // src/adapters/reasoning/ollama.ts
 import OpenAI from "openai";
 
-import { ProviderAdapter } from '../../core/interfaces';
+import { ProviderAdapter } from '@/core/interfaces';
 import {
   ArtStandardPrompt,
   ArtStandardMessage,
@@ -9,9 +9,9 @@ import {
   StreamEvent,
   LLMMetadata,
   ToolSchema, // Added for tool support
-} from '../../types';
-import { Logger } from '../../utils/logger';
-import { ARTError, ErrorCode } from '../../errors';
+} from '@/types';
+import { Logger } from '@/utils/logger';
+import { ARTError, ErrorCode } from '@/errors';
 // XmlMatcher removed, parsing of embedded XML is responsibility of OutputParser
 
 // Define expected options for the Ollama adapter constructor

@@ -1,5 +1,5 @@
-import { StateManager as IStateManager, IStateRepository } from '../../../core/interfaces';
-import { ThreadContext, ThreadConfig, AgentState, StateSavingStrategy } from '../../../types';
+import { StateManager as IStateManager, IStateRepository } from '@/core/interfaces';
+import { ThreadContext, ThreadConfig, AgentState, StateSavingStrategy } from '@/types';
 
 // Helper for deep cloning, as structuredClone might not be available in all environments
 // or might not handle all types perfectly (e.g., functions, though not expected in AgentState).

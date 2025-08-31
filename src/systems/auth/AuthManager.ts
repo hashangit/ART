@@ -1,6 +1,6 @@
-import { IAuthStrategy } from '../../core/interfaces';
-import { ARTError, ErrorCode } from '../../errors';
-import { Logger } from '../../utils/logger';
+import { IAuthStrategy } from '@/core/interfaces';
+import { ARTError, ErrorCode } from '@/errors';
+import { Logger } from '@/utils/logger';
 
 /**
  * Central authentication manager for handling multiple authentication strategies.

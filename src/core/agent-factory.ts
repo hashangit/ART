@@ -19,54 +19,54 @@ import {
     ToolSystem,
     UISystem
     // Removed ObservationSocket, ConversationSocket interface imports
-} from './interfaces';
-import { IProviderManager } from '../types/providers'; // Corrected path
+} from '@/core/interfaces';
+import { IProviderManager } from '@/types/providers'; // Corrected path
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { ProviderManagerConfig } from '../types/providers'; // type-only import
+import type { ProviderManagerConfig } from '@/types/providers'; // type-only import
 // Import ArtInstanceConfig and StateSavingStrategy
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { ArtInstanceConfig } from '../types'; // type-only import
+import type { ArtInstanceConfig } from '@/types'; // type-only import
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { StateSavingStrategy } from '../types'; // type-only import
-import { ProviderManagerImpl } from '../providers/ProviderManagerImpl'; // Corrected path
-import { PESAgent } from './agents/pes-agent';
+import type { StateSavingStrategy } from '@/types'; // type-only import
+import { ProviderManagerImpl } from '@/providers/ProviderManagerImpl'; // Corrected path
+import { PESAgent } from '@/core/agents/pes-agent';
 
 // Import concrete implementations (assuming paths)
 // Storage Adapters
-import { InMemoryStorageAdapter } from '../adapters/storage/inMemory'; // Corrected path
-import { IndexedDBStorageAdapter } from '../adapters/storage/indexedDB'; // Corrected path
+import { InMemoryStorageAdapter } from '@/integrations/storage/inMemory'; // Corrected path
+import { IndexedDBStorageAdapter } from '@/integrations/storage/indexedDB'; // Corrected path
 // Repositories
-import { ConversationRepository } from '../systems/context/repositories/ConversationRepository'; // Corrected path
-import { ObservationRepository } from '../systems/context/repositories/ObservationRepository'; // Corrected path - Moved from observation system
-import { StateRepository } from '../systems/context/repositories/StateRepository'; // Corrected path
-import { TaskStatusRepository } from '../systems/context/repositories/TaskStatusRepository'; // A2A task repository
+import { ConversationRepository } from '@/systems/context/repositories/ConversationRepository'; // Corrected path
+import { ObservationRepository } from '@/systems/context/repositories/ObservationRepository'; // Corrected path - Moved from observation system
+import { StateRepository } from '@/systems/context/repositories/StateRepository'; // Corrected path
+import { TaskStatusRepository } from '@/systems/context/repositories/TaskStatusRepository'; // A2A task repository
 // Managers
-import { ConversationManager as ConversationManagerImpl } from '../systems/context/managers/ConversationManager'; // Corrected path
-import { StateManager as StateManagerImpl } from '../systems/context/managers/StateManager'; // Corrected path
-import { ObservationManager as ObservationManagerImpl } from '../systems/observation/observation-manager'; // Correct path
+import { ConversationManager as ConversationManagerImpl } from '@/systems/context/managers/ConversationManager'; // Corrected path
+import { StateManager as StateManagerImpl } from '@/systems/context/managers/StateManager'; // Corrected path
+import { ObservationManager as ObservationManagerImpl } from '@/systems/observation/observation-manager'; // Correct path
 // Tool System
-import { ToolRegistry as ToolRegistryImpl } from '../systems/tool/ToolRegistry'; // Correct path
-import { ToolSystem as ToolSystemImpl } from '../systems/tool/ToolSystem'; // Correct path
+import { ToolRegistry as ToolRegistryImpl } from '@/systems/tool/ToolRegistry'; // Correct path
+import { ToolSystem as ToolSystemImpl } from '@/systems/tool/ToolSystem'; // Correct path
 // Reasoning System
-import { PromptManager as PromptManagerImpl } from '../systems/reasoning/PromptManager'; // Correct path
-import { SystemPromptResolver as SystemPromptResolverImpl } from '../systems/reasoning/SystemPromptResolver';
-import { ReasoningEngine as ReasoningEngineImpl } from '../systems/reasoning/ReasoningEngine'; // Correct path
-import { OutputParser as OutputParserImpl } from '../systems/reasoning/OutputParser'; // Correct path
+import { PromptManager as PromptManagerImpl } from '@/systems/reasoning/PromptManager'; // Correct path
+import { SystemPromptResolver as SystemPromptResolverImpl } from '@/systems/reasoning/SystemPromptResolver';
+import { ReasoningEngine as ReasoningEngineImpl } from '@/systems/reasoning/ReasoningEngine'; // Correct path
+import { OutputParser as OutputParserImpl } from '@/systems/reasoning/OutputParser'; // Correct path
 // Provider Adapters are now managed by ProviderManagerImpl
 // UI System
-import { UISystem as UISystemImpl } from '../systems/ui/ui-system'; // Correct path
+import { UISystem as UISystemImpl } from '@/systems/ui/ui-system'; // Correct path
 // Auth and MCP Systems
-import { AuthManager } from '../systems/auth/AuthManager'; // Import AuthManager
-import { McpManager } from '../systems/mcp/McpManager'; // Import McpManager
+import { AuthManager } from '@/systems/auth/AuthManager'; // Import AuthManager
+import { McpManager } from '@/systems/mcp/McpManager'; // Import McpManager
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { McpManagerConfig } from '../systems/mcp/types'; // type-only import for McpManagerConfig
-import { AgentDiscoveryService } from '../systems/a2a/AgentDiscoveryService';
-import { TaskDelegationService } from '../systems/a2a/TaskDelegationService';
+import type { McpManagerConfig } from '@/systems/mcp/types'; // type-only import for McpManagerConfig
+import { AgentDiscoveryService } from '@/systems/a2a/AgentDiscoveryService';
+import { TaskDelegationService } from '@/systems/a2a/TaskDelegationService';
 // Removed direct imports of concrete socket classes - they will be accessed via UISystem instance
 // Removed unused type imports: Observation, ConversationMessage, ObservationType, MessageRole
-import { Logger } from '../utils/logger'; // Import Logger
+import { Logger } from '@/utils/logger'; // Import Logger
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { LogLevel } from '../utils/logger'; // type-only import
+import type { LogLevel } from '@/utils/logger'; // type-only import
 
 
 /**
@@ -345,7 +345,7 @@ export class AgentFactory {
 }
 
 // --- Convenience Factory Function ---
-import { ArtInstance } from './interfaces'; // Import the new interface
+import { ArtInstance } from '@/core/interfaces'; // Import the new interface
 
 /**
  * High-level factory function to create and initialize a complete ART framework instance.

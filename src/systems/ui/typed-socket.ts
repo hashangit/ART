@@ -1,6 +1,6 @@
 // src/systems/ui/typed-socket.ts
 import { v4 as uuidv4 } from 'uuid';
-import { Logger } from '../../utils/logger'; // Assuming logger exists
+import { Logger } from '@/utils/logger'; // Assuming logger exists
 
 export type UnsubscribeFunction = () => void;
 

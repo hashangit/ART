@@ -1,6 +1,6 @@
-import { Logger } from '../../utils/logger';
-import { ARTError, ErrorCode } from '../../errors';
-import { A2AAgentInfo } from '../../types';
+import { Logger } from '@/utils/logger';
+import { ARTError, ErrorCode } from '@/errors';
+import { A2AAgentInfo } from '@/types';
 
 /**
  * Interface for A2A Agent Card as defined in the A2A protocol standards.

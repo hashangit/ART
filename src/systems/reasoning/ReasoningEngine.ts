@@ -2,10 +2,10 @@
 import {
   ReasoningEngine as IReasoningEngine,
   // Removed ProviderAdapter import
-} from '../../core/interfaces';
-import { FormattedPrompt, CallOptions, StreamEvent } from '../../types';
-import { IProviderManager, ManagedAdapterAccessor, RuntimeProviderConfig } from '../../types/providers'; // Import ProviderManager types and RuntimeProviderConfig
-import { Logger } from '../../utils/logger';
+} from '@/core/interfaces';
+import { FormattedPrompt, CallOptions, StreamEvent } from '@/types';
+import { IProviderManager, ManagedAdapterAccessor, RuntimeProviderConfig } from '@/types/providers'; // Import ProviderManager types and RuntimeProviderConfig
+import { Logger } from '@/utils/logger';
 
 /**
  * Default implementation of the `ReasoningEngine` interface.

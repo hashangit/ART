@@ -1,9 +1,9 @@
 // src/systems/a2a/TaskDelegationService.ts
 
-import { Logger } from '../../utils/logger';
-import { ARTError, ErrorCode } from '../../errors';
-import { A2ATask, A2ATaskStatus, A2AAgentInfo, A2ATaskResult, A2ATaskMetadata } from '../../types';
-import { IA2ATaskRepository } from '../../core/interfaces';
+import { Logger } from '@/utils/logger';
+import { ARTError, ErrorCode } from '@/errors';
+import { A2ATask, A2ATaskStatus, A2AAgentInfo, A2ATaskResult, A2ATaskMetadata } from '@/types';
+import { IA2ATaskRepository } from '@/core/interfaces';
 // AgentDiscoveryService is no longer used here; discovery is handled by PESAgent.
 
 /**

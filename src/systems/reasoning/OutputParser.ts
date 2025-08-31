@@ -1,9 +1,9 @@
 // src/systems/reasoning/OutputParser.ts
 import * as z from 'zod'; // Import Zod
-import { OutputParser as IOutputParser } from '../../core/interfaces';
-import { ParsedToolCall } from '../../types';
-import { Logger } from '../../utils/logger'; // Import the Logger class
-import { XmlMatcher } from '../../utils/xml-matcher'; // Import XmlMatcher
+import { OutputParser as IOutputParser } from '@/core/interfaces';
+import { ParsedToolCall } from '@/types';
+import { Logger } from '@/utils/logger'; // Import the Logger class
+import { XmlMatcher } from '@/utils/xml-matcher'; // Import XmlMatcher
 
 // Define Zod schema for a single tool call
 const parsedToolCallSchema = z.object({

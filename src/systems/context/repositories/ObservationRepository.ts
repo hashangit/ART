@@ -1,5 +1,5 @@
-import { IObservationRepository, StorageAdapter } from '../../../core/interfaces';
-import { Observation, ObservationFilter } from '../../../types';
+import { IObservationRepository, StorageAdapter } from '@/core/interfaces';
+import { Observation, ObservationFilter } from '@/types';
 
 // Observation already has an 'id' field, so no need for a separate Stored type usually.
 // However, ensure the StorageAdapter expects 'id' as the keyPath for the 'observations' store.

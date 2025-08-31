@@ -1,8 +1,8 @@
 // Lazy import to avoid SSR/bundling path issues if SDK evolves
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
-import { Logger } from '../../utils/logger';
-import { ARTError, ErrorCode } from '../../errors';
+import { Logger } from '@/utils/logger';
+import { ARTError, ErrorCode } from '@/errors';
 
 /**
  * @function base64UrlEncode

@@ -1,6 +1,6 @@
-import { ToolRegistry, StateManager } from '../../core/interfaces';
-import { ARTError, ErrorCode } from '../../errors';
-import { Logger } from '../../utils/logger';
+import { ToolRegistry, StateManager } from '@/core/interfaces';
+import { ARTError, ErrorCode } from '@/errors';
+import { Logger } from '@/utils/logger';
 import { AuthManager } from '../auth/AuthManager';
 import { McpProxyTool } from './McpProxyTool';
 import { ConfigManager } from './ConfigManager';

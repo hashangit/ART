@@ -4,12 +4,12 @@ import {
     IObservationRepository,
     IConversationRepository,
     IA2ATaskRepository
-} from '../../core/interfaces';
+} from '@/core/interfaces';
 import { ObservationSocket } from './observation-socket';
 import { ConversationSocket } from './conversation-socket';
 import { LLMStreamSocket } from './llm-stream-socket'; // Import the new socket
 import { A2ATaskSocket } from './a2a-task-socket';
-import { Logger } from '../../utils/logger';
+import { Logger } from '@/utils/logger';
 
 /**
  * Provides access to the UI communication sockets (Observation, Conversation, LLM Stream, and A2A Task).

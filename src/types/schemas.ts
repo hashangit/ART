@@ -1,6 +1,6 @@
 // src/types/schemas.ts
 import { z } from 'zod';
-import { ArtStandardMessageRole } from './index'; // Import role type from main types
+import { ArtStandardMessageRole } from '@/types'; // Import role type from main types
 
 /**
  * Zod schema for validating a single ArtStandardMessage object.

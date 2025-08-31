@@ -1,5 +1,5 @@
-import { GenericOAuthStrategy, type OAuthConfig } from './GenericOAuthStrategy';
-import { Logger } from '../utils/logger';
+import { GenericOAuthStrategy, type OAuthConfig } from '@/auth/GenericOAuthStrategy';
+import { Logger } from '@/utils/logger';
 
 /**
  * Configuration specific to Zyntopia OAuth strategy

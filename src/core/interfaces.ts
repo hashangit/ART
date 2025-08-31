@@ -21,7 +21,7 @@ import {
   // --- Import new types (Refactor Phase 1) ---
   ArtStandardPrompt,
   // PromptContext, // Removed - No longer used by PromptManager interface
-} from '../types';
+} from '@/types';
 
 // Re-export types that might be needed by implementers of these core interfaces
 export type {
@@ -45,7 +45,7 @@ export type {
   ArtStandardPrompt,
   StreamEvent, // Also re-export StreamEvent as it's used in ReasoningEngine
   LLMMetadata  // Also re-export LLMMetadata
-} from '../types';
+} from '@/types';
 
 
 /**
@@ -80,7 +80,7 @@ export interface ReasoningEngine {
    * @throws {ARTError} If a critical error occurs during the initial call setup or if the stream itself errors out (typically code `LLM_PROVIDER_ERROR`).
    */
   // TODO (Refactor): Update prompt type from FormattedPrompt to FormattedPromptResult['prompt'] in Phase 2
-  call(prompt: import('../types').FormattedPrompt, options: CallOptions): Promise<AsyncIterable<import("../types").StreamEvent>>;
+  call(prompt: import('@/types').FormattedPrompt, options: CallOptions): Promise<AsyncIterable<import("@/types").StreamEvent>>;
 }
 
 // --- PromptManager Interface (Refactor Phase 1) ---
@@ -119,7 +119,7 @@ export interface PromptManager {
      * @returns A promise resolving to the assembled ArtStandardPrompt.
      * @throws {ARTError} If template rendering or JSON parsing fails.
      */
-    assemblePrompt(blueprint: import('../types').PromptBlueprint, context: import('../types').PromptContext): Promise<ArtStandardPrompt>;
+    assemblePrompt(blueprint: import('@/types').PromptBlueprint, context: import('@/types').PromptContext): Promise<ArtStandardPrompt>;
 
     // Future methods could include:
     // - loadFragmentsFromDir(directoryPath: string): Promise<void>;
@@ -134,9 +134,9 @@ export interface SystemPromptResolver {
   resolve(
     input: {
       base: string;
-      instance?: string | import('../types').SystemPromptOverride;
-      thread?: string | import('../types').SystemPromptOverride;
-      call?: string | import('../types').SystemPromptOverride;
+      instance?: string | import('@/types').SystemPromptOverride;
+      thread?: string | import('@/types').SystemPromptOverride;
+      call?: string | import('@/types').SystemPromptOverride;
     },
     traceId?: string
   ): Promise<string>;
@@ -454,8 +454,8 @@ export interface ObservationSocket extends ITypedSocket<Observation, Observation
 export interface ConversationSocket extends ITypedSocket<ConversationMessage, MessageRole | MessageRole[]> {}
 
 // Import concrete socket classes for use in the UISystem interface return types
-import { ObservationSocket as ObservationSocketImpl } from '../systems/ui/observation-socket';
-import { ConversationSocket as ConversationSocketImpl } from '../systems/ui/conversation-socket';
+import { ObservationSocket as ObservationSocketImpl } from '@/systems/ui/observation-socket';
+import { ConversationSocket as ConversationSocketImpl } from '@/systems/ui/conversation-socket';
 
 /**
  * Interface for the system providing access to UI communication sockets.
@@ -466,9 +466,9 @@ export interface UISystem {
   /** Returns the singleton instance of the ConversationSocket. */
   getConversationSocket(): ConversationSocketImpl;
   /** Returns the singleton instance of the LLMStreamSocket. */
-  getLLMStreamSocket(): import("../systems/ui/llm-stream-socket").LLMStreamSocket;
+  getLLMStreamSocket(): import("@/systems/ui/llm-stream-socket").LLMStreamSocket;
   /** Returns the singleton instance of the A2ATaskSocket. */
-  getA2ATaskSocket(): import("../systems/ui/a2a-task-socket").A2ATaskSocket;
+  getA2ATaskSocket(): import("@/systems/ui/a2a-task-socket").A2ATaskSocket;
   // TODO: Potentially add getStateSocket(): StateSocket; in the future
 }
 
@@ -554,7 +554,7 @@ export interface IA2ATaskRepository {
    * @returns A promise that resolves when the task is successfully stored.
    * @throws {ARTError} If the task cannot be created (e.g., duplicate taskId, validation errors).
    */
-  createTask(task: import('../types').A2ATask): Promise<void>;
+  createTask(task: import('@/types').A2ATask): Promise<void>;
 
   /**
    * Retrieves an A2A task by its unique identifier.
@@ -562,7 +562,7 @@ export interface IA2ATaskRepository {
    * @returns A promise resolving to the A2ATask object if found, or null if not found.
    * @throws {ARTError} If an error occurs during retrieval.
    */
-  getTask(taskId: string): Promise<import('../types').A2ATask | null>;
+  getTask(taskId: string): Promise<import('@/types').A2ATask | null>;
 
   /**
    * Updates an existing A2A task with new information.
@@ -571,7 +571,7 @@ export interface IA2ATaskRepository {
    * @returns A promise that resolves when the task is successfully updated.
    * @throws {ARTError} If the task is not found or cannot be updated.
    */
-  updateTask(taskId: string, updates: Partial<import('../types').A2ATask>): Promise<void>;
+  updateTask(taskId: string, updates: Partial<import('@/types').A2ATask>): Promise<void>;
 
   /**
    * Removes an A2A task from the repository.
@@ -588,10 +588,10 @@ export interface IA2ATaskRepository {
    * @returns A promise resolving to an array of A2ATask objects matching the criteria.
    */
   getTasksByThread(threadId: string, filter?: {
-    status?: import('../types').A2ATaskStatus | import('../types').A2ATaskStatus[];
-    priority?: import('../types').A2ATaskPriority;
+    status?: import('@/types').A2ATaskStatus | import('@/types').A2ATaskStatus[];
+    priority?: import('@/types').A2ATaskPriority;
     assignedAgentId?: string;
-  }): Promise<import('../types').A2ATask[]>;
+  }): Promise<import('@/types').A2ATask[]>;
 
   /**
    * Retrieves tasks assigned to a specific agent.
@@ -600,9 +600,9 @@ export interface IA2ATaskRepository {
    * @returns A promise resolving to an array of A2ATask objects assigned to the agent.
    */
   getTasksByAgent(agentId: string, filter?: {
-    status?: import('../types').A2ATaskStatus | import('../types').A2ATaskStatus[];
-    priority?: import('../types').A2ATaskPriority;
-  }): Promise<import('../types').A2ATask[]>;
+    status?: import('@/types').A2ATaskStatus | import('@/types').A2ATaskStatus[];
+    priority?: import('@/types').A2ATaskPriority;
+  }): Promise<import('@/types').A2ATask[]>;
 
   /**
    * Retrieves tasks based on their current status.
@@ -611,9 +611,9 @@ export interface IA2ATaskRepository {
    * @returns A promise resolving to an array of A2ATask objects with the specified status.
    */
   getTasksByStatus(
-    status: import('../types').A2ATaskStatus | import('../types').A2ATaskStatus[],
+    status: import('@/types').A2ATaskStatus | import('@/types').A2ATaskStatus[],
     options?: { limit?: number; offset?: number }
-  ): Promise<import('../types').A2ATask[]>;
+  ): Promise<import('@/types').A2ATask[]>;
 }
 
 /**
@@ -642,7 +642,7 @@ export interface IAuthStrategy {
   isAuthenticated?(): Promise<boolean>;
 }
 
-import { AuthManager } from '../systems/auth/AuthManager';
+import { AuthManager } from '@/systems/auth/AuthManager';
 
 export interface ArtInstance {
     /** The main method to process a user query using the configured Agent Core. */

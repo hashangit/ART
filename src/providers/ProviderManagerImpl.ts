@@ -4,14 +4,14 @@ import {
     RuntimeProviderConfig,
     ManagedAdapterAccessor,
     AvailableProviderEntry,
-} from '../types/providers';
-import { ProviderAdapter } from '../core/interfaces';
+} from '@/types/providers';
+import { ProviderAdapter } from '@/core/interfaces';
 import {
     UnknownProviderError,
     LocalProviderConflictError,
     LocalInstanceBusyError,
     AdapterInstantiationError, // Will need this later
-} from '../errors';
+} from '@/errors';
 
 /** Internal type to track managed adapter instances */
 interface ManagedInstance {

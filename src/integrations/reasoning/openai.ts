@@ -1,5 +1,5 @@
 // src/adapters/reasoning/openai.ts
-import { ProviderAdapter } from '../../core/interfaces';
+import { ProviderAdapter } from '@/core/interfaces';
 import {
   ArtStandardPrompt, // Use the new standard type
   ArtStandardMessage, // Keep for translation function type hint
@@ -7,9 +7,9 @@ import {
   CallOptions,
   StreamEvent,
   LLMMetadata,
-} from '../../types';
-import { Logger } from '../../utils/logger';
-import { ARTError, ErrorCode } from '../../errors'; // Import ARTError and ErrorCode
+} from '@/types';
+import { Logger } from '@/utils/logger';
+import { ARTError, ErrorCode } from '@/errors'; // Import ARTError and ErrorCode
 
 // TODO: Upgrade to use the official 'openai' SDK package instead of raw fetch calls.
 

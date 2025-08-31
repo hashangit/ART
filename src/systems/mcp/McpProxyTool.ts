@@ -1,6 +1,6 @@
-import { IToolExecutor } from '../../core/interfaces';
-import { ToolSchema, ToolResult, ExecutionContext } from '../../types';
-import { Logger } from '../../utils/logger';
+import { IToolExecutor } from '@/core/interfaces';
+import { ToolSchema, ToolResult, ExecutionContext } from '@/types';
+import { Logger } from '@/utils/logger';
 import { McpManager } from './McpManager';
 import { McpServerConfig, McpToolDefinition } from './types';
 import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';

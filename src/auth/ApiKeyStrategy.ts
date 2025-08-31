@@ -1,4 +1,4 @@
-import { IAuthStrategy } from '../core/interfaces';
+import { IAuthStrategy } from '@/core/interfaces';
 
 /**
  * Simple API key authentication strategy.

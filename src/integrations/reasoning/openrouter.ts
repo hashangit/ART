@@ -1,33 +1,37 @@
-// src/adapters/reasoning/deepseek.ts
-import { ProviderAdapter } from '../../core/interfaces';
+// src/adapters/reasoning/openrouter.ts
+import { ProviderAdapter } from '@/core/interfaces';
 import {
   ArtStandardPrompt, // Use the new standard type
   ArtStandardMessage, // Keep for translation function type hint
   CallOptions,
   StreamEvent,
   LLMMetadata,
-} from '../../types';
-import { Logger } from '../../utils/logger';
-import { ARTError, ErrorCode } from '../../errors'; // Import ARTError and ErrorCode
+} from '@/types';
+import { Logger } from '@/utils/logger';
+import { ARTError, ErrorCode } from '@/errors'; // Import ARTError and ErrorCode
 
-// TODO: Implement streaming support for DeepSeek.
+// TODO: Implement streaming support for OpenRouter.
 // TODO: Consider if a dedicated SDK or more specific types are needed, or if OpenAI compatibility is sufficient.
 
-// Define expected options for the DeepSeek adapter constructor
+// Define expected options for the OpenRouter adapter constructor
 /**
- * Configuration options required for the `DeepSeekAdapter`.
+ * Configuration options required for the `OpenRouterAdapter`.
  */
-export interface DeepSeekAdapterOptions {
-  /** Your DeepSeek API key. Handle securely. */
+export interface OpenRouterAdapterOptions {
+  /** Your OpenRouter API key. Handle securely. */
   apiKey: string;
-  /** The default DeepSeek model ID to use (e.g., 'deepseek-chat', 'deepseek-coder'). Defaults to 'deepseek-chat' if not provided. */
-  model?: string;
-  /** Optional: Override the base URL for the DeepSeek API. Defaults to 'https://api.deepseek.com/v1'. */
+  /** The required OpenRouter model identifier string (e.g., 'google/gemini-pro', 'anthropic/claude-3-haiku', 'openai/gpt-4o'). This specifies which underlying model OpenRouter should use. */
+  model: string;
+  /** Optional: Override the base URL for the OpenRouter API. Defaults to 'https://openrouter.ai/api/v1'. */
   apiBaseUrl?: string;
+  /** Optional: Your application's site URL, sent as the 'HTTP-Referer' header (recommended by OpenRouter). */
+  siteUrl?: string;
+  /** Optional: Your application's name, sent as the 'X-Title' header (recommended by OpenRouter). */
+  appName?: string;
 }
 
-// Use OpenAI-compatible structures
-// Based on https://platform.deepseek.com/api-docs/api/create-chat-completion/index.html
+// Use OpenAI-compatible structures, assuming OpenRouter adheres closely
+// Based on https://openrouter.ai/docs#api-reference-chat-completions
 interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string | null;
@@ -54,7 +58,7 @@ interface OpenAIChatCompletionPayload {
   frequency_penalty?: number;
   presence_penalty?: number;
   stop?: string | string[];
-  stream?: boolean; // DeepSeek supports streaming
+  stream?: boolean; // OpenRouter supports streaming
   // TODO: Add support for 'tools' and 'tool_choice' if needed later
 }
 
@@ -62,51 +66,60 @@ interface OpenAIChatCompletionResponse {
   id: string;
   object: string;
   created: number;
-  model: string;
+  model: string; // The specific model used by OpenRouter
   choices: {
     index: number;
     message: OpenAIMessage; // Use the defined OpenAIMessage type
     finish_reason: string; // e.g., 'stop', 'length', 'tool_calls'
   }[];
-  usage: { // Note: DeepSeek usage structure matches OpenAI
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
+  usage?: { // Usage might be optional or structured differently
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+    // OpenRouter might add cost info here
   };
 }
 
 /**
- * Implements the `ProviderAdapter` interface for interacting with the DeepSeek API,
- * which uses an OpenAI-compatible Chat Completions endpoint.
+ * Implements the `ProviderAdapter` interface for interacting with the OpenRouter API,
+ * which provides access to various LLMs through an OpenAI-compatible interface.
  *
- * Handles formatting requests and parsing responses for DeepSeek models.
+ * Handles formatting requests and parsing responses for OpenRouter's chat completions endpoint.
+ * Handles formatting requests and parsing responses for OpenRouter's chat completions endpoint.
  * Note: Streaming is **not yet implemented** for this adapter. Calls requesting streaming will yield an error and end.
  *
  * @implements {ProviderAdapter}
  */
-export class DeepSeekAdapter implements ProviderAdapter {
-  readonly providerName = 'deepseek';
+export class OpenRouterAdapter implements ProviderAdapter {
+  readonly providerName = 'openrouter';
   private apiKey: string;
   private model: string;
   private apiBaseUrl: string;
+  private siteUrl?: string;
+  private appName?: string;
 
   /**
-   * Creates an instance of the DeepSeekAdapter.
-   * @param options - Configuration options including the API key and optional model/baseURL overrides.
-   * @throws {Error} If the API key is missing.
+   * Creates an instance of the OpenRouterAdapter.
+   * @param options - Configuration options including the API key, the specific OpenRouter model identifier, and optional headers/baseURL.
+   * @throws {Error} If the API key or model identifier is missing.
    */
-  constructor(options: DeepSeekAdapterOptions) {
+  constructor(options: OpenRouterAdapterOptions) {
     if (!options.apiKey) {
-      throw new Error('DeepSeekAdapter requires an apiKey in options.');
+      throw new Error('OpenRouterAdapter requires an apiKey in options.');
+    }
+    if (!options.model) {
+      throw new Error('OpenRouterAdapter requires a model identifier in options (e.g., \'google/gemini-pro\').');
     }
     this.apiKey = options.apiKey;
-    this.model = options.model || 'deepseek-chat'; // Default model
-    this.apiBaseUrl = options.apiBaseUrl || 'https://api.deepseek.com/v1';
-    Logger.debug(`DeepSeekAdapter initialized with model: ${this.model}`);
+    this.model = options.model;
+    this.apiBaseUrl = options.apiBaseUrl || 'https://openrouter.ai/api/v1';
+    this.siteUrl = options.siteUrl;
+    this.appName = options.appName;
+    Logger.debug(`OpenRouterAdapter initialized for model: ${this.model}`);
   }
 
   /**
-   * Sends a request to the DeepSeek Chat Completions API endpoint.
+   * Sends a request to the OpenRouter Chat Completions API endpoint.
    * Translates `ArtStandardPrompt` to the OpenAI-compatible format.
    *
    * **Note:** Streaming is **not yet implemented**.
@@ -116,15 +129,15 @@ export class DeepSeekAdapter implements ProviderAdapter {
    * @returns {Promise<AsyncIterable<StreamEvent>>} A promise resolving to an AsyncIterable of StreamEvent objects. If streaming is requested, it yields an error event and ends.
    */
   async call(prompt: ArtStandardPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
-    const { threadId, traceId = `deepseek-trace-${Date.now()}`, sessionId, stream, callContext, model: modelOverride } = options;
-    const modelToUse = modelOverride || this.model;
+    const { threadId, traceId = `openrouter-trace-${Date.now()}`, sessionId, stream, callContext, model: modelOverride } = options;
+    const modelToUse = modelOverride || this.model; // Allow overriding model per call
 
     // --- Placeholder for Streaming ---
-    // TODO: Implement streaming for DeepSeek
+    // TODO: Implement streaming for OpenRouter
     if (stream) {
-        Logger.warn(`DeepSeekAdapter: Streaming requested but not implemented. Returning error stream.`, { threadId, traceId });
+        Logger.warn(`OpenRouterAdapter: Streaming requested but not implemented. Returning error stream.`, { threadId, traceId });
         const errorGenerator = async function*(): AsyncIterable<StreamEvent> {
-            const err = new ARTError("Streaming is not yet implemented for the DeepSeekAdapter.", ErrorCode.LLM_PROVIDER_ERROR);
+            const err = new ARTError("Streaming is not yet implemented for the OpenRouterAdapter.", ErrorCode.LLM_PROVIDER_ERROR); // Use LLM_PROVIDER_ERROR
             yield { type: 'ERROR', data: err, threadId: threadId ?? '', traceId: traceId ?? '', sessionId };
             yield { type: 'END', data: null, threadId: threadId ?? '', traceId: traceId ?? '', sessionId };
         };
@@ -139,7 +152,7 @@ export class DeepSeekAdapter implements ProviderAdapter {
       // Reuse the same translation logic as OpenAI adapter
       openAiMessages = this.translateToOpenAI(prompt);
     } catch (error: any) {
-      Logger.error(`Error translating ArtStandardPrompt to DeepSeek/OpenAI format: ${error.message}`, { error, threadId, traceId });
+      Logger.error(`Error translating ArtStandardPrompt to OpenRouter/OpenAI format: ${error.message}`, { error, threadId, traceId });
       const generator = async function*(): AsyncIterable<StreamEvent> {
           const err = error instanceof ARTError ? error : new ARTError(`Prompt translation failed: ${error.message}`, ErrorCode.PROMPT_TRANSLATION_FAILED, error);
           yield { type: 'ERROR', data: err, threadId, traceId, sessionId };
@@ -158,6 +171,7 @@ export class DeepSeekAdapter implements ProviderAdapter {
       temperature: options.temperature,
       max_tokens: options.max_tokens || options.maxOutputTokens,
       top_p: options.top_p || options.topP,
+      // top_k: options.top_k || options.topK, // Less common, include if needed
       stop: stopSequences,
       stream: false, // Explicitly false for non-streaming
       // TODO: Add tools/tool_choice if needed
@@ -169,10 +183,13 @@ export class DeepSeekAdapter implements ProviderAdapter {
          'Content-Type': 'application/json',
          'Authorization': `Bearer ${this.apiKey}`,
      };
+     if (this.siteUrl) headers['HTTP-Referer'] = this.siteUrl;
+     if (this.appName) headers['X-Title'] = this.appName;
    
-     Logger.debug(`Calling DeepSeek API (non-streaming): ${apiUrl} with model ${this.model}`, { threadId, traceId });
+     Logger.debug(`Calling OpenRouter API (non-streaming): ${apiUrl} with model ${this.model}`, { threadId, traceId });
    
      // Use an async generator for non-streaming case too
+     // const adapter = this; // Removed unused alias
      const generator = async function*(): AsyncIterable<StreamEvent> {
          try {
              const response = await fetch(apiUrl, {
@@ -189,7 +206,7 @@ export class DeepSeekAdapter implements ProviderAdapter {
                      if (parsedError?.error?.message) errorMessage = parsedError.error.message;
                  } catch (e) { /* Ignore */ }
                  const err = new ARTError(
-                    `DeepSeek API request failed: ${response.status} ${response.statusText} - ${errorMessage}`,
+                    `OpenRouter API request failed: ${response.status} ${response.statusText} - ${errorMessage}`,
                     ErrorCode.LLM_PROVIDER_ERROR,
                     new Error(errorBody) // Pass underlying error context
                  );
@@ -202,7 +219,7 @@ export class DeepSeekAdapter implements ProviderAdapter {
              const firstChoice = data.choices?.[0];
 
              if (!firstChoice?.message) {
-                 const err = new ARTError('Invalid response structure from DeepSeek API: No message found.', ErrorCode.LLM_PROVIDER_ERROR, new Error(JSON.stringify(data)));
+                 const err = new ARTError('Invalid response structure from OpenRouter API: No message found.', ErrorCode.LLM_PROVIDER_ERROR, new Error(JSON.stringify(data)));
                  yield { type: 'ERROR', data: err, threadId, traceId, sessionId };
                  yield { type: 'END', data: null, threadId, traceId, sessionId };
                  return; // Stop the generator
@@ -211,9 +228,9 @@ export class DeepSeekAdapter implements ProviderAdapter {
              const responseMessage = firstChoice.message;
              // TODO: Handle tool_calls in non-streaming response if needed by agent logic
              if (responseMessage.tool_calls) {
-                 Logger.debug("DeepSeek response included tool calls (non-streaming)", { toolCalls: responseMessage.tool_calls, threadId, traceId });
+                 Logger.debug("OpenRouter response included tool calls (non-streaming)", { toolCalls: responseMessage.tool_calls, threadId, traceId });
              }
-             Logger.debug(`DeepSeek API call successful. Finish reason: ${firstChoice.finish_reason}`, { threadId, traceId });
+             Logger.debug(`OpenRouter API call successful. Finish reason: ${firstChoice.finish_reason}`, { threadId, traceId });
 
              // Yield TOKEN
              const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'FINAL_SYNTHESIS_LLM_RESPONSE';
@@ -234,19 +251,19 @@ export class DeepSeekAdapter implements ProviderAdapter {
              yield { type: 'END', data: null, threadId, traceId, sessionId };
 
          } catch (error: any) {
-             Logger.error(`Error during DeepSeek API call: ${error.message}`, { error, threadId, traceId });
+             Logger.error(`Error during OpenRouter API call: ${error.message}`, { error, threadId, traceId });
              const artError = error instanceof ARTError ? error : new ARTError(error.message, ErrorCode.LLM_PROVIDER_ERROR, error);
              yield { type: 'ERROR', data: artError, threadId, traceId, sessionId };
              yield { type: 'END', data: null, threadId, traceId, sessionId };
          }
-     }; // No need for .bind(this)
+     }; // No need for .bind(this) with arrow functions or if 'this' isn't used inside
 
      return generator();
    }
 
    /**
     * Translates the provider-agnostic `ArtStandardPrompt` into the OpenAI API's `OpenAIMessage[]` format.
-    * (Copied from OpenAIAdapter - assumes DeepSeek compatibility)
+    * (Copied from OpenAIAdapter - assumes OpenRouter compatibility)
     *
     * @private
     * @param {ArtStandardPrompt} artPrompt - The input `ArtStandardPrompt` array.
@@ -259,14 +276,14 @@ export class DeepSeekAdapter implements ProviderAdapter {
        switch (message.role) {
          case 'system': {
            if (typeof message.content !== 'string') {
-             Logger.warn(`DeepSeekAdapter: System message content is not a string. Stringifying.`, { content: message.content });
+             Logger.warn(`OpenRouterAdapter: System message content is not a string. Stringifying.`, { content: message.content });
              return { role: 'system', content: String(message.content) };
            }
            return { role: 'system', content: message.content };
          }
          case 'user': {
            if (typeof message.content !== 'string') {
-             Logger.warn(`DeepSeekAdapter: User message content is not a string. Stringifying.`, { content: message.content });
+             Logger.warn(`OpenRouterAdapter: User message content is not a string. Stringifying.`, { content: message.content });
              return { role: 'user', content: String(message.content) };
            }
            return { role: 'user', content: message.content };
@@ -280,7 +297,7 @@ export class DeepSeekAdapter implements ProviderAdapter {
              assistantMsg.tool_calls = message.tool_calls.map(tc => {
                  if (tc.type !== 'function' || !tc.function?.name || typeof tc.function?.arguments !== 'string') {
                       throw new ARTError(
-                         `DeepSeekAdapter: Invalid tool_call structure in assistant message. ID: ${tc.id}`,
+                         `OpenRouterAdapter: Invalid tool_call structure in assistant message. ID: ${tc.id}`,
                          ErrorCode.PROMPT_TRANSLATION_FAILED
                      );
                  }
@@ -308,12 +325,12 @@ export class DeepSeekAdapter implements ProviderAdapter {
          case 'tool_result': {
            if (!message.tool_call_id) {
              throw new ARTError(
-               `DeepSeekAdapter: 'tool_result' message missing required 'tool_call_id'.`,
+               `OpenRouterAdapter: 'tool_result' message missing required 'tool_call_id'.`,
                ErrorCode.PROMPT_TRANSLATION_FAILED
              );
            }
            if (typeof message.content !== 'string') {
-              Logger.warn(`DeepSeekAdapter: Tool result content is not a string. Stringifying.`, { content: message.content });
+              Logger.warn(`OpenRouterAdapter: Tool result content is not a string. Stringifying.`, { content: message.content });
            }
            return {
              role: 'tool',
@@ -323,13 +340,13 @@ export class DeepSeekAdapter implements ProviderAdapter {
          }
          case 'tool_request': {
             throw new ARTError(
-               `DeepSeekAdapter: Unexpected 'tool_request' role encountered during translation.`,
+               `OpenRouterAdapter: Unexpected 'tool_request' role encountered during translation.`,
                ErrorCode.PROMPT_TRANSLATION_FAILED
              );
          }
          default: {
             throw new ARTError(
-               `DeepSeekAdapter: Unknown message role '${message.role}' encountered during translation.`,
+               `OpenRouterAdapter: Unknown message role '${message.role}' encountered during translation.`,
                ErrorCode.PROMPT_TRANSLATION_FAILED
              );
          }

@@ -1,7 +1,7 @@
 import { TypedSocket } from './typed-socket';
-import { A2ATask, A2ATaskStatus, A2ATaskPriority } from '../../types';
-import { Logger } from '../../utils/logger';
-import { IA2ATaskRepository } from '../../core/interfaces';
+import { A2ATask, A2ATaskStatus, A2ATaskPriority } from '@/types';
+import { Logger } from '@/utils/logger';
+import { IA2ATaskRepository } from '@/core/interfaces';
 
 /**
  * Filter type for A2A task notifications.

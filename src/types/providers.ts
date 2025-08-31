@@ -1,4 +1,4 @@
-import { ProviderAdapter } from '../core/interfaces';
+import { ProviderAdapter } from '@/core/interfaces';
 
 export type { ProviderAdapter };
 

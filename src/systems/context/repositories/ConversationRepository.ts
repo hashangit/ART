@@ -1,5 +1,5 @@
-import { IConversationRepository, StorageAdapter } from '../../../core/interfaces';
-import { ConversationMessage, MessageOptions } from '../../../types';
+import { IConversationRepository, StorageAdapter } from '@/core/interfaces';
+import { ConversationMessage, MessageOptions } from '@/types';
 
 // Define the structure of the data as stored, including the 'id' field
 type StoredConversationMessage = ConversationMessage & { id: string };

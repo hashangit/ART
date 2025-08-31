@@ -1,8 +1,8 @@
 // src/systems/reasoning/SystemPromptResolver.ts
-import { SystemPromptResolver as ISystemPromptResolver } from '../../core/interfaces';
-import { SystemPromptsRegistry, SystemPromptOverride, SystemPromptMergeStrategy } from '../../types';
+import { SystemPromptResolver as ISystemPromptResolver } from '@/core/interfaces';
+import { SystemPromptsRegistry, SystemPromptOverride, SystemPromptMergeStrategy } from '@/types';
 import { PromptManager } from './PromptManager';
-import { Logger } from '../../utils/logger';
+import { Logger } from '@/utils/logger';
 
 function applyStrategy(base: string, addition: string, strategy: SystemPromptMergeStrategy | undefined): string {
   const s = strategy || 'append';

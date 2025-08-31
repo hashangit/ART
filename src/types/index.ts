@@ -1,8 +1,8 @@
 // src/types/index.ts
 import type { RuntimeProviderConfig } from './providers'; // Import for use within this file
-import type { IToolExecutor, IAgentCore } from '../core/interfaces'; // For ArtInstanceConfig
-import type { LogLevel } from '../utils/logger'; // For ArtInstanceConfig
-import type { StorageAdapter } from '../core/interfaces'; // For ArtInstanceConfig (storage property)
+import type { IToolExecutor, IAgentCore } from '@/core/interfaces'; // For ArtInstanceConfig
+import type { LogLevel } from '@/utils/logger'; // For ArtInstanceConfig
+import type { StorageAdapter } from '@/core/interfaces'; // For ArtInstanceConfig (storage property)
 // --- ART Error Types ---
 export {
     ErrorCode,
@@ -12,13 +12,13 @@ export {
     LocalInstanceBusyError,
     ApiQueueTimeoutError,
     AdapterInstantiationError
-} from '../errors';
+} from '@/errors';
 
 // --- UI Socket Related Types ---
-export { LLMStreamSocket } from '../systems/ui/llm-stream-socket';
-export { TypedSocket } from '../systems/ui/typed-socket';
-export { A2ATaskSocket } from '../systems/ui/a2a-task-socket';
-export type { UnsubscribeFunction } from '../systems/ui/typed-socket';
+export { LLMStreamSocket } from '@/systems/ui/llm-stream-socket';
+export { TypedSocket } from '@/systems/ui/typed-socket';
+export { A2ATaskSocket } from '@/systems/ui/a2a-task-socket';
+export type { UnsubscribeFunction } from '@/systems/ui/typed-socket';
 
 // --- Zod Schemas for Validation ---
 export { ArtStandardPromptSchema, ArtStandardMessageSchema } from './schemas';

@@ -1,5 +1,5 @@
-import { IA2ATaskRepository, StorageAdapter } from '../../../core/interfaces';
-import { A2ATask, A2ATaskStatus, A2ATaskPriority, ARTError, ErrorCode } from '../../../types';
+import { IA2ATaskRepository, StorageAdapter } from '@/core/interfaces';
+import { A2ATask, A2ATaskStatus, A2ATaskPriority, ARTError, ErrorCode } from '@/types';
 
 // Define the structure of the data as stored, including the 'id' field (taskId)
 type StoredA2ATask = A2ATask & { id: string };

@@ -1,6 +1,6 @@
-import { ConversationManager as IConversationManager, IConversationRepository } from '../../../core/interfaces';
-import { ConversationSocket } from '../../ui/conversation-socket'; // Import the class
-import { ConversationMessage, MessageOptions } from '../../../types';
+import { ConversationManager as IConversationManager, IConversationRepository } from '@/core/interfaces';
+import { ConversationSocket } from '@/systems/ui/conversation-socket'; // Import the class
+import { ConversationMessage, MessageOptions } from '@/types';
 
 /**
  * Manages the retrieval and addition of `ConversationMessage` objects for different threads,

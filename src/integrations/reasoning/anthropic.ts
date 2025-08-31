@@ -2,7 +2,7 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 // AnthropicStream and CacheControlEphemeral are not directly used, SDK handles stream types.
 
-import { ProviderAdapter, ToolSchema } from '../../core/interfaces';
+import { ProviderAdapter, ToolSchema } from '@/core/interfaces';
 import {
   ArtStandardPrompt,
   ArtStandardMessage,
@@ -10,9 +10,9 @@ import {
   StreamEvent,
   LLMMetadata,
   // Assuming ArtToolCall and ArtToolResult types exist or are part of ArtStandardMessage
-} from '../../types';
-import { Logger } from '../../utils/logger';
-import { ARTError, ErrorCode } from '../../errors';
+} from '@/types';
+import { Logger } from '@/utils/logger';
+import { ARTError, ErrorCode } from '@/errors';
 
 // Default model if not specified
 const ANTHROPIC_DEFAULT_MODEL_ID = 'claude-3-7-sonnet-20250219';

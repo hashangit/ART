@@ -1,5 +1,5 @@
-import { IStateRepository, StorageAdapter } from '../../../core/interfaces';
-import { ThreadContext, ThreadConfig, AgentState } from '../../../types';
+import { IStateRepository, StorageAdapter } from '@/core/interfaces';
+import { ThreadContext, ThreadConfig, AgentState } from '@/types';
 
 // Define the structure of the data as stored, including the 'id' field (threadId)
 type StoredThreadContext = ThreadContext & { id: string };

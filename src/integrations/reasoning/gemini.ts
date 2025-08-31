@@ -1,7 +1,7 @@
 // src/adapters/reasoning/gemini.ts
 // Use correct import based on documentation for @google/genai
 import { GoogleGenAI, Content, Part, GenerationConfig, GenerateContentResponse } from "@google/genai"; // Import SDK components
-import { ProviderAdapter } from '../../core/interfaces';
+import { ProviderAdapter } from '@/core/interfaces';
 import {
   ArtStandardPrompt, // Use the new standard type
   // ArtStandardMessage, // Removed unused import
@@ -10,9 +10,9 @@ import {
   StreamEvent,
   LLMMetadata,
   // Removed ConversationMessage, MessageRole as they are replaced by ArtStandard types for input
-} from '../../types';
-import { Logger } from '../../utils/logger';
-import { ARTError, ErrorCode } from '../../errors'; // Import ARTError and ErrorCode
+} from '@/types';
+import { Logger } from '@/utils/logger';
+import { ARTError, ErrorCode } from '@/errors'; // Import ARTError and ErrorCode
 
 // Define expected options for the Gemini adapter constructor
 /**

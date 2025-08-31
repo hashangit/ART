@@ -1,5 +1,5 @@
-import { StorageAdapter } from '../../core/interfaces';
-import { FilterOptions } from '../../types';
+import { StorageAdapter } from '@/core/interfaces';
+import { FilterOptions } from '@/types';
 
 /**
  * An in-memory implementation of the `StorageAdapter` interface.

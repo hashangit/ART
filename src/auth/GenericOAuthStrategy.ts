@@ -1,6 +1,6 @@
-import { IAuthStrategy } from '../core/interfaces';
-import { ARTError, ErrorCode } from '../errors';
-import { Logger } from '../utils/logger';
+import { IAuthStrategy } from '@/core/interfaces';
+import { ARTError, ErrorCode } from '@/errors';
+import { Logger } from '@/utils/logger';
 
 /**
  * Configuration for OAuth 2.0 authentication strategy

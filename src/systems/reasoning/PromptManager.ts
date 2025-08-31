@@ -1,9 +1,9 @@
 // src/systems/reasoning/PromptManager.ts
-import { PromptManager as PromptManagerInterface } from '../../core/interfaces';
-import { ArtStandardPrompt, PromptBlueprint, PromptContext } from '../../types';
-import { ArtStandardPromptSchema } from '../../types/schemas'; // Import Zod schema (Reverted - trying this path again)
-import { ARTError, ErrorCode } from '../../errors';
-import { Logger } from '../../utils/logger';
+import { PromptManager as PromptManagerInterface } from '@/core/interfaces';
+import { ArtStandardPrompt, PromptBlueprint, PromptContext } from '@/types';
+import { ArtStandardPromptSchema } from '@/types/schemas'; // Import Zod schema (Reverted - trying this path again)
+import { ARTError, ErrorCode } from '@/errors';
+import { Logger } from '@/utils/logger';
 import { ZodError } from 'zod'; // Import ZodError for type checking
 import mustache from 'mustache';
 

@@ -1,7 +1,7 @@
 // src/tools/CalculatorTool.ts
-import { IToolExecutor } from '../core/interfaces';
-import { ToolSchema, ExecutionContext, ToolResult } from '../types';
-import { Logger } from '../utils/logger';
+import { IToolExecutor } from '@/core/interfaces';
+import { ToolSchema, ExecutionContext, ToolResult } from '@/types';
+import { Logger } from '@/utils/logger';
 // Import necessary parts from mathjs
 import { evaluate, type Complex } from 'mathjs'; // Removed unused MathJsStatic, MathNode
 import * as math from 'mathjs'; // Import the full math object to access functions
