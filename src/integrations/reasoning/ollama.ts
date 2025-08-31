@@ -307,7 +307,11 @@ export class OllamaAdapter implements ProviderAdapter {
 
   /**
    * Translates the provider-agnostic `ArtStandardPrompt` into the OpenAI API's `OpenAIMessage[]` format.
-   * This is a common utility function that can be shared or adapted from other OpenAI-compatible adapters.
+   * This method can handle model-specific formatting, such as merging consecutive messages for certain models.
+   * @private
+   * @param {ArtStandardPrompt} artPrompt - The input `ArtStandardPrompt` array.
+   * @param {string} [modelIdForTransform] - The model ID, used to determine if special formatting is needed.
+   * @returns {OpenAIMessage[]} The `OpenAIMessage[]` array formatted for the OpenAI API.
    */
   private translateToOpenAI(artPrompt: ArtStandardPrompt, modelIdForTransform?: string): OpenAIMessage[] {
     const messagesToProcess = [...artPrompt];
@@ -376,6 +380,13 @@ export class OllamaAdapter implements ProviderAdapter {
 
   // Helper function to map a single ArtStandardMessage to an OpenAIMessage
   // This is called by translateToOpenAI
+  /**
+   * Maps a single `ArtStandardMessage` to an `OpenAIMessage`.
+   * @private
+   * @param {ArtStandardMessage} message - The message to map.
+   * @returns {OpenAIMessage} The mapped message.
+   * @throws {ARTError} If an unsupported or invalid message role is encountered.
+   */
   private mapArtMessageToOpenAIMessage(message: ArtStandardMessage): OpenAIMessage {
     switch (message.role) {
       case 'system':
@@ -437,7 +448,11 @@ export class OllamaAdapter implements ProviderAdapter {
   }
 
   /**
-   * Translates ART ToolSchema array to OpenAI's tool format.
+   * Translates an array of `ToolSchema` from the ART framework format to OpenAI's specific tool format.
+   * @private
+   * @param {ToolSchema[]} artTools - An array of ART tool schemas.
+   * @returns {OpenAI.Chat.Completions.ChatCompletionTool[]} An array of tools formatted for the OpenAI API.
+   * @throws {ARTError} If a tool's schema is invalid.
    */
   private translateArtToolsToOpenAI(artTools: ToolSchema[]): OpenAI.Chat.Completions.ChatCompletionTool[] {
     return artTools.map(artTool => {
@@ -458,11 +473,9 @@ export class OllamaAdapter implements ProviderAdapter {
   }
 
   /**
-   * Optional method for graceful shutdown.
-   * For Ollama, which is typically a separate local server, this adapter
-   * doesn't manage persistent connections that need explicit closing.
-   * The OpenAI client used internally might have its own cleanup, but
-   * it's generally handled by garbage collection.
+   * Optional method for graceful shutdown. For Ollama, which is typically a separate
+   * local server, this adapter doesn't manage persistent connections that need explicit closing.
+   * @returns {Promise<void>} A promise that resolves when the shutdown is complete.
    */
   async shutdown(): Promise<void> {
     Logger.debug(`OllamaAdapter shutdown called. No specific resources to release for model ${this.defaultModel || 'not set'}.`);

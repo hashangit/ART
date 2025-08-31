@@ -40,6 +40,7 @@ export class GeminiAdapter implements ProviderAdapter {
    * Creates an instance of GeminiAdapter.
    * @param {GeminiAdapterOptions} options - Configuration options for the adapter.
    * @throws {Error} If `apiKey` is missing in the options.
+   * @see https://ai.google.dev/api/rest
    */
   constructor(options: GeminiAdapterOptions) {
     if (!options.apiKey) {
@@ -74,6 +75,7 @@ export class GeminiAdapter implements ProviderAdapter {
    * @see {CallOptions}
    * @see {StreamEvent}
    * @see {LLMMetadata}
+   * @see https://ai.google.dev/api/rest/v1beta/models/generateContent
    */
   async call(prompt: ArtStandardPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
     const { threadId, traceId = `gemini-trace-${Date.now()}`, sessionId, stream, callContext, model: modelOverride } = options;

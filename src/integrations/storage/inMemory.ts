@@ -17,7 +17,16 @@ export class InMemoryStorageAdapter implements StorageAdapter {
   private storage: Map<string, Map<string, any>> = new Map();
 
   /**
-   * Initializes the adapter. This is a no-op for the in-memory adapter.
+   * Creates an instance of InMemoryStorageAdapter.
+   * @see StorageAdapter
+   */
+  constructor() {
+    // No-op
+  }
+
+  /**
+   * Initializes the adapter. This is a no-op for the in-memory adapter
+   * and is provided for interface compatibility.
    * @param _config - Optional configuration (ignored by this adapter).
    * @returns A promise that resolves immediately.
    */

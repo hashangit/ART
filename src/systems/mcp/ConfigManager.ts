@@ -12,16 +12,14 @@ export class ConfigManager {
   private config: ArtMcpConfig;
 
   /**
-   * @constructor
-   * @description Initializes the ConfigManager by loading the configuration from localStorage.
+   * Initializes the ConfigManager by loading the configuration from localStorage.
    */
   constructor() {
     this.config = this.loadConfig();
   }
 
   /**
-   * @method loadConfig
-   * @description Loads the MCP configuration from localStorage, creating a default if none exists.
+   * Loads the MCP configuration from localStorage, creating a default if none exists.
    * @private
    * @returns {ArtMcpConfig} The loaded or created MCP configuration.
    */
@@ -50,8 +48,7 @@ export class ConfigManager {
   }
 
   /**
-   * @method validateAndFixConfig
-   * @description Validates the loaded configuration and fixes any inconsistencies.
+   * Validates the loaded configuration and fixes any inconsistencies.
    * @private
    * @param {ArtMcpConfig} config - The configuration to validate.
    * @returns {ArtMcpConfig} The validated and fixed configuration.
@@ -126,8 +123,7 @@ export class ConfigManager {
   }
 
   /**
-   * @method createDefaultConfig
-   * @description Creates a default MCP configuration.
+   * Creates a default MCP configuration.
    * @private
    * @returns {ArtMcpConfig} The default MCP configuration.
    */
@@ -162,8 +158,7 @@ export class ConfigManager {
   }
 
   /**
-   * @method writeConfig
-   * @description Writes the MCP configuration to localStorage.
+   * Writes the MCP configuration to localStorage.
    * @private
    * @param {ArtMcpConfig} config - The configuration to write.
    */
@@ -178,8 +173,7 @@ export class ConfigManager {
   }
 
   /**
-   * @method getConfig
-   * @description Gets the current MCP configuration.
+   * Gets the current MCP configuration.
    * @returns {ArtMcpConfig} The current MCP configuration.
    */
   public getConfig(): ArtMcpConfig {
@@ -187,8 +181,7 @@ export class ConfigManager {
   }
 
   /**
-   * @method setServerConfig
-   * @description Sets the configuration for a specific server and saves it.
+   * Sets the configuration for a specific server and saves it.
    * @param {string} serverId - The ID of the server to configure.
    * @param {McpServerConfig} serverConfig - The configuration for the server.
    */
@@ -199,8 +192,7 @@ export class ConfigManager {
   }
 
   /**
-   * @method removeServerConfig
-   * @description Removes the configuration for a specific server and saves the changes.
+   * Removes the configuration for a specific server and saves the changes.
    * @param {string} serverId - The ID of the server to remove.
    */
   public removeServerConfig(serverId: string): void {

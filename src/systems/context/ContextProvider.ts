@@ -13,6 +13,8 @@ import { Logger } from '@/utils/logger'; // Import Logger
  *
  * For v1.0, the core context (history, config) is primarily managed and retrieved
  * directly via ConversationManager and StateManager within the Agent Core's flow.
+ * @see StateManager
+ * @see ConversationManager
  */
 export class ContextProvider {
     // Dependencies like StateManager and ConversationManager might be needed later
@@ -21,6 +23,9 @@ export class ContextProvider {
     //     private conversationManager: ConversationManager
     // ) {}
 
+    /**
+     * Creates an instance of ContextProvider.
+     */
     constructor() {
         Logger.info("ContextProvider initialized (v1.0 Placeholder)"); // Use Logger
     }
@@ -29,9 +34,9 @@ export class ContextProvider {
      * Retrieves relevant dynamic context based on the current state.
      * Placeholder implementation for v1.0.
      *
-     * @param _threadId The ID of the current thread.
-     * @param _query The current user query or intent.
-     * @returns A promise resolving to a context object (currently empty).
+     * @param {string} _threadId The ID of the current thread.
+     * @param {string} [_query] The current user query or intent.
+     * @returns {Promise<Record<string, any>>} A promise resolving to a context object (currently empty).
      */
     async getDynamicContext(_threadId: string, _query?: string): Promise<Record<string, any>> {
         // In future versions, this method would:

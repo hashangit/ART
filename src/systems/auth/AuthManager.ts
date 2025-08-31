@@ -98,6 +98,12 @@ export class AuthManager {
     Logger.debug(`AuthManager: Cleared ${count} strategies.`);
   }
 
+  /**
+   * Initiates the login flow for a specific strategy.
+   * @param {string} strategyId - The ID of the strategy to use for login.
+   * @returns {Promise<void>} A promise that resolves when the login process is initiated.
+   * @throws {ARTError} If the strategy is not found or does not support login.
+   */
   public async login(strategyId: string): Promise<void> {
     const strategy = this.strategies.get(strategyId);
     if (!strategy || !strategy.login) {
@@ -106,6 +112,12 @@ export class AuthManager {
     await strategy.login();
   }
 
+  /**
+   * Handles the redirect from an OAuth provider.
+   * @param {string} strategyId - The ID of the strategy that initiated the redirect.
+   * @returns {Promise<void>} A promise that resolves when the redirect has been handled.
+   * @throws {ARTError} If the strategy is not found or does not support handling redirects.
+   */
   public async handleRedirect(strategyId: string): Promise<void> {
     const strategy = this.strategies.get(strategyId);
     if (!strategy || !strategy.handleRedirect) {
@@ -114,6 +126,11 @@ export class AuthManager {
     await strategy.handleRedirect();
   }
 
+  /**
+   * Logs the user out of a specific strategy.
+   * @param {string} strategyId - The ID of the strategy to use for logout.
+   * @throws {ARTError} If the strategy is not found or does not support logout.
+   */
   public logout(strategyId: string): void {
     const strategy = this.strategies.get(strategyId);
     if (!strategy || !strategy.logout) {
@@ -122,6 +139,11 @@ export class AuthManager {
     strategy.logout();
   }
 
+  /**
+   * Checks if the user is authenticated with a specific strategy.
+   * @param {string} strategyId - The ID of the strategy to check.
+   * @returns {Promise<boolean>} A promise that resolves to true if authenticated, false otherwise.
+   */
   public async isAuthenticated(strategyId: string): Promise<boolean> {
     const strategy = this.strategies.get(strategyId);
     if (!strategy || !strategy.isAuthenticated) {

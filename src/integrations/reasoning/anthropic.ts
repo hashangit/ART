@@ -390,9 +390,11 @@ export class AnthropicAdapter implements ProviderAdapter {
   }
 
   /**
-   * Prepares request options. Currently a placeholder for potential future additions
-   * like Anthropic beta headers for specific models or features (e.g., prompt caching).
-   * The user's example code shows more advanced beta header logic.
+   * Prepares request options, adding Anthropic beta headers if applicable for features like prompt caching.
+   * This allows opting into experimental features on a per-request basis.
+   * @private
+   * @param {string} modelId - The model ID being used for the request, to determine which beta features may apply.
+   * @returns {Anthropic.RequestOptions} The request options object, potentially with custom headers.
    */
   private getRequestOptions(modelId: string): Anthropic.RequestOptions {
     const betas: string[] = [];
@@ -419,11 +421,12 @@ export class AnthropicAdapter implements ProviderAdapter {
 
   /**
    * Translates the provider-agnostic `ArtStandardPrompt` into the Anthropic SDK Messages format.
+   * It handles system prompts, message merging for consecutive roles, and validates message structure.
    *
    * @private
    * @param {ArtStandardPrompt} artPrompt - The input `ArtStandardPrompt` array.
-   * @returns {{ systemPrompt?: string; messages: AnthropicSDKMessageParam[] }}
-   * @throws {ARTError} If translation encounters an issue.
+   * @returns {{ systemPrompt?: string; messages: Anthropic.Messages.MessageParam[] }} An object containing the extracted system prompt and the array of Anthropic-formatted messages.
+   * @throws {ARTError} If translation encounters an issue, such as multiple system messages or invalid message roles.
    */
   private translateToAnthropicSdk(artPrompt: ArtStandardPrompt): { systemPrompt?: string; messages: Anthropic.Messages.MessageParam[] } {
     let systemPrompt: string | undefined;
@@ -492,7 +495,14 @@ export class AnthropicAdapter implements ProviderAdapter {
   }
 
   /**
-   * Maps a single ArtStandardMessage to Anthropic SDK's content format (string or AnthropicSDKContentBlockParam[]).
+   * Maps a single `ArtStandardMessage` to Anthropic SDK's content format.
+   * This can be a simple string or an array of `ContentBlockParam` for complex content
+   * like tool calls and tool results.
+   *
+   * @private
+   * @param {ArtStandardMessage} artMsg - The ART standard message to map.
+   * @returns {string | AnthropicSDKContentBlockParam[]} The translated content for the Anthropic API.
+   * @throws {ARTError} If tool call arguments are not valid JSON or if a tool result is missing its ID.
    */
   private mapArtMessageToAnthropicContent(artMsg: ArtStandardMessage): string | AnthropicSDKContentBlockParam[] {
     const blocks: AnthropicSDKContentBlockParam[] = [];
@@ -570,7 +580,11 @@ export class AnthropicAdapter implements ProviderAdapter {
   }
 
   /**
-   * Translates ART ToolSchema array to Anthropic's tool format.
+   * Translates an array of `ToolSchema` from the ART framework format to Anthropic's specific tool format.
+   * @private
+   * @param {ToolSchema[]} artTools - An array of ART tool schemas.
+   * @returns {AnthropicSDKTool[]} An array of tools formatted for the Anthropic API.
+   * @throws {ARTError} If a tool's `inputSchema` is invalid.
    */
   private translateArtToolsToAnthropic(artTools: ToolSchema[]): AnthropicSDKTool[] {
     return artTools.map(artTool => {

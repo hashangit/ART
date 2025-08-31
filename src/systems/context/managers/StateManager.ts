@@ -36,6 +36,11 @@ export class StateManager implements IStateManager {
     private strategy: StateSavingStrategy;
     private contextCache: Map<string, { originalStateSnapshot: string | null, context: ThreadContext }>;
 
+    /**
+     * Creates an instance of StateManager.
+     * @param {IStateRepository} stateRepository - The repository for persisting state.
+     * @param {StateSavingStrategy} [strategy='explicit'] - The state saving strategy to use.
+     */
     constructor(
         stateRepository: IStateRepository,
         strategy: StateSavingStrategy = 'explicit' // Default to explicit
@@ -49,9 +54,9 @@ export class StateManager implements IStateManager {
      * Loads the complete context (`ThreadConfig` and `AgentState`) for a specific thread.
      * If in 'implicit' state saving strategy, it caches the loaded context and a snapshot
      * of its AgentState for later comparison in `saveStateIfModified`.
-     * @param threadId - The unique identifier for the thread.
-     * @param _userId - Optional user identifier (currently unused).
-     * @returns A promise resolving to the `ThreadContext` object.
+     * @param {string} threadId - The unique identifier for the thread.
+     * @param {string} [_userId] - Optional user identifier (currently unused).
+     * @returns {Promise<ThreadContext>} A promise resolving to the `ThreadContext` object.
      * @throws {Error} If `threadId` is empty or if the repository fails to find the context.
      */
     async loadThreadContext(threadId: string, _userId?: string): Promise<ThreadContext> {
@@ -88,9 +93,9 @@ export class StateManager implements IStateManager {
     /**
      * Checks if a specific tool is permitted for use within a given thread.
      * It loads the thread's context and checks the `enabledTools` array in the configuration.
-     * @param threadId - The ID of the thread.
-     * @param toolName - The name of the tool to check.
-     * @returns A promise resolving to `true` if the tool is listed in the thread's `enabledTools` config, `false` otherwise or if the context/config cannot be loaded.
+     * @param {string} threadId - The ID of the thread.
+     * @param {string} toolName - The name of the tool to check.
+     * @returns {Promise<boolean>} A promise resolving to `true` if the tool is listed in the thread's `enabledTools` config, `false` otherwise or if the context/config cannot be loaded.
      */
     async isToolEnabled(threadId: string, toolName: string): Promise<boolean> {
         try {
@@ -106,9 +111,9 @@ export class StateManager implements IStateManager {
      * Retrieves a specific value from the thread's configuration (`ThreadConfig`).
      * Loads the context first (which might come from cache in implicit mode).
      * @template T - The expected type of the configuration value.
-     * @param threadId - The ID of the thread.
-     * @param key - The top-level configuration key.
-     * @returns A promise resolving to the configuration value, or `undefined`.
+     * @param {string} threadId - The ID of the thread.
+     * @param {string} key - The top-level configuration key.
+     * @returns {Promise<T | undefined>} A promise resolving to the configuration value, or `undefined`.
      */
     async getThreadConfigValue<T>(threadId: string, key: string): Promise<T | undefined> {
          const context = await this.loadThreadContext(threadId); // Will use cache if implicit
@@ -130,7 +135,8 @@ export class StateManager implements IStateManager {
      * - 'implicit': Compares the current `AgentState` (from the cached `ThreadContext` modified by the agent)
      *               with the snapshot taken during `loadThreadContext`. If different, saves the state
      *               to the repository and updates the snapshot.
-     * @param threadId - The ID of the thread whose state might need saving.
+     * @param {string} threadId - The ID of the thread whose state might need saving.
+     * @returns {Promise<void>} A promise that resolves when the state is saved or the operation is skipped.
      */
     async saveStateIfModified(threadId: string): Promise<void> {
         if (!threadId) {
@@ -187,8 +193,9 @@ export class StateManager implements IStateManager {
       /**
         * Sets or completely replaces the configuration (`ThreadConfig`) for a specific thread
         * by calling the underlying state repository. This also clears any cached context for the thread.
-        * @param threadId - The ID of the thread.
-        * @param config - The complete `ThreadConfig` object.
+        * @param {string} threadId - The ID of the thread.
+        * @param {ThreadConfig} config - The complete `ThreadConfig` object.
+        * @returns {Promise<void>} A promise that resolves when the configuration is saved.
         */
       async setThreadConfig(threadId: string, config: ThreadConfig): Promise<void> {
         if (!threadId || !config) {
@@ -208,8 +215,9 @@ export class StateManager implements IStateManager {
      * Explicitly sets or updates the AgentState for a specific thread by calling the underlying state repository.
      * If in 'implicit' mode, this also updates the cached snapshot to prevent `saveStateIfModified`
      * from re-saving the same state immediately.
-     * @param threadId - The unique identifier of the thread.
-     * @param state - The AgentState object to save. Must not be undefined or null.
+     * @param {string} threadId - The unique identifier of the thread.
+     * @param {AgentState} state - The AgentState object to save. Must not be undefined or null.
+     * @returns {Promise<void>} A promise that resolves when the state is saved.
      * @throws {Error} If threadId or state is undefined/null, or if the repository fails.
      */
     async setAgentState(threadId: string, state: AgentState): Promise<void> {
@@ -244,8 +252,9 @@ export class StateManager implements IStateManager {
      * Enables specific tools for a conversation thread by adding them to the thread's enabled tools list.
      * This method loads the current thread configuration, updates the enabledTools array,
      * and persists the changes. Cache is invalidated to ensure fresh data on next load.
-     * @param threadId - The unique identifier of the thread.
-     * @param toolNames - Array of tool names to enable for this thread.
+     * @param {string} threadId - The unique identifier of the thread.
+     * @param {string[]} toolNames - Array of tool names to enable for this thread.
+     * @returns {Promise<void>} A promise that resolves when the tools are enabled.
      * @throws {Error} If threadId is empty, toolNames is empty, or if the repository fails.
      */
     async enableToolsForThread(threadId: string, toolNames: string[]): Promise<void> {
@@ -280,8 +289,9 @@ export class StateManager implements IStateManager {
      * Disables specific tools for a conversation thread by removing them from the thread's enabled tools list.
      * This method loads the current thread configuration, updates the enabledTools array,
      * and persists the changes. Cache is invalidated to ensure fresh data on next load.
-     * @param threadId - The unique identifier of the thread.
-     * @param toolNames - Array of tool names to disable for this thread.
+     * @param {string} threadId - The unique identifier of the thread.
+     * @param {string[]} toolNames - Array of tool names to disable for this thread.
+     * @returns {Promise<void>} A promise that resolves when the tools are disabled.
      * @throws {Error} If threadId is empty, toolNames is empty, or if the repository fails.
      */
     async disableToolsForThread(threadId: string, toolNames: string[]): Promise<void> {
@@ -315,8 +325,8 @@ export class StateManager implements IStateManager {
     /**
      * Gets the list of currently enabled tools for a specific thread.
      * This is a convenience method that loads the thread context and returns the enabledTools array.
-     * @param threadId - The unique identifier of the thread.
-     * @returns A promise that resolves to an array of enabled tool names, or empty array if no tools are enabled.
+     * @param {string} threadId - The unique identifier of the thread.
+     * @returns {Promise<string[]>} A promise that resolves to an array of enabled tool names, or empty array if no tools are enabled.
      * @throws {Error} If the thread context cannot be loaded.
      */
     async getEnabledToolsForThread(threadId: string): Promise<string[]> {

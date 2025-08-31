@@ -83,6 +83,11 @@ export class AgentDiscoveryService {
   private readonly config: Required<AgentDiscoveryConfig>;
   private agentCache: Map<string, { agents: A2AAgentInfo[]; timestamp: number }> = new Map();
 
+  /**
+   * Creates an instance of AgentDiscoveryService.
+   * @param {Partial<AgentDiscoveryConfig>} config - The configuration for the service.
+   * @see A2AAgentCard
+   */
   constructor(config?: Partial<AgentDiscoveryConfig>) {
     this.config = {
       discoveryEndpoint: 'https://api.zyntopia.com/a2a/discover', // Default endpoint
@@ -189,6 +194,7 @@ export class AgentDiscoveryService {
    * @param topK - The maximum number of agents to return.
    * @param traceId - Optional trace ID for request tracking.
    * @returns Promise resolving to a ranked array of matching agents.
+   * @todo Revisit and enhance the scoring algorithm.
    */
   async findTopAgentsForTask(taskType: string, topK: number = 3, traceId?: string): Promise<A2AAgentInfo[]> {
     const agents = await this.discoverAgents(traceId);

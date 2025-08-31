@@ -13,8 +13,8 @@ export class ConversationManager implements IConversationManager {
 
     /**
      * Creates an instance of ConversationManager.
-     * @param conversationRepository - The repository responsible for persisting conversation messages.
-     * @param conversationSocket - The socket instance used to notify the UI of new messages.
+     * @param {IConversationRepository} conversationRepository - The repository responsible for persisting conversation messages.
+     * @param {ConversationSocket} conversationSocket - The socket instance used to notify the UI of new messages.
      */
     constructor(
         conversationRepository: IConversationRepository,
@@ -27,9 +27,9 @@ export class ConversationManager implements IConversationManager {
     /**
      * Adds one or more messages to a specific thread's history using the repository
      * and notifies the `ConversationSocket` for each added message.
-     * @param threadId - The ID of the thread to add messages to. Must not be empty.
-     * @param messages - An array of `ConversationMessage` objects to add.
-     * @returns A promise that resolves when messages are saved and notifications are sent (or attempted).
+     * @param {string} threadId - The ID of the thread to add messages to. Must not be empty.
+     * @param {ConversationMessage[]} messages - An array of `ConversationMessage` objects to add.
+     * @returns {Promise<void>} A promise that resolves when messages are saved and notifications are sent (or attempted).
      * @throws {Error} If `threadId` is empty. Repository errors might also propagate.
      */
     async addMessages(threadId: string, messages: ConversationMessage[]): Promise<void> {
@@ -58,9 +58,9 @@ export class ConversationManager implements IConversationManager {
 
     /**
      * Retrieves messages from a specific thread's history using the repository.
-     * @param threadId - The ID of the thread whose history is needed. Must not be empty.
-     * @param options - Optional parameters (`MessageOptions`) to control retrieval (e.g., limit, timestamp filters).
-     * @returns A promise resolving to an array of `ConversationMessage` objects, typically ordered newest first by the repository.
+     * @param {string} threadId - The ID of the thread whose history is needed. Must not be empty.
+     * @param {MessageOptions} [options] - Optional parameters (`MessageOptions`) to control retrieval (e.g., limit, timestamp filters).
+     * @returns {Promise<ConversationMessage[]>} A promise resolving to an array of `ConversationMessage` objects, typically ordered newest first by the repository.
      * @throws {Error} If `threadId` is empty. Repository errors might also propagate.
      */
     async getMessages(threadId: string, options?: MessageOptions): Promise<ConversationMessage[]> {

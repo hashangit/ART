@@ -1,9 +1,26 @@
-// src/types/schemas.ts
+/**
+ * @module types/schemas
+ * @description This module defines Zod schemas for validating the core data structures of the ART framework,
+ * particularly the standardized prompt and message formats. These schemas ensure data integrity and consistency
+ * when creating and processing prompts.
+ *
+ * @see {@link ArtStandardMessage} for the interface being validated.
+ * @see {@link ArtStandardPrompt} for the array structure being validated.
+ */
 import { z } from 'zod';
 import { ArtStandardMessageRole } from '@/types'; // Import role type from main types
 
 /**
- * Zod schema for validating a single ArtStandardMessage object.
+ * Zod schema for validating a single {@link ArtStandardMessage} object.
+ *
+ * @remarks
+ * This schema enforces the structural and type requirements for each message, including:
+ * - A valid `role` from the {@link ArtStandardMessageRole} enum.
+ * - `content` that matches the expected type for a given role (e.g., string for 'user', string or null for 'assistant').
+ * - The presence of `tool_call_id` for 'tool' or 'tool_result' roles.
+ * - The structure of `tool_calls` when present in an 'assistant' message.
+ *
+ * It uses a `.refine()` method to implement context-aware validation based on the message's `role`.
  */
 export const ArtStandardMessageSchema = z.object({
   role: z.custom<ArtStandardMessageRole>((val) => {
@@ -49,6 +66,10 @@ export const ArtStandardMessageSchema = z.object({
 
 
 /**
- * Zod schema for validating an entire ArtStandardPrompt (an array of messages).
+ * Zod schema for validating an entire {@link ArtStandardPrompt} (an array of messages).
+ *
+ * @remarks
+ * This is a straightforward array schema that applies the {@link ArtStandardMessageSchema} to each element,
+ * ensuring that every message in the prompt conforms to the required structure.
  */
 export const ArtStandardPromptSchema = z.array(ArtStandardMessageSchema);

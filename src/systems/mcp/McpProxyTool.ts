@@ -6,9 +6,15 @@ import { McpServerConfig, McpToolDefinition } from './types';
 import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 
 /**
- * @class McpProxyTool
- * @description A proxy tool that wraps an MCP server tool and implements the IToolExecutor interface.
+ * A proxy tool that wraps an MCP server tool and implements the {@link IToolExecutor} interface.
+ *
+ * @remarks
  * This allows MCP server tools to be used seamlessly within the ART Framework.
+ *
+ * @see {@link McpManager} for the system that manages these proxy tools.
+ * @see {@link IToolExecutor} for the interface it implements.
+ *
+ * @class McpProxyTool
  * @implements {IToolExecutor}
  */
 export class McpProxyTool implements IToolExecutor {
@@ -19,11 +25,11 @@ export class McpProxyTool implements IToolExecutor {
   private mcpManager: McpManager;
 
   /**
-   * @constructor
-   * @description Creates a new MCP proxy tool.
-   * @param {McpServerConfig} card - Configuration for the MCP server hosting this tool.
-   * @param {McpToolDefinition} toolDefinition - The tool definition from the MCP server.
-   * @param {McpManager} mcpManager - The MCP manager for managing connections.
+   * Creates an instance of McpProxyTool.
+   *
+   * @param card Configuration for the MCP server hosting this tool.
+   * @param toolDefinition The tool definition from the MCP server.
+   * @param mcpManager The MCP manager for managing connections.
    */
   constructor(card: McpServerConfig, toolDefinition: McpToolDefinition, mcpManager: McpManager) {
     this.card = card;
@@ -42,11 +48,11 @@ export class McpProxyTool implements IToolExecutor {
   }
 
   /**
-   * @method execute
-   * @description Executes the tool by making a request to the MCP server.
-   * @param {any} input - Validated input arguments for the tool.
-   * @param {ExecutionContext} context - Execution context containing threadId, traceId, etc.
-   * @returns {Promise<ToolResult>} A promise resolving to the tool result.
+   * Executes the tool by making a request to the MCP server.
+   *
+   * @param input Validated input arguments for the tool.
+   * @param context Execution context containing threadId, traceId, etc.
+   * @returns A promise resolving to the tool result.
    */
   async execute(input: any, context: ExecutionContext): Promise<ToolResult> {
     const startTime = Date.now();
@@ -94,27 +100,27 @@ export class McpProxyTool implements IToolExecutor {
   }
 
   /**
-   * @method getOriginalToolName
-   * @description Gets the original tool name from the MCP server.
-   * @returns {string} The original tool name.
+   * Gets the original tool name from the MCP server.
+   *
+   * @returns The original tool name.
    */
   getOriginalToolName(): string {
     return this.toolDefinition.name;
   }
 
   /**
-   * @method getServerConfig
-   * @description Gets the MCP server configuration.
-   * @returns {McpServerConfig} The server configuration.
+   * Gets the MCP server configuration.
+   *
+   * @returns The server configuration.
    */
   getServerConfig(): McpServerConfig {
     return { ...this.card };
   }
 
   /**
-   * @method getToolDefinition
-   * @description Gets the MCP tool definition.
-   * @returns {McpToolDefinition} The tool definition.
+   * Gets the MCP tool definition.
+   *
+   * @returns The tool definition.
    */
   getToolDefinition(): McpToolDefinition {
     return { ...this.toolDefinition };

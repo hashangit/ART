@@ -1,26 +1,45 @@
-// src/utils/xml-matcher.ts
+/**
+ * @module utils/xml-matcher
+ * @description Provides a utility class for incrementally parsing and extracting content
+ * from within specific XML tags from a stream of text. This is particularly useful for
+ * handling LLM responses that embed structured data (like thoughts or plans) within XML tags.
+ */
 
 /**
- * Represents a chunk of text processed by XmlMatcher, indicating whether
+ * Represents a chunk of text processed by {@link XmlMatcher}, indicating whether
  * it was part of the matched XML tag's content or outside of it.
+ *
+ * @interface XmlMatcherChunk
  */
 export interface XmlMatcherChunk {
-  /** True if this chunk was inside the matched XML tag, false otherwise. */
+  /**
+   * True if this chunk was inside the matched XML tag, false otherwise.
+   * @property {boolean} matched
+   */
   matched: boolean;
-  /** The text content of this chunk. */
+  /**
+   * The text content of this chunk.
+   * @property {string} data
+   */
   data: string;
 }
 
 /**
  * A utility class to find and extract content within a specific XML tag from a stream of text.
+ *
+ * @remarks
  * It processes text chunks incrementally and yields segments, marking whether each segment
  * was inside or outside the specified XML tag.
  *
- * Example: Given tagName 'think', and input "Some text <think>this is a thought</think> and more text.",
- * it would yield:
- * - { matched: false, data: "Some text " }
- * - { matched: true, data: "this is a thought" }
- * - { matched: false, data: " and more text." }
+ * @example
+ * // Given tagName 'think', and input "Some text <think>this is a thought</think> and more text.",
+ * // it would yield:
+ * // - { matched: false, data: "Some text " }
+ * // - { matched: true, data: "this is a thought" }
+ * // - { matched: false, data: " and more text." }
+ *
+ * @class XmlMatcher
+ * @template Result - The type of the transformed chunk, defaults to {@link XmlMatcherChunk}.
  */
 export class XmlMatcher<Result = XmlMatcherChunk> {
   private index = 0;
@@ -32,14 +51,13 @@ export class XmlMatcher<Result = XmlMatcherChunk> {
 
   /**
    * Constructs an XmlMatcher.
+   *
    * @param tagName The name of the XML tag to match (e.g., "think").
-   * @param transform An optional function to transform the yielded XmlMatcherChunk into a custom Result type.
+   * @param transform An optional function to transform the yielded {@link XmlMatcherChunk} into a custom Result type.
    * @param position The character position in the input stream at which matching should begin.
    *                 If 0, matching starts immediately. If greater than 0, characters before this
    *                 position are treated as unmatched text until the tag is encountered at or after
    *                 this position. This is useful if the tag is expected after some preamble.
-   *                 The example code had `this.pointer <= this.position + 1 || this.matched`
-   *                 which implies matching can start if we are at/before the desired start position OR if we are already in a matched state.
    */
   constructor(
     readonly tagName: string,
@@ -92,6 +110,7 @@ export class XmlMatcher<Result = XmlMatcherChunk> {
 
   /**
    * Processes an incoming chunk of text.
+   *
    * @param chunk The text chunk to process.
    * @returns An array of transformed results based on the matched segments.
    */
@@ -175,6 +194,7 @@ export class XmlMatcher<Result = XmlMatcherChunk> {
 
   /**
    * Finalizes processing, flushing any remaining buffered text.
+   *
    * @param chunk An optional final text chunk to process.
    * @returns An array of transformed results.
    */

@@ -40,7 +40,8 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
   /**
    * Creates an instance of IndexedDBStorageAdapter.
    * Note: The database connection is not opened until `init()` is called.
-   * @param config - Configuration options including database name, version, and required object stores.
+   * @param {IndexedDBConfig} config - Configuration options including database name, version, and required object stores.
+   * @see https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API
    */
   constructor(config: IndexedDBConfig) {
     this.dbName = config.dbName || DEFAULT_DB_NAME;
@@ -67,8 +68,6 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
     if (this.initPromise) {
       return this.initPromise;
     }
-
-// ... (rest of the file remains the same until line 71)
 
     this.initPromise = new Promise((resolve, reject) => {
       if (!('indexedDB' in window)) {
@@ -318,6 +317,7 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
    * @param filterOptions - Options for filtering, sorting, skipping, and limiting results.
    * @returns A promise resolving to an array of deep copies of the matching items.
    * @throws {Error} If the database is not initialized, the store doesn't exist, or a database error occurs.
+   * @todo Implement more advanced querying using IndexedDB indexes and cursors.
    */
   async query<T>(collection: string, filterOptions: FilterOptions): Promise<T[]> {
      await this.init(); // Ensure DB is ready

@@ -45,7 +45,7 @@ export class ZyntopiaOAuthStrategy extends GenericOAuthStrategy {
 
   /**
    * Creates a new Zyntopia OAuth authentication strategy.
-   * @param config - Zyntopia-specific OAuth configuration
+   * @param {ZyntopiaOAuthConfig} config - Zyntopia-specific OAuth configuration
    */
   constructor(config: ZyntopiaOAuthConfig) {
     // Set defaults for Zyntopia
@@ -92,7 +92,7 @@ export class ZyntopiaOAuthStrategy extends GenericOAuthStrategy {
 
   /**
    * Gets the Zyntopia-specific configuration.
-   * @returns Zyntopia configuration (excluding sensitive data)
+   * @returns {Omit<ZyntopiaOAuthConfig, 'clientSecret'>} Zyntopia configuration (excluding sensitive data).
    */
   public getZyntopiaConfig(): Omit<ZyntopiaOAuthConfig, 'clientSecret'> {
     return {
@@ -108,7 +108,7 @@ export class ZyntopiaOAuthStrategy extends GenericOAuthStrategy {
 
   /**
    * Gets the current environment this strategy is configured for.
-   * @returns The environment ('production', 'staging', or 'development')
+   * @returns {'production' | 'staging' | 'development'} The environment ('production', 'staging', or 'development').
    */
   public getEnvironment(): 'production' | 'staging' | 'development' {
     return this.zyntopiaConfig.environment;
@@ -116,7 +116,7 @@ export class ZyntopiaOAuthStrategy extends GenericOAuthStrategy {
 
   /**
    * Checks if this strategy is configured for production environment.
-   * @returns True if configured for production, false otherwise
+   * @returns {boolean} True if configured for production, false otherwise.
    */
   public isProduction(): boolean {
     return this.zyntopiaConfig.environment === 'production';
@@ -124,7 +124,7 @@ export class ZyntopiaOAuthStrategy extends GenericOAuthStrategy {
 
   /**
    * Checks if this strategy is configured for development/testing.
-   * @returns True if configured for development or staging, false for production
+   * @returns {boolean} True if configured for development or staging, false for production.
    */
   public isDevelopment(): boolean {
     return this.zyntopiaConfig.environment !== 'production';
@@ -132,10 +132,10 @@ export class ZyntopiaOAuthStrategy extends GenericOAuthStrategy {
 
   /**
    * Creates a ZyntopiaOAuthStrategy instance pre-configured for production.
-   * @param clientId - Zyntopia client ID
-   * @param clientSecret - Zyntopia client secret
-   * @param customScopes - Optional custom scopes (defaults to production scopes)
-   * @returns Configured ZyntopiaOAuthStrategy for production
+   * @param {string} clientId - Zyntopia client ID
+   * @param {string} clientSecret - Zyntopia client secret
+   * @param {string} [customScopes] - Optional custom scopes (defaults to production scopes)
+   * @returns {ZyntopiaOAuthStrategy} Configured ZyntopiaOAuthStrategy for production.
    */
   public static forProduction(
     clientId: string, 
@@ -152,10 +152,10 @@ export class ZyntopiaOAuthStrategy extends GenericOAuthStrategy {
 
   /**
    * Creates a ZyntopiaOAuthStrategy instance pre-configured for staging.
-   * @param clientId - Zyntopia client ID
-   * @param clientSecret - Zyntopia client secret
-   * @param customScopes - Optional custom scopes (defaults to staging scopes)
-   * @returns Configured ZyntopiaOAuthStrategy for staging
+   * @param {string} clientId - Zyntopia client ID
+   * @param {string} clientSecret - Zyntopia client secret
+   * @param {string} [customScopes] - Optional custom scopes (defaults to staging scopes)
+   * @returns {ZyntopiaOAuthStrategy} Configured ZyntopiaOAuthStrategy for staging.
    */
   public static forStaging(
     clientId: string, 
@@ -172,10 +172,10 @@ export class ZyntopiaOAuthStrategy extends GenericOAuthStrategy {
 
   /**
    * Creates a ZyntopiaOAuthStrategy instance pre-configured for development.
-   * @param clientId - Zyntopia client ID
-   * @param clientSecret - Zyntopia client secret
-   * @param customScopes - Optional custom scopes (defaults to development scopes)
-   * @returns Configured ZyntopiaOAuthStrategy for development
+   * @param {string} clientId - Zyntopia client ID
+   * @param {string} clientSecret - Zyntopia client secret
+   * @param {string} [customScopes] - Optional custom scopes (defaults to development scopes)
+   * @returns {ZyntopiaOAuthStrategy} Configured ZyntopiaOAuthStrategy for development.
    */
   public static forDevelopment(
     clientId: string, 
@@ -192,8 +192,8 @@ export class ZyntopiaOAuthStrategy extends GenericOAuthStrategy {
 
   /**
    * Gets the default scopes for a specific environment.
-   * @param environment - The environment to get scopes for
-   * @returns Default scopes for the specified environment
+   * @param {'production' | 'staging' | 'development'} environment - The environment to get scopes for
+   * @returns {string} Default scopes for the specified environment.
    */
   public static getDefaultScopes(environment: 'production' | 'staging' | 'development'): string {
     return ZyntopiaOAuthStrategy.ZYNTOPIA_DEFAULT_SCOPES[environment];
@@ -201,8 +201,8 @@ export class ZyntopiaOAuthStrategy extends GenericOAuthStrategy {
 
   /**
    * Gets the token endpoint for a specific environment.
-   * @param environment - The environment to get endpoint for
-   * @returns Token endpoint URL for the specified environment
+   * @param {'production' | 'staging' | 'development'} environment - The environment to get endpoint for
+   * @returns {string} Token endpoint URL for the specified environment.
    */
   public static getTokenEndpoint(environment: 'production' | 'staging' | 'development'): string {
     return ZyntopiaOAuthStrategy.ZYNTOPIA_ENDPOINTS[environment];
@@ -210,8 +210,8 @@ export class ZyntopiaOAuthStrategy extends GenericOAuthStrategy {
 
   /**
    * Validates Zyntopia-specific configuration requirements.
-   * @param config - Configuration to validate
-   * @throws {Error} If configuration is invalid
+   * @param {ZyntopiaOAuthConfig} config - Configuration to validate
+   * @throws {Error} If configuration is invalid.
    */
   public static validateZyntopiaConfig(config: ZyntopiaOAuthConfig): void {
     if (!config.clientId || config.clientId.trim() === '') {

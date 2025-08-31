@@ -18,7 +18,7 @@ export class TaskStatusRepository implements IA2ATaskRepository {
 
   /**
    * Creates an instance of TaskStatusRepository.
-   * @param storageAdapter - The configured `StorageAdapter` instance used for persistence.
+   * @param {StorageAdapter} storageAdapter - The configured `StorageAdapter` instance used for persistence.
    */
   constructor(storageAdapter: StorageAdapter) {
     if (!storageAdapter) {
@@ -30,8 +30,8 @@ export class TaskStatusRepository implements IA2ATaskRepository {
 
   /**
    * Creates a new A2A task in the repository.
-   * @param task - The A2ATask object to create.
-   * @returns A promise that resolves when the task is successfully stored.
+   * @param {A2ATask} task - The A2ATask object to create.
+   * @returns {Promise<void>} A promise that resolves when the task is successfully stored.
    * @throws {ARTError} If the task cannot be created (e.g., duplicate taskId, validation errors).
    */
   async createTask(task: A2ATask): Promise<void> {
@@ -56,8 +56,8 @@ export class TaskStatusRepository implements IA2ATaskRepository {
 
   /**
    * Retrieves an A2A task by its unique identifier.
-   * @param taskId - The unique identifier of the task.
-   * @returns A promise resolving to the A2ATask object if found, or null if not found.
+   * @param {string} taskId - The unique identifier of the task.
+   * @returns {Promise<A2ATask | null>} A promise resolving to the A2ATask object if found, or null if not found.
    * @throws {ARTError} If an error occurs during retrieval.
    */
   async getTask(taskId: string): Promise<A2ATask | null> {
@@ -82,9 +82,9 @@ export class TaskStatusRepository implements IA2ATaskRepository {
 
   /**
    * Updates an existing A2A task with new information.
-   * @param taskId - The unique identifier of the task to update.
-   * @param updates - Partial A2ATask object containing the fields to update.
-   * @returns A promise that resolves when the task is successfully updated.
+   * @param {string} taskId - The unique identifier of the task to update.
+   * @param {Partial<A2ATask>} updates - Partial A2ATask object containing the fields to update.
+   * @returns {Promise<void>} A promise that resolves when the task is successfully updated.
    * @throws {ARTError} If the task is not found or cannot be updated.
    */
   async updateTask(taskId: string, updates: Partial<A2ATask>): Promise<void> {
@@ -131,8 +131,8 @@ export class TaskStatusRepository implements IA2ATaskRepository {
 
   /**
    * Removes an A2A task from the repository.
-   * @param taskId - The unique identifier of the task to delete.
-   * @returns A promise that resolves when the task is successfully deleted.
+   * @param {string} taskId - The unique identifier of the task to delete.
+   * @returns {Promise<void>} A promise that resolves when the task is successfully deleted.
    * @throws {ARTError} If the task is not found or cannot be deleted.
    */
   async deleteTask(taskId: string): Promise<void> {
@@ -158,9 +158,9 @@ export class TaskStatusRepository implements IA2ATaskRepository {
 
   /**
    * Retrieves tasks associated with a specific thread.
-   * @param threadId - The thread identifier to filter tasks.
-   * @param filter - Optional filter criteria for task status, priority, or assigned agent.
-   * @returns A promise resolving to an array of A2ATask objects matching the criteria.
+   * @param {string} threadId - The thread identifier to filter tasks.
+   * @param {object} [filter] - Optional filter criteria for task status, priority, or assigned agent.
+   * @returns {Promise<A2ATask[]>} A promise resolving to an array of A2ATask objects matching the criteria.
    */
   async getTasksByThread(
     threadId: string,
@@ -212,9 +212,9 @@ export class TaskStatusRepository implements IA2ATaskRepository {
 
   /**
    * Retrieves tasks assigned to a specific agent.
-   * @param agentId - The agent identifier to filter tasks.
-   * @param filter - Optional filter criteria for task status or priority.
-   * @returns A promise resolving to an array of A2ATask objects assigned to the agent.
+   * @param {string} agentId - The agent identifier to filter tasks.
+   * @param {object} [filter] - Optional filter criteria for task status or priority.
+   * @returns {Promise<A2ATask[]>} A promise resolving to an array of A2ATask objects assigned to the agent.
    */
   async getTasksByAgent(
     agentId: string,
@@ -262,9 +262,9 @@ export class TaskStatusRepository implements IA2ATaskRepository {
 
   /**
    * Retrieves tasks based on their current status.
-   * @param status - The task status(es) to filter by.
-   * @param options - Optional query parameters like limit and pagination.
-   * @returns A promise resolving to an array of A2ATask objects with the specified status.
+   * @param {A2ATaskStatus | A2ATaskStatus[]} status - The task status(es) to filter by.
+   * @param {object} [options] - Optional query parameters like limit and pagination.
+   * @returns {Promise<A2ATask[]>} A promise resolving to an array of A2ATask objects with the specified status.
    */
   async getTasksByStatus(
     status: A2ATaskStatus | A2ATaskStatus[],
@@ -310,8 +310,9 @@ export class TaskStatusRepository implements IA2ATaskRepository {
 
   /**
    * Utility method to remove the internal 'id' field from stored tasks before returning them.
-   * @param tasks - Array of StoredA2ATask objects.
-   * @returns Array of A2ATask objects with 'id' field removed.
+   * @private
+   * @param {StoredA2ATask[]} tasks - Array of StoredA2ATask objects.
+   * @returns {A2ATask[]} Array of A2ATask objects with 'id' field removed.
    */
   private _removeIdField(tasks: StoredA2ATask[]): A2ATask[] {
     return tasks.map(task => {

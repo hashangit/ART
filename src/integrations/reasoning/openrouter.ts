@@ -11,9 +11,8 @@ import { Logger } from '@/utils/logger';
 import { ARTError, ErrorCode } from '@/errors'; // Import ARTError and ErrorCode
 
 // TODO: Implement streaming support for OpenRouter.
-// TODO: Consider if a dedicated SDK or more specific types are needed, or if OpenAI compatibility is sufficient.
+// TODO: Implement support for 'tools' and 'tool_choice'.
 
-// Define expected options for the OpenRouter adapter constructor
 /**
  * Configuration options required for the `OpenRouterAdapter`.
  */
@@ -100,8 +99,9 @@ export class OpenRouterAdapter implements ProviderAdapter {
 
   /**
    * Creates an instance of the OpenRouterAdapter.
-   * @param options - Configuration options including the API key, the specific OpenRouter model identifier, and optional headers/baseURL.
+   * @param {OpenRouterAdapterOptions} options - Configuration options including the API key, the specific OpenRouter model identifier, and optional headers/baseURL.
    * @throws {Error} If the API key or model identifier is missing.
+   * @see https://openrouter.ai/docs
    */
   constructor(options: OpenRouterAdapterOptions) {
     if (!options.apiKey) {
@@ -127,6 +127,7 @@ export class OpenRouterAdapter implements ProviderAdapter {
    * @param {ArtStandardPrompt} prompt - The standardized prompt messages.
    * @param {CallOptions} options - Call options, including `threadId`, `traceId`, `stream`, and any OpenAI-compatible generation parameters.
    * @returns {Promise<AsyncIterable<StreamEvent>>} A promise resolving to an AsyncIterable of StreamEvent objects. If streaming is requested, it yields an error event and ends.
+   * @see https://openrouter.ai/docs#api-reference-chat-completions
    */
   async call(prompt: ArtStandardPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
     const { threadId, traceId = `openrouter-trace-${Date.now()}`, sessionId, stream, callContext, model: modelOverride } = options;

@@ -47,10 +47,19 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     a2a_tasks: 'a2a_tasks',
   };
 
+  /**
+   * Creates an instance of SupabaseStorageAdapter.
+   * @param {SupabaseConfig} config - The configuration for the adapter.
+   */
   constructor(config: SupabaseConfig) {
     this.configure(config);
   }
 
+  /**
+   * Configures the adapter with the provided Supabase settings.
+   * @private
+   * @param {SupabaseConfig} config - The configuration for the adapter.
+   */
   private configure(config: SupabaseConfig) {
     this.config = config;
     if (config.schema) this.schema = config.schema;
@@ -60,6 +69,10 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     this.client = config.client ?? null;
   }
 
+  /**
+   * Initializes the Supabase client if it hasn't been provided already.
+   * @returns {Promise<void>} A promise that resolves when the client is initialized.
+   */
   async init(): Promise<void> {
     if (this.client) return; // Already provided
     try {
@@ -76,6 +89,12 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     }
   }
 
+  /**
+   * Maps a collection name to a Supabase table name.
+   * @private
+   * @param {string} collection - The name of the collection.
+   * @returns {string} The name of the Supabase table.
+   */
   private tableForCollection(collection: string): string {
     // Allow direct pass-through for custom collections; otherwise map known ones
     switch (collection) {
@@ -92,6 +111,13 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     }
   }
 
+  /**
+   * Retrieves a single item from a collection by its ID.
+   * @template T
+   * @param {string} collection - The name of the collection.
+   * @param {string} id - The ID of the item to retrieve.
+   * @returns {Promise<T | null>} A promise that resolves with the item, or null if not found.
+   */
   async get<T>(collection: string, id: string): Promise<T | null> {
     await this.init();
     const table = this.tableForCollection(collection);
@@ -108,6 +134,14 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     return (data ? { ...data } : null) as T | null;
   }
 
+  /**
+   * Saves (upserts) an item in a collection.
+   * @template T
+   * @param {string} collection - The name of the collection.
+   * @param {string} id - The ID of the item to save.
+   * @param {T} data - The data to save.
+   * @returns {Promise<void>} A promise that resolves when the item is saved.
+   */
   async set<T>(collection: string, id: string, data: T): Promise<void> {
     await this.init();
     const table = this.tableForCollection(collection);
@@ -125,6 +159,12 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     }
   }
 
+  /**
+   * Deletes an item from a collection by its ID.
+   * @param {string} collection - The name of the collection.
+   * @param {string} id - The ID of the item to delete.
+   * @returns {Promise<void>} A promise that resolves when the item is deleted.
+   */
   async delete(collection: string, id: string): Promise<void> {
     await this.init();
     const table = this.tableForCollection(collection);
@@ -138,6 +178,13 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     }
   }
 
+  /**
+   * Queries items in a collection.
+   * @template T
+   * @param {string} collection - The name of the collection.
+   * @param {FilterOptions} filterOptions - The options for filtering, sorting, and pagination.
+   * @returns {Promise<T[]>} A promise that resolves with an array of items.
+   */
   async query<T>(collection: string, filterOptions: FilterOptions): Promise<T[]> {
     await this.init();
     const table = this.tableForCollection(collection);
@@ -181,6 +228,11 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     return (data ?? []).map((row: any) => ({ ...row })) as T[];
   }
 
+  /**
+   * Clears all items from a collection.
+   * @param {string} collection - The name of the collection.
+   * @returns {Promise<void>} A promise that resolves when the collection is cleared.
+   */
   async clearCollection(collection: string): Promise<void> {
     await this.init();
     const table = this.tableForCollection(collection);
@@ -191,6 +243,10 @@ export class SupabaseStorageAdapter implements StorageAdapter {
     }
   }
 
+  /**
+   * Clears all items from all collections.
+   * @returns {Promise<void>} A promise that resolves when all collections are cleared.
+   */
   async clearAll(): Promise<void> {
     await this.init();
     const tables = Object.values(this.tables);

@@ -20,9 +20,6 @@ export interface OAuthConfig {
   tokenRequestHeaders?: Record<string, string>;
   /** Custom timeout for token requests in milliseconds (default: 30000) */
   tokenTimeoutMs?: number;
-/**
- * @deprecated This strategy is not recommended for browser-based applications as it uses the insecure client_credentials grant type. Please use PKCEOAuthStrategy instead.
- */
   /** Buffer time before token expiry to trigger refresh (default: 300000 = 5 minutes) */
   tokenRefreshBufferMs?: number;
 }
@@ -52,6 +49,7 @@ interface CachedToken {
 /**
  * Generic OAuth 2.0 authentication strategy with token caching and refresh capabilities.
  * Supports client credentials flow and authorization code flow with automatic token refresh.
+ * @deprecated This strategy is not recommended for browser-based applications as it uses the insecure client_credentials grant type. Please use PKCEOAuthStrategy instead.
  */
 export class GenericOAuthStrategy implements IAuthStrategy {
   private config: OAuthConfig;
@@ -60,7 +58,7 @@ export class GenericOAuthStrategy implements IAuthStrategy {
 
   /**
    * Creates a new OAuth authentication strategy.
-   * @param config - OAuth configuration including endpoints, credentials, and options
+   * @param {OAuthConfig} config - OAuth configuration including endpoints, credentials, and options
    */
   constructor(config: OAuthConfig) {
     this.validateConfig(config);
@@ -76,6 +74,8 @@ export class GenericOAuthStrategy implements IAuthStrategy {
 
   /**
    * Validates the OAuth configuration to ensure required fields are present.
+   * @param {OAuthConfig} config - The OAuth configuration to validate.
+   * @throws {ARTError} If the configuration is invalid.
    */
   private validateConfig(config: OAuthConfig): void {
     if (!config.clientId || config.clientId.trim() === '') {
@@ -98,7 +98,7 @@ export class GenericOAuthStrategy implements IAuthStrategy {
 
   /**
    * Gets authentication headers, automatically handling token refresh if needed.
-   * @returns Promise resolving to authentication headers with Bearer token
+   * @returns {Promise<Record<string, string>>} A promise that resolves to the authentication headers.
    */
   async getAuthHeaders(): Promise<Record<string, string>> {
     try {
@@ -115,7 +115,7 @@ export class GenericOAuthStrategy implements IAuthStrategy {
 
   /**
    * Gets a valid access token, refreshing if necessary.
-   * @returns Promise resolving to a valid cached token
+   * @returns {Promise<CachedToken>} A promise that resolves to a valid cached token.
    */
   private async getValidToken(): Promise<CachedToken> {
     // Check if we have a valid cached token
@@ -144,6 +144,8 @@ export class GenericOAuthStrategy implements IAuthStrategy {
 
   /**
    * Checks if a token is still valid (not expired with buffer).
+   * @param {CachedToken} token - The token to validate.
+   * @returns {boolean} True if the token is valid, false otherwise.
    */
   private isTokenValid(token: CachedToken): boolean {
     const now = Date.now();
@@ -153,6 +155,7 @@ export class GenericOAuthStrategy implements IAuthStrategy {
 
   /**
    * Acquires a new token from the OAuth provider.
+   * @returns {Promise<CachedToken>} A promise that resolves to a new cached token.
    */
   private async acquireNewToken(): Promise<CachedToken> {
     Logger.debug(`GenericOAuthStrategy: Acquiring new token from ${this.config.tokenEndpoint}`);
@@ -194,6 +197,7 @@ export class GenericOAuthStrategy implements IAuthStrategy {
 
   /**
    * Builds the token request configuration based on grant type.
+   * @returns {RequestInit} The request initialization object for the token request.
    */
   private buildTokenRequest(): RequestInit {
     const headers: Record<string, string> = {
@@ -238,6 +242,8 @@ export class GenericOAuthStrategy implements IAuthStrategy {
 
   /**
    * Processes the token response and creates a cached token object.
+   * @param {TokenResponse} response - The token response from the provider.
+   * @returns {CachedToken} The processed and cached token.
    */
   private processTokenResponse(response: TokenResponse): CachedToken {
     if (!response.access_token) {
@@ -262,7 +268,7 @@ export class GenericOAuthStrategy implements IAuthStrategy {
 
   /**
    * Manually refreshes the cached token.
-   * @returns Promise resolving to new authentication headers
+   * @returns {Promise<Record<string, string>>} A promise that resolves to new authentication headers.
    */
   public async refreshToken(): Promise<Record<string, string>> {
     Logger.debug('GenericOAuthStrategy: Manual token refresh requested');
@@ -282,7 +288,7 @@ export class GenericOAuthStrategy implements IAuthStrategy {
 
   /**
    * Gets information about the current cached token.
-   * @returns Token information or null if no token is cached
+   * @returns {{ expiresAt: Date; scope?: string; hasRefreshToken: boolean } | null} Token information or null if no token is cached.
    */
   public getTokenInfo(): { expiresAt: Date; scope?: string; hasRefreshToken: boolean } | null {
     if (!this.cachedToken) {
@@ -298,7 +304,7 @@ export class GenericOAuthStrategy implements IAuthStrategy {
 
   /**
    * Gets the configured OAuth endpoints and settings.
-   * @returns Configuration information (excluding sensitive data)
+   * @returns {Omit<OAuthConfig, 'clientSecret'>} Configuration information (excluding sensitive data).
    */
   public getConfig(): Omit<OAuthConfig, 'clientSecret'> {
     return {

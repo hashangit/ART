@@ -74,6 +74,11 @@ export class TaskDelegationService {
   private readonly config: Required<TaskDelegationConfig>;
   private readonly taskRepository: IA2ATaskRepository;
 
+  /**
+   * Creates an instance of TaskDelegationService.
+   * @param {IA2ATaskRepository} taskRepository - The repository for persisting task status.
+   * @param {TaskDelegationConfig} [config={}] - Configuration for the service.
+   */
   constructor(
     taskRepository: IA2ATaskRepository,
     config: TaskDelegationConfig = {}
@@ -96,9 +101,9 @@ export class TaskDelegationService {
    * Delegates a list of A2A tasks to suitable remote agents.
    * For each task, finds the best agent and submits the task.
    * 
-   * @param tasks - Array of A2A tasks to delegate
-   * @param traceId - Optional trace ID for request tracking
-   * @returns Promise resolving to array of successfully delegated tasks
+   * @param {A2ATask[]} tasks - Array of A2A tasks to delegate
+   * @param {string} [traceId] - Optional trace ID for request tracking
+   * @returns {Promise<A2ATask[]>} Promise resolving to array of successfully delegated tasks
    */
   async delegateTasks(tasks: A2ATask[], traceId?: string): Promise<A2ATask[]> {
     if (tasks.length === 0) {
@@ -128,9 +133,9 @@ export class TaskDelegationService {
   /**
    * Delegates a single A2A task to a suitable remote agent.
    * 
-   * @param task - The A2A task to delegate
-   * @param traceId - Optional trace ID for request tracking
-   * @returns Promise resolving to the updated task or null if delegation failed
+   * @param {A2ATask} task - The A2A task to delegate
+   * @param {string} [traceId] - Optional trace ID for request tracking
+   * @returns {Promise<A2ATask | null>} Promise resolving to the updated task or null if delegation failed
    */
   async delegateTask(task: A2ATask, traceId?: string): Promise<A2ATask | null> {
     Logger.debug(`[${traceId}] Delegating task ${task.taskId} of type "${task.payload.taskType}"`);
@@ -208,10 +213,11 @@ export class TaskDelegationService {
   /**
    * Submits a task to a specific remote agent using A2A protocol.
    * 
-   * @param task - The A2A task to submit
-   * @param targetAgent - The target agent to submit the task to
-   * @param traceId - Optional trace ID for request tracking
-   * @returns Promise resolving to the submission response
+   * @private
+   * @param {A2ATask} task - The A2A task to submit
+   * @param {A2AAgentInfo} targetAgent - The target agent to submit the task to
+   * @param {string} [traceId] - Optional trace ID for request tracking
+   * @returns {Promise<TaskSubmissionResponse>} Promise resolving to the submission response
    */
   private async submitTaskToAgent(
     task: A2ATask, 
@@ -325,9 +331,9 @@ export class TaskDelegationService {
   /**
    * Checks the status of a delegated task from the remote agent.
    * 
-   * @param task - The A2A task to check status for
-   * @param traceId - Optional trace ID for request tracking
-   * @returns Promise resolving to the current task status
+   * @param {A2ATask} task - The A2A task to check status for
+   * @param {string} [traceId] - Optional trace ID for request tracking
+   * @returns {Promise<TaskStatusResponse | null>} Promise resolving to the current task status
    */
   async checkTaskStatus(task: A2ATask, traceId?: string): Promise<TaskStatusResponse | null> {
     if (!task.targetAgent?.endpoint) {
@@ -380,10 +386,10 @@ export class TaskDelegationService {
   /**
    * Updates a local A2A task based on remote status information.
    * 
-   * @param task - The local A2A task to update
-   * @param statusResponse - The status response from the remote agent
-   * @param traceId - Optional trace ID for request tracking
-   * @returns Promise resolving to the updated task
+   * @param {A2ATask} task - The local A2A task to update
+   * @param {TaskStatusResponse} statusResponse - The status response from the remote agent
+   * @param {string} [traceId] - Optional trace ID for request tracking
+   * @returns {Promise<A2ATask>} Promise resolving to the updated task
    */
   async updateTaskFromRemoteStatus(
     task: A2ATask, 
@@ -435,8 +441,9 @@ export class TaskDelegationService {
    * Generates a callback URL for webhook notifications.
    * This would typically point to an endpoint in the local system.
    * 
-   * @param taskId - The task ID to generate callback URL for
-   * @returns The callback URL string
+   * @private
+   * @param {string} taskId - The task ID to generate callback URL for
+   * @returns {string} The callback URL string
    */
   private generateCallbackUrl(taskId: string): string {
     const baseUrl = this.config.callbackUrl.replace(/\/$/, ''); // Remove trailing slash
@@ -446,9 +453,9 @@ export class TaskDelegationService {
   /**
    * Cancels a delegated task on the remote agent.
    * 
-   * @param task - The A2A task to cancel
-   * @param traceId - Optional trace ID for request tracking
-   * @returns Promise resolving to whether cancellation was successful
+   * @param {A2ATask} task - The A2A task to cancel
+   * @param {string} [traceId] - Optional trace ID for request tracking
+   * @returns {Promise<boolean>} Promise resolving to whether cancellation was successful
    */
   async cancelTask(task: A2ATask, traceId?: string): Promise<boolean> {
     if (!task.targetAgent?.endpoint) {

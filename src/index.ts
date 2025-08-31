@@ -3,6 +3,8 @@
  * This file exports the primary factory function (`createArtInstance`),
  * core components, adapters, types, interfaces, and utilities needed
  * to build and run ART agents.
+ * 
+ * @module ART
  */
 
 // --- Core Factory Function ---
@@ -39,7 +41,10 @@ export { AnthropicAdapter } from '@/integrations/reasoning/anthropic';
 export { OpenRouterAdapter } from '@/integrations/reasoning/openrouter';
 /** Adapter for DeepSeek models. */
 export { DeepSeekAdapter } from '@/integrations/reasoning/deepseek';
-/** Adapter for Ollama models. */
+/** 
+ * Adapter for running local models via Ollama.
+ * @see {@link ./integrations/reasoning/ollama/index.ts}
+ */
 export { OllamaAdapter } from '@/integrations/reasoning/ollama';
 export type { OllamaAdapterOptions } from '@/integrations/reasoning/ollama';
 
@@ -49,7 +54,7 @@ export { CalculatorTool } from '@/tools/CalculatorTool';
 // export { WebSearchTool } from './tools/WebSearchTool'; // Example for future
 
 // --- Prompt Utilities ---
-/** PromptManager provides access to prompt fragments and prompt validation. */
+/** Provides access to prompt fragments and validation. */
 export { PromptManager } from '@/systems/reasoning/PromptManager';
 
 // --- Authentication Components ---
@@ -59,10 +64,16 @@ export { AuthManager } from '@/systems/auth/AuthManager';
 export { PKCEOAuthStrategy } from '@/auth/PKCEOAuthStrategy';
 
 // --- Core Types & Interfaces ---
-/** Export all core data structures and type definitions. @see {@link ./types/index.ts} */
+/** 
+ * Export all core data structures and type definitions.
+ * @see {@link ./types/index.ts}
+ */
 export * from '@/types';
 export type { ArtInstanceConfig } from '@/types'; // Explicit export for clarity
-/** Export all core system interfaces. @see {@link ./core/interfaces.ts} */
+/** 
+ * Export all core system interfaces.
+ * @see {@link ./core/interfaces.ts}
+ */
 export * from '@/core/interfaces';
 // Explicitly export Provider types from their source file
 export type {
@@ -84,7 +95,10 @@ export { generateUUID } from '@/utils/uuid';
 export const VERSION = '0.2.8';
 
 // --- MCP Runtime Exports ---
-// Expose MCP manager, proxy tool, client, config manager, and types for runtime usage in apps
+/**
+ * Exports for the Multi-Capability Provider (MCP) system.
+ * These are used for runtime integration with MCP servers.
+ */
 export {
   McpManager,
   McpProxyTool,

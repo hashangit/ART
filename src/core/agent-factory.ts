@@ -25,10 +25,8 @@ import { IProviderManager } from '@/types/providers'; // Corrected path
 import type { ProviderManagerConfig } from '@/types/providers'; // type-only import
 // Import ArtInstanceConfig and StateSavingStrategy
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { ArtInstanceConfig } from '@/types'; // type-only import
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { StateSavingStrategy } from '@/types'; // type-only import
-import { ProviderManagerImpl } from '@/providers/ProviderManagerImpl'; // Corrected path
+import { ArtInstanceConfig, StateSavingStrategy } from '@/types';
+import { ProviderManagerImpl } from '@/systems/reasoning/ProviderManagerImpl'; // Corrected path
 import { PESAgent } from '@/core/agents/pes-agent';
 
 // Import concrete implementations (assuming paths)

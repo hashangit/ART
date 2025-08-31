@@ -13,7 +13,6 @@ import { ARTError, ErrorCode } from '@/errors'; // Import ARTError and ErrorCode
 
 // TODO: Upgrade to use the official 'openai' SDK package instead of raw fetch calls.
 
-// Define expected options for the OpenAI adapter constructor
 /**
  * Configuration options required for the `OpenAIAdapter`.
  */
@@ -96,8 +95,9 @@ export class OpenAIAdapter implements ProviderAdapter {
 
   /**
    * Creates an instance of the OpenAIAdapter.
-   * @param options - Configuration options including the API key and optional model/baseURL overrides.
+   * @param {OpenAIAdapterOptions} options - Configuration options including the API key and optional model/baseURL overrides.
    * @throws {Error} If the API key is missing.
+   * @see https://platform.openai.com/docs/api-reference
    */
   constructor(options: OpenAIAdapterOptions) {
     if (!options.apiKey) {
@@ -116,6 +116,7 @@ export class OpenAIAdapter implements ProviderAdapter {
    * @param {ArtStandardPrompt} prompt - The standardized prompt messages.
    * @param {CallOptions} options - Call options, including `threadId`, `traceId`, `stream` preference, and any OpenAI-specific parameters (like `temperature`, `max_tokens`) passed through.
    * @returns {Promise<AsyncIterable<StreamEvent>>} A promise resolving to an AsyncIterable of StreamEvent objects.
+   * @see https://platform.openai.com/docs/api-reference/chat/create
    */
   async call(prompt: ArtStandardPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
     const { threadId, traceId = `openai-trace-${Date.now()}`, sessionId, stream, callContext, model: modelOverride } = options;

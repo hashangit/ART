@@ -11,9 +11,8 @@ import { Logger } from '@/utils/logger';
 import { ARTError, ErrorCode } from '@/errors'; // Import ARTError and ErrorCode
 
 // TODO: Implement streaming support for DeepSeek.
-// TODO: Consider if a dedicated SDK or more specific types are needed, or if OpenAI compatibility is sufficient.
+// TODO: Implement support for 'tools' and 'tool_choice'.
 
-// Define expected options for the DeepSeek adapter constructor
 /**
  * Configuration options required for the `DeepSeekAdapter`.
  */
@@ -92,8 +91,9 @@ export class DeepSeekAdapter implements ProviderAdapter {
 
   /**
    * Creates an instance of the DeepSeekAdapter.
-   * @param options - Configuration options including the API key and optional model/baseURL overrides.
+   * @param {DeepSeekAdapterOptions} options - Configuration options including the API key and optional model/baseURL overrides.
    * @throws {Error} If the API key is missing.
+   * @see https://platform.deepseek.com/api-docs
    */
   constructor(options: DeepSeekAdapterOptions) {
     if (!options.apiKey) {
@@ -114,6 +114,7 @@ export class DeepSeekAdapter implements ProviderAdapter {
    * @param {ArtStandardPrompt} prompt - The standardized prompt messages.
    * @param {CallOptions} options - Call options, including `threadId`, `traceId`, `stream`, and any OpenAI-compatible generation parameters.
    * @returns {Promise<AsyncIterable<StreamEvent>>} A promise resolving to an AsyncIterable of StreamEvent objects. If streaming is requested, it yields an error event and ends.
+   * @see https://platform.deepseek.com/api-docs/api/create-chat-completion/index.html
    */
   async call(prompt: ArtStandardPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
     const { threadId, traceId = `deepseek-trace-${Date.now()}`, sessionId, stream, callContext, model: modelOverride } = options;

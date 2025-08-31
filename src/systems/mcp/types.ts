@@ -7,161 +7,295 @@
  */
 
 /**
- * @interface StreamableHttpConnection
- * @description Defines the connection details for a streamable HTTP-based MCP server.
+ * Defines the connection details for a streamable HTTP-based MCP server.
  * This is the primary transport mechanism for browser-based MCP communication.
+ *
+ * @interface StreamableHttpConnection
  */
 export interface StreamableHttpConnection {
-  /** The base URL of the MCP server. */
+  /**
+   * The base URL of the MCP server.
+   * @property {string} url
+   */
   url: string;
-  /** Optional headers to include in every request to the server. */
+  /**
+   * Optional headers to include in every request to the server.
+   * @property {Record<string, string>} [headers]
+   */
   headers?: Record<string, string>;
-  /** The ID of an authentication strategy to use for this connection. */
+  /**
+   * The ID of an authentication strategy to use for this connection.
+   * @property {string} [authStrategyId]
+   */
   authStrategyId?: string;
-  /** 
+  /**
    * Optional OAuth configuration for automatic PKCE setup per server.
    * This enables secure, per-server authentication without manual token handling.
+   * @property {object} [oauth]
    */
   oauth?: {
-    /** The type of OAuth flow, currently supporting 'pkce'. */
+    /**
+     * The type of OAuth flow, currently supporting 'pkce'.
+     * @property {'pkce'} type
+     */
     type: 'pkce';
-    /** The OAuth 2.1 Authorization Endpoint URL. */
+    /**
+     * The OAuth 2.1 Authorization Endpoint URL.
+     * @property {string} authorizationEndpoint
+     */
     authorizationEndpoint: string;
-    /** The OAuth 2.1 Token Endpoint URL. */
+    /**
+     * The OAuth 2.1 Token Endpoint URL.
+     * @property {string} tokenEndpoint
+     */
     tokenEndpoint: string;
-    /** The public client ID for the OAuth application. */
+    /**
+     * The public client ID for the OAuth application.
+     * @property {string} clientId
+     */
     clientId: string;
-    /** A space-delimited string of OAuth scopes to request. */
+    /**
+     * A space-delimited string of OAuth scopes to request.
+     * @property {string} scopes
+     */
     scopes: string;
-    /** The redirect URI that will handle the OAuth callback. */
+    /**
+     * The redirect URI that will handle the OAuth callback.
+     * @property {string} redirectUri
+     */
     redirectUri: string;
-    /** Optional 'resource' parameter for OAuth 2.1, often used as an audience identifier. */
+    /**
+     * Optional 'resource' parameter for OAuth 2.1, often used as an audience identifier.
+     * @property {string} [resource]
+     */
     resource?: string;
-    /** 
-     * Determines whether to open the login page in a new tab. 
+    /**
+     * Determines whether to open the login page in a new tab.
      * Defaults to true if omitted.
+     * @property {boolean} [openInNewTab]
      */
     openInNewTab?: boolean;
-    /** 
+    /**
      * An optional BroadcastChannel name for delivering tokens, useful in multi-window scenarios.
+     * @property {string} [channelName]
      */
     channelName?: string;
   };
 }
 
 /**
+ * Defines the schema for a tool provided by an MCP server.
+ *
  * @interface McpToolDefinition
- * @description Defines the schema for a tool provided by an MCP server.
  */
 export interface McpToolDefinition {
-  /** The name of the tool. */
+  /**
+   * The name of the tool.
+   * @property {string} name
+   */
   name: string;
-  /** A description of what the tool does. */
+  /**
+   * A description of what the tool does.
+   * @property {string} [description]
+   */
   description?: string;
-  /** The JSON schema for the tool's input. */
+  /**
+   * The JSON schema for the tool's input.
+   * @property {any} inputSchema
+   */
   inputSchema: any;
-  /** The JSON schema for the tool's output. */
+  /**
+   * The JSON schema for the tool's output.
+   * @property {any} [outputSchema]
+   */
   outputSchema?: any;
 }
 
 /**
+ * Defines a static resource provided by an MCP server.
+ *
  * @interface McpResource
- * @description Defines a static resource provided by an MCP server.
  */
 export interface McpResource {
-  /** The URI of the resource. */
+  /**
+   * The URI of the resource.
+   * @property {string} uri
+   */
   uri: string;
-  /** The name of the resource. */
+  /**
+   * The name of the resource.
+   * @property {string} name
+   */
   name: string;
-  /** The MIME type of the resource. */
+  /**
+   * The MIME type of the resource.
+   * @property {string} [mimeType]
+   */
   mimeType?: string;
-  /** A description of the resource. */
+  /**
+   * A description of the resource.
+   * @property {string} [description]
+   */
   description?: string;
 }
 
 /**
+ * Defines a template for a resource provided by an MCP server.
+ *
  * @interface McpResourceTemplate
- * @description Defines a template for a resource provided by an MCP server.
  */
 export interface McpResourceTemplate {
-  /** The URI template for the resource. */
+  /**
+   * The URI template for the resource.
+   * @property {string} uriTemplate
+   */
   uriTemplate: string;
-  /** The name of the resource template. */
+  /**
+   * The name of the resource template.
+   * @property {string} name
+   */
   name: string;
-  /** A description of the resource template. */
+  /**
+   * A description of the resource template.
+   * @property {string} [description]
+   */
   description?: string;
-  /** The MIME type of the resource. */
+  /**
+   * The MIME type of the resource.
+   * @property {string} [mimeType]
+   */
   mimeType?: string;
 }
 
 /**
- * @typedef McpServerConfig
- * @description Represents the configuration for a single MCP server.
+ * Represents the configuration for a single MCP server.
+ *
+ * @remarks
  * This is the format for each server entry in the `art_mcp_config.json` file.
  * It contains all the necessary information for discovering, installing, and connecting to an MCP server.
+ *
+ * @typedef {object} McpServerConfig
  */
 export type McpServerConfig = {
-    /** A unique identifier for the server. */
+    /**
+     * A unique identifier for the server.
+     * @property {string} id
+     */
     id: string;
-    /** The transport type for the server, currently only 'streamable-http' is supported. */
+    /**
+     * The transport type for the server, currently only 'streamable-http' is supported.
+     * @property {'streamable-http'} type
+     */
     type: 'streamable-http';
-    /** Whether the server is enabled and should be connected to. */
+    /**
+     * Whether the server is enabled and should be connected to.
+     * @property {boolean} enabled
+     */
     enabled: boolean;
-    /** A user-friendly name for the server. */
+    /**
+     * A user-friendly name for the server.
+     * @property {string} [displayName]
+     */
     displayName?: string;
-    /** A description of the server and its capabilities. */
+    /**
+     * A description of the server and its capabilities.
+     * @property {string} [description]
+     */
     description?: string;
-    /** The connection details for the server. */
+    /**
+     * The connection details for the server.
+     * @property {StreamableHttpConnection} connection
+     */
     connection: StreamableHttpConnection;
-    /** Information about how the server was installed (e.g., 'git', 'npm', 'manual'). */
+    /**
+     * Information about how the server was installed (e.g., 'git', 'npm', 'manual').
+     * @property {object} [installation]
+     */
     installation?: { source: 'git' | 'npm' | 'manual'; [key: string]: any; };
-    /** The timeout in milliseconds for requests to the server. */
+    /**
+     * The timeout in milliseconds for requests to the server.
+     * @property {number} [timeout]
+     */
     timeout?: number;
-    /** The tools provided by the server. */
+    /**
+     * The tools provided by the server.
+     * @property {McpToolDefinition[]} tools
+     */
     tools: McpToolDefinition[];
-    /** The static resources provided by the server. */
+    /**
+     * The static resources provided by the server.
+     * @property {McpResource[]} resources
+     */
     resources: McpResource[];
-    /** The resource templates provided by the server. */
+    /**
+     * The resource templates provided by the server.
+     * @property {McpResourceTemplate[]} resourceTemplates
+     */
     resourceTemplates: McpResourceTemplate[];
 };
 
 /**
+ * Defines the root structure of the `art_mcp_config.json` file.
+ *
  * @interface ArtMcpConfig
- * @description Defines the root structure of the `art_mcp_config.json` file.
  */
 export interface ArtMcpConfig {
-    /** A record of MCP server configurations, where the key is the server ID. */
+    /**
+     * A record of MCP server configurations, where the key is the server ID.
+     * @property {Record<string, McpServerConfig>} mcpServers
+     */
     mcpServers: Record<string, McpServerConfig>;
 }
 
 /**
- * @interface McpServerStatus
- * @description Represents the internal status of an MCP server connection.
+ * Represents the internal status of an MCP server connection.
  * This is not part of the public configuration.
+ *
+ * @interface McpServerStatus
  */
 export interface McpServerStatus {
-    /** The unique identifier for the server. */
+    /**
+     * The unique identifier for the server.
+     * @property {string} id
+     */
     id: string;
-    /** The current connection status of the server. */
+    /**
+     * The current connection status of the server.
+     * @property {'connected' | 'disconnected' | 'error' | 'connecting'} status
+     */
     status: 'connected' | 'disconnected' | 'error' | 'connecting';
-    /** The timestamp of the last successful connection. */
+    /**
+     * The timestamp of the last successful connection.
+     * @property {Date} [lastConnected]
+     */
     lastConnected?: Date;
-    /** The last error message received from the server. */
+    /**
+     * The last error message received from the server.
+     * @property {string} [lastError]
+     */
     lastError?: string;
-    /** The number of tools registered from this server. */
+    /**
+     * The number of tools registered from this server.
+     * @property {number} toolCount
+     */
     toolCount: number;
 }
 
 /**
+ * Defines the configuration for the McpManager.
+ *
  * @interface McpManagerConfig
- * @description Defines the configuration for the McpManager.
  */
 export interface McpManagerConfig {
-  /** Whether to enable MCP functionality. Defaults to false. */
+  /**
+   * Whether to enable MCP functionality. Defaults to false.
+   * @property {boolean} enabled
+   */
   enabled: boolean;
-  /** 
+  /**
    * An optional endpoint URL for discovering MCP servers.
    * Defaults to the Zyntopia API if not provided.
+   * @property {string} [discoveryEndpoint]
    */
   discoveryEndpoint?: string;
 }

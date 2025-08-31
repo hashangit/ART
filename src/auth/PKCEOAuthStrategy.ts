@@ -41,6 +41,10 @@ export class PKCEOAuthStrategy implements IAuthStrategy {
   private loginWaiter: { resolve: () => void; reject: (e: any) => void } | null = null;
   private channel?: BroadcastChannel;
 
+  /**
+   * Creates an instance of PKCEOAuthStrategy.
+   * @param {PKCEOAuthConfig} config - The configuration for the PKCE OAuth 2.0 strategy.
+   */
   constructor(config: PKCEOAuthConfig) {
     if (!config.authorizationEndpoint || !config.tokenEndpoint || !config.clientId || !config.redirectUri || !config.scopes) {
       throw new ARTError(
@@ -73,6 +77,7 @@ export class PKCEOAuthStrategy implements IAuthStrategy {
 
   /**
    * Initiates the PKCE login flow by redirecting the user to the authorization endpoint.
+   * @returns {Promise<void>} A promise that resolves when the login process is complete.
    */
   public async login(): Promise<void> {
     const codeVerifier = this.generateCodeVerifier();
@@ -131,6 +136,7 @@ export class PKCEOAuthStrategy implements IAuthStrategy {
    * Handles the redirect from the authorization server.
    * This method should be called on the redirect URI page.
    * It exchanges the authorization code for an access token.
+   * @returns {Promise<void>} A promise that resolves when the redirect has been handled.
    */
   public async handleRedirect(): Promise<void> {
     const params = new URLSearchParams(window.location.search);
@@ -188,7 +194,7 @@ export class PKCEOAuthStrategy implements IAuthStrategy {
 
   /**
    * Gets the authentication headers, automatically handling token refresh if needed.
-   * @returns A promise that resolves to the authentication headers.
+   * @returns {Promise<Record<string, string>>} A promise that resolves to the authentication headers.
    */
   public async getAuthHeaders(): Promise<Record<string, string>> {
     if (!this.cachedToken) {
@@ -216,7 +222,7 @@ export class PKCEOAuthStrategy implements IAuthStrategy {
 
   /**
    * Checks if there is a valid, non-expired token.
-   * @returns A promise that resolves to true if the token is valid, false otherwise.
+   * @returns {Promise<boolean>} A promise that resolves to true if the token is valid, false otherwise.
    */
   public async isAuthenticated(): Promise<boolean> {
     if (!this.cachedToken) {
@@ -237,12 +243,21 @@ export class PKCEOAuthStrategy implements IAuthStrategy {
 
   // --- Private Helper Methods ---
 
+  /**
+   * Generates a random string for the code verifier.
+   * @returns {string} The generated code verifier.
+   */
   private generateCodeVerifier(): string {
     const randomBytes = new Uint8Array(32);
     window.crypto.getRandomValues(randomBytes);
     return this.base64UrlEncode(randomBytes);
   }
 
+  /**
+   * Generates a code challenge from a code verifier.
+   * @param {string} verifier - The code verifier.
+   * @returns {Promise<string>} A promise that resolves to the code challenge.
+   */
   private async generateCodeChallenge(verifier: string): Promise<string> {
     const encoder = new TextEncoder();
     const data = encoder.encode(verifier);
@@ -250,6 +265,11 @@ export class PKCEOAuthStrategy implements IAuthStrategy {
     return this.base64UrlEncode(new Uint8Array(hashBuffer));
   }
 
+  /**
+   * Encodes a byte array into a base64 URL-safe string.
+   * @param {Uint8Array} bytes - The byte array to encode.
+   * @returns {string} The base64 URL-safe encoded string.
+   */
   private base64UrlEncode(bytes: Uint8Array): string {
     return btoa(String.fromCharCode.apply(null, Array.from(bytes)))
       .replace(/\+/g, '-')
@@ -257,6 +277,10 @@ export class PKCEOAuthStrategy implements IAuthStrategy {
       .replace(/=+$/, '');
   }
 
+  /**
+   * Refreshes the access token using the refresh token.
+   * @returns {Promise<void>} A promise that resolves when the token has been refreshed.
+   */
   private async refreshToken(): Promise<void> {
     if (!this.cachedToken?.refreshToken) {
       this.logout(); // Clear expired token
@@ -299,6 +323,11 @@ export class PKCEOAuthStrategy implements IAuthStrategy {
   }
 
   // --- Private: Exchange code to token using stored verifier (new-tab flow) ---
+  /**
+   * Exchanges an authorization code for an access token.
+   * @param {string} code - The authorization code.
+   * @returns {Promise<void>} A promise that resolves when the token exchange is complete.
+   */
   private async exchangeCodeForToken(code: string): Promise<void> {
     if (!this.codeVerifierForPendingLogin) {
       throw new ARTError('Missing code verifier for PKCE exchange.', ErrorCode.INVALID_CONFIG);

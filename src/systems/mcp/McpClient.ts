@@ -52,8 +52,7 @@ export class TokenManager {
   constructor(private oauthConfig: { token_endpoint?: string }) {}
 
   /**
-   * @method load
-   * @description Loads tokens from session storage.
+   * Loads tokens from session storage.
    */
   load() {
     this.accessToken = sessionStorage.getItem('access_token')
@@ -64,15 +63,13 @@ export class TokenManager {
   }
 
   /**
-   * @method setClientId
-   * @description Sets the client ID.
+   * Sets the client ID.
    * @param {string} id - The client ID.
    */
   setClientId(id: string) { this.clientId = id }
 
   /**
-   * @method update
-   * @description Updates the tokens and stores them in session storage.
+   * Updates the tokens and stores them in session storage.
    * @param {any} token - The token object.
    */
   update(token: any) {
@@ -85,8 +82,7 @@ export class TokenManager {
   }
 
   /**
-   * @method clear
-   * @description Clears the tokens from memory and session storage.
+   * Clears the tokens from memory and session storage.
    */
   clear() {
     this.accessToken = null
@@ -98,15 +94,13 @@ export class TokenManager {
   }
 
   /**
-   * @method getAccessToken
-   * @description Gets the access token.
+   * Gets the access token.
    * @returns {string | null} The access token.
    */
   getAccessToken() { return this.accessToken }
 
   /**
-   * @method needsRefresh
-   * @description Checks if the token needs to be refreshed.
+   * Checks if the token needs to be refreshed.
    * @returns {boolean} True if the token needs to be refreshed, false otherwise.
    */
   needsRefresh(): boolean {
@@ -115,8 +109,7 @@ export class TokenManager {
   }
 
   /**
-   * @method refresh
-   * @description Refreshes the access token using the refresh token.
+   * Refreshes the access token using the refresh token.
    * @returns {Promise<void>}
    */
   async refresh(): Promise<void> {
@@ -141,8 +134,7 @@ export class TokenManager {
   }
 
   /**
-   * @method isAuthenticated
-   * @description Checks if the user is authenticated.
+   * Checks if the user is authenticated.
    * @returns {boolean} True if the user is authenticated, false otherwise.
    */
   isAuthenticated(): boolean {
@@ -164,14 +156,19 @@ export class McpClientController {
   private sessionId: string | null = null
   private readonly protocolVersion: string = '2025-06-18'
 
+  /**
+   * Creates an instance of McpClientController.
+   * @private
+   * @param {string} baseUrl - The base URL of the MCP server.
+   * @param {string[]} [scopes] - The OAuth scopes to request.
+   */
   private constructor(baseUrl: string, scopes?: string[]) {
     this.baseUrl = new URL(baseUrl)
     this.scopes = scopes ?? ['read', 'write']
   }
 
   /**
-   * @method create
-   * @description Creates a new instance of McpClientController.
+   * Creates a new instance of McpClientController.
    * @param {string} baseUrl - The base URL of the MCP server.
    * @param {string[]} [scopes] - The OAuth scopes to request.
    * @returns {McpClientController} A new instance of McpClientController.
@@ -181,8 +178,7 @@ export class McpClientController {
   }
 
   /**
-   * @method discoverAuthorizationServer
-   * @description Discovers the authorization server metadata.
+   * Discovers the authorization server metadata.
    * @private
    * @returns {Promise<void>}
    */
@@ -230,8 +226,7 @@ export class McpClientController {
   }
 
   /**
-   * @method registerClient
-   * @description Registers the client with the authorization server.
+   * Registers the client with the authorization server.
    * @private
    * @returns {Promise<string>} A promise that resolves to the client ID.
    */
@@ -262,8 +257,7 @@ export class McpClientController {
   }
 
   /**
-   * @method startOAuth
-   * @description Starts the OAuth flow by redirecting the user to the authorization server.
+   * Starts the OAuth flow by redirecting the user to the authorization server.
    * @returns {Promise<void>}
    */
   async startOAuth() {
@@ -288,8 +282,7 @@ export class McpClientController {
   }
 
   /**
-   * @method maybeHandleCallback
-   * @description Handles the OAuth callback, exchanging the authorization code for an access token.
+   * Handles the OAuth callback, exchanging the authorization code for an access token.
    * @returns {Promise<boolean>} A promise that resolves to true if the callback was handled, false otherwise.
    */
   async maybeHandleCallback(): Promise<boolean> {
@@ -337,8 +330,7 @@ export class McpClientController {
   }
 
   /**
-   * @method loadExistingSession
-   * @description Loads an existing session from session storage.
+   * Loads an existing session from session storage.
    */
   loadExistingSession() {
     const discoveryDoc = sessionStorage.getItem('mcp_oauth_discovery')
@@ -349,8 +341,7 @@ export class McpClientController {
   }
 
   /**
-   * @method isAuthenticated
-   * @description Checks if the user is authenticated.
+   * Checks if the user is authenticated.
    * @returns {boolean} True if the user is authenticated, false otherwise.
    */
   isAuthenticated(): boolean {
@@ -359,8 +350,7 @@ export class McpClientController {
   }
 
   /**
-   * @method connect
-   * @description Connects to the MCP server.
+   * Connects to the MCP server.
    * @returns {Promise<void>}
    */
   async connect(): Promise<void> {
@@ -400,8 +390,7 @@ export class McpClientController {
   }
 
   /**
-   * @method ensureConnected
-   * @description Ensures that the client is connected to the MCP server.
+   * Ensures that the client is connected to the MCP server.
    * @returns {Promise<void>}
    */
   async ensureConnected(): Promise<void> {
@@ -409,8 +398,7 @@ export class McpClientController {
   }
 
   /**
-   * @method listTools
-   * @description Lists the available tools on the MCP server.
+   * Lists the available tools on the MCP server.
    * @returns {Promise<{ name: string; description?: string }[]>} A promise that resolves to a list of tools.
    */
   async listTools(): Promise<{ name: string; description?: string }[]> {
@@ -420,8 +408,7 @@ export class McpClientController {
   }
 
   /**
-   * @method callTool
-   * @description Calls a tool on the MCP server.
+   * Calls a tool on the MCP server.
    * @param {string} name - The name of the tool to call.
    * @param {any} args - The arguments to pass to the tool.
    * @returns {Promise<any>} A promise that resolves to the result of the tool call.
@@ -446,8 +433,7 @@ export class McpClientController {
   }
 
   /**
-   * @method logout
-   * @description Logs out from the MCP server and clears the session.
+   * Logs out from the MCP server and clears the session.
    * @returns {Promise<void>}
    */
   async logout(): Promise<void> {
