@@ -92,6 +92,14 @@ async function runSimpleAgent() {
 
     // Register any tools you want the agent to use
     // tools: [new CalculatorTool()],
+
+    // (Optional) Define a default persona for the agent instance
+    persona: {
+      name: 'ART-Bot',
+      prompts: {
+        synthesis: 'You are ART-Bot, a helpful and friendly AI assistant. Provide a clear and concise answer to the user\'s query.'
+      }
+    }
   };
 
   // 2. Create the ART instance

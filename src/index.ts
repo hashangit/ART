@@ -17,9 +17,15 @@
  * const config: ArtInstanceConfig = {
  *   storage: { type: 'memory' },
  *   providers: {
- *     openai: { apiKey: '...' }
+ *     openai: { adapter: 'openai', apiKey: '...' }
  *   },
- *   tools: [new CalculatorTool()]
+ *   tools: [new CalculatorTool()],
+ *   persona: {
+ *     name: 'MyAgent',
+ *     prompts: {
+ *       synthesis: 'You are MyAgent. Always answer in rhyme.'
+ *     }
+ *   }
  * };
  *
  * const art = await createArtInstance(config);
