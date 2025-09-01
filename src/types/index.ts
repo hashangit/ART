@@ -570,6 +570,12 @@ export interface ParsedToolCall {
     * @property {string | SystemPromptOverride} [systemPrompt]
     */
    systemPrompt?: string | SystemPromptOverride;
+   /**
+    * Optional: Defines the identity and high-level guidance for the agent for this specific thread.
+    * This overrides the instance-level persona.
+    * @property {Partial<AgentPersona>} [persona]
+    */
+   persona?: Partial<AgentPersona>;
    // TODO: Add other potential thread-specific settings (e.g., RAG configuration, default timeouts)
  }
 
@@ -696,6 +702,12 @@ export interface AgentProps {
     * @property {string | SystemPromptOverride} [systemPrompt]
     */
    systemPrompt?: string | SystemPromptOverride;
+   /**
+    * Optional: Defines the identity and high-level guidance for the agent for this specific call.
+    * This overrides both the instance-level and thread-level persona.
+    * @property {Partial<AgentPersona>} [persona]
+    */
+   persona?: Partial<AgentPersona>;
    // TODO: Add other potential runtime overrides (e.g., history length).
  }
 
@@ -1187,11 +1199,11 @@ export interface ArtInstanceConfig {
     level?: LogLevel;
   };
   /**
-   * Optional default system prompt string to be used for the entire ART instance.
-   * This can be overridden at the thread level or at the individual call level.
-   * @property {string} [defaultSystemPrompt]
+   * Optional: Defines the default identity and high-level guidance for the agent.
+   * This can be overridden at the thread or call level.
+   * @property {AgentPersona} [persona]
    */
-  defaultSystemPrompt?: string;
+  persona?: AgentPersona;
   /**
    * Optional configuration for MCP (Model Context Protocol) manager.
    * Enables connection to external MCP servers for dynamic tool loading.
@@ -1638,4 +1650,47 @@ export interface UpdateA2ATaskRequest {
    * @property {Partial<A2ATaskMetadata>} [metadata]
    */
   metadata?: Partial<A2ATaskMetadata>;
+}
+
+/**
+ * Defines the default identity and high-level guidance for an agent.
+ * This is provided at the instance level and can be overridden by thread or call-specific prompts.
+ *
+ * @interface AgentPersona
+ */
+export interface AgentPersona {
+  /**
+   * The name or identity of the agent (e.g., "Zoi").
+   * This will be used in the synthesis prompt.
+   * @property {string} name
+   */
+  name: string;
+
+  /**
+   * The default system prompt that provides high-level guidance.
+   * This serves as the base layer in the system prompt resolution hierarchy.
+   * @property {string} defaultSystemPrompt
+   */
+  prompts: StageSpecificPrompts;
+}
+
+/**
+ * Defines stage-specific system prompts for planning and synthesis.
+ *
+ * @interface StageSpecificPrompts
+ */
+export interface StageSpecificPrompts {
+  /**
+   * System prompt to guide the planning phase.
+   * Focuses on reasoning, expertise, and tool selection.
+   * @property {string} [planning]
+   */
+  planning?: string;
+
+  /**
+   * System prompt to guide the synthesis phase.
+   * Focuses on tone, formatting, and final response structure.
+   * @property {string} [synthesis]
+   */
+  synthesis?: string;
 }

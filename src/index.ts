@@ -66,7 +66,7 @@ export * from '@/types';
  * The main configuration object for creating an ART instance.
  * Explicitly exported for clarity and ease of use.
  */
-export type { ArtInstanceConfig } from '@/types';
+export type { ArtInstanceConfig, AgentPersona } from '@/types';
 
 /**
  * Types related to LLM Provider management.

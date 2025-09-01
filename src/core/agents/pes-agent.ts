@@ -36,6 +36,7 @@ import {
     // ToolSchema, // Removed unused import
     // ThreadContext, // Removed unused import
 } from '@/types';
+import { AgentPersona } from '@/types';
 import { RuntimeProviderConfig } from '@/types/providers'; // Import RuntimeProviderConfig
 import { generateUUID } from '@/utils/uuid';
 import { ARTError, ErrorCode } from '@/errors';
@@ -56,7 +57,7 @@ export interface PESAgentDependencies {
      * This serves as a custom prompt part if no thread-specific or call-specific
      * system prompt is provided. It's appended to the agent's base system prompt.
      */
-    instanceDefaultCustomSystemPrompt?: string;
+    // instanceDefaultCustomSystemPrompt?: string; // This will be replaced by the persona
     /** Manages conversation history. */
     conversationManager: ConversationManager;
     /** Registry for available tools. */
@@ -81,12 +82,17 @@ export interface PESAgentDependencies {
     taskDelegationService?: TaskDelegationService | null;
     /** Resolver for standardized system prompt composition. */
     systemPromptResolver: import('@/core/interfaces').SystemPromptResolver;
+    /** Optional: Defines the default identity and high-level guidance for the agent. */
+    persona?: AgentPersona;
 }
 
-// Default system prompt remains
-const DEFAULT_PES_SYSTEM_PROMPT = `You are a helpful AI assistant. You need to understand a user's query, potentially use tools to gather information, and then synthesize a final response.`;
-
-// Removed DEFAULT_PLANNING_BLUEPRINT and DEFAULT_SYNTHESIS_BLUEPRINT
+const DEFAULT_PERSONA: AgentPersona = {
+  name: 'Zoi',
+  prompts: {
+    planning: 'You are a helpful AI assistant. Your primary goal is to understand a user\'s query, determine the intent, and create a clear plan to provide an accurate and helpful response. You can use tools to gather information if necessary.',
+    synthesis: 'You are a helpful AI assistant named Art. Your primary goal is to synthesize the information gathered from tools and planning into a final, user-friendly response. Be clear, concise, and helpful.'
+  }
+};
 
 /**
  * Implements the Plan-Execute-Synthesize (PES) agent orchestration logic.
@@ -105,14 +111,7 @@ const DEFAULT_PES_SYSTEM_PROMPT = `You are a helpful AI assistant. You need to u
  */
 export class PESAgent implements IAgentCore {
     private readonly deps: PESAgentDependencies;
-    /** The base system prompt inherent to this agent. */
-    private readonly defaultSystemPrompt: string = DEFAULT_PES_SYSTEM_PROMPT; // This is the AGENT BASE
-    /**
-     * Stores the instance-level default custom system prompt, passed during construction.
-     * Used in the system prompt hierarchy if no thread or call-level prompt is specified.
-     */
-    private readonly instanceDefaultCustomSystemPrompt?: string;
-    // Removed blueprint properties
+    private readonly persona: AgentPersona;
 
     /**
      * Creates an instance of the PESAgent.
@@ -120,7 +119,15 @@ export class PESAgent implements IAgentCore {
      */
     constructor(dependencies: PESAgentDependencies) {
         this.deps = dependencies;
-        this.instanceDefaultCustomSystemPrompt = dependencies.instanceDefaultCustomSystemPrompt;
+        // Deep merge the default persona with the provided one
+        this.persona = {
+            ...DEFAULT_PERSONA,
+            ...dependencies.persona,
+            prompts: {
+                ...DEFAULT_PERSONA.prompts,
+                ...dependencies.persona?.prompts,
+            },
+        };
     }
 
     /**
@@ -153,7 +160,7 @@ export class PESAgent implements IAgentCore {
         try {
             // Stage 1: Load configuration and resolve system prompt
             phase = 'configuration';
-            const { threadContext, systemPrompt, runtimeProviderConfig } = await this._loadConfiguration(props, traceId);
+            const { threadContext, planningSystemPrompt, synthesisSystemPrompt, runtimeProviderConfig, finalPersona } = await this._loadConfiguration(props, traceId);
 
             // Stage 2: Gather context data
             phase = 'context_gathering';
@@ -163,7 +170,7 @@ export class PESAgent implements IAgentCore {
             // Stage 3: Perform planning
             phase = 'planning';
             const { planningOutput, planningMetadata, planningContext } = await this._performPlanning(
-                props, systemPrompt, history, availableTools, runtimeProviderConfig, traceId
+                props, planningSystemPrompt, history, availableTools, runtimeProviderConfig, traceId
             );
             llmCalls++;
             if (planningMetadata) {
@@ -197,7 +204,7 @@ export class PESAgent implements IAgentCore {
             // Stage 6: Perform synthesis
             phase = 'synthesis';
             const { finalResponseContent, synthesisMetadata } = await this._performSynthesis(
-                props, systemPrompt, history, planningOutput, toolResults, completedA2ATasks, runtimeProviderConfig, traceId, planningContext
+                props, synthesisSystemPrompt, history, planningOutput, toolResults, completedA2ATasks, runtimeProviderConfig, traceId, finalPersona, planningContext
             );
             llmCalls++;
             if (synthesisMetadata) {
@@ -286,11 +293,28 @@ export class PESAgent implements IAgentCore {
             throw new ARTError(`Thread context not found for threadId: ${props.threadId}`, ErrorCode.THREAD_NOT_FOUND);
         }
 
-        // Resolve system prompt using standardized override model via resolver
-        const agentInternalBaseSystemPrompt = this.defaultSystemPrompt;
-        const finalSystemPrompt = await this.deps.systemPromptResolver.resolve({
-            base: agentInternalBaseSystemPrompt,
-            instance: this.instanceDefaultCustomSystemPrompt,
+        // Resolve persona hierarchy: call -> thread -> instance
+        const callPersona = props.options?.persona;
+        const threadPersona = await this.deps.stateManager.getThreadConfigValue<Partial<AgentPersona>>(props.threadId, 'persona');
+        const instancePersona = this.persona;
+
+        const finalPersona: AgentPersona = {
+            name: callPersona?.name || threadPersona?.name || instancePersona.name,
+            prompts: {
+                planning: callPersona?.prompts?.planning || threadPersona?.prompts?.planning || instancePersona.prompts.planning,
+                synthesis: callPersona?.prompts?.synthesis || threadPersona?.prompts?.synthesis || instancePersona.prompts.synthesis,
+            },
+        };
+
+        // Resolve system prompts for each stage
+        const planningSystemPrompt = await this.deps.systemPromptResolver.resolve({
+            base: finalPersona.prompts.planning || '',
+            thread: await this.deps.stateManager.getThreadConfigValue<any>(props.threadId, 'systemPrompt'),
+            call: props.options?.systemPrompt
+        }, traceId);
+
+        const synthesisSystemPrompt = await this.deps.systemPromptResolver.resolve({
+            base: finalPersona.prompts.synthesis || '',
             thread: await this.deps.stateManager.getThreadConfigValue<any>(props.threadId, 'systemPrompt'),
             call: props.options?.systemPrompt
         }, traceId);
@@ -303,7 +327,13 @@ export class PESAgent implements IAgentCore {
              throw new ARTError(`RuntimeProviderConfig is missing in AgentProps.options or ThreadConfig for threadId: ${props.threadId}`, ErrorCode.INVALID_CONFIG);
         }
 
-        return { threadContext, systemPrompt: finalSystemPrompt, runtimeProviderConfig };
+        return { 
+            threadContext, 
+            planningSystemPrompt, 
+            synthesisSystemPrompt, 
+            runtimeProviderConfig,
+            finalPersona
+        };
     }
 
     /**
@@ -818,6 +848,7 @@ Invalid Examples (do NOT do these):
         a2aTasks: A2ATask[],
         runtimeProviderConfig: RuntimeProviderConfig,
         traceId: string,
+        finalPersona: AgentPersona,
         planningContext?: {
             toolsList: { name: string; description?: string }[];
             a2aSummary: string;
@@ -837,7 +868,7 @@ Invalid Examples (do NOT do these):
         // Construct synthesis prompt
         let synthesisPrompt: ArtStandardPrompt;
         try {
-            const wrappedSynthesisSystemPrompt = `You are a Zoi. Your purpose is to combine the user's query, the execution plan, and the results from tools and other agents into a single, coherent, and well-formatted final response.
+            const wrappedSynthesisSystemPrompt = `You are ${finalPersona.name}. Your purpose is to combine the user's query, the execution plan, and the results from tools and other agents into a single, coherent, and well-formatted final response.
 
 **Core Directives:**
 1.  **Truthfulness:** Your response MUST be based *only* on the information provided in the context (user query, plan, tool results, A2A task results). Do not invent facts or speculate beyond the provided data.

@@ -25,6 +25,7 @@ Existing agent frameworks often rely on server-side components, limiting their u
 *   **Swappable Agent Cores:** Start with the default Plan-Execute-Synthesize (`PESAgent`) pattern and seamlessly switch to or create custom reasoning patterns (e.g., ReAct, Chain of Thought).
 *   **Streaming-First:** Native support for streaming LLM responses, enabling real-time, interactive user experiences.
 *   **Dynamic Prompt Management:** A powerful system for constructing prompts from blueprints with dynamic context injection.
+*   **Agent Persona Customization:** Easily define your agent's identity and default system prompt through a simple configuration object.
 *   **Rich Observability:** A detailed, typed `Observation` system provides transparent insights into every step of an agent's operation for debugging, monitoring, and visualization.
 
 #### Connectivity & Data
@@ -128,6 +129,7 @@ runSimpleAgent();
 ## Documentation
 
 *   **[Comprehensive Developer Guide](docs/README.md):** The primary guide covering concepts, architecture, and API usage. **(Start Here!)**
+*   **[How-To Guides](docs/how-to):** Practical guides for specific tasks, such as [Customizing the Agent's Persona](docs/how-to/customizing-agent-persona.md).
 *   **[API Reference](docs/components/README.md):** Auto-generated API documentation.
 *   **[Examples](./examples):** Find practical examples, including a full React chatbot implementation.
 

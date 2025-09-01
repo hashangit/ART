@@ -312,7 +312,7 @@ export class AgentFactory {
             mcpManager: this.mcpManager, // Include MCP Manager (may be null if not configured)
             agentDiscoveryService: this.agentDiscoveryService, // Include A2A Discovery Service
             taskDelegationService: this.taskDelegationService, // Include A2A Delegation Service
-            instanceDefaultCustomSystemPrompt: this.config.defaultSystemPrompt, // Pass instance-level default system prompt from ArtInstanceConfig
+            persona: this.config.persona, // Pass the persona from the main config
             // Note: providerAdapter is used by reasoningEngine, not directly by agent core usually
         };
 
