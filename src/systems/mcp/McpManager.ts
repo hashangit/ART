@@ -24,7 +24,6 @@ import { hasInstall, install, getAllowedInfo, requestHosts, getInstallUrl } from
  * seamless integration with the ART Framework's tool system.
  *
  * @see {@link McpProxyTool} for the tool wrapper implementation.
- * @see {@link ConfigManager} for MCP configuration management.
  * @see {@link McpClientController} for the underlying client implementation.
  *
  * @class McpManager

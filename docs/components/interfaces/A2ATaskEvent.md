@@ -6,7 +6,7 @@
 
 # Interface: A2ATaskEvent
 
-Defined in: [src/systems/ui/a2a-task-socket.ts:29](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/ui/a2a-task-socket.ts#L29)
+Defined in: [src/systems/ui/a2a-task-socket.ts:29](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/a2a-task-socket.ts#L29)
 
 Event data structure for A2A task updates.
 Contains the updated task and metadata about the change.
@@ -17,7 +17,7 @@ Contains the updated task and metadata about the change.
 
 > **eventType**: `"created"` \| `"updated"` \| `"completed"` \| `"failed"` \| `"cancelled"` \| `"status_changed"` \| `"delegated"`
 
-Defined in: [src/systems/ui/a2a-task-socket.ts:33](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/ui/a2a-task-socket.ts#L33)
+Defined in: [src/systems/ui/a2a-task-socket.ts:33](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/a2a-task-socket.ts#L33)
 
 The type of event that occurred
 
@@ -27,7 +27,7 @@ The type of event that occurred
 
 > `optional` **metadata**: `object`
 
-Defined in: [src/systems/ui/a2a-task-socket.ts:39](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/ui/a2a-task-socket.ts#L39)
+Defined in: [src/systems/ui/a2a-task-socket.ts:39](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/a2a-task-socket.ts#L39)
 
 Additional metadata about the event
 
@@ -55,7 +55,7 @@ The component that triggered the update
 
 > `optional` **previousStatus**: [`A2ATaskStatus`](../enumerations/A2ATaskStatus.md)
 
-Defined in: [src/systems/ui/a2a-task-socket.ts:37](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/ui/a2a-task-socket.ts#L37)
+Defined in: [src/systems/ui/a2a-task-socket.ts:37](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/a2a-task-socket.ts#L37)
 
 Previous status (if applicable) for status change events
 
@@ -65,7 +65,7 @@ Previous status (if applicable) for status change events
 
 > **task**: [`A2ATask`](A2ATask.md)
 
-Defined in: [src/systems/ui/a2a-task-socket.ts:31](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/ui/a2a-task-socket.ts#L31)
+Defined in: [src/systems/ui/a2a-task-socket.ts:31](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/a2a-task-socket.ts#L31)
 
 The A2A task that was updated
 
@@ -75,6 +75,6 @@ The A2A task that was updated
 
 > **timestamp**: `number`
 
-Defined in: [src/systems/ui/a2a-task-socket.ts:35](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/ui/a2a-task-socket.ts#L35)
+Defined in: [src/systems/ui/a2a-task-socket.ts:35](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/a2a-task-socket.ts#L35)
 
 Timestamp when the event occurred

@@ -6,7 +6,7 @@
 
 # Interface: McpResourceTemplate
 
-Defined in: [src/systems/mcp/types.ts:145](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L145)
+Defined in: [src/systems/mcp/types.ts:145](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L145)
 
 Defines a template for a resource provided by an MCP server.
 
@@ -18,7 +18,7 @@ Defines a template for a resource provided by an MCP server.
 
 > `optional` **description**: `string`
 
-Defined in: [src/systems/mcp/types.ts:160](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L160)
+Defined in: [src/systems/mcp/types.ts:160](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L160)
 
 A description of the resource template.
 
@@ -28,7 +28,7 @@ A description of the resource template.
 
 > `optional` **mimeType**: `string`
 
-Defined in: [src/systems/mcp/types.ts:165](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L165)
+Defined in: [src/systems/mcp/types.ts:165](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L165)
 
 The MIME type of the resource.
 
@@ -38,7 +38,7 @@ The MIME type of the resource.
 
 > **name**: `string`
 
-Defined in: [src/systems/mcp/types.ts:155](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L155)
+Defined in: [src/systems/mcp/types.ts:155](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L155)
 
 The name of the resource template.
 
@@ -48,6 +48,6 @@ The name of the resource template.
 
 > **uriTemplate**: `string`
 
-Defined in: [src/systems/mcp/types.ts:150](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L150)
+Defined in: [src/systems/mcp/types.ts:150](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L150)
 
 The URI template for the resource.

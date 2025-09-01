@@ -6,7 +6,7 @@
 
 # Interface: IToolExecutor
 
-Defined in: [src/core/interfaces.ts:191](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/core/interfaces.ts#L191)
+Defined in: [src/core/interfaces.ts:191](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L191)
 
 Interface for the executable logic of a tool.
 
@@ -16,7 +16,7 @@ Interface for the executable logic of a tool.
 
 > `readonly` **schema**: [`ToolSchema`](ToolSchema.md)
 
-Defined in: [src/core/interfaces.ts:193](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/core/interfaces.ts#L193)
+Defined in: [src/core/interfaces.ts:193](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L193)
 
 The schema definition for this tool.
 
@@ -26,7 +26,7 @@ The schema definition for this tool.
 
 > **execute**(`input`, `context`): `Promise`\<[`ToolResult`](ToolResult.md)\>
 
-Defined in: [src/core/interfaces.ts:201](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/core/interfaces.ts#L201)
+Defined in: [src/core/interfaces.ts:201](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L201)
 
 Executes the tool's logic.
 

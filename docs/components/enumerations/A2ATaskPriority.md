@@ -6,7 +6,7 @@
 
 # Enumeration: A2ATaskPriority
 
-Defined in: [src/types/index.ts:1265](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L1265)
+Defined in: [src/types/index.ts:1277](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1277)
 
 Represents the priority level of an A2A task.
 
@@ -16,7 +16,7 @@ Represents the priority level of an A2A task.
 
 > **HIGH**: `"HIGH"`
 
-Defined in: [src/types/index.ts:1271](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L1271)
+Defined in: [src/types/index.ts:1283](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1283)
 
 High priority.
 
@@ -26,7 +26,7 @@ High priority.
 
 > **LOW**: `"LOW"`
 
-Defined in: [src/types/index.ts:1267](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L1267)
+Defined in: [src/types/index.ts:1279](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1279)
 
 Low priority.
 
@@ -36,7 +36,7 @@ Low priority.
 
 > **MEDIUM**: `"MEDIUM"`
 
-Defined in: [src/types/index.ts:1269](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L1269)
+Defined in: [src/types/index.ts:1281](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1281)
 
 Medium priority.
 
@@ -46,6 +46,6 @@ Medium priority.
 
 > **URGENT**: `"URGENT"`
 
-Defined in: [src/types/index.ts:1273](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L1273)
+Defined in: [src/types/index.ts:1285](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1285)
 
 Urgent priority.

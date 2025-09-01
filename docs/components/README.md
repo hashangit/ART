@@ -4,10 +4,45 @@
 
 # ART Framework Component Reference
 
-Main entry point for the ART Framework library.
-This file exports the primary factory function (`createArtInstance`),
-core components, adapters, types, interfaces, and utilities needed
-to build and run ART agents.
+ART (Agentic Reasoning & Tool-use) Framework - Main Entry Point
+-----------------------------------------------------------------
+
+Welcome to the ART framework! This file is the primary public API surface for the library.
+It's structured to provide a clear and intuitive experience for developers,
+whether you're just getting started or building advanced, custom agentic systems.
+
+--- Quick Start ---
+For most use cases, you'll only need `createArtInstance` and the associated types.
+
+Example:
+```ts
+import { createArtInstance } from 'art-framework';
+import type { ArtInstanceConfig } from 'art-framework';
+
+const config: ArtInstanceConfig = {
+  storage: { type: 'memory' },
+  providers: {
+    openai: { adapter: 'openai', apiKey: '...' }
+  },
+  tools: [new CalculatorTool()],
+  persona: {
+    name: 'MyAgent',
+    prompts: {
+      synthesis: 'You are MyAgent. Always answer in rhyme.'
+    }
+  }
+};
+
+const art = await createArtInstance(config);
+const response = await art.process({ query: "Hello, world!" });
+```
+
+--- API Structure ---
+1.  **Core Factory**: The main function to create an ART instance.
+2.  **Primary Interfaces & Types**: Essential types for configuration and interaction.
+3.  **Built-in Components**: Concrete implementations of adapters, tools, and agents.
+4.  **Advanced Systems & Managers**: Lower-level components for building custom logic.
+5.  **Utilities**: Helper functions and classes.
 
 ## Enumerations
 
@@ -29,7 +64,6 @@ to build and run ART agents.
 - [ARTError](classes/ARTError.md)
 - [AuthManager](classes/AuthManager.md)
 - [CalculatorTool](classes/CalculatorTool.md)
-- [ConfigManager](classes/ConfigManager.md)
 - [ConversationSocket](classes/ConversationSocket.md)
 - [DeepSeekAdapter](classes/DeepSeekAdapter.md)
 - [GeminiAdapter](classes/GeminiAdapter.md)
@@ -64,12 +98,12 @@ to build and run ART agents.
 - [AgentDiscoveryConfig](interfaces/AgentDiscoveryConfig.md)
 - [AgentFinalResponse](interfaces/AgentFinalResponse.md)
 - [AgentOptions](interfaces/AgentOptions.md)
+- [AgentPersona](interfaces/AgentPersona.md)
 - [AgentProps](interfaces/AgentProps.md)
 - [AgentState](interfaces/AgentState.md)
 - [AnthropicAdapterOptions](interfaces/AnthropicAdapterOptions.md)
 - [ArtInstance](interfaces/ArtInstance.md)
 - [ArtInstanceConfig](interfaces/ArtInstanceConfig.md)
-- [ArtMcpConfig](interfaces/ArtMcpConfig.md)
 - [ArtStandardMessage](interfaces/ArtStandardMessage.md)
 - [AvailableProviderEntry](interfaces/AvailableProviderEntry.md)
 - [CallOptions](interfaces/CallOptions.md)
@@ -85,7 +119,6 @@ to build and run ART agents.
 - [IAgentCore](interfaces/IAgentCore.md)
 - [IAuthStrategy](interfaces/IAuthStrategy.md)
 - [IConversationRepository](interfaces/IConversationRepository.md)
-- [IndexedDBConfig](interfaces/IndexedDBConfig.md)
 - [IObservationRepository](interfaces/IObservationRepository.md)
 - [IProviderManager](interfaces/IProviderManager.md)
 - [IStateRepository](interfaces/IStateRepository.md)
@@ -109,7 +142,6 @@ to build and run ART agents.
 - [OpenRouterAdapterOptions](interfaces/OpenRouterAdapterOptions.md)
 - [OutputParser](interfaces/OutputParser.md)
 - [ParsedToolCall](interfaces/ParsedToolCall.md)
-- [PESAgentDependencies](interfaces/PESAgentDependencies.md)
 - [PKCEOAuthConfig](interfaces/PKCEOAuthConfig.md)
 - [PromptBlueprint](interfaces/PromptBlueprint.md)
 - [PromptContext](interfaces/PromptContext.md)
@@ -118,11 +150,10 @@ to build and run ART agents.
 - [ProviderManagerConfig](interfaces/ProviderManagerConfig.md)
 - [ReasoningEngine](interfaces/ReasoningEngine.md)
 - [RuntimeProviderConfig](interfaces/RuntimeProviderConfig.md)
+- [StageSpecificPrompts](interfaces/StageSpecificPrompts.md)
 - [StateManager](interfaces/StateManager.md)
 - [StorageAdapter](interfaces/StorageAdapter.md)
-- [StreamableHttpConnection](interfaces/StreamableHttpConnection.md)
 - [StreamEvent](interfaces/StreamEvent.md)
-- [SupabaseConfig](interfaces/SupabaseConfig.md)
 - [SystemPromptOverride](interfaces/SystemPromptOverride.md)
 - [SystemPromptResolver](interfaces/SystemPromptResolver.md)
 - [SystemPromptSpec](interfaces/SystemPromptSpec.md)

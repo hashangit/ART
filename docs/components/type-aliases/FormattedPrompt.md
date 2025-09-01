@@ -8,7 +8,7 @@
 
 > **FormattedPrompt** = [`ArtStandardPrompt`](ArtStandardPrompt.md)
 
-Defined in: [src/types/index.ts:1026](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L1026)
+Defined in: [src/types/index.ts:1038](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1038)
 
 Represents the prompt data formatted for a specific LLM provider.
 Can be a simple string or a complex object (e.g., for OpenAI Chat Completion API).

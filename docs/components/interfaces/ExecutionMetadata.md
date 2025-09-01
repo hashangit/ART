@@ -6,7 +6,7 @@
 
 # Interface: ExecutionMetadata
 
-Defined in: [src/types/index.ts:725](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L725)
+Defined in: [src/types/index.ts:737](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L737)
 
 Metadata summarizing an agent execution cycle, including performance metrics and outcomes.
 
@@ -18,7 +18,7 @@ Metadata summarizing an agent execution cycle, including performance metrics and
 
 > `optional` **error**: `string`
 
-Defined in: [src/types/index.ts:770](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L770)
+Defined in: [src/types/index.ts:782](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L782)
 
 A top-level error message if the overall status is 'error' or 'partial'.
 
@@ -28,7 +28,7 @@ A top-level error message if the overall status is 'error' or 'partial'.
 
 > **llmCalls**: `number`
 
-Defined in: [src/types/index.ts:755](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L755)
+Defined in: [src/types/index.ts:767](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L767)
 
 The number of calls made to the `ReasoningEngine`.
 
@@ -38,7 +38,7 @@ The number of calls made to the `ReasoningEngine`.
 
 > `optional` **llmCost**: `number`
 
-Defined in: [src/types/index.ts:765](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L765)
+Defined in: [src/types/index.ts:777](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L777)
 
 An optional estimated cost for the LLM calls made during this execution.
 
@@ -48,7 +48,7 @@ An optional estimated cost for the LLM calls made during this execution.
 
 > `optional` **llmMetadata**: [`LLMMetadata`](LLMMetadata.md)
 
-Defined in: [src/types/index.ts:775](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L775)
+Defined in: [src/types/index.ts:787](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L787)
 
 Aggregated metadata from LLM calls made during the execution.
 
@@ -58,7 +58,7 @@ Aggregated metadata from LLM calls made during the execution.
 
 > **status**: `"error"` \| `"success"` \| `"partial"`
 
-Defined in: [src/types/index.ts:745](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L745)
+Defined in: [src/types/index.ts:757](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L757)
 
 The overall status of the execution ('success', 'error', or 'partial' if some steps failed but a response was generated).
 
@@ -68,7 +68,7 @@ The overall status of the execution ('success', 'error', or 'partial' if some st
 
 > **threadId**: `string`
 
-Defined in: [src/types/index.ts:730](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L730)
+Defined in: [src/types/index.ts:742](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L742)
 
 The thread ID associated with this execution cycle.
 
@@ -78,7 +78,7 @@ The thread ID associated with this execution cycle.
 
 > **toolCalls**: `number`
 
-Defined in: [src/types/index.ts:760](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L760)
+Defined in: [src/types/index.ts:772](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L772)
 
 The number of tool execution attempts made by the `ToolSystem`.
 
@@ -88,7 +88,7 @@ The number of tool execution attempts made by the `ToolSystem`.
 
 > **totalDurationMs**: `number`
 
-Defined in: [src/types/index.ts:750](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L750)
+Defined in: [src/types/index.ts:762](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L762)
 
 The total duration of the `agent.process()` call in milliseconds.
 
@@ -98,7 +98,7 @@ The total duration of the `agent.process()` call in milliseconds.
 
 > `optional` **traceId**: `string`
 
-Defined in: [src/types/index.ts:735](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L735)
+Defined in: [src/types/index.ts:747](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L747)
 
 The trace ID used during this execution, if provided.
 
@@ -108,6 +108,6 @@ The trace ID used during this execution, if provided.
 
 > `optional` **userId**: `string`
 
-Defined in: [src/types/index.ts:740](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L740)
+Defined in: [src/types/index.ts:752](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L752)
 
 The user ID associated with the execution, if provided.

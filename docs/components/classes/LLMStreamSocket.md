@@ -6,7 +6,7 @@
 
 # Class: LLMStreamSocket
 
-Defined in: [src/systems/ui/llm-stream-socket.ts:13](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/ui/llm-stream-socket.ts#L13)
+Defined in: [src/systems/ui/llm-stream-socket.ts:13](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/llm-stream-socket.ts#L13)
 
 A dedicated socket for broadcasting LLM stream events (`StreamEvent`) to UI subscribers.
 Extends the generic TypedSocket and implements filtering based on `StreamEvent.type`.
@@ -21,7 +21,7 @@ Extends the generic TypedSocket and implements filtering based on `StreamEvent.t
 
 > **new LLMStreamSocket**(): `LLMStreamSocket`
 
-Defined in: [src/systems/ui/llm-stream-socket.ts:15](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/ui/llm-stream-socket.ts#L15)
+Defined in: [src/systems/ui/llm-stream-socket.ts:15](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/llm-stream-socket.ts#L15)
 
 #### Returns
 
@@ -37,7 +37,7 @@ Defined in: [src/systems/ui/llm-stream-socket.ts:15](https://github.com/hashangi
 
 > **clearAllSubscriptions**(): `void`
 
-Defined in: [src/systems/ui/typed-socket.ts:99](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/ui/typed-socket.ts#L99)
+Defined in: [src/systems/ui/typed-socket.ts:99](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/typed-socket.ts#L99)
 
 Clears all subscriptions. Useful for cleanup.
 
@@ -55,7 +55,7 @@ Clears all subscriptions. Useful for cleanup.
 
 > `optional` **getHistory**(`_filter?`, `_options?`): `Promise`\<[`StreamEvent`](../interfaces/StreamEvent.md)[]\>
 
-Defined in: [src/systems/ui/typed-socket.ts:91](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/ui/typed-socket.ts#L91)
+Defined in: [src/systems/ui/typed-socket.ts:91](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/typed-socket.ts#L91)
 
 Optional: Retrieves historical data. This base implementation is empty.
 Subclasses might implement this by interacting with repositories.
@@ -90,7 +90,7 @@ Subclasses might implement this by interacting with repositories.
 
 > **notify**(`data`, `options?`, `filterCheck?`): `void`
 
-Defined in: [src/systems/ui/typed-socket.ts:55](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/ui/typed-socket.ts#L55)
+Defined in: [src/systems/ui/typed-socket.ts:55](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/typed-socket.ts#L55)
 
 Notifies all relevant subscribers with new data.
 
@@ -134,7 +134,7 @@ A function to check if a subscription's filter matches the data.
 
 > **notifyStreamEvent**(`event`): `void`
 
-Defined in: [src/systems/ui/llm-stream-socket.ts:25](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/ui/llm-stream-socket.ts#L25)
+Defined in: [src/systems/ui/llm-stream-socket.ts:25](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/llm-stream-socket.ts#L25)
 
 Notifies subscribers about a new LLM stream event.
 Filters based on event type if a filter is provided during subscription.
@@ -157,7 +157,7 @@ The StreamEvent data.
 
 > **subscribe**(`callback`, `filter?`, `options?`): [`UnsubscribeFunction`](../type-aliases/UnsubscribeFunction.md)
 
-Defined in: [src/systems/ui/typed-socket.ts:33](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/ui/typed-socket.ts#L33)
+Defined in: [src/systems/ui/typed-socket.ts:33](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/typed-socket.ts#L33)
 
 Subscribes a callback function to receive notifications.
 

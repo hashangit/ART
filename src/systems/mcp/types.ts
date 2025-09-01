@@ -202,7 +202,7 @@ export type McpServerConfig = {
     description?: string;
     /**
      * The connection details for the server.
-     * @property {StreamableHttpConnection} connection
+     * @see module:systems/mcp/types.StreamableHttpConnection
      */
     connection: StreamableHttpConnection;
     /**

@@ -6,7 +6,7 @@
 
 # Interface: McpServerStatus
 
-Defined in: [src/systems/mcp/types.ts:254](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L254)
+Defined in: [src/systems/mcp/types.ts:254](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L254)
 
 Represents the internal status of an MCP server connection.
 This is not part of the public configuration.
@@ -19,7 +19,7 @@ This is not part of the public configuration.
 
 > **id**: `string`
 
-Defined in: [src/systems/mcp/types.ts:259](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L259)
+Defined in: [src/systems/mcp/types.ts:259](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L259)
 
 The unique identifier for the server.
 
@@ -29,7 +29,7 @@ The unique identifier for the server.
 
 > `optional` **lastConnected**: `Date`
 
-Defined in: [src/systems/mcp/types.ts:269](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L269)
+Defined in: [src/systems/mcp/types.ts:269](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L269)
 
 The timestamp of the last successful connection.
 
@@ -39,7 +39,7 @@ The timestamp of the last successful connection.
 
 > `optional` **lastError**: `string`
 
-Defined in: [src/systems/mcp/types.ts:274](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L274)
+Defined in: [src/systems/mcp/types.ts:274](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L274)
 
 The last error message received from the server.
 
@@ -49,7 +49,7 @@ The last error message received from the server.
 
 > **status**: `"connected"` \| `"disconnected"` \| `"error"` \| `"connecting"`
 
-Defined in: [src/systems/mcp/types.ts:264](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L264)
+Defined in: [src/systems/mcp/types.ts:264](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L264)
 
 The current connection status of the server.
 
@@ -59,6 +59,6 @@ The current connection status of the server.
 
 > **toolCount**: `number`
 
-Defined in: [src/systems/mcp/types.ts:279](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L279)
+Defined in: [src/systems/mcp/types.ts:279](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L279)
 
 The number of tools registered from this server.

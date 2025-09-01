@@ -41,7 +41,7 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
   /**
    * Creates an instance of IndexedDBStorageAdapter.
    * Note: The database connection is not opened until `init()` is called.
-   * @param {IndexedDBConfig} config - Configuration options including database name, version, and required object stores.
+   * @param {module:integrations/storage/indexedDB.IndexedDBConfig} config - Configuration options including database name, version, and required object stores.
    * @see https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API
    */
   constructor(config: IndexedDBConfig) {

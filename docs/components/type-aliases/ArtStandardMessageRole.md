@@ -8,7 +8,7 @@
 
 > **ArtStandardMessageRole** = `"system"` \| `"user"` \| `"assistant"` \| `"tool_request"` \| `"tool_result"` \| `"tool"`
 
-Defined in: [src/types/index.ts:877](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L877)
+Defined in: [src/types/index.ts:889](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L889)
 
 Defines the standard roles for messages within the `ArtStandardPrompt` format.
 

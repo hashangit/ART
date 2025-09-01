@@ -6,7 +6,7 @@
 
 # Interface: A2AAgentInfo
 
-Defined in: [src/types/index.ts:1281](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L1281)
+Defined in: [src/types/index.ts:1293](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1293)
 
 Represents agent information for A2A task assignment.
 
@@ -18,7 +18,7 @@ Represents agent information for A2A task assignment.
 
 > **agentId**: `string`
 
-Defined in: [src/types/index.ts:1286](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L1286)
+Defined in: [src/types/index.ts:1298](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1298)
 
 Unique identifier for the agent.
 
@@ -28,7 +28,7 @@ Unique identifier for the agent.
 
 > **agentName**: `string`
 
-Defined in: [src/types/index.ts:1291](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L1291)
+Defined in: [src/types/index.ts:1303](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1303)
 
 Human-readable name for the agent.
 
@@ -38,7 +38,7 @@ Human-readable name for the agent.
 
 > **agentType**: `string`
 
-Defined in: [src/types/index.ts:1296](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L1296)
+Defined in: [src/types/index.ts:1308](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1308)
 
 The type or role of the agent (e.g., 'reasoning', 'data-processing', 'synthesis').
 
@@ -48,7 +48,7 @@ The type or role of the agent (e.g., 'reasoning', 'data-processing', 'synthesis'
 
 > `optional` **authentication**: `object`
 
-Defined in: [src/types/index.ts:1316](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L1316)
+Defined in: [src/types/index.ts:1328](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1328)
 
 Authentication configuration for communicating with the agent.
 
@@ -76,7 +76,7 @@ Type of authentication required.
 
 > `optional` **capabilities**: `string`[]
 
-Defined in: [src/types/index.ts:1306](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L1306)
+Defined in: [src/types/index.ts:1318](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1318)
 
 Agent capabilities or specializations.
 
@@ -86,7 +86,7 @@ Agent capabilities or specializations.
 
 > `optional` **endpoint**: `string`
 
-Defined in: [src/types/index.ts:1301](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L1301)
+Defined in: [src/types/index.ts:1313](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1313)
 
 Base URL or endpoint for communicating with the agent.
 
@@ -96,6 +96,6 @@ Base URL or endpoint for communicating with the agent.
 
 > `optional` **status**: `"available"` \| `"busy"` \| `"offline"`
 
-Defined in: [src/types/index.ts:1311](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L1311)
+Defined in: [src/types/index.ts:1323](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1323)
 
 Current load or availability status of the agent.

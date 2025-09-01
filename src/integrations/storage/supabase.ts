@@ -49,7 +49,7 @@ export class SupabaseStorageAdapter implements StorageAdapter {
 
   /**
    * Creates an instance of SupabaseStorageAdapter.
-   * @param {SupabaseConfig} config - The configuration for the adapter.
+   * @see SupabaseConfig
    */
   constructor(config: SupabaseConfig) {
     this.configure(config);

@@ -6,7 +6,7 @@
 
 # Interface: ProviderManagerConfig
 
-Defined in: [src/types/providers.ts:37](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/providers.ts#L37)
+Defined in: [src/types/providers.ts:37](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/providers.ts#L37)
 
 Configuration for the ProviderManager passed during ART initialization.
 
@@ -18,7 +18,7 @@ Configuration for the ProviderManager passed during ART initialization.
 
 > `optional` **apiInstanceIdleTimeoutSeconds**: `number`
 
-Defined in: [src/types/providers.ts:51](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/providers.ts#L51)
+Defined in: [src/types/providers.ts:51](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/providers.ts#L51)
 
 Time in seconds an API adapter instance can be idle before being eligible for removal. Default: 300.
 
@@ -28,7 +28,7 @@ Time in seconds an API adapter instance can be idle before being eligible for re
 
 > **availableProviders**: [`AvailableProviderEntry`](AvailableProviderEntry.md)[]
 
-Defined in: [src/types/providers.ts:41](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/providers.ts#L41)
+Defined in: [src/types/providers.ts:41](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/providers.ts#L41)
 
 ***
 
@@ -36,6 +36,6 @@ Defined in: [src/types/providers.ts:41](https://github.com/hashangit/ART/blob/fe
 
 > `optional` **maxParallelApiInstancesPerProvider**: `number`
 
-Defined in: [src/types/providers.ts:46](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/providers.ts#L46)
+Defined in: [src/types/providers.ts:46](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/providers.ts#L46)
 
 Max concurrent ACTIVE instances per API-based provider NAME. Default: 5.

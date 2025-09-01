@@ -8,7 +8,7 @@
 
 > **McpServerConfig** = `object`
 
-Defined in: [src/systems/mcp/types.ts:177](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L177)
+Defined in: [src/systems/mcp/types.ts:177](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L177)
 
 Represents the configuration for a single MCP server.
 
@@ -21,11 +21,15 @@ It contains all the necessary information for discovering, installing, and conne
 
 ### connection
 
-> **connection**: [`StreamableHttpConnection`](../interfaces/StreamableHttpConnection.md)
+> **connection**: `StreamableHttpConnection`
 
-Defined in: [src/systems/mcp/types.ts:207](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L207)
+Defined in: [src/systems/mcp/types.ts:207](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L207)
 
 The connection details for the server.
+
+#### See
+
+module:systems/mcp/types.StreamableHttpConnection
 
 ***
 
@@ -33,7 +37,7 @@ The connection details for the server.
 
 > `optional` **description**: `string`
 
-Defined in: [src/systems/mcp/types.ts:202](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L202)
+Defined in: [src/systems/mcp/types.ts:202](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L202)
 
 A description of the server and its capabilities.
 
@@ -43,7 +47,7 @@ A description of the server and its capabilities.
 
 > `optional` **displayName**: `string`
 
-Defined in: [src/systems/mcp/types.ts:197](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L197)
+Defined in: [src/systems/mcp/types.ts:197](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L197)
 
 A user-friendly name for the server.
 
@@ -53,7 +57,7 @@ A user-friendly name for the server.
 
 > **enabled**: `boolean`
 
-Defined in: [src/systems/mcp/types.ts:192](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L192)
+Defined in: [src/systems/mcp/types.ts:192](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L192)
 
 Whether the server is enabled and should be connected to.
 
@@ -63,7 +67,7 @@ Whether the server is enabled and should be connected to.
 
 > **id**: `string`
 
-Defined in: [src/systems/mcp/types.ts:182](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L182)
+Defined in: [src/systems/mcp/types.ts:182](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L182)
 
 A unique identifier for the server.
 
@@ -73,7 +77,7 @@ A unique identifier for the server.
 
 > `optional` **installation**: `object`
 
-Defined in: [src/systems/mcp/types.ts:212](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L212)
+Defined in: [src/systems/mcp/types.ts:212](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L212)
 
 Information about how the server was installed (e.g., 'git', 'npm', 'manual').
 
@@ -91,7 +95,7 @@ Information about how the server was installed (e.g., 'git', 'npm', 'manual').
 
 > **resources**: [`McpResource`](../interfaces/McpResource.md)[]
 
-Defined in: [src/systems/mcp/types.ts:227](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L227)
+Defined in: [src/systems/mcp/types.ts:227](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L227)
 
 The static resources provided by the server.
 
@@ -101,7 +105,7 @@ The static resources provided by the server.
 
 > **resourceTemplates**: [`McpResourceTemplate`](../interfaces/McpResourceTemplate.md)[]
 
-Defined in: [src/systems/mcp/types.ts:232](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L232)
+Defined in: [src/systems/mcp/types.ts:232](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L232)
 
 The resource templates provided by the server.
 
@@ -111,7 +115,7 @@ The resource templates provided by the server.
 
 > `optional` **timeout**: `number`
 
-Defined in: [src/systems/mcp/types.ts:217](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L217)
+Defined in: [src/systems/mcp/types.ts:217](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L217)
 
 The timeout in milliseconds for requests to the server.
 
@@ -121,7 +125,7 @@ The timeout in milliseconds for requests to the server.
 
 > **tools**: [`McpToolDefinition`](../interfaces/McpToolDefinition.md)[]
 
-Defined in: [src/systems/mcp/types.ts:222](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L222)
+Defined in: [src/systems/mcp/types.ts:222](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L222)
 
 The tools provided by the server.
 
@@ -131,6 +135,6 @@ The tools provided by the server.
 
 > **type**: `"streamable-http"`
 
-Defined in: [src/systems/mcp/types.ts:187](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/mcp/types.ts#L187)
+Defined in: [src/systems/mcp/types.ts:187](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/types.ts#L187)
 
 The transport type for the server, currently only 'streamable-http' is supported.

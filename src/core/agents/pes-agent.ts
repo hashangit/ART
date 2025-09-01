@@ -115,7 +115,7 @@ export class PESAgent implements IAgentCore {
 
     /**
      * Creates an instance of the PESAgent.
-     * @param dependencies - An object containing instances of all required subsystems (managers, registries, etc.).
+     * @param {module:core/agents/pes-agent.PESAgentDependencies} dependencies - An object containing instances of all required subsystems (managers, registries, etc.).
      */
     constructor(dependencies: PESAgentDependencies) {
         this.deps = dependencies;

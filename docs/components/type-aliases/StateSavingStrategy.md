@@ -8,7 +8,7 @@
 
 > **StateSavingStrategy** = `"explicit"` \| `"implicit"`
 
-Defined in: [src/types/index.ts:1126](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/types/index.ts#L1126)
+Defined in: [src/types/index.ts:1138](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1138)
 
 Defines the strategy for saving AgentState.
 

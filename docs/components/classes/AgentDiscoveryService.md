@@ -6,7 +6,7 @@
 
 # Class: AgentDiscoveryService
 
-Defined in: [src/systems/a2a/AgentDiscoveryService.ts:82](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/a2a/AgentDiscoveryService.ts#L82)
+Defined in: [src/systems/a2a/AgentDiscoveryService.ts:82](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/AgentDiscoveryService.ts#L82)
 
 Service for discovering A2A protocol compatible agents.
 Implements the A2A discovery standards for finding and identifying compatible agents.
@@ -17,7 +17,7 @@ Implements the A2A discovery standards for finding and identifying compatible ag
 
 > **new AgentDiscoveryService**(`config?`): `AgentDiscoveryService`
 
-Defined in: [src/systems/a2a/AgentDiscoveryService.ts:91](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/a2a/AgentDiscoveryService.ts#L91)
+Defined in: [src/systems/a2a/AgentDiscoveryService.ts:91](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/AgentDiscoveryService.ts#L91)
 
 Creates an instance of AgentDiscoveryService.
 
@@ -43,7 +43,7 @@ A2AAgentCard
 
 > **clearCache**(): `void`
 
-Defined in: [src/systems/a2a/AgentDiscoveryService.ts:359](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/a2a/AgentDiscoveryService.ts#L359)
+Defined in: [src/systems/a2a/AgentDiscoveryService.ts:359](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/AgentDiscoveryService.ts#L359)
 
 Clears the agent cache.
 
@@ -57,7 +57,7 @@ Clears the agent cache.
 
 > **discoverAgents**(`traceId?`): `Promise`\<[`A2AAgentInfo`](../interfaces/A2AAgentInfo.md)[]\>
 
-Defined in: [src/systems/a2a/AgentDiscoveryService.ts:109](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/a2a/AgentDiscoveryService.ts#L109)
+Defined in: [src/systems/a2a/AgentDiscoveryService.ts:109](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/AgentDiscoveryService.ts#L109)
 
 Discovers all available A2A agents from the discovery endpoint.
 
@@ -85,7 +85,7 @@ If discovery fails or no agents are found
 
 > **findAgentsByCapabilities**(`capabilities`, `traceId?`): `Promise`\<[`A2AAgentInfo`](../interfaces/A2AAgentInfo.md)[]\>
 
-Defined in: [src/systems/a2a/AgentDiscoveryService.ts:340](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/a2a/AgentDiscoveryService.ts#L340)
+Defined in: [src/systems/a2a/AgentDiscoveryService.ts:340](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/AgentDiscoveryService.ts#L340)
 
 Finds agents by specific capabilities.
 
@@ -115,7 +115,7 @@ Promise resolving to agents that have all specified capabilities
 
 > **findTopAgentsForTask**(`taskType`, `topK`, `traceId?`): `Promise`\<[`A2AAgentInfo`](../interfaces/A2AAgentInfo.md)[]\>
 
-Defined in: [src/systems/a2a/AgentDiscoveryService.ts:199](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/systems/a2a/AgentDiscoveryService.ts#L199)
+Defined in: [src/systems/a2a/AgentDiscoveryService.ts:199](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/AgentDiscoveryService.ts#L199)
 
 Finds the top K A2A agents for a specific task type, ranked by suitability.
 This method acts as a pre-filter, returning a list of the most promising candidates

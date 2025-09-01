@@ -6,7 +6,7 @@
 
 # Class: PESAgent
 
-Defined in: [src/core/agents/pes-agent.ts:106](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/core/agents/pes-agent.ts#L106)
+Defined in: [src/core/agents/pes-agent.ts:112](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/agents/pes-agent.ts#L112)
 
 Implements the Plan-Execute-Synthesize (PES) agent orchestration logic.
 This agent follows a structured approach:
@@ -36,7 +36,7 @@ for the `ReasoningEngine`. It processes the `StreamEvent` output from the reason
 
 > **new PESAgent**(`dependencies`): `PESAgent`
 
-Defined in: [src/core/agents/pes-agent.ts:121](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/core/agents/pes-agent.ts#L121)
+Defined in: [src/core/agents/pes-agent.ts:120](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/agents/pes-agent.ts#L120)
 
 Creates an instance of the PESAgent.
 
@@ -44,7 +44,7 @@ Creates an instance of the PESAgent.
 
 ##### dependencies
 
-[`PESAgentDependencies`](../interfaces/PESAgentDependencies.md)
+`PESAgentDependencies`
 
 An object containing instances of all required subsystems (managers, registries, etc.).
 
@@ -58,7 +58,7 @@ An object containing instances of all required subsystems (managers, registries,
 
 > **process**(`props`): `Promise`\<[`AgentFinalResponse`](../interfaces/AgentFinalResponse.md)\>
 
-Defined in: [src/core/agents/pes-agent.ts:142](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/core/agents/pes-agent.ts#L142)
+Defined in: [src/core/agents/pes-agent.ts:149](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/agents/pes-agent.ts#L149)
 
 Executes the full Plan-Execute-Synthesize cycle for a given user query.
 

@@ -6,7 +6,7 @@
 
 # Interface: OpenRouterAdapterOptions
 
-Defined in: [src/integrations/reasoning/openrouter.ts:19](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/integrations/reasoning/openrouter.ts#L19)
+Defined in: [src/integrations/reasoning/openrouter.ts:19](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/openrouter.ts#L19)
 
 Configuration options required for the `OpenRouterAdapter`.
 
@@ -16,7 +16,7 @@ Configuration options required for the `OpenRouterAdapter`.
 
 > `optional` **apiBaseUrl**: `string`
 
-Defined in: [src/integrations/reasoning/openrouter.ts:25](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/integrations/reasoning/openrouter.ts#L25)
+Defined in: [src/integrations/reasoning/openrouter.ts:25](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/openrouter.ts#L25)
 
 Optional: Override the base URL for the OpenRouter API. Defaults to 'https://openrouter.ai/api/v1'.
 
@@ -26,7 +26,7 @@ Optional: Override the base URL for the OpenRouter API. Defaults to 'https://ope
 
 > **apiKey**: `string`
 
-Defined in: [src/integrations/reasoning/openrouter.ts:21](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/integrations/reasoning/openrouter.ts#L21)
+Defined in: [src/integrations/reasoning/openrouter.ts:21](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/openrouter.ts#L21)
 
 Your OpenRouter API key. Handle securely.
 
@@ -36,7 +36,7 @@ Your OpenRouter API key. Handle securely.
 
 > `optional` **appName**: `string`
 
-Defined in: [src/integrations/reasoning/openrouter.ts:29](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/integrations/reasoning/openrouter.ts#L29)
+Defined in: [src/integrations/reasoning/openrouter.ts:29](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/openrouter.ts#L29)
 
 Optional: Your application's name, sent as the 'X-Title' header (recommended by OpenRouter).
 
@@ -46,7 +46,7 @@ Optional: Your application's name, sent as the 'X-Title' header (recommended by 
 
 > **model**: `string`
 
-Defined in: [src/integrations/reasoning/openrouter.ts:23](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/integrations/reasoning/openrouter.ts#L23)
+Defined in: [src/integrations/reasoning/openrouter.ts:23](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/openrouter.ts#L23)
 
 The required OpenRouter model identifier string (e.g., 'google/gemini-pro', 'anthropic/claude-3-haiku', 'openai/gpt-4o'). This specifies which underlying model OpenRouter should use.
 
@@ -56,6 +56,6 @@ The required OpenRouter model identifier string (e.g., 'google/gemini-pro', 'ant
 
 > `optional` **siteUrl**: `string`
 
-Defined in: [src/integrations/reasoning/openrouter.ts:27](https://github.com/hashangit/ART/blob/fe46dfaaacd3f198d9540925c3184fcab0f9c813/src/integrations/reasoning/openrouter.ts#L27)
+Defined in: [src/integrations/reasoning/openrouter.ts:27](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/openrouter.ts#L27)
 
 Optional: Your application's site URL, sent as the 'HTTP-Referer' header (recommended by OpenRouter).
