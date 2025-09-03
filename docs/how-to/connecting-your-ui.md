@@ -160,6 +160,20 @@ const unsubscribe = observationSocket.subscribe(
   'TOOL_CALL', // Filter by the ObservationType
   { threadId: 'user-123-session-1' }
 );
+
+// Example: Listen for the final response to get structured UI metadata
+const unsubscribeFinal = observationSocket.subscribe(
+  (observation) => {
+    if (observation.type === 'FINAL_RESPONSE') {
+      const { message, uiMetadata } = observation.content;
+      console.log('Final message:', message.content);
+      console.log('UI Metadata for sources/suggestions:', uiMetadata);
+      // Code to render sources and suggestions from the uiMetadata object
+    }
+  },
+  'FINAL_RESPONSE',
+  { threadId: 'user-123-session-1' }
+);
 ```
 
 ### Fetching Observation History
@@ -175,6 +189,8 @@ async function loadExecutionLog(threadId) {
     );
 
     console.log('Loaded execution log:', observations);
+    // The `content` of the PLAN observation will be a structured array of steps.
+    // The `content` of the FINAL_RESPONSE observation will contain the final message and uiMetadata.
     // Code to display the log in your UI
   } catch (error) {
     console.error('Failed to load execution log:', error);

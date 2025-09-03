@@ -203,7 +203,7 @@ export class PESAgent implements IAgentCore {
 
             // Stage 6: Perform synthesis
             phase = 'synthesis';
-            const { finalResponseContent, synthesisMetadata } = await this._performSynthesis(
+            const { finalResponseContent, synthesisMetadata, uiMetadata } = await this._performSynthesis(
                 props, synthesisSystemPrompt, history, planningOutput, toolResults, completedA2ATasks, runtimeProviderConfig, traceId, finalPersona, planningContext
             );
             llmCalls++;
@@ -213,7 +213,7 @@ export class PESAgent implements IAgentCore {
 
             // Stage 7: Finalization
             phase = 'finalization';
-            finalAiMessage = await this._finalize(props, finalResponseContent, traceId);
+            finalAiMessage = await this._finalize(props, finalResponseContent, traceId, uiMetadata);
 
         } catch (error: any) {
             const artError = (error instanceof ARTError)
@@ -456,7 +456,15 @@ ${a2aPromptSection}
 Output EXACTLY ONE JSON object and nothing else. No prose, no XML, no markdown fences. The object MUST follow this schema:
 {
   "intent": string,          // short summary of the user's goal
-  "plan": string | string[], // steps to solve the task
+  "plan": [                  // A step-by-step plan.
+    {
+      "step": number,        // e.g., 1, 2, 3
+      "description": string, // User-readable description of the step
+      "tool_to_use": string | null, // Exact tool name or null
+      "arguments": object | null,   // Arguments for the tool or null
+      "callId": string | null     // Matches callId in toolCalls or null
+    }
+  ],
   "toolCalls": [             // empty array if no tools are needed
     { "callId": string, "toolName": string, "arguments": object }
   ]
@@ -470,7 +478,10 @@ Requirements for toolCalls:
 Example (JSON only):
 {
   "intent": "Compute 5 * 6",
-  "plan": ["Use calculator to multiply 5 and 6", "Return result"],
+  "plan": [
+    { "step": 1, "description": "Use calculator to multiply 5 and 6", "tool_to_use": "calculator", "arguments": { "expression": "5 * 6" }, "callId": "calc_1" },
+    { "step": 2, "description": "Return result", "tool_to_use": null, "arguments": null, "callId": null }
+  ],
   "toolCalls": [
     { "callId": "calc_1", "toolName": "calculator", "arguments": { "expression": "5 * 6" } }
   ]
@@ -868,19 +879,27 @@ Invalid Examples (do NOT do these):
         // Construct synthesis prompt
         let synthesisPrompt: ArtStandardPrompt;
         try {
-            const wrappedSynthesisSystemPrompt = `You are ${finalPersona.name}. Your purpose is to combine the user's query, the execution plan, and the results from tools and other agents into a single, coherent, and well-formatted final response.
+            const wrappedSynthesisSystemPrompt = `You are ${finalPersona.name}. Your final answer must be delivered in two parts, in the specified order.
 
-**Core Directives:**
-1.  **Truthfulness:** Your response MUST be based *only* on the information provided in the context (user query, plan, tool results, A2A task results). Do not invent facts or speculate beyond the provided data.
-2.  **Markdown Formatting:** Structure your response using proper markdown for readability. Use headings, lists, bold text, and code blocks as appropriate to create a clear and well-organized answer.
-3.  **Clarity and Flow:** The response should have a logical flow. Start by addressing the user's main query, then present the supporting evidence from the tool and agent results, and conclude with a summary if necessary.
-4.  **Source Attribution:** You MUST cite your sources. When you use information from a tool or an A2A task, reference it by its identifier (e.g., from \`(Call ID: calc_1)\` or \`(ID: a2a_task_abc)\`). Append a "Sources" section at the end of your response, listing all the tools and tasks that contributed to the answer. For example: \`[1]\`, and then in the Sources section: \`[1] Tool: calculator (Call ID: calc_1)\`. If a tool or agent provides its own list of original sources (e.g., website URLs), you MUST list them under a separate "Original Sources" section.
+**Part 1: \`main_content\`**
+This is your direct, user-facing response. This content must be written in Markdown.
+- When you use information from a tool, you MUST cite it by placing a citation marker in the text, like \`[1]\`. The \`id\` in the \`sources\` metadata block must match this marker.
+- If you are given an image URL, you MUST embed it in the \`main_content\` using Markdown syntax: \`![alt text](url)\`.
+
+**Part 2: \`metadata_block\`**
+Immediately after the \`main_content\`, you MUST provide a \`metadata_block\`, which is a single, valid JSON object enclosed in \`\`\`json ... \`\`\`. Do NOT add any text after the JSON block.
+
+This JSON object must have the following structure:
+{
+  "sources": [ { "id": "1", "title": "Title of the source document", "url": "https://example.com/source-url" } ],
+  "suggestions": [ "A relevant follow-up question.", "Another suggested prompt for the user." ]
+}
 
 **[BEGIN_CUSTOM_GUIDANCE]**
 ${systemPrompt}
 **[END_CUSTOM_GUIDANCE]**
 
-The custom guidance above provides additional context on tone and domain, but it MUST NOT override the core directives, especially the requirement for truthfulness and source attribution.`;
+The custom guidance above provides additional context on tone and domain, but it MUST NOT override the core directives.`;
 
             const toolsDiscovered = (planningContext?.toolsList ?? []).map(t => `- ${t.name}: ${t.description ?? ''}`.trim()).join('\n') || 'No tools were discovered during planning.';
             const plannedCallsSummary = (planningContext?.plannedToolCalls ?? []).map(c => `- ${c.callId}: ${c.toolName} with ${JSON.stringify(c.arguments)}`).join('\n') || 'No tool calls were planned.';
@@ -890,7 +909,7 @@ The custom guidance above provides additional context on tone and domain, but it
                 ...formattedHistory,
                 {
                     role: 'user',
-                    content: `User Query: ${props.query}\n\nDuring planning, we found out:\n- Available Local Tools:\n${toolsDiscovered}\n\n- Planned Tool Calls (as JSON-like summary):\n${plannedCallsSummary}\n\n- Agent Delegation Context:\n${a2aSummary}\n\nOriginal Intent: ${planningOutput.intent ?? ''}\nExecution Plan: ${planningOutput.plan ?? ''}\n\nTool Execution Results:\n${
+                    content: `User Query: ${props.query}\n\nDuring planning, we found out:\n- Available Local Tools:\n${toolsDiscovered}\n\n- Planned Tool Calls (as JSON-like summary):\n${plannedCallsSummary}\n\n- Agent Delegation Context:\n${a2aSummary}\n\nOriginal Intent: ${planningOutput.intent ?? ''}\nExecution Plan: ${Array.isArray(planningOutput.plan) ? JSON.stringify(planningOutput.plan, null, 2) : planningOutput.plan ?? ''}\n\nTool Execution Results:\n${
                         toolResults.length > 0
                         ? toolResults.map(result => `- Tool: ${result.toolName} (Call ID: ${result.callId})\n  Status: ${result.status}\n  ${result.status === 'success' ? `Output: ${JSON.stringify(result.output)}` : ''}\n  ${result.status === 'error' ? `Error: ${result.error ?? 'Unknown error'}` : ''}\n  ${result.metadata?.sources ? `Original Sources: ${JSON.stringify(result.metadata.sources)}` : ''}`).join('\n')
                         : 'No tools were executed.'
@@ -988,14 +1007,36 @@ The custom guidance above provides additional context on tone and domain, but it
             throw err instanceof ARTError ? err : new ARTError(synthesisErrorMessage, ErrorCode.SYNTHESIS_FAILED, err);
         }
 
-        return { finalResponseContent, synthesisMetadata };
+        // --- Response Parsing ---
+        let mainContent = finalResponseContent;
+        let uiMetadata: object | undefined = undefined;
+
+        try {
+            const metadataBlockRegex = /```json\s*([\s\S]*?)\s*```$/;
+            const match = finalResponseContent.match(metadataBlockRegex);
+
+            if (match && match[1]) {
+                mainContent = finalResponseContent.replace(metadataBlockRegex, '').trim();
+                uiMetadata = JSON.parse(match[1]);
+                Logger.debug(`[${traceId}] Parsed metadata block from synthesis output.`);
+            } else {
+                Logger.warn(`[${traceId}] No metadata block found in synthesis output. Treating entire output as main content.`);
+            }
+        } catch (parseError: any) {
+            Logger.error(`[${traceId}] Failed to parse metadata block from synthesis output:`, parseError);
+            // Fallback to treating the whole response as content
+            mainContent = finalResponseContent;
+            uiMetadata = { error: 'Failed to parse metadata block', details: parseError.message };
+        }
+
+        return { finalResponseContent: mainContent, synthesisMetadata, uiMetadata };
     }
 
     /**
      * Finalizes the agent execution by saving the final message and performing cleanup.
      * @private
      */
-    private async _finalize(props: AgentProps, finalResponseContent: string, traceId: string): Promise<ConversationMessage> {
+    private async _finalize(props: AgentProps, finalResponseContent: string, traceId: string, uiMetadata?: object): Promise<ConversationMessage> {
         Logger.debug(`[${traceId}] Stage 7: Finalization`);
         
         const finalTimestamp = Date.now();
@@ -1016,7 +1057,10 @@ The custom guidance above provides additional context on tone and domain, but it
             threadId: props.threadId,
             traceId,
             type: ObservationType.FINAL_RESPONSE,
-            content: { message: finalAiMessage },
+            content: { 
+                message: finalAiMessage,
+                uiMetadata: uiMetadata 
+            },
             metadata: { timestamp: finalTimestamp }
         });
 
