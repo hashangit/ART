@@ -226,6 +226,66 @@ The `StreamEvent` system provides a granular, real-time feed of the LLM's genera
 
 This event-driven approach allows a UI to react intelligently, for example, by displaying a "thinking..." spinner for `AGENT_THOUGHT` tokens and then switching to a "typewriter" effect for `FINAL_SYNTHESIS` tokens.
 
+### Example: Building a Comprehensive Reasoning View
+
+A powerful feature of the UI system is its ability to combine data from multiple sockets to create a detailed, real-time view of the agent's entire thought process for a single user request. This is invaluable for building advanced UIs that offer full transparency into the agent's reasoning.
+
+The key to this is the **`traceId`**. Every event from every socket that belongs to the same `agent.process()` cycle will share the same `traceId`, allowing a UI component to subscribe to multiple sockets and assemble a complete, chronological "reasoning block."
+
+Here is the typical sequence of events a UI would receive and render for a single, complete agent execution that involves tool use:
+
+1.  **Planning Phase Thoughts (`LLMStreamSocket`)**: The process begins with the agent's planning phase. The UI receives a stream of `TOKEN` events from the `LLMStreamSocket`. These tokens are the raw, unstructured reasoning of the LLM as it formulates its plan, often wrapped in `<thought>` tags by the model. A UI can identify these by checking the `callContext` (e.g., `'AGENT_THOUGHT'`) on the `StreamEvent`.
+
+2.  **Structured Planning Observations (`ObservationSocket`)**: Once the planning stream ends, the agent parses the output and records several structured observations. The UI then receives `INTENT`, `PLAN`, and `TOOL_CALL` observations from the `ObservationSocket`. These represent the high-quality, validated outcomes of the planning phase.
+
+3.  **Tool Execution (`ObservationSocket`)**: The agent's `ToolSystem` executes the planned tools. As each tool finishes, the UI receives one or more `TOOL_EXECUTION` observations, showing the result (success or error) and output of each call.
+
+4.  **Synthesis Phase Thoughts (`LLMStreamSocket`)**: With the tool results in hand, the agent begins synthesizing the final answer. The UI again receives `TOKEN` events from the `LLMStreamSocket`, but this time the `callContext` will be `'FINAL_SYNTHESIS'`. This stream might include the LLM's reasoning on how to interpret the tool results before it begins generating the final user-facing text.
+
+5.  **Final Response (`LLMStreamSocket` & `ObservationSocket`)**: The final stream of `TOKEN` events from the synthesis call constitutes the agent's answer to the user. When this stream ends, a `FINAL_RESPONSE` observation is recorded, containing the complete, persisted `ConversationMessage`.
+
+#### Visualizing the Event Flow
+
+This diagram illustrates how a UI component would receive this interleaved sequence of events from the two sockets to build a complete reasoning view.
+
+```mermaid
+sequenceDiagram
+    participant UI
+    participant LLMStreamSocket
+    participant ObservationSocket
+
+    Note over UI: Subscribes to both sockets, filtering events by a specific traceId
+
+    rect rgb(240, 248, 255)
+    note right of UI: Planning Phase
+    LLMStreamSocket->>UI: StreamEvent (TOKEN, context: AGENT_THOUGHT)
+    LLMStreamSocket->>UI: ... more thought tokens ...
+    LLMStreamSocket->>UI: StreamEvent (END)
+    ObservationSocket->>UI: Observation (INTENT)
+    ObservationSocket->>UI: Observation (PLAN)
+    ObservationSocket->>UI: Observation (TOOL_CALL)
+    end
+
+    rect rgb(255, 250, 240)
+    note right of UI: Execution Phase
+    ObservationSocket->>UI: Observation (TOOL_EXECUTION)
+    ObservationSocket->>UI: ... more tool results ...
+    end
+
+    rect rgb(240, 255, 240)
+    note right of UI: Synthesis Phase
+    ObservationSocket->>UI: Observation (SYNTHESIS)
+    LLMStreamSocket->>UI: StreamEvent (TOKEN, context: FINAL_SYNTHESIS)
+    LLMStreamSocket->>UI: ... final response tokens ...
+    LLMStreamSocket->>UI: StreamEvent (END)
+    ObservationSocket->>UI: Observation (FINAL_RESPONSE)
+    end
+```
+
+By handling these events in order, a UI can create a rich, step-by-step visualization that shows not just *what* the agent did, but *why* it did it.
+
+---
+
 ### `StreamEvent.type`
 
 | Type       | Description                                                                                              |
