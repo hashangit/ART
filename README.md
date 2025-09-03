@@ -1,4 +1,4 @@
-﻿# ✨ ART: Agentic Runtime Framework <img src="https://img.shields.io/badge/Version-v0.2.8-blue" alt="Version 0.3.0">
+﻿# ✨ ART: Agentic Runtime Framework <img src="https://img.shields.io/badge/Version-v0.3.1-blue" alt="Version 0.3.1">
 
 **ART is a powerful, modular, and browser-first TypeScript framework for building sophisticated LLM-powered agents capable of complex reasoning, planning, and tool usage.**
 
@@ -67,69 +67,85 @@ yarn add art-framework
 
 ## Quick Start
 
-This example demonstrates setting up a simple agent that uses OpenAI, runs in-memory, and answers a query.
+This example demonstrates setting up a simple agent that uses OpenAI and runs in-memory. For a complete example with all configurations, see the [Comprehensive Developer Guide](./docs/README.md).
 
 ```typescript
-import { createArtInstance } from 'art-framework';
-import type { ArtInstanceConfig } from 'art-framework';
+import { 
+  createArtInstance, 
+  ArtInstanceConfig, 
+  ThreadConfig,
+  CalculatorTool,
+  OpenAIAdapter, 
+  GeminiAdapter 
+} from 'art-framework';
 
-async function runSimpleAgent() {
-  // 1. Define the configuration for the ART instance
-  const config: ArtInstanceConfig = {
-    // Use 'memory' for simple tests, or 'indexedDB' for browser persistence
-    storage: { type: 'memory' },
+// --- 1. Configure the ART Instance ---
+// Note: No API keys or secrets are present here.
 
-    // Configure your LLM providers. The key ('openai' here) is a friendly name.
-    providers: {
-      openai: {
-        // The adapter handles communication with the provider
-        adapter: 'openai', // Use the name of the built-in adapter
-        // Pass API key securely (use env vars or a secrets manager in production)
-        apiKey: 'YOUR_OPENAI_API_KEY',
-      },
-      // You could add other providers here, e.g., 'anthropic', 'gemini'
-    },
-
-    // Register any tools you want the agent to use
-    // tools: [new CalculatorTool()],
-
-    // (Optional) Define a default persona for the agent instance
-    persona: {
-      name: 'ART-Bot',
-      prompts: {
-        synthesis: 'You are ART-Bot, a helpful and friendly AI assistant. Provide a clear and concise answer to the user\'s query.'
-      }
+const artConfig: ArtInstanceConfig = {
+  storage: { 
+    type: 'indexedDB', 
+    dbName: 'MyCorrectChatDB'
+  },
+  providers: {
+    availableProviders: [
+      { name: 'openai', adapter: OpenAIAdapter },
+      { name: 'gemini', adapter: GeminiAdapter }
+    ]
+  },
+  tools: [new CalculatorTool()],
+  persona: {
+    name: 'ConfigExpert',
+    prompts: {
+      synthesis: 'You explain configurations clearly.'
     }
+  },
+  logger: { level: 'info' }
+};
+
+
+// --- 2. Main Application Logic ---
+
+async function initializeAndRun() {
+  // Create the ART instance with the high-level configuration.
+  const art = await createArtInstance(artConfig);
+  console.log('ART Instance Initialized.');
+
+  // --- 3. Set Up a New Conversation Thread ---
+  const threadId = 'user-123-session-1';
+
+  // Create the thread-specific configuration.
+  // THIS is where you specify the provider, model, and API key.
+  const threadConfig: ThreadConfig = {
+    providerConfig: {
+      providerName: 'openai', // Must match a name from availableProviders
+      modelId: 'gpt-4o',
+      adapterOptions: {
+        apiKey: 'sk-your-real-openai-api-key', // Securely provide your API key here
+        temperature: 0.7
+      }
+    },
+    // Other thread settings
+    enabledTools: ['CalculatorTool'],
+    historyLimit: 20
   };
 
-  // 2. Create the ART instance
-  const art = await createArtInstance(config);
-  console.log('ART instance created successfully!');
+  // Save this configuration for the new thread.
+  // This step is crucial and must be done before the first `process` call.
+  await art.stateManager.setThreadConfig(threadId, threadConfig);
+  console.log(`ThreadConfig set for threadId: ${threadId}`);
+  
+  // Now the ART instance is ready to process requests for this thread.
+  console.log('Sending first message...');
+  const response = await art.process({
+    query: 'What is 2 + 2?',
+    threadId: threadId
+  });
 
-  // 3. Start a conversation and process a query
-  try {
-    const result = await art.process({
-      query: 'What is the capital of France?',
-      // Use a provider and model configured above
-      threadConfig: {
-        runtimeProvider: {
-          provider: 'openai',
-          model: 'gpt-4o-mini',
-        },
-      },
-      // (Optional) A unique ID for the conversation thread
-      threadId: 'quickstart-thread-1',
-    });
-
-    // 4. Log the result
-    console.log('Agent Response:', result.responseText);
-    // console.log("Full Result:", result); // You can inspect the full object for more details
-  } catch (error) {
-    console.error('Agent processing failed:', error);
-  }
+  console.log('Final response:', response.response.content);
 }
 
-runSimpleAgent();
+initializeAndRun().catch(console.error);
 ```
 
 *(Note: Replace `'YOUR_OPENAI_API_KEY'` with your actual key. In a real application, load this from a secure source like environment variables or a secrets manager.)*
@@ -137,8 +153,8 @@ runSimpleAgent();
 ## Documentation
 
 *   **[Comprehensive Developer Guide](docs/README.md):** The primary guide covering concepts, architecture, and API usage. **(Start Here!)**
-*   **[How-To Guides](docs/how-to):** Practical guides for specific tasks, such as [Customizing the Agent's Persona](docs/how-to/customizing-agent-persona.md).
-*   **[API Reference](docs/components/README.md):** Auto-generated API documentation.
+*   **[How-To Guides](./docs/how-to):** Practical guides for specific tasks, such as [Customizing the Agent's Persona](./docs/how-to/customizing-agent-persona.md).
+*   **[API Reference](./docs/components):** Auto-generated API documentation.
 *   **[Examples](./examples):** Find practical examples, including a full React chatbot implementation.
 
 ## Contributing
