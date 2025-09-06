@@ -154,6 +154,80 @@ Provides a real-time stream of the raw token output from the Language Model as i
 -   **Associated Types**:
     -   `StreamEventTypeFilter`: A type used to filter the events received from the LLM stream.
 
+---
+
+## 6. Gemini Thinking Tokens & THOUGHTS Observations
+
+The Gemini adapter now supports optional separation of thought (reasoning) tokens from response tokens on models that expose this feature (e.g., `gemini-2.5-*`).
+
+### Enabling Thinking Output
+
+Pass provider-specific options on the call:
+
+```ts
+const stream = await art.reasoningEngine.call(prompt, {
+  threadId,
+  stream: true,
+  callContext: 'FINAL_SYNTHESIS',
+  providerConfig, // your configured Gemini provider
+  gemini: {
+    thinking: { includeThoughts: true, thinkingBudget: 8096 }
+  }
+});
+```
+
+The adapter forwards these to the GenAI SDK via `config.thinkingConfig` and, when available, distinguishes thought vs response parts.
+
+### Stream Event Token Typing
+
+When thought markers are available, `StreamEvent.tokenType` will be set to one of the agent-context-aware variants:
+
+-   `AGENT_THOUGHT_LLM_THINKING` / `AGENT_THOUGHT_LLM_RESPONSE`
+-   `FINAL_SYNTHESIS_LLM_THINKING` / `FINAL_SYNTHESIS_LLM_RESPONSE`
+
+If unsupported, tokens fall back to `...LLM_RESPONSE`.
+
+### Observations: THOUGHTS
+
+The `PESAgent` now emits `ObservationType.THOUGHTS` entries whenever a thinking token is received during planning or synthesis. Each observation contains:
+
+-   `content.text`: the token text
+-   `metadata.phase`: `planning` or `synthesis`
+-   `metadata.tokenType`: the specific token type
+
+### Metadata
+
+When provided by the SDK, `LLMMetadata.thinkingTokens` is populated in the final `METADATA` stream event.
+
+### Example: Streaming THOUGHTS to a UI element
+
+```ts
+// Given an initialized ART instance `art` and a known `threadId`
+const obsSocket = art.uiSystem.getObservationSocket();
+
+// Subscribe only to THOUGHTS for a specific thread
+const unsubscribe = obsSocket.subscribe(
+  (observation) => {
+    if (observation.type !== ObservationType.THOUGHTS) return;
+
+    const phase = observation.metadata?.phase; // 'planning' | 'synthesis'
+    const token = typeof observation.content?.text === 'string' ? observation.content.text : '';
+
+    // Route to your UI components
+    if (phase === 'planning') {
+      appendToPlanningThoughts(token); // your UI helper
+    } else if (phase === 'synthesis') {
+      appendToSynthesisThoughts(token); // your UI helper
+    }
+  },
+  ObservationType.THOUGHTS,
+  { threadId }
+);
+
+// Later, to stop streaming thoughts for this thread:
+// unsubscribe();
+```
+
 #### `A2ATaskSocket`
 
 Provides real-time updates on the status of tasks delegated between agents in a multi-agent system.
@@ -298,4 +372,4 @@ A function to generate RFC4122 v4 compliant UUIDs.
 
 The current version of the ART Framework package.
 -   **Usage**: `console.log(VERSION);`
--   **Value**: `'0.3.3'` (at the time of writing)
+-   **Value**: `'0.3.6'` (at the time of writing)

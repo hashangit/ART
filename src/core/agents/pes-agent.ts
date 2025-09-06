@@ -553,6 +553,16 @@ Invalid Examples (do NOT do these):
                 switch (event.type) {
                     case 'TOKEN':
                         planningOutputText += event.data;
+                        // Emit THOUGHTS observation for thinking tokens
+                        if (event.tokenType && String(event.tokenType).includes('THINKING')) {
+                            await this.deps.observationManager.record({
+                                threadId: props.threadId,
+                                traceId,
+                                type: ObservationType.THOUGHTS,
+                                content: { text: event.data },
+                                metadata: { phase: 'planning', tokenType: event.tokenType, timestamp: Date.now() }
+                            }).catch(err => Logger.error(`[${traceId}] Failed to record THOUGHTS (planning) observation:`, err));
+                        }
                         break;
                     case 'METADATA':
                         planningMetadata = { ...(planningMetadata ?? {}), ...event.data };
@@ -962,6 +972,16 @@ The custom guidance above provides additional context on tone and domain, but it
                     case 'TOKEN':
                         if (event.tokenType === 'FINAL_SYNTHESIS_LLM_RESPONSE' || event.tokenType === 'LLM_RESPONSE') {
                             finalResponseContent += event.data;
+                        }
+                        // Emit THOUGHTS observation for thinking tokens during synthesis
+                        if (event.tokenType && String(event.tokenType).includes('THINKING')) {
+                            await this.deps.observationManager.record({
+                                threadId: props.threadId,
+                                traceId,
+                                type: ObservationType.THOUGHTS,
+                                content: { text: event.data },
+                                metadata: { phase: 'synthesis', tokenType: event.tokenType, timestamp: Date.now() }
+                            }).catch(err => Logger.error(`[${traceId}] Failed to record THOUGHTS (synthesis) observation:`, err));
                         }
                         break;
                     case 'METADATA':
