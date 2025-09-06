@@ -881,12 +881,12 @@ Invalid Examples (do NOT do these):
         try {
             const wrappedSynthesisSystemPrompt = `You are ${finalPersona.name}. Your final answer must be delivered in two parts, in the specified order.
 
-**Part 1: \`main_content\`**
+**Part 1: \`main_content\`** must be placed within <mainContent></mainContent>
 This is your direct, user-facing response. This content must be written in Markdown.
 - When you use information from a tool, you MUST cite it by placing a citation marker in the text, like \`[1]\`. The \`id\` in the \`sources\` metadata block must match this marker.
 - If you are given an image URL, you MUST embed it in the \`main_content\` using Markdown syntax: \`![alt text](url)\`.
 
-**Part 2: \`metadata_block\`**
+**Part 2: \`metadata_block\`** Must be placed within <uiMetadata></uiMetadata>
 Immediately after the \`main_content\`, you MUST provide a \`metadata_block\`, which is a single, valid JSON object enclosed in \`\`\`json ... \`\`\`. Do NOT add any text after the JSON block.
 
 This JSON object must have the following structure:
