@@ -183,6 +183,20 @@ export { ConversationSocket } from '@/systems/ui/conversation-socket';
  */
 export { ObservationSocket } from '@/systems/ui/observation-socket';
 export type { StreamEventTypeFilter } from '@/systems/ui/llm-stream-socket';
+/**
+ * Provides a real-time stream of raw token output from the LLM as it's generated.
+ * When to use: For building UIs with a typewriter effect and fine-grained stream control.
+ */
+export { LLMStreamSocket } from '@/systems/ui/llm-stream-socket';
+/**
+ * Provides real-time updates for A2A task lifecycle events.
+ * When to use: For dashboards/monitors tracking delegated task progress.
+ */
+export { A2ATaskSocket } from '@/systems/ui/a2a-task-socket';
+/**
+ * Facade providing access to all UI sockets.
+ */
+export { UISystem } from '@/systems/ui/ui-system';
 
 // --- Authentication ---
 /**
@@ -199,6 +213,14 @@ export { AuthManager } from '@/systems/auth/AuthManager';
  */
 export { PKCEOAuthStrategy } from '@/auth/PKCEOAuthStrategy';
 export type { PKCEOAuthConfig } from '@/auth/PKCEOAuthStrategy';
+/**
+ * Simple API key authentication strategy and generic OAuth strategy variants.
+ */
+export { ApiKeyStrategy } from '@/auth/ApiKeyStrategy';
+export { GenericOAuthStrategy } from '@/auth/GenericOAuthStrategy';
+export type { OAuthConfig } from '@/auth/GenericOAuthStrategy';
+export { ZyntopiaOAuthStrategy } from '@/auth/ZyntopiaOAuthStrategy';
+export type { ZyntopiaOAuthConfig } from '@/auth/ZyntopiaOAuthStrategy';
 
 // --- MCP (Model Context Protocol) ---
 /**
@@ -250,6 +272,20 @@ export type { A2ATaskEvent, A2ATaskFilter } from '@/systems/ui/a2a-task-socket';
 
 // --- 5. Utilities ---
 
+// --- Managers & Registries (advanced) ---
+/**
+ * State manager for thread config/state with explicit/implicit save strategies.
+ */
+export { StateManager } from '@/systems/context/managers/StateManager';
+/**
+ * In-memory tool registry for registering and querying tool executors.
+ */
+export { ToolRegistry } from '@/systems/tool/ToolRegistry';
+/**
+ * Provider manager implementation controlling adapter lifecycles and concurrency.
+ */
+export { ProviderManagerImpl } from '@/systems/reasoning/ProviderManagerImpl';
+
 /**
  * A simple logging utility with configurable levels.
  * When to use: For adding consistent logging throughout your custom components.
@@ -268,4 +304,4 @@ export { generateUUID } from '@/utils/uuid';
 /**
  * The current version of the ART Framework package.
  */
-export const VERSION = '0.2.8';
+export const VERSION = '0.3.3';

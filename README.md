@@ -1,6 +1,6 @@
 ﻿
 
-# ✨ ART: Agentic Runtime Framework <img src="https://img.shields.io/badge/Version-v0.3.2-blue" alt="Version 0.3.2">
+# ✨ ART: Agentic Runtime Framework <img src="https://img.shields.io/badge/Version-v0.3.3-blue" alt="Version 0.3.3">
 
 <p align="center">
   <img src="docs/art-logo.jpeg" alt="ART Framework Logo" width="200"/>
