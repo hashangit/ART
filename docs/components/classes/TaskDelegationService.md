@@ -6,7 +6,7 @@
 
 # Class: TaskDelegationService
 
-Defined in: [src/systems/a2a/TaskDelegationService.ts:73](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/TaskDelegationService.ts#L73)
+Defined in: [src/systems/a2a/TaskDelegationService.ts:73](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/a2a/TaskDelegationService.ts#L73)
 
 Service responsible for delegating A2A tasks to remote agents.
 Implements the A2A protocol for task submission, tracking, and completion.
@@ -25,7 +25,7 @@ This service handles:
 
 > **new TaskDelegationService**(`taskRepository`, `config?`): `TaskDelegationService`
 
-Defined in: [src/systems/a2a/TaskDelegationService.ts:82](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/TaskDelegationService.ts#L82)
+Defined in: [src/systems/a2a/TaskDelegationService.ts:82](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/a2a/TaskDelegationService.ts#L82)
 
 Creates an instance of TaskDelegationService.
 
@@ -53,7 +53,7 @@ Configuration for the service.
 
 > **cancelTask**(`task`, `traceId?`): `Promise`\<`boolean`\>
 
-Defined in: [src/systems/a2a/TaskDelegationService.ts:460](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/TaskDelegationService.ts#L460)
+Defined in: [src/systems/a2a/TaskDelegationService.ts:460](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/a2a/TaskDelegationService.ts#L460)
 
 Cancels a delegated task on the remote agent.
 
@@ -83,7 +83,7 @@ Promise resolving to whether cancellation was successful
 
 > **checkTaskStatus**(`task`, `traceId?`): `Promise`\<`null` \| [`TaskStatusResponse`](../interfaces/TaskStatusResponse.md)\>
 
-Defined in: [src/systems/a2a/TaskDelegationService.ts:338](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/TaskDelegationService.ts#L338)
+Defined in: [src/systems/a2a/TaskDelegationService.ts:338](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/a2a/TaskDelegationService.ts#L338)
 
 Checks the status of a delegated task from the remote agent.
 
@@ -113,7 +113,7 @@ Promise resolving to the current task status
 
 > **delegateTask**(`task`, `traceId?`): `Promise`\<`null` \| [`A2ATask`](../interfaces/A2ATask.md)\>
 
-Defined in: [src/systems/a2a/TaskDelegationService.ts:140](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/TaskDelegationService.ts#L140)
+Defined in: [src/systems/a2a/TaskDelegationService.ts:140](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/a2a/TaskDelegationService.ts#L140)
 
 Delegates a single A2A task to a suitable remote agent.
 
@@ -143,7 +143,7 @@ Promise resolving to the updated task or null if delegation failed
 
 > **delegateTasks**(`tasks`, `traceId?`): `Promise`\<[`A2ATask`](../interfaces/A2ATask.md)[]\>
 
-Defined in: [src/systems/a2a/TaskDelegationService.ts:108](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/TaskDelegationService.ts#L108)
+Defined in: [src/systems/a2a/TaskDelegationService.ts:108](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/a2a/TaskDelegationService.ts#L108)
 
 Delegates a list of A2A tasks to suitable remote agents.
 For each task, finds the best agent and submits the task.
@@ -174,7 +174,7 @@ Promise resolving to array of successfully delegated tasks
 
 > **updateTaskFromRemoteStatus**(`task`, `statusResponse`, `traceId?`): `Promise`\<[`A2ATask`](../interfaces/A2ATask.md)\>
 
-Defined in: [src/systems/a2a/TaskDelegationService.ts:394](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/TaskDelegationService.ts#L394)
+Defined in: [src/systems/a2a/TaskDelegationService.ts:394](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/a2a/TaskDelegationService.ts#L394)
 
 Updates a local A2A task based on remote status information.
 

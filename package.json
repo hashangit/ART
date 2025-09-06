@@ -1,6 +1,6 @@
 {
   "name": "art-framework",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Agent Runtine (ART) Framework - A browser-first JavaScript/TypeScript framework for building LLM-powered Agentic AI applications that supports MCP and A2A protocols natively",
   "type": "module",
   "main": "./dist/index.js",
@@ -62,7 +62,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.51.0",
-    "@google/genai": "^0.10.0",
+    "@google/genai": "^1.17.0",
     "@modelcontextprotocol/sdk": "^1.12.3",
     "@supabase/supabase-js": "^2.56.0",
     "@types/mathjs": "^9.4.1",

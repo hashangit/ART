@@ -8,7 +8,7 @@
 
 > **ArtStandardPrompt** = [`ArtStandardMessage`](../interfaces/ArtStandardMessage.md)[]
 
-Defined in: [src/types/index.ts:961](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L961)
+Defined in: [src/types/index.ts:961](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L961)
 
 Represents the entire prompt as an array of standardized messages (`ArtStandardMessage`).
 

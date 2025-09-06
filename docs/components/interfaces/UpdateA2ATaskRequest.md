@@ -6,7 +6,7 @@
 
 # Interface: UpdateA2ATaskRequest
 
-Defined in: [src/types/index.ts:1627](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1627)
+Defined in: [src/types/index.ts:1627](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1627)
 
 Represents an update to an existing A2A task.
 
@@ -18,7 +18,7 @@ Represents an update to an existing A2A task.
 
 > `optional` **metadata**: `Partial`\<[`A2ATaskMetadata`](A2ATaskMetadata.md)\>
 
-Defined in: [src/types/index.ts:1652](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1652)
+Defined in: [src/types/index.ts:1652](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1652)
 
 Additional metadata updates.
 
@@ -28,7 +28,7 @@ Additional metadata updates.
 
 > `optional` **result**: [`A2ATaskResult`](A2ATaskResult.md)
 
-Defined in: [src/types/index.ts:1647](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1647)
+Defined in: [src/types/index.ts:1647](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1647)
 
 Task result (if completing).
 
@@ -38,7 +38,7 @@ Task result (if completing).
 
 > `optional` **status**: [`A2ATaskStatus`](../enumerations/A2ATaskStatus.md)
 
-Defined in: [src/types/index.ts:1637](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1637)
+Defined in: [src/types/index.ts:1637](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1637)
 
 New task status (if changing).
 
@@ -48,7 +48,7 @@ New task status (if changing).
 
 > `optional` **targetAgent**: [`A2AAgentInfo`](A2AAgentInfo.md)
 
-Defined in: [src/types/index.ts:1642](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1642)
+Defined in: [src/types/index.ts:1642](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1642)
 
 Target agent assignment (if assigning/reassigning).
 
@@ -58,6 +58,6 @@ Target agent assignment (if assigning/reassigning).
 
 > **taskId**: `string`
 
-Defined in: [src/types/index.ts:1632](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1632)
+Defined in: [src/types/index.ts:1632](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1632)
 
 Task ID to update.

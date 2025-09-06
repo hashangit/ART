@@ -6,7 +6,7 @@
 
 # Interface: PromptContext
 
-Defined in: [src/types/index.ts:974](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L974)
+Defined in: [src/types/index.ts:974](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L974)
 
 Represents the contextual data gathered by Agent Logic (e.g., `PESAgent`) to be injected
 into a Mustache blueprint/template by the `PromptManager.assemblePrompt` method.
@@ -31,7 +31,7 @@ Allows agent patterns (like PES) to pass any other custom data needed by their s
 
 > `optional` **availableTools**: [`ToolSchema`](ToolSchema.md) & `object`[]
 
-Defined in: [src/types/index.ts:995](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L995)
+Defined in: [src/types/index.ts:995](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L995)
 
 The schemas of the tools available for use, potentially pre-formatted for the blueprint
 (e.g., with `inputSchemaJson` pre-stringified).
@@ -42,7 +42,7 @@ The schemas of the tools available for use, potentially pre-formatted for the bl
 
 > `optional` **history**: `object`[]
 
-Defined in: [src/types/index.ts:989](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L989)
+Defined in: [src/types/index.ts:989](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L989)
 
 The conversation history, typically formatted as an array suitable for the blueprint
 (e.g., array of objects with `role` and `content`). Agent logic should pre-format this.
@@ -69,7 +69,7 @@ While `ArtStandardPrompt` could be used, simpler structures might be preferred f
 
 > `optional` **query**: `string`
 
-Defined in: [src/types/index.ts:979](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L979)
+Defined in: [src/types/index.ts:979](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L979)
 
 The user's current query or input relevant to this prompt generation step.
 
@@ -79,7 +79,7 @@ The user's current query or input relevant to this prompt generation step.
 
 > `optional` **systemPrompt**: `string`
 
-Defined in: [src/types/index.ts:1006](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1006)
+Defined in: [src/types/index.ts:1006](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1006)
 
 The system prompt string to be used (resolved by agent logic from config or defaults).
 
@@ -89,7 +89,7 @@ The system prompt string to be used (resolved by agent logic from config or defa
 
 > `optional` **toolResults**: [`ToolResult`](ToolResult.md) & `object`[]
 
-Defined in: [src/types/index.ts:1001](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1001)
+Defined in: [src/types/index.ts:1001](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1001)
 
 The results from any tools executed in a previous step, potentially pre-formatted for the blueprint
 (e.g., with `outputJson` pre-stringified).

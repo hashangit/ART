@@ -6,7 +6,7 @@
 
 # Interface: OllamaAdapterOptions
 
-Defined in: [src/integrations/reasoning/ollama.ts:21](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/ollama.ts#L21)
+Defined in: [src/integrations/reasoning/ollama.ts:21](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/reasoning/ollama.ts#L21)
 
 Configuration options required for the `OllamaAdapter`.
 
@@ -16,7 +16,7 @@ Configuration options required for the `OllamaAdapter`.
 
 > `optional` **apiKey**: `string`
 
-Defined in: [src/integrations/reasoning/ollama.ts:36](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/ollama.ts#L36)
+Defined in: [src/integrations/reasoning/ollama.ts:36](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/reasoning/ollama.ts#L36)
 
 API key for Ollama (if secured). Defaults to "ollama" as commonly used.
 
@@ -26,7 +26,7 @@ API key for Ollama (if secured). Defaults to "ollama" as commonly used.
 
 > `optional` **defaultModel**: `string`
 
-Defined in: [src/integrations/reasoning/ollama.ts:32](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/ollama.ts#L32)
+Defined in: [src/integrations/reasoning/ollama.ts:32](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/reasoning/ollama.ts#L32)
 
 The default Ollama model ID to use (e.g., 'llama3', 'mistral').
 This can be overridden by `RuntimeProviderConfig.modelId` or `CallOptions.model`.
@@ -38,7 +38,7 @@ It's recommended to set this if you primarily use one model with Ollama.
 
 > `optional` **ollamaBaseUrl**: `string`
 
-Defined in: [src/integrations/reasoning/ollama.ts:26](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/ollama.ts#L26)
+Defined in: [src/integrations/reasoning/ollama.ts:26](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/reasoning/ollama.ts#L26)
 
 The base URL for the Ollama API. Defaults to 'http://localhost:11434'.
 The '/v1' suffix for OpenAI compatibility will be added automatically.

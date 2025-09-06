@@ -6,7 +6,7 @@
 
 # Interface: A2ATaskMetadata
 
-Defined in: [src/types/index.ts:1352](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1352)
+Defined in: [src/types/index.ts:1352](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1352)
 
 Represents metadata about A2A task execution.
 
@@ -18,7 +18,7 @@ Represents metadata about A2A task execution.
 
 > `optional` **completedAt**: `number`
 
-Defined in: [src/types/index.ts:1372](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1372)
+Defined in: [src/types/index.ts:1372](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1372)
 
 Timestamp when the task was completed/failed (if applicable).
 
@@ -28,7 +28,7 @@ Timestamp when the task was completed/failed (if applicable).
 
 > `optional` **correlationId**: `string`
 
-Defined in: [src/types/index.ts:1392](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1392)
+Defined in: [src/types/index.ts:1392](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1392)
 
 Correlation ID for tracking related tasks across the system.
 
@@ -38,7 +38,7 @@ Correlation ID for tracking related tasks across the system.
 
 > **createdAt**: `number`
 
-Defined in: [src/types/index.ts:1357](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1357)
+Defined in: [src/types/index.ts:1357](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1357)
 
 Timestamp when the task was created (Unix timestamp in milliseconds).
 
@@ -48,7 +48,7 @@ Timestamp when the task was created (Unix timestamp in milliseconds).
 
 > `optional` **delegatedAt**: `number`
 
-Defined in: [src/types/index.ts:1377](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1377)
+Defined in: [src/types/index.ts:1377](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1377)
 
 Timestamp when the task was delegated to a remote agent (if applicable).
 
@@ -58,7 +58,7 @@ Timestamp when the task was delegated to a remote agent (if applicable).
 
 > `optional` **estimatedCompletionMs**: `number`
 
-Defined in: [src/types/index.ts:1412](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1412)
+Defined in: [src/types/index.ts:1412](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1412)
 
 Estimated completion time in milliseconds (if provided by remote agent).
 
@@ -68,7 +68,7 @@ Estimated completion time in milliseconds (if provided by remote agent).
 
 > `optional` **initiatedBy**: `string`
 
-Defined in: [src/types/index.ts:1387](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1387)
+Defined in: [src/types/index.ts:1387](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1387)
 
 The user or system that initiated this task.
 
@@ -78,7 +78,7 @@ The user or system that initiated this task.
 
 > `optional` **lastUpdated**: `number`
 
-Defined in: [src/types/index.ts:1382](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1382)
+Defined in: [src/types/index.ts:1382](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1382)
 
 Timestamp when the task was last updated (for compatibility).
 
@@ -88,7 +88,7 @@ Timestamp when the task was last updated (for compatibility).
 
 > `optional` **maxRetries**: `number`
 
-Defined in: [src/types/index.ts:1402](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1402)
+Defined in: [src/types/index.ts:1402](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1402)
 
 Maximum number of retry attempts allowed.
 
@@ -98,7 +98,7 @@ Maximum number of retry attempts allowed.
 
 > `optional` **retryCount**: `number`
 
-Defined in: [src/types/index.ts:1397](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1397)
+Defined in: [src/types/index.ts:1397](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1397)
 
 Number of retry attempts made for this task.
 
@@ -108,7 +108,7 @@ Number of retry attempts made for this task.
 
 > `optional` **startedAt**: `number`
 
-Defined in: [src/types/index.ts:1367](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1367)
+Defined in: [src/types/index.ts:1367](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1367)
 
 Timestamp when the task was started (if applicable).
 
@@ -118,7 +118,7 @@ Timestamp when the task was started (if applicable).
 
 > `optional` **tags**: `string`[]
 
-Defined in: [src/types/index.ts:1417](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1417)
+Defined in: [src/types/index.ts:1417](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1417)
 
 Tags or labels for categorizing tasks.
 
@@ -128,7 +128,7 @@ Tags or labels for categorizing tasks.
 
 > `optional` **timeoutMs**: `number`
 
-Defined in: [src/types/index.ts:1407](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1407)
+Defined in: [src/types/index.ts:1407](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1407)
 
 Timeout duration in milliseconds.
 
@@ -138,6 +138,6 @@ Timeout duration in milliseconds.
 
 > **updatedAt**: `number`
 
-Defined in: [src/types/index.ts:1362](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/types/index.ts#L1362)
+Defined in: [src/types/index.ts:1362](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1362)
 
 Timestamp when the task was last updated (Unix timestamp in milliseconds).

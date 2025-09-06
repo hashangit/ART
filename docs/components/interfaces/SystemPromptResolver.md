@@ -6,7 +6,7 @@
 
 # Interface: SystemPromptResolver
 
-Defined in: [src/core/interfaces.ts:133](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L133)
+Defined in: [src/core/interfaces.ts:133](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L133)
 
 Resolves the final system prompt from base + instance/thread/call overrides
 using tag+variables and merge strategies.
@@ -17,7 +17,7 @@ using tag+variables and merge strategies.
 
 > **resolve**(`input`, `traceId?`): `Promise`\<`string`\>
 
-Defined in: [src/core/interfaces.ts:134](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L134)
+Defined in: [src/core/interfaces.ts:134](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L134)
 
 #### Parameters
 

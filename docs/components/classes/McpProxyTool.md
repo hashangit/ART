@@ -6,7 +6,7 @@
 
 # Class: McpProxyTool
 
-Defined in: [src/systems/mcp/McpProxyTool.ts:19](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/McpProxyTool.ts#L19)
+Defined in: [src/systems/mcp/McpProxyTool.ts:19](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpProxyTool.ts#L19)
 
 A proxy tool that wraps an MCP server tool and implements the [IToolExecutor](../interfaces/IToolExecutor.md) interface.
 
@@ -31,7 +31,7 @@ This allows MCP server tools to be used seamlessly within the ART Framework.
 
 > **new McpProxyTool**(`card`, `toolDefinition`, `mcpManager`): `McpProxyTool`
 
-Defined in: [src/systems/mcp/McpProxyTool.ts:33](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/McpProxyTool.ts#L33)
+Defined in: [src/systems/mcp/McpProxyTool.ts:33](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpProxyTool.ts#L33)
 
 Creates an instance of McpProxyTool.
 
@@ -65,7 +65,7 @@ The MCP manager for managing connections.
 
 > `readonly` **schema**: [`ToolSchema`](../interfaces/ToolSchema.md)
 
-Defined in: [src/systems/mcp/McpProxyTool.ts:20](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/McpProxyTool.ts#L20)
+Defined in: [src/systems/mcp/McpProxyTool.ts:20](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpProxyTool.ts#L20)
 
 The schema definition for this tool.
 
@@ -79,7 +79,7 @@ The schema definition for this tool.
 
 > **execute**(`input`, `context`): `Promise`\<[`ToolResult`](../interfaces/ToolResult.md)\>
 
-Defined in: [src/systems/mcp/McpProxyTool.ts:56](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/McpProxyTool.ts#L56)
+Defined in: [src/systems/mcp/McpProxyTool.ts:56](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpProxyTool.ts#L56)
 
 Executes the tool by making a request to the MCP server.
 
@@ -113,7 +113,7 @@ A promise resolving to the tool result.
 
 > **getOriginalToolName**(): `string`
 
-Defined in: [src/systems/mcp/McpProxyTool.ts:106](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/McpProxyTool.ts#L106)
+Defined in: [src/systems/mcp/McpProxyTool.ts:106](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpProxyTool.ts#L106)
 
 Gets the original tool name from the MCP server.
 
@@ -129,7 +129,7 @@ The original tool name.
 
 > **getServerConfig**(): [`McpServerConfig`](../type-aliases/McpServerConfig.md)
 
-Defined in: [src/systems/mcp/McpProxyTool.ts:115](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/McpProxyTool.ts#L115)
+Defined in: [src/systems/mcp/McpProxyTool.ts:115](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpProxyTool.ts#L115)
 
 Gets the MCP server configuration.
 
@@ -145,7 +145,7 @@ The server configuration.
 
 > **getToolDefinition**(): [`McpToolDefinition`](../interfaces/McpToolDefinition.md)
 
-Defined in: [src/systems/mcp/McpProxyTool.ts:124](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/McpProxyTool.ts#L124)
+Defined in: [src/systems/mcp/McpProxyTool.ts:124](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpProxyTool.ts#L124)
 
 Gets the MCP tool definition.
 

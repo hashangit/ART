@@ -6,7 +6,7 @@
 
 # Interface: PKCEOAuthConfig
 
-Defined in: [src/auth/PKCEOAuthStrategy.ts:8](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/auth/PKCEOAuthStrategy.ts#L8)
+Defined in: [src/auth/PKCEOAuthStrategy.ts:8](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/PKCEOAuthStrategy.ts#L8)
 
 Configuration for the PKCE OAuth 2.0 authentication strategy.
 
@@ -16,7 +16,7 @@ Configuration for the PKCE OAuth 2.0 authentication strategy.
 
 > **authorizationEndpoint**: `string`
 
-Defined in: [src/auth/PKCEOAuthStrategy.ts:10](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/auth/PKCEOAuthStrategy.ts#L10)
+Defined in: [src/auth/PKCEOAuthStrategy.ts:10](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/PKCEOAuthStrategy.ts#L10)
 
 The OAuth 2.0 authorization endpoint URL.
 
@@ -26,7 +26,7 @@ The OAuth 2.0 authorization endpoint URL.
 
 > `optional` **channelName**: `string`
 
-Defined in: [src/auth/PKCEOAuthStrategy.ts:24](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/auth/PKCEOAuthStrategy.ts#L24)
+Defined in: [src/auth/PKCEOAuthStrategy.ts:24](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/PKCEOAuthStrategy.ts#L24)
 
 BroadcastChannel name used to receive auth codes from callback tab (default 'art-auth').
 
@@ -36,7 +36,7 @@ BroadcastChannel name used to receive auth codes from callback tab (default 'art
 
 > **clientId**: `string`
 
-Defined in: [src/auth/PKCEOAuthStrategy.ts:14](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/auth/PKCEOAuthStrategy.ts#L14)
+Defined in: [src/auth/PKCEOAuthStrategy.ts:14](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/PKCEOAuthStrategy.ts#L14)
 
 The client ID for the application.
 
@@ -46,7 +46,7 @@ The client ID for the application.
 
 > `optional` **openInNewTab**: `boolean`
 
-Defined in: [src/auth/PKCEOAuthStrategy.ts:22](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/auth/PKCEOAuthStrategy.ts#L22)
+Defined in: [src/auth/PKCEOAuthStrategy.ts:22](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/PKCEOAuthStrategy.ts#L22)
 
 Open login in a new tab (default true for ART MCP flows).
 
@@ -56,7 +56,7 @@ Open login in a new tab (default true for ART MCP flows).
 
 > **redirectUri**: `string`
 
-Defined in: [src/auth/PKCEOAuthStrategy.ts:16](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/auth/PKCEOAuthStrategy.ts#L16)
+Defined in: [src/auth/PKCEOAuthStrategy.ts:16](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/PKCEOAuthStrategy.ts#L16)
 
 The redirect URI for the application.
 
@@ -66,7 +66,7 @@ The redirect URI for the application.
 
 > `optional` **resource**: `string`
 
-Defined in: [src/auth/PKCEOAuthStrategy.ts:20](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/auth/PKCEOAuthStrategy.ts#L20)
+Defined in: [src/auth/PKCEOAuthStrategy.ts:20](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/PKCEOAuthStrategy.ts#L20)
 
 Optional: The resource parameter to specify the target audience (for MCP servers).
 
@@ -76,7 +76,7 @@ Optional: The resource parameter to specify the target audience (for MCP servers
 
 > **scopes**: `string`
 
-Defined in: [src/auth/PKCEOAuthStrategy.ts:18](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/auth/PKCEOAuthStrategy.ts#L18)
+Defined in: [src/auth/PKCEOAuthStrategy.ts:18](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/PKCEOAuthStrategy.ts#L18)
 
 The scopes to request (space-separated).
 
@@ -86,6 +86,6 @@ The scopes to request (space-separated).
 
 > **tokenEndpoint**: `string`
 
-Defined in: [src/auth/PKCEOAuthStrategy.ts:12](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/auth/PKCEOAuthStrategy.ts#L12)
+Defined in: [src/auth/PKCEOAuthStrategy.ts:12](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/PKCEOAuthStrategy.ts#L12)
 
 The OAuth 2.0 token endpoint URL.

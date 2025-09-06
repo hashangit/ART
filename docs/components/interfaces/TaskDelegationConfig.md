@@ -6,7 +6,7 @@
 
 # Interface: TaskDelegationConfig
 
-Defined in: [src/systems/a2a/TaskDelegationService.ts:12](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/TaskDelegationService.ts#L12)
+Defined in: [src/systems/a2a/TaskDelegationService.ts:12](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/a2a/TaskDelegationService.ts#L12)
 
 Configuration options for the TaskDelegationService
 
@@ -16,7 +16,7 @@ Configuration options for the TaskDelegationService
 
 > `optional` **callbackUrl**: `string`
 
-Defined in: [src/systems/a2a/TaskDelegationService.ts:22](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/TaskDelegationService.ts#L22)
+Defined in: [src/systems/a2a/TaskDelegationService.ts:22](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/a2a/TaskDelegationService.ts#L22)
 
 The base callback URL for receiving A2A task updates.
 
@@ -26,7 +26,7 @@ The base callback URL for receiving A2A task updates.
 
 > `optional` **defaultTimeoutMs**: `number`
 
-Defined in: [src/systems/a2a/TaskDelegationService.ts:14](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/TaskDelegationService.ts#L14)
+Defined in: [src/systems/a2a/TaskDelegationService.ts:14](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/a2a/TaskDelegationService.ts#L14)
 
 Default timeout for task delegation requests in milliseconds
 
@@ -36,7 +36,7 @@ Default timeout for task delegation requests in milliseconds
 
 > `optional` **maxRetries**: `number`
 
-Defined in: [src/systems/a2a/TaskDelegationService.ts:16](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/TaskDelegationService.ts#L16)
+Defined in: [src/systems/a2a/TaskDelegationService.ts:16](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/a2a/TaskDelegationService.ts#L16)
 
 Maximum number of retry attempts for failed requests
 
@@ -46,7 +46,7 @@ Maximum number of retry attempts for failed requests
 
 > `optional` **retryDelayMs**: `number`
 
-Defined in: [src/systems/a2a/TaskDelegationService.ts:18](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/TaskDelegationService.ts#L18)
+Defined in: [src/systems/a2a/TaskDelegationService.ts:18](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/a2a/TaskDelegationService.ts#L18)
 
 Base delay between retry attempts in milliseconds
 
@@ -56,6 +56,6 @@ Base delay between retry attempts in milliseconds
 
 > `optional` **useExponentialBackoff**: `boolean`
 
-Defined in: [src/systems/a2a/TaskDelegationService.ts:20](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/a2a/TaskDelegationService.ts#L20)
+Defined in: [src/systems/a2a/TaskDelegationService.ts:20](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/a2a/TaskDelegationService.ts#L20)
 
 Whether to use exponential backoff for retries

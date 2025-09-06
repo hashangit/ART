@@ -6,7 +6,7 @@
 
 # Class: McpManager
 
-Defined in: [src/systems/mcp/McpManager.ts:31](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/McpManager.ts#L31)
+Defined in: [src/systems/mcp/McpManager.ts:31](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpManager.ts#L31)
 
 Manages MCP (Model Context Protocol) server connections and tool registration.
 
@@ -16,7 +16,7 @@ The `McpManager` is responsible for:
 - Connecting to configured MCP servers.
 - Discovering available tools from servers.
 - Creating proxy tools that wrap MCP server tools.
-- Registering proxy tools with the [ToolRegistry](../interfaces/ToolRegistry.md).
+- Registering proxy tools with the [ToolRegistry](ToolRegistry.md).
 - Managing server health and status.
 - Handling thread-specific tool activation/deactivation.
 
@@ -36,7 +36,7 @@ seamless integration with the ART Framework's tool system.
 
 > **new McpManager**(`toolRegistry`, `_stateManager`, `authManager?`): `McpManager`
 
-Defined in: [src/systems/mcp/McpManager.ts:44](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/McpManager.ts#L44)
+Defined in: [src/systems/mcp/McpManager.ts:44](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpManager.ts#L44)
 
 Creates an instance of McpManager.
 
@@ -44,13 +44,13 @@ Creates an instance of McpManager.
 
 ##### toolRegistry
 
-[`ToolRegistry`](../interfaces/ToolRegistry.md)
+`ToolRegistry`
 
 The tool registry to register proxy tools with.
 
 ##### \_stateManager
 
-[`StateManager`](../interfaces/StateManager.md)
+`StateManager`
 
 The state manager (not currently used).
 
@@ -70,7 +70,7 @@ The authentication manager.
 
 > **discoverAvailableServers**(`discoveryEndpoint?`): `Promise`\<[`McpServerConfig`](../type-aliases/McpServerConfig.md)[]\>
 
-Defined in: [src/systems/mcp/McpManager.ts:220](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/McpManager.ts#L220)
+Defined in: [src/systems/mcp/McpManager.ts:220](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpManager.ts#L220)
 
 Searches a discovery service for available MCP servers.
 
@@ -94,7 +94,7 @@ A promise resolving to an array of McpServerConfig.
 
 > **getOrCreateConnection**(`serverId`): `Promise`\<[`McpClientController`](McpClientController.md)\>
 
-Defined in: [src/systems/mcp/McpManager.ts:135](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/McpManager.ts#L135)
+Defined in: [src/systems/mcp/McpManager.ts:135](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpManager.ts#L135)
 
 Gets an existing connection or creates a new one for a given server ID.
 
@@ -118,7 +118,7 @@ A promise that resolves to the MCP client controller.
 
 > **initialize**(`mcpConfig?`): `Promise`\<`void`\>
 
-Defined in: [src/systems/mcp/McpManager.ts:59](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/McpManager.ts#L59)
+Defined in: [src/systems/mcp/McpManager.ts:59](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpManager.ts#L59)
 
 Initializes the McpManager, discovers and registers tools from configured servers.
 
@@ -152,7 +152,7 @@ A promise that resolves when initialization is complete.
 
 > **installServer**(`server`): `Promise`\<[`McpServerConfig`](../type-aliases/McpServerConfig.md)\>
 
-Defined in: [src/systems/mcp/McpManager.ts:306](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/McpManager.ts#L306)
+Defined in: [src/systems/mcp/McpManager.ts:306](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpManager.ts#L306)
 
 Installs a server by persisting its config, discovering tools via MCP, and
 registering proxy tools. Returns the finalized config with accurate tools.
@@ -177,7 +177,7 @@ A promise that resolves to the finalized server configuration.
 
 > **shutdown**(): `Promise`\<`void`\>
 
-Defined in: [src/systems/mcp/McpManager.ts:121](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/McpManager.ts#L121)
+Defined in: [src/systems/mcp/McpManager.ts:121](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpManager.ts#L121)
 
 Shuts down all active MCP connections.
 
@@ -193,7 +193,7 @@ A promise that resolves when all connections are shut down.
 
 > **uninstallServer**(`serverId`): `Promise`\<`void`\>
 
-Defined in: [src/systems/mcp/McpManager.ts:372](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/mcp/McpManager.ts#L372)
+Defined in: [src/systems/mcp/McpManager.ts:372](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpManager.ts#L372)
 
 Uninstalls a server: disconnects, removes registered proxy tools, and deletes config.
 

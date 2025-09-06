@@ -64,10 +64,24 @@ export class GeminiAdapter implements ProviderAdapter {
    *
    * Handles both streaming and non-streaming requests based on `options.stream`.
    *
+   * Thinking tokens (Gemini):
+   * - On supported Gemini models (e.g., `gemini-2.5-*`), you can enable thought output via `config.thinkingConfig`.
+   * - This adapter reads provider-specific flags from the call options:
+   *   - `options.gemini.thinking.includeThoughts: boolean` — when `true`, requests thought (reasoning) output.
+   *   - `options.gemini.thinking.thinkingBudget?: number` — optional token budget for thinking.
+   * - When enabled and supported, the adapter will attempt to differentiate thought vs response parts and set
+   *   `StreamEvent.tokenType` accordingly:
+   *   - For planning calls (`callContext === 'AGENT_THOUGHT'`): `AGENT_THOUGHT_LLM_THINKING` or `AGENT_THOUGHT_LLM_RESPONSE`.
+   *   - For synthesis calls (`callContext === 'FINAL_SYNTHESIS'`): `FINAL_SYNTHESIS_LLM_THINKING` or `FINAL_SYNTHESIS_LLM_RESPONSE`.
+   * - `LLMMetadata.thinkingTokens` will be populated if the provider reports separate thinking token usage.
+   * - If the SDK/model does not expose thought parts, the adapter falls back to labeling tokens as `...LLM_RESPONSE`.
+   *
    * @param {ArtStandardPrompt} prompt - The standardized prompt messages.
    * @param {CallOptions} options - Options for the LLM call, including streaming preference, model override, and execution context.
    * @returns {Promise<AsyncIterable<StreamEvent>>} An async iterable that yields `StreamEvent` objects.
    *   - `TOKEN`: Contains a chunk of the response text. `tokenType` indicates if it's part of agent thought or final synthesis.
+   *             When Gemini thinking is enabled and available, `tokenType` may be one of the `...LLM_THINKING` or
+   *             `...LLM_RESPONSE` variants to separate thought vs response tokens.
    *   - `METADATA`: Contains information like stop reason, token counts, and timing, yielded once at the end.
    *   - `ERROR`: Contains any error encountered during translation, SDK call, or response processing.
    *   - `END`: Signals the completion of the stream.
@@ -76,6 +90,23 @@ export class GeminiAdapter implements ProviderAdapter {
    * @see {StreamEvent}
    * @see {LLMMetadata}
    * @see https://ai.google.dev/api/rest/v1beta/models/generateContent
+   *
+   * @example
+   * // Enable Gemini thinking (if supported by the selected model)
+   * const stream = await geminiAdapter.call(prompt, {
+   *   threadId,
+   *   stream: true,
+   *   callContext: 'FINAL_SYNTHESIS',
+   *   providerConfig, // your RuntimeProviderConfig
+   *   gemini: {
+   *     thinking: { includeThoughts: true, thinkingBudget: 8096 }
+   *   }
+   * });
+   * for await (const evt of stream) {
+   *   if (evt.type === 'TOKEN') {
+   *     // evt.tokenType may be FINAL_SYNTHESIS_LLM_THINKING or FINAL_SYNTHESIS_LLM_RESPONSE
+   *   }
+   * }
    */
   async call(prompt: ArtStandardPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
     const { threadId, traceId = `gemini-trace-${Date.now()}`, sessionId, stream, callContext, model: modelOverride } = options;
@@ -108,6 +139,20 @@ export class GeminiAdapter implements ProviderAdapter {
         generationConfig[key as keyof GenerationConfig] === undefined &&
         delete generationConfig[key as keyof GenerationConfig]
     );
+    // Build optional thinking configuration from CallOptions (feature flag)
+    // Expecting shape: options.gemini?.thinking?.{ includeThoughts?: boolean; thinkingBudget?: number }
+    const includeThoughts: boolean = !!(options as any)?.gemini?.thinking?.includeThoughts;
+    const thinkingBudget: number | undefined = (options as any)?.gemini?.thinking?.thinkingBudget;
+    // Merge into a requestConfig that is leniently typed to allow SDK preview fields
+    const requestConfig: any = includeThoughts
+      ? {
+          ...generationConfig,
+          thinkingConfig: {
+            includeThoughts: true,
+            ...(thinkingBudget !== undefined ? { thinkingBudget } : {}),
+          },
+        }
+      : { ...generationConfig };
     // --- End Format Payload ---
 
     Logger.debug(`Calling Gemini SDK with model ${modelToUse}, stream: ${!!stream}`, { threadId, traceId });
@@ -131,7 +176,7 @@ export class GeminiAdapter implements ProviderAdapter {
           const streamResult = await genAIInstance.models.generateContentStream({ // Use captured instance
             model: modelToUse, // Pass model name here
             contents,
-            config: generationConfig, // Pass config object directly (key is 'config')
+            config: requestConfig, // Pass merged config including optional thinkingConfig
           });
 
           // Process the stream by iterating directly over streamResult (based on docs)
@@ -140,11 +185,29 @@ export class GeminiAdapter implements ProviderAdapter {
             if (!timeToFirstTokenMs) {
                 timeToFirstTokenMs = Date.now() - startTime;
             }
-            const textPart = chunk.text; // Access as property (based on docs)
-            if (textPart) {
-              // Determine tokenType based on callContext (Gemini SDK doesn't expose thinking markers directly)
-              const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'FINAL_SYNTHESIS_LLM_RESPONSE';
-              yield { type: 'TOKEN', data: textPart, threadId, traceId, sessionId, tokenType };
+            // Prefer structured parts if available to differentiate thinking vs response
+            const candidate = (chunk as any)?.candidates?.[0];
+            const parts = candidate?.content?.parts;
+            if (Array.isArray(parts) && parts.length > 0) {
+              for (const part of parts) {
+                const partText: string | undefined = (part as any)?.text;
+                if (!partText) continue;
+                const isThought: boolean = !!(
+                  (part as any)?.thought ||
+                  (part as any)?.metadata?.thought ||
+                  (part as any)?.inlineMetadata?.thought
+                );
+                const tokenType = callContext === 'AGENT_THOUGHT'
+                  ? (isThought ? 'AGENT_THOUGHT_LLM_THINKING' : 'AGENT_THOUGHT_LLM_RESPONSE')
+                  : (isThought ? 'FINAL_SYNTHESIS_LLM_THINKING' : 'FINAL_SYNTHESIS_LLM_RESPONSE');
+                yield { type: 'TOKEN', data: partText, threadId, traceId, sessionId, tokenType };
+              }
+            } else {
+              const textPart = (chunk as any).text; // Access as property (fallback)
+              if (textPart) {
+                const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'FINAL_SYNTHESIS_LLM_RESPONSE';
+                yield { type: 'TOKEN', data: textPart, threadId, traceId, sessionId, tokenType };
+              }
             }
              // Log potential usage metadata if available in chunks (less common)
              // Capture usage metadata if present in chunks
@@ -181,6 +244,7 @@ export class GeminiAdapter implements ProviderAdapter {
              stopReason: streamFinishReason, // Use finishReason from last chunk
              inputTokens: finalUsage?.promptTokenCount,
              outputTokens: finalUsage?.candidatesTokenCount, // Or totalTokenCount? Check SDK details
+             thinkingTokens: finalUsage?.thinkingTokenCount ?? finalUsage?.thoughtTokens,
              timeToFirstTokenMs: timeToFirstTokenMs,
              totalGenerationTimeMs: totalGenerationTimeMs,
              providerRawUsage: finalUsage, // Use usage from last chunk
@@ -195,7 +259,7 @@ export class GeminiAdapter implements ProviderAdapter {
           const result: GenerateContentResponse = await genAIInstance.models.generateContent({ // Use captured instance
             model: modelToUse, // Pass model name here
             contents,
-            config: generationConfig, // Use 'config' key as per documentation
+            config: requestConfig, // Use merged config including optional thinkingConfig
           });
           // Removed incorrect line: const response = result.response;
           const firstCandidate = result.candidates?.[0]; // Access directly from result
@@ -205,8 +269,23 @@ export class GeminiAdapter implements ProviderAdapter {
           const totalGenerationTimeMs = Date.now() - startTime;
 
 
-          // Check if candidate exists AND responseText is truthy (not undefined, null, or empty string)
-          if (!firstCandidate || !responseText) {
+          // If structured parts are present, prefer splitting into thought vs response tokens
+          const nonStreamParts = (firstCandidate as any)?.content?.parts;
+          if (Array.isArray(nonStreamParts) && nonStreamParts.length > 0) {
+            for (const part of nonStreamParts) {
+              const partText: string | undefined = (part as any)?.text;
+              if (!partText) continue;
+              const isThought: boolean = !!(
+                (part as any)?.thought ||
+                (part as any)?.metadata?.thought ||
+                (part as any)?.inlineMetadata?.thought
+              );
+              const tokenType = callContext === 'AGENT_THOUGHT'
+                ? (isThought ? 'AGENT_THOUGHT_LLM_THINKING' : 'AGENT_THOUGHT_LLM_RESPONSE')
+                : (isThought ? 'FINAL_SYNTHESIS_LLM_THINKING' : 'FINAL_SYNTHESIS_LLM_RESPONSE');
+              yield { type: 'TOKEN', data: partText.trim(), threadId, traceId, sessionId, tokenType };
+            }
+          } else if (!firstCandidate || !responseText) {
             if (result.promptFeedback?.blockReason) { // Access directly from result
               Logger.error('Gemini SDK call blocked.', { feedback: result.promptFeedback, threadId, traceId });
               yield { type: 'ERROR', data: new Error(`Gemini API call blocked: ${result.promptFeedback.blockReason}`), threadId, traceId, sessionId };
@@ -215,20 +294,18 @@ export class GeminiAdapter implements ProviderAdapter {
             Logger.error('Invalid response structure from Gemini SDK: No text content found', { responseData: result, threadId, traceId }); // Log the whole result
             yield { type: 'ERROR', data: new Error('Invalid response structure from Gemini SDK: No text content found.'), threadId, traceId, sessionId };
             return;
+          } else {
+            // Yield TOKEN (fallback single text)
+            const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'LLM_RESPONSE';
+            yield { type: 'TOKEN', data: responseText.trim(), threadId, traceId, sessionId, tokenType };
           }
-
-          // Yield TOKEN
-          // Determine tokenType based on callContext for non-streaming
-          // For planning (AGENT_THOUGHT), yield the raw response text for the OutputParser
-          // For synthesis, yield the text as the final response
-          const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'LLM_RESPONSE';
-          yield { type: 'TOKEN', data: responseText.trim(), threadId, traceId, sessionId, tokenType };
 
           // Yield METADATA
           const metadata: LLMMetadata = {
             stopReason: finishReason,
             inputTokens: usageMetadata?.promptTokenCount,
             outputTokens: usageMetadata?.candidatesTokenCount,
+            thinkingTokens: (usageMetadata as any)?.thinkingTokenCount ?? (usageMetadata as any)?.thoughtTokens,
             totalGenerationTimeMs: totalGenerationTimeMs,
             providerRawUsage: usageMetadata,
             traceId: traceId,

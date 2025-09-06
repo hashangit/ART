@@ -6,7 +6,7 @@
 
 # Interface: ArtInstance
 
-Defined in: [src/core/interfaces.ts:647](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L647)
+Defined in: [src/core/interfaces.ts:647](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L647)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [src/core/interfaces.ts:647](https://github.com/hashangit/ART/blob/e
 
 > `readonly` `optional` **authManager**: `null` \| [`AuthManager`](../classes/AuthManager.md)
 
-Defined in: [src/core/interfaces.ts:661](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L661)
+Defined in: [src/core/interfaces.ts:661](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L661)
 
 Accessor for the Auth Manager, used for handling authentication.
 
@@ -24,7 +24,7 @@ Accessor for the Auth Manager, used for handling authentication.
 
 > `readonly` **conversationManager**: [`ConversationManager`](ConversationManager.md)
 
-Defined in: [src/core/interfaces.ts:655](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L655)
+Defined in: [src/core/interfaces.ts:655](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L655)
 
 Accessor for the Conversation Manager, used for managing message history.
 
@@ -34,7 +34,7 @@ Accessor for the Conversation Manager, used for managing message history.
 
 > `readonly` **observationManager**: [`ObservationManager`](ObservationManager.md)
 
-Defined in: [src/core/interfaces.ts:659](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L659)
+Defined in: [src/core/interfaces.ts:659](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L659)
 
 Accessor for the Observation Manager, used for recording and retrieving observations.
 
@@ -44,7 +44,7 @@ Accessor for the Observation Manager, used for recording and retrieving observat
 
 > `readonly` **process**: (`props`) => `Promise`\<[`AgentFinalResponse`](AgentFinalResponse.md)\>
 
-Defined in: [src/core/interfaces.ts:649](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L649)
+Defined in: [src/core/interfaces.ts:649](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L649)
 
 The main method to process a user query using the configured Agent Core.
 
@@ -73,9 +73,9 @@ If a critical error occurs during orchestration that prevents completion.
 
 ### stateManager
 
-> `readonly` **stateManager**: [`StateManager`](StateManager.md)
+> `readonly` **stateManager**: `StateManager`
 
-Defined in: [src/core/interfaces.ts:653](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L653)
+Defined in: [src/core/interfaces.ts:653](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L653)
 
 Accessor for the State Manager, used for managing thread configuration and state.
 
@@ -83,9 +83,9 @@ Accessor for the State Manager, used for managing thread configuration and state
 
 ### toolRegistry
 
-> `readonly` **toolRegistry**: [`ToolRegistry`](ToolRegistry.md)
+> `readonly` **toolRegistry**: `ToolRegistry`
 
-Defined in: [src/core/interfaces.ts:657](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L657)
+Defined in: [src/core/interfaces.ts:657](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L657)
 
 Accessor for the Tool Registry, used for managing available tools.
 
@@ -93,8 +93,8 @@ Accessor for the Tool Registry, used for managing available tools.
 
 ### uiSystem
 
-> `readonly` **uiSystem**: [`UISystem`](UISystem.md)
+> `readonly` **uiSystem**: `UISystem`
 
-Defined in: [src/core/interfaces.ts:651](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L651)
+Defined in: [src/core/interfaces.ts:651](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L651)
 
 Accessor for the UI System, used to get sockets for subscriptions.

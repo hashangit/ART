@@ -6,7 +6,7 @@
 
 # Interface: StorageAdapter
 
-Defined in: [src/core/interfaces.ts:478](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L478)
+Defined in: [src/core/interfaces.ts:478](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L478)
 
 Interface for a storage adapter, providing a generic persistence layer.
 
@@ -16,7 +16,7 @@ Interface for a storage adapter, providing a generic persistence layer.
 
 > `optional` **clearAll**(): `Promise`\<`void`\>
 
-Defined in: [src/core/interfaces.ts:517](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L517)
+Defined in: [src/core/interfaces.ts:517](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L517)
 
 Optional: Clears all data managed by the adapter. Use with caution!
 
@@ -30,7 +30,7 @@ Optional: Clears all data managed by the adapter. Use with caution!
 
 > `optional` **clearCollection**(`collection`): `Promise`\<`void`\>
 
-Defined in: [src/core/interfaces.ts:514](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L514)
+Defined in: [src/core/interfaces.ts:514](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L514)
 
 Optional: Clears all items from a specific collection.
 
@@ -50,7 +50,7 @@ Optional: Clears all items from a specific collection.
 
 > **delete**(`collection`, `id`): `Promise`\<`void`\>
 
-Defined in: [src/core/interfaces.ts:503](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L503)
+Defined in: [src/core/interfaces.ts:503](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L503)
 
 Deletes an item from a collection by its ID.
 
@@ -78,7 +78,7 @@ The unique ID of the item.
 
 > **get**\<`T`\>(`collection`, `id`): `Promise`\<`null` \| `T`\>
 
-Defined in: [src/core/interfaces.ts:488](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L488)
+Defined in: [src/core/interfaces.ts:488](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L488)
 
 Retrieves a single item from a collection by its ID.
 
@@ -114,7 +114,7 @@ The item or null if not found.
 
 > `optional` **init**(`config?`): `Promise`\<`void`\>
 
-Defined in: [src/core/interfaces.ts:480](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L480)
+Defined in: [src/core/interfaces.ts:480](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L480)
 
 Optional initialization method (e.g., connecting to DB).
 
@@ -134,7 +134,7 @@ Optional initialization method (e.g., connecting to DB).
 
 > **query**\<`T`\>(`collection`, `filterOptions`): `Promise`\<`T`[]\>
 
-Defined in: [src/core/interfaces.ts:511](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L511)
+Defined in: [src/core/interfaces.ts:511](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L511)
 
 Queries items in a collection based on filter options.
 
@@ -170,7 +170,7 @@ An array of matching items.
 
 > **set**\<`T`\>(`collection`, `id`, `data`): `Promise`\<`void`\>
 
-Defined in: [src/core/interfaces.ts:496](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/core/interfaces.ts#L496)
+Defined in: [src/core/interfaces.ts:496](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L496)
 
 Saves (creates or updates) an item in a collection.
 

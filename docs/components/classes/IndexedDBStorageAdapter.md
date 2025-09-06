@@ -6,7 +6,7 @@
 
 # Class: IndexedDBStorageAdapter
 
-Defined in: [src/integrations/storage/indexedDB.ts:34](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/indexedDB.ts#L34)
+Defined in: [src/integrations/storage/indexedDB.ts:34](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/indexedDB.ts#L34)
 
 An implementation of the `StorageAdapter` interface that uses the browser's
 IndexedDB API for persistent, client-side storage.
@@ -32,7 +32,7 @@ any other database operations (get, set, delete, query).
 
 > **new IndexedDBStorageAdapter**(`config`): `IndexedDBStorageAdapter`
 
-Defined in: [src/integrations/storage/indexedDB.ts:47](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/indexedDB.ts#L47)
+Defined in: [src/integrations/storage/indexedDB.ts:47](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/indexedDB.ts#L47)
 
 Creates an instance of IndexedDBStorageAdapter.
 Note: The database connection is not opened until `init()` is called.
@@ -59,7 +59,7 @@ https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API
 
 > **clearAll**(): `Promise`\<`void`\>
 
-Defined in: [src/integrations/storage/indexedDB.ts:424](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/indexedDB.ts#L424)
+Defined in: [src/integrations/storage/indexedDB.ts:424](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/indexedDB.ts#L424)
 
 Removes all data from all object stores managed by this adapter instance within the database.
 Use with caution as this is destructive.
@@ -84,7 +84,7 @@ If the database is not initialized or a transaction error occurs.
 
 > **clearCollection**(`collection`): `Promise`\<`void`\>
 
-Defined in: [src/integrations/storage/indexedDB.ts:391](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/indexedDB.ts#L391)
+Defined in: [src/integrations/storage/indexedDB.ts:391](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/indexedDB.ts#L391)
 
 Removes all items from a specific object store (collection).
 
@@ -116,7 +116,7 @@ If the database is not initialized, the store doesn't exist, or a database error
 
 > **delete**(`collection`, `id`): `Promise`\<`void`\>
 
-Defined in: [src/integrations/storage/indexedDB.ts:282](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/indexedDB.ts#L282)
+Defined in: [src/integrations/storage/indexedDB.ts:282](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/indexedDB.ts#L282)
 
 Deletes an item from the specified object store (collection) by its ID.
 
@@ -154,7 +154,7 @@ If the database is not initialized, the store doesn't exist, or a database error
 
 > **get**\<`T`\>(`collection`, `id`): `Promise`\<`null` \| `T`\>
 
-Defined in: [src/integrations/storage/indexedDB.ts:189](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/indexedDB.ts#L189)
+Defined in: [src/integrations/storage/indexedDB.ts:189](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/indexedDB.ts#L189)
 
 Retrieves a single item by its ID from the specified object store (collection).
 
@@ -200,7 +200,7 @@ If the database is not initialized, the store doesn't exist, or a database error
 
 > **init**(): `Promise`\<`void`\>
 
-Defined in: [src/integrations/storage/indexedDB.ts:67](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/indexedDB.ts#L67)
+Defined in: [src/integrations/storage/indexedDB.ts:67](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/indexedDB.ts#L67)
 
 Opens the IndexedDB database connection and ensures the required object stores
 are created or updated based on the configured `dbVersion`.
@@ -223,7 +223,7 @@ A promise that resolves when the database is successfully opened and ready, or r
 
 > **query**\<`T`\>(`collection`, `filterOptions`): `Promise`\<`T`[]\>
 
-Defined in: [src/integrations/storage/indexedDB.ts:324](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/indexedDB.ts#L324)
+Defined in: [src/integrations/storage/indexedDB.ts:324](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/indexedDB.ts#L324)
 
 Queries items within a collection based on provided filter options.
 **Note:** This implementation uses `getAll()` and performs filtering, sorting,
@@ -279,7 +279,7 @@ This will improve performance for large datasets.
 
 > **set**\<`T`\>(`collection`, `id`, `data`): `Promise`\<`void`\>
 
-Defined in: [src/integrations/storage/indexedDB.ts:226](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/indexedDB.ts#L226)
+Defined in: [src/integrations/storage/indexedDB.ts:226](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/indexedDB.ts#L226)
 
 Saves (creates or updates) an item in the specified object store (collection).
 Assumes the object store uses 'id' as its keyPath. The `id` parameter provided

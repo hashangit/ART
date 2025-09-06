@@ -6,7 +6,7 @@
 
 # Class: InMemoryStorageAdapter
 
-Defined in: [src/integrations/storage/inMemory.ts:19](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/inMemory.ts#L19)
+Defined in: [src/integrations/storage/inMemory.ts:19](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/inMemory.ts#L19)
 
 An in-memory implementation of the `StorageAdapter` interface.
 Stores all data in JavaScript Maps within the current process memory.
@@ -34,7 +34,7 @@ ART framework, such as conversation history, agent state, and observations.
 
 > **new InMemoryStorageAdapter**(): `InMemoryStorageAdapter`
 
-Defined in: [src/integrations/storage/inMemory.ts:26](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/inMemory.ts#L26)
+Defined in: [src/integrations/storage/inMemory.ts:26](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/inMemory.ts#L26)
 
 Creates an instance of InMemoryStorageAdapter.
 
@@ -52,7 +52,7 @@ StorageAdapter
 
 > **clearAll**(): `Promise`\<`void`\>
 
-Defined in: [src/integrations/storage/inMemory.ts:151](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/inMemory.ts#L151)
+Defined in: [src/integrations/storage/inMemory.ts:151](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/inMemory.ts#L151)
 
 Removes all collections and all data stored within the adapter instance.
 Use with caution, especially during testing.
@@ -73,7 +73,7 @@ A promise that resolves when all data is cleared.
 
 > **clearCollection**(`collection`): `Promise`\<`void`\>
 
-Defined in: [src/integrations/storage/inMemory.ts:141](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/inMemory.ts#L141)
+Defined in: [src/integrations/storage/inMemory.ts:141](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/inMemory.ts#L141)
 
 Removes all items from a specific collection within the in-memory store.
 
@@ -101,7 +101,7 @@ A promise that resolves when the collection is cleared.
 
 > **delete**(`collection`, `id`): `Promise`\<`void`\>
 
-Defined in: [src/integrations/storage/inMemory.ts:84](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/inMemory.ts#L84)
+Defined in: [src/integrations/storage/inMemory.ts:84](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/inMemory.ts#L84)
 
 Deletes an item from a specified collection using its ID.
 If the collection or item does not exist, the operation completes silently.
@@ -136,7 +136,7 @@ A promise that resolves when the deletion attempt is complete.
 
 > **get**\<`T`\>(`collection`, `id`): `Promise`\<`null` \| `T`\>
 
-Defined in: [src/integrations/storage/inMemory.ts:48](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/inMemory.ts#L48)
+Defined in: [src/integrations/storage/inMemory.ts:48](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/inMemory.ts#L48)
 
 Retrieves a single item (as a deep copy) from a specified collection by its ID.
 
@@ -178,7 +178,7 @@ A promise resolving to a deep copy of the item if found, or `null` otherwise.
 
 > **init**(`_config?`): `Promise`\<`void`\>
 
-Defined in: [src/integrations/storage/inMemory.ts:36](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/inMemory.ts#L36)
+Defined in: [src/integrations/storage/inMemory.ts:36](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/inMemory.ts#L36)
 
 Initializes the adapter. This is a no-op for the in-memory adapter
 and is provided for interface compatibility.
@@ -207,7 +207,7 @@ A promise that resolves immediately.
 
 > **query**\<`T`\>(`collection`, `filterOptions`): `Promise`\<`T`[]\>
 
-Defined in: [src/integrations/storage/inMemory.ts:103](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/inMemory.ts#L103)
+Defined in: [src/integrations/storage/inMemory.ts:103](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/inMemory.ts#L103)
 
 Queries items within a collection based on provided filter options.
 **Note:** This in-memory implementation provides basic filtering capabilities:
@@ -253,7 +253,7 @@ A promise resolving to an array of deep copies of the matching items.
 
 > **set**\<`T`\>(`collection`, `id`, `data`): `Promise`\<`void`\>
 
-Defined in: [src/integrations/storage/inMemory.ts:67](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/storage/inMemory.ts#L67)
+Defined in: [src/integrations/storage/inMemory.ts:67](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/inMemory.ts#L67)
 
 Saves (creates or updates) an item in a specified collection.
 Stores a deep copy of the provided data to prevent external mutations.

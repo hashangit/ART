@@ -6,7 +6,7 @@
 
 # Class: OllamaAdapter
 
-Defined in: [src/integrations/reasoning/ollama.ts:68](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/ollama.ts#L68)
+Defined in: [src/integrations/reasoning/ollama.ts:68](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/reasoning/ollama.ts#L68)
 
 Implements the `ProviderAdapter` interface for interacting with Ollama's
 OpenAI-compatible API endpoint.
@@ -28,7 +28,7 @@ Handles formatting requests, parsing responses, streaming, and tool use.
 
 > **new OllamaAdapter**(`options`): `OllamaAdapter`
 
-Defined in: [src/integrations/reasoning/ollama.ts:78](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/ollama.ts#L78)
+Defined in: [src/integrations/reasoning/ollama.ts:78](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/reasoning/ollama.ts#L78)
 
 Creates an instance of the OllamaAdapter.
 
@@ -50,7 +50,7 @@ Configuration options.
 
 > `readonly` **providerName**: `"ollama"` = `'ollama'`
 
-Defined in: [src/integrations/reasoning/ollama.ts:69](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/ollama.ts#L69)
+Defined in: [src/integrations/reasoning/ollama.ts:69](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/reasoning/ollama.ts#L69)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -64,7 +64,7 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 > **call**(`prompt`, `options`): `Promise`\<`AsyncIterable`\<[`StreamEvent`](../interfaces/StreamEvent.md), `any`, `any`\>\>
 
-Defined in: [src/integrations/reasoning/ollama.ts:102](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/ollama.ts#L102)
+Defined in: [src/integrations/reasoning/ollama.ts:102](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/reasoning/ollama.ts#L102)
 
 Sends a request to the Ollama API.
 Translates `ArtStandardPrompt` to the OpenAI format and handles streaming and tool use.
@@ -99,7 +99,7 @@ A promise resolving to an AsyncIterable of StreamEvent objects.
 
 > **shutdown**(): `Promise`\<`void`\>
 
-Defined in: [src/integrations/reasoning/ollama.ts:481](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/ollama.ts#L481)
+Defined in: [src/integrations/reasoning/ollama.ts:481](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/reasoning/ollama.ts#L481)
 
 Optional method for graceful shutdown. For Ollama, which is typically a separate
 local server, this adapter doesn't manage persistent connections that need explicit closing.

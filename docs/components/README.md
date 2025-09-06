@@ -60,6 +60,7 @@ const response = await art.process({ query: "Hello, world!" });
 - [AdapterInstantiationError](classes/AdapterInstantiationError.md)
 - [AgentDiscoveryService](classes/AgentDiscoveryService.md)
 - [AnthropicAdapter](classes/AnthropicAdapter.md)
+- [ApiKeyStrategy](classes/ApiKeyStrategy.md)
 - [ApiQueueTimeoutError](classes/ApiQueueTimeoutError.md)
 - [ARTError](classes/ARTError.md)
 - [AuthManager](classes/AuthManager.md)
@@ -67,6 +68,7 @@ const response = await art.process({ query: "Hello, world!" });
 - [ConversationSocket](classes/ConversationSocket.md)
 - [DeepSeekAdapter](classes/DeepSeekAdapter.md)
 - [GeminiAdapter](classes/GeminiAdapter.md)
+- [~~GenericOAuthStrategy~~](classes/GenericOAuthStrategy.md)
 - [IndexedDBStorageAdapter](classes/IndexedDBStorageAdapter.md)
 - [InMemoryStorageAdapter](classes/InMemoryStorageAdapter.md)
 - [LLMStreamSocket](classes/LLMStreamSocket.md)
@@ -82,10 +84,15 @@ const response = await art.process({ query: "Hello, world!" });
 - [OpenRouterAdapter](classes/OpenRouterAdapter.md)
 - [PESAgent](classes/PESAgent.md)
 - [PKCEOAuthStrategy](classes/PKCEOAuthStrategy.md)
+- [ProviderManagerImpl](classes/ProviderManagerImpl.md)
+- [StateManager](classes/StateManager.md)
 - [SupabaseStorageAdapter](classes/SupabaseStorageAdapter.md)
 - [TaskDelegationService](classes/TaskDelegationService.md)
+- [ToolRegistry](classes/ToolRegistry.md)
 - [TypedSocket](classes/TypedSocket.md)
+- [UISystem](classes/UISystem.md)
 - [UnknownProviderError](classes/UnknownProviderError.md)
+- [ZyntopiaOAuthStrategy](classes/ZyntopiaOAuthStrategy.md)
 
 ## Interfaces
 
@@ -134,6 +141,7 @@ const response = await art.process({ query: "Hello, world!" });
 - [McpServerStatus](interfaces/McpServerStatus.md)
 - [McpToolDefinition](interfaces/McpToolDefinition.md)
 - [MessageOptions](interfaces/MessageOptions.md)
+- [OAuthConfig](interfaces/OAuthConfig.md)
 - [Observation](interfaces/Observation.md)
 - [ObservationFilter](interfaces/ObservationFilter.md)
 - [ObservationManager](interfaces/ObservationManager.md)
@@ -151,7 +159,6 @@ const response = await art.process({ query: "Hello, world!" });
 - [ReasoningEngine](interfaces/ReasoningEngine.md)
 - [RuntimeProviderConfig](interfaces/RuntimeProviderConfig.md)
 - [StageSpecificPrompts](interfaces/StageSpecificPrompts.md)
-- [StateManager](interfaces/StateManager.md)
 - [StorageAdapter](interfaces/StorageAdapter.md)
 - [StreamEvent](interfaces/StreamEvent.md)
 - [SystemPromptOverride](interfaces/SystemPromptOverride.md)
@@ -162,12 +169,11 @@ const response = await art.process({ query: "Hello, world!" });
 - [TaskStatusResponse](interfaces/TaskStatusResponse.md)
 - [ThreadConfig](interfaces/ThreadConfig.md)
 - [ThreadContext](interfaces/ThreadContext.md)
-- [ToolRegistry](interfaces/ToolRegistry.md)
 - [ToolResult](interfaces/ToolResult.md)
 - [ToolSchema](interfaces/ToolSchema.md)
 - [ToolSystem](interfaces/ToolSystem.md)
-- [UISystem](interfaces/UISystem.md)
 - [UpdateA2ATaskRequest](interfaces/UpdateA2ATaskRequest.md)
+- [ZyntopiaOAuthConfig](interfaces/ZyntopiaOAuthConfig.md)
 
 ## Type Aliases
 

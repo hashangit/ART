@@ -6,7 +6,7 @@
 
 # Class: ObservationSocket
 
-Defined in: [src/systems/ui/observation-socket.ts:12](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/observation-socket.ts#L12)
+Defined in: [src/systems/ui/observation-socket.ts:12](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/observation-socket.ts#L12)
 
 A specialized TypedSocket for handling Observation data.
 Allows filtering by ObservationType.
@@ -22,7 +22,7 @@ Can optionally fetch historical observations from a repository.
 
 > **new ObservationSocket**(`observationRepository?`): `ObservationSocket`
 
-Defined in: [src/systems/ui/observation-socket.ts:15](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/observation-socket.ts#L15)
+Defined in: [src/systems/ui/observation-socket.ts:15](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/observation-socket.ts#L15)
 
 #### Parameters
 
@@ -44,7 +44,7 @@ Defined in: [src/systems/ui/observation-socket.ts:15](https://github.com/hashang
 
 > **clearAllSubscriptions**(): `void`
 
-Defined in: [src/systems/ui/typed-socket.ts:99](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/typed-socket.ts#L99)
+Defined in: [src/systems/ui/typed-socket.ts:99](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/typed-socket.ts#L99)
 
 Clears all subscriptions. Useful for cleanup.
 
@@ -62,7 +62,7 @@ Clears all subscriptions. Useful for cleanup.
 
 > **getHistory**(`filter?`, `options?`): `Promise`\<[`Observation`](../interfaces/Observation.md)[]\>
 
-Defined in: [src/systems/ui/observation-socket.ts:47](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/observation-socket.ts#L47)
+Defined in: [src/systems/ui/observation-socket.ts:47](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/observation-socket.ts#L47)
 
 Retrieves historical observations, optionally filtered by type and thread.
 Requires an ObservationRepository to be configured.
@@ -103,7 +103,7 @@ A promise resolving to an array of observations.
 
 > **notify**(`data`, `options?`, `filterCheck?`): `void`
 
-Defined in: [src/systems/ui/typed-socket.ts:55](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/typed-socket.ts#L55)
+Defined in: [src/systems/ui/typed-socket.ts:55](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/typed-socket.ts#L55)
 
 Notifies all relevant subscribers with new data.
 
@@ -147,7 +147,7 @@ A function to check if a subscription's filter matches the data.
 
 > **notifyObservation**(`observation`): `void`
 
-Defined in: [src/systems/ui/observation-socket.ts:25](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/observation-socket.ts#L25)
+Defined in: [src/systems/ui/observation-socket.ts:25](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/observation-socket.ts#L25)
 
 Notifies subscribers about a new observation.
 
@@ -169,7 +169,7 @@ The observation data.
 
 > **subscribe**(`callback`, `filter?`, `options?`): [`UnsubscribeFunction`](../type-aliases/UnsubscribeFunction.md)
 
-Defined in: [src/systems/ui/typed-socket.ts:33](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/typed-socket.ts#L33)
+Defined in: [src/systems/ui/typed-socket.ts:33](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/typed-socket.ts#L33)
 
 Subscribes a callback function to receive notifications.
 

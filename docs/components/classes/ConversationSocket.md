@@ -6,7 +6,7 @@
 
 # Class: ConversationSocket
 
-Defined in: [src/systems/ui/conversation-socket.ts:12](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/conversation-socket.ts#L12)
+Defined in: [src/systems/ui/conversation-socket.ts:12](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/conversation-socket.ts#L12)
 
 A specialized TypedSocket for handling ConversationMessage data.
 Allows filtering by MessageRole.
@@ -22,7 +22,7 @@ Can optionally fetch historical messages from a repository.
 
 > **new ConversationSocket**(`conversationRepository?`): `ConversationSocket`
 
-Defined in: [src/systems/ui/conversation-socket.ts:15](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/conversation-socket.ts#L15)
+Defined in: [src/systems/ui/conversation-socket.ts:15](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/conversation-socket.ts#L15)
 
 #### Parameters
 
@@ -44,7 +44,7 @@ Defined in: [src/systems/ui/conversation-socket.ts:15](https://github.com/hashan
 
 > **clearAllSubscriptions**(): `void`
 
-Defined in: [src/systems/ui/typed-socket.ts:99](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/typed-socket.ts#L99)
+Defined in: [src/systems/ui/typed-socket.ts:99](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/typed-socket.ts#L99)
 
 Clears all subscriptions. Useful for cleanup.
 
@@ -62,7 +62,7 @@ Clears all subscriptions. Useful for cleanup.
 
 > **getHistory**(`filter?`, `options?`): `Promise`\<[`ConversationMessage`](../interfaces/ConversationMessage.md)[]\>
 
-Defined in: [src/systems/ui/conversation-socket.ts:47](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/conversation-socket.ts#L47)
+Defined in: [src/systems/ui/conversation-socket.ts:47](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/conversation-socket.ts#L47)
 
 Retrieves historical messages, optionally filtered by role and thread.
 Requires a ConversationRepository to be configured.
@@ -103,7 +103,7 @@ A promise resolving to an array of messages.
 
 > **notify**(`data`, `options?`, `filterCheck?`): `void`
 
-Defined in: [src/systems/ui/typed-socket.ts:55](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/typed-socket.ts#L55)
+Defined in: [src/systems/ui/typed-socket.ts:55](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/typed-socket.ts#L55)
 
 Notifies all relevant subscribers with new data.
 
@@ -147,7 +147,7 @@ A function to check if a subscription's filter matches the data.
 
 > **notifyMessage**(`message`): `void`
 
-Defined in: [src/systems/ui/conversation-socket.ts:25](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/conversation-socket.ts#L25)
+Defined in: [src/systems/ui/conversation-socket.ts:25](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/conversation-socket.ts#L25)
 
 Notifies subscribers about a new conversation message.
 
@@ -169,7 +169,7 @@ The conversation message data.
 
 > **subscribe**(`callback`, `filter?`, `options?`): [`UnsubscribeFunction`](../type-aliases/UnsubscribeFunction.md)
 
-Defined in: [src/systems/ui/typed-socket.ts:33](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/systems/ui/typed-socket.ts#L33)
+Defined in: [src/systems/ui/typed-socket.ts:33](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/typed-socket.ts#L33)
 
 Subscribes a callback function to receive notifications.
 
