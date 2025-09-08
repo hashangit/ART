@@ -6,7 +6,7 @@
 
 # Interface: ZyntopiaOAuthConfig
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:7](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L7)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:7](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L7)
 
 Configuration specific to Zyntopia OAuth strategy
 
@@ -16,7 +16,7 @@ Configuration specific to Zyntopia OAuth strategy
 
 > **clientId**: `string`
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:9](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L9)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:9](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L9)
 
 Client ID for Zyntopia OAuth authentication
 
@@ -26,7 +26,7 @@ Client ID for Zyntopia OAuth authentication
 
 > **clientSecret**: `string`
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:11](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L11)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:11](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L11)
 
 Client secret for Zyntopia OAuth authentication
 
@@ -36,7 +36,7 @@ Client secret for Zyntopia OAuth authentication
 
 > `optional` **customHeaders**: `Record`\<`string`, `string`\>
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:23](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L23)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:23](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L23)
 
 Additional custom headers for Zyntopia API requirements
 
@@ -46,7 +46,7 @@ Additional custom headers for Zyntopia API requirements
 
 > `optional` **environment**: `"production"` \| `"staging"` \| `"development"`
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:17](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L17)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:17](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L17)
 
 Optional environment ('production' | 'staging' | 'development')
 
@@ -56,7 +56,7 @@ Optional environment ('production' | 'staging' | 'development')
 
 > `optional` **scopes**: `string`
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:15](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L15)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:15](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L15)
 
 Optional custom scopes (defaults to Zyntopia's standard scopes)
 
@@ -66,7 +66,7 @@ Optional custom scopes (defaults to Zyntopia's standard scopes)
 
 > `optional` **tokenEndpoint**: `string`
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:13](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L13)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:13](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L13)
 
 Optional custom token endpoint (defaults to Zyntopia's standard endpoint)
 
@@ -76,7 +76,7 @@ Optional custom token endpoint (defaults to Zyntopia's standard endpoint)
 
 > `optional` **tokenRefreshBufferMs**: `number`
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:21](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L21)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:21](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L21)
 
 Optional custom buffer time before token expiry to trigger refresh
 
@@ -86,6 +86,6 @@ Optional custom buffer time before token expiry to trigger refresh
 
 > `optional` **tokenTimeoutMs**: `number`
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:19](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L19)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:19](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L19)
 
 Optional custom timeout for token requests in milliseconds

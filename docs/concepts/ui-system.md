@@ -183,6 +183,7 @@ This enum lists all possible categories for an `Observation` record. A UI can fi
 
 | Member                | Description                                                               |
 | :-------------------- | :------------------------------------------------------------------------ |
+| `TITLE`               | A concise thread title (<= 10 words) derived from intent and context.     |
 | `INTENT`              | The user's inferred intent.                                               |
 | `PLAN`                | The agent's step-by-step plan to address the intent.                      |
 | `THOUGHTS`            | The agent's internal monologue or reasoning process.                      |
@@ -283,6 +284,25 @@ sequenceDiagram
 ```
 
 By handling these events in order, a UI can create a rich, step-by-step visualization that shows not just *what* the agent did, but *why* it did it.
+### Example: Subscribing to TITLE updates
+
+A UI component can subscribe to the `ObservationSocket` to receive `TITLE` events and set the thread title reactively:
+
+```ts
+const unsubscribe = art.uiSystem.getObservationSocket().subscribe(
+  (obs) => {
+    if (obs.type === 'TITLE' && obs.content?.title) {
+      updateThreadTitle(obs.content.title);
+    }
+  },
+  'TITLE',
+  { threadId }
+);
+
+// Later, to stop listening
+unsubscribe();
+```
+
 
 ---
 

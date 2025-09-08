@@ -38,19 +38,23 @@ export class OutputParser implements IOutputParser {
    *
    * This method performs the following steps:
    * 1. Uses `XmlMatcher` to identify and extract content within `<think>...</think>` tags.
-   *    This extracted content is aggregated into the `thoughts` field of the result.
+   *    The extracted content is aggregated into the `thoughts` field of the result.
    * 2. Attempts a JSON-first parse (Option 2): tries to parse a single JSON object containing
-   *    { intent, plan, toolCalls, payload? }. If successful, returns immediately.
-   * 3. Falls back to the section-based parser (Option 1): parses Intent:, Plan:, and Tool Calls:
-   *    sections from the remaining content. Includes tolerant fallbacks for common wrappers.
+   *    `{ title?, intent, plan, toolCalls }`. If successful, returns immediately.
+   * 3. Falls back to the section-based parser (Option 1): parses `Title:`, `Intent:`, `Plan:`, and `Tool Calls:`
+   *    sections from the remaining content. Includes tolerant fallbacks for common wrappers (e.g., code fences).
+   *
+   * The `title` value should be a concise sentence with no more than 10 words.
    */
   async parsePlanningOutput(output: string): Promise<{
+    title?: string;
     intent?: string;
     plan?: string;
     toolCalls?: ParsedToolCall[];
     thoughts?: string; // Add thoughts to the return type
   }> {
    const result: {
+     title?: string;
      intent?: string;
      plan?: string;
      toolCalls?: ParsedToolCall[];
@@ -79,11 +83,11 @@ export class OutputParser implements IOutputParser {
      result.thoughts = thoughtsList.join("\n\n---\n\n"); // Join multiple thoughts
    }
 
-   // Now parse Intent, Plan, Tool Calls from the non-thinking content
+   // Now parse Title, Intent, Plan, Tool Calls from the non-thinking content
    processedOutput = nonThinkingContent;
 
    // --- Option 2: JSON-first parsing for a single object ---
-   const tryParsePlanningJson = (raw: string): { intent?: string; plan?: string; toolCalls?: ParsedToolCall[] } | null => {
+   const tryParsePlanningJson = (raw: string): { title?: string; intent?: string; plan?: string; toolCalls?: ParsedToolCall[] } | null => {
      if (!raw) return null;
      let s = raw.trim();
      // Remove code fences if present
@@ -101,7 +105,8 @@ export class OutputParser implements IOutputParser {
      try {
        const obj: any = JSON.parse(s);
        if (!obj || (typeof obj !== 'object')) return null;
-       const out: { intent?: string; plan?: string; toolCalls?: ParsedToolCall[] } = {};
+       const out: { title?: string; intent?: string; plan?: string; toolCalls?: ParsedToolCall[] } = {};
+       if (typeof obj.title === 'string') out.title = obj.title;
        if (typeof obj.intent === 'string') out.intent = obj.intent;
        if (Array.isArray(obj.plan)) out.plan = obj.plan.join('\n');
        else if (typeof obj.plan === 'string') out.plan = obj.plan;
@@ -111,7 +116,7 @@ export class OutputParser implements IOutputParser {
          else out.toolCalls = [];
        }
        // Accept if at least one of the expected fields exists
-       if (out.intent || out.plan || out.toolCalls) return out;
+       if (out.title || out.intent || out.plan || out.toolCalls) return out;
        return null;
      } catch {
        return null;
@@ -120,6 +125,7 @@ export class OutputParser implements IOutputParser {
 
    const jsonParsed = tryParsePlanningJson(processedOutput);
    if (jsonParsed) {
+     result.title = jsonParsed.title;
      result.intent = jsonParsed.intent;
      result.plan = jsonParsed.plan;
      result.toolCalls = jsonParsed.toolCalls;
@@ -128,6 +134,9 @@ export class OutputParser implements IOutputParser {
 
    // --- Fallback: section-based parsing (Option 1) ---
    // Robustly extract sections from the processedOutput (non-thinking part)
+   const titleMatch = processedOutput.match(/Title:\s*([\s\S]*?)(Intent:|Plan:|Tool Calls:|$)/i);
+   result.title = titleMatch?.[1]?.trim();
+
    const intentMatch = processedOutput.match(/Intent:\s*([\s\S]*?)(Plan:|Tool Calls:|$)/i);
    result.intent = intentMatch?.[1]?.trim();
 
@@ -198,8 +207,8 @@ export class OutputParser implements IOutputParser {
     }
 
      // Handle cases where sections might be missing entirely from the non-thinking content
-     if (!result.intent && !result.plan && (result.toolCalls === undefined || result.toolCalls.length === 0) && !result.thoughts) {
-        Logger.warn(`OutputParser: Could not parse any structured data (Intent, Plan, Tool Calls, Thoughts) from planning output. Original output: ${output}`);
+     if (!result.title && !result.intent && !result.plan && (result.toolCalls === undefined || result.toolCalls.length === 0) && !result.thoughts) {
+        Logger.warn(`OutputParser: Could not parse any structured data (Title, Intent, Plan, Tool Calls, Thoughts) from planning output. Original output: ${output}`);
         // If nothing structured is found, but there were thoughts, that's still a partial parse.
         // If no thoughts AND no other structure, then it's a more complete failure to parse structure.
         // If the original output was just thoughts, result.thoughts would be populated.
@@ -207,10 +216,10 @@ export class OutputParser implements IOutputParser {
         // This warning triggers if even thoughts couldn't be extracted AND other sections are also missing.
         // If only thoughts were present, result.thoughts would exist, and this condition might not be met.
         // Let's refine the condition: if no standard sections (intent, plan, toolCalls) are found in `processedOutput`
-        if (!result.intent && !result.plan && (result.toolCalls === undefined || result.toolCalls.length === 0)) {
-           Logger.debug(`OutputParser: No Intent, Plan, or Tool Calls found in non-thinking content part: ${processedOutput}`);
+        if (!result.title && !result.intent && !result.plan && (result.toolCalls === undefined || result.toolCalls.length === 0)) {
+           Logger.debug(`OutputParser: No Title, Intent, Plan, or Tool Calls found in non-thinking content part: ${processedOutput}`);
         }
-     } else if (!result.intent && !result.plan && !result.toolCalls && !result.thoughts) {
+     } else if (!result.title && !result.intent && !result.plan && !result.toolCalls && !result.thoughts) {
         // This case means absolutely nothing was parsed, not even thoughts.
         Logger.warn(`OutputParser: Complete failure to parse any structured data or thoughts from planning output: ${output}`);
      }

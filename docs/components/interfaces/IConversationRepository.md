@@ -6,7 +6,7 @@
 
 # Interface: IConversationRepository
 
-Defined in: [src/core/interfaces.ts:524](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L524)
+Defined in: [src/core/interfaces.ts:539](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L539)
 
 Repository for managing ConversationMessages.
 
@@ -16,7 +16,7 @@ Repository for managing ConversationMessages.
 
 > **addMessages**(`threadId`, `messages`): `Promise`\<`void`\>
 
-Defined in: [src/core/interfaces.ts:525](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L525)
+Defined in: [src/core/interfaces.ts:540](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L540)
 
 #### Parameters
 
@@ -38,7 +38,7 @@ Defined in: [src/core/interfaces.ts:525](https://github.com/hashangit/ART/blob/1
 
 > **getMessages**(`threadId`, `options?`): `Promise`\<[`ConversationMessage`](ConversationMessage.md)[]\>
 
-Defined in: [src/core/interfaces.ts:526](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L526)
+Defined in: [src/core/interfaces.ts:541](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L541)
 
 #### Parameters
 

@@ -6,7 +6,7 @@
 
 # Interface: PromptManager
 
-Defined in: [src/core/interfaces.ts:92](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L92)
+Defined in: [src/core/interfaces.ts:92](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L92)
 
 Interface for the stateless prompt assembler.
 Uses a blueprint (template) and context provided by Agent Logic
@@ -18,7 +18,7 @@ to create a standardized prompt format (`ArtStandardPrompt`).
 
 > **assemblePrompt**(`blueprint`, `context`): `Promise`\<[`ArtStandardPrompt`](../type-aliases/ArtStandardPrompt.md)\>
 
-Defined in: [src/core/interfaces.ts:122](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L122)
+Defined in: [src/core/interfaces.ts:122](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L122)
 
 Assembles a prompt using a Mustache template (blueprint) and context data.
 Renders the template with the provided context and parses the result as an ArtStandardPrompt.
@@ -53,7 +53,7 @@ If template rendering or JSON parsing fails.
 
 > **getFragment**(`name`, `context?`): `string`
 
-Defined in: [src/core/interfaces.ts:102](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L102)
+Defined in: [src/core/interfaces.ts:102](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L102)
 
 Retrieves a named prompt fragment (e.g., a piece of instruction text).
 Optionally allows for simple variable substitution if the fragment is a basic template.
@@ -88,7 +88,7 @@ If the fragment is not found.
 
 > **validatePrompt**(`prompt`): [`ArtStandardPrompt`](../type-aliases/ArtStandardPrompt.md)
 
-Defined in: [src/core/interfaces.ts:111](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L111)
+Defined in: [src/core/interfaces.ts:111](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L111)
 
 Validates a constructed prompt object against the standard schema.
 

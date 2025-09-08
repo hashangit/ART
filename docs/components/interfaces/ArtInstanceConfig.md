@@ -6,7 +6,7 @@
 
 # Interface: ArtInstanceConfig
 
-Defined in: [src/types/index.ts:1150](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1150)
+Defined in: [src/types/index.ts:1161](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1161)
 
 Configuration for creating an ART instance.
 
@@ -18,7 +18,7 @@ Configuration for creating an ART instance.
 
 > `optional` **a2aConfig**: `object`
 
-Defined in: [src/types/index.ts:1234](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1234)
+Defined in: [src/types/index.ts:1245](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1245)
 
 Optional: Configuration for A2A services.
 
@@ -40,7 +40,7 @@ The endpoint for discovering A2A agents.
 
 > `optional` **agentCore**: (`dependencies`) => [`IAgentCore`](IAgentCore.md)
 
-Defined in: [src/types/index.ts:1174](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1174)
+Defined in: [src/types/index.ts:1185](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1185)
 
 The agent core implementation class to use.
 Defaults to `PESAgent` if not provided.
@@ -67,7 +67,7 @@ MyCustomAgentClass
 
 > `optional` **authConfig**: `object`
 
-Defined in: [src/types/index.ts:1218](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1218)
+Defined in: [src/types/index.ts:1229](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1229)
 
 Optional configuration for authentication strategies.
 Used for secure connections to external services and MCP servers.
@@ -90,7 +90,7 @@ Pre-configured authentication strategies to register at startup.
 
 > `optional` **logger**: `object`
 
-Defined in: [src/types/index.ts:1197](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1197)
+Defined in: [src/types/index.ts:1208](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1208)
 
 Optional configuration for the framework's logger.
 
@@ -106,7 +106,7 @@ Minimum log level to output. Defaults to 'info'.
 
 > `optional` **mcpConfig**: [`McpManagerConfig`](McpManagerConfig.md)
 
-Defined in: [src/types/index.ts:1212](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1212)
+Defined in: [src/types/index.ts:1223](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1223)
 
 Optional configuration for MCP (Model Context Protocol) manager.
 Enables connection to external MCP servers for dynamic tool loading.
@@ -117,7 +117,7 @@ Enables connection to external MCP servers for dynamic tool loading.
 
 > `optional` **persona**: [`AgentPersona`](AgentPersona.md)
 
-Defined in: [src/types/index.ts:1206](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1206)
+Defined in: [src/types/index.ts:1217](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1217)
 
 Optional: Defines the default identity and high-level guidance for the agent.
 This can be overridden at the thread or call level.
@@ -128,7 +128,7 @@ This can be overridden at the thread or call level.
 
 > **providers**: [`ProviderManagerConfig`](ProviderManagerConfig.md)
 
-Defined in: [src/types/index.ts:1165](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1165)
+Defined in: [src/types/index.ts:1176](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1176)
 
 Configuration for the ProviderManager, defining available LLM provider adapters.
 
@@ -138,7 +138,7 @@ Configuration for the ProviderManager, defining available LLM provider adapters.
 
 > `optional` **stateSavingStrategy**: [`StateSavingStrategy`](../type-aliases/StateSavingStrategy.md)
 
-Defined in: [src/types/index.ts:1192](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1192)
+Defined in: [src/types/index.ts:1203](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1203)
 
 Defines the strategy for saving `AgentState`. Defaults to 'explicit'.
 
@@ -156,7 +156,7 @@ Defines the strategy for saving `AgentState`. Defaults to 'explicit'.
 
 > **storage**: [`StorageAdapter`](StorageAdapter.md) \| \{ `dbName?`: `string`; `objectStores?`: `any`[]; `type`: `"memory"` \| `"indexedDB"`; `version?`: `number`; \}
 
-Defined in: [src/types/index.ts:1160](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1160)
+Defined in: [src/types/index.ts:1171](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1171)
 
 Configuration for the storage adapter.
 Can be a pre-configured `StorageAdapter` instance,
@@ -174,6 +174,6 @@ or an object specifying the type and options for a built-in adapter.
 
 > `optional` **tools**: [`IToolExecutor`](IToolExecutor.md)[]
 
-Defined in: [src/types/index.ts:1179](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1179)
+Defined in: [src/types/index.ts:1190](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1190)
 
 An optional array of tool executor instances to register at initialization.

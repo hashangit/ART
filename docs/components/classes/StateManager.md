@@ -6,7 +6,7 @@
 
 # Class: StateManager
 
-Defined in: [src/systems/context/managers/StateManager.ts:34](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/context/managers/StateManager.ts#L34)
+Defined in: [src/systems/context/managers/StateManager.ts:34](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/context/managers/StateManager.ts#L34)
 
 Manages thread-specific configuration (ThreadConfig) and state (AgentState)
 using an underlying StateRepository. Supports explicit and implicit state saving strategies.
@@ -21,7 +21,7 @@ using an underlying StateRepository. Supports explicit and implicit state saving
 
 > **new StateManager**(`stateRepository`, `strategy?`): `StateManager`
 
-Defined in: [src/systems/context/managers/StateManager.ts:44](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/context/managers/StateManager.ts#L44)
+Defined in: [src/systems/context/managers/StateManager.ts:44](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/context/managers/StateManager.ts#L44)
 
 Creates an instance of StateManager.
 
@@ -49,7 +49,7 @@ The state saving strategy to use.
 
 > **clearCache**(): `void`
 
-Defined in: [src/systems/context/managers/StateManager.ts:346](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/context/managers/StateManager.ts#L346)
+Defined in: [src/systems/context/managers/StateManager.ts:346](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/context/managers/StateManager.ts#L346)
 
 Clears the internal context cache. Useful if the underlying storage is manipulated externally
 during an agent's processing cycle, though this is generally not recommended.
@@ -65,7 +65,7 @@ Or for testing purposes.
 
 > **disableToolsForThread**(`threadId`, `toolNames`): `Promise`\<`void`\>
 
-Defined in: [src/systems/context/managers/StateManager.ts:297](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/context/managers/StateManager.ts#L297)
+Defined in: [src/systems/context/managers/StateManager.ts:297](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/context/managers/StateManager.ts#L297)
 
 Disables specific tools for a conversation thread by removing them from the thread's enabled tools list.
 This method loads the current thread configuration, updates the enabledTools array,
@@ -105,7 +105,7 @@ If threadId is empty, toolNames is empty, or if the repository fails.
 
 > **enableToolsForThread**(`threadId`, `toolNames`): `Promise`\<`void`\>
 
-Defined in: [src/systems/context/managers/StateManager.ts:260](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/context/managers/StateManager.ts#L260)
+Defined in: [src/systems/context/managers/StateManager.ts:260](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/context/managers/StateManager.ts#L260)
 
 Enables specific tools for a conversation thread by adding them to the thread's enabled tools list.
 This method loads the current thread configuration, updates the enabledTools array,
@@ -145,7 +145,7 @@ If threadId is empty, toolNames is empty, or if the repository fails.
 
 > **getEnabledToolsForThread**(`threadId`): `Promise`\<`string`[]\>
 
-Defined in: [src/systems/context/managers/StateManager.ts:332](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/context/managers/StateManager.ts#L332)
+Defined in: [src/systems/context/managers/StateManager.ts:332](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/context/managers/StateManager.ts#L332)
 
 Gets the list of currently enabled tools for a specific thread.
 This is a convenience method that loads the thread context and returns the enabledTools array.
@@ -178,7 +178,7 @@ If the thread context cannot be loaded.
 
 > **getThreadConfigValue**\<`T`\>(`threadId`, `key`): `Promise`\<`undefined` \| `T`\>
 
-Defined in: [src/systems/context/managers/StateManager.ts:118](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/context/managers/StateManager.ts#L118)
+Defined in: [src/systems/context/managers/StateManager.ts:118](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/context/managers/StateManager.ts#L118)
 
 Retrieves a specific value from the thread's configuration (`ThreadConfig`).
 Loads the context first (which might come from cache in implicit mode).
@@ -221,7 +221,7 @@ A promise resolving to the configuration value, or `undefined`.
 
 > **isToolEnabled**(`threadId`, `toolName`): `Promise`\<`boolean`\>
 
-Defined in: [src/systems/context/managers/StateManager.ts:100](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/context/managers/StateManager.ts#L100)
+Defined in: [src/systems/context/managers/StateManager.ts:100](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/context/managers/StateManager.ts#L100)
 
 Checks if a specific tool is permitted for use within a given thread.
 It loads the thread's context and checks the `enabledTools` array in the configuration.
@@ -256,7 +256,7 @@ A promise resolving to `true` if the tool is listed in the thread's `enabledTool
 
 > **loadThreadContext**(`threadId`, `_userId?`): `Promise`\<[`ThreadContext`](../interfaces/ThreadContext.md)\>
 
-Defined in: [src/systems/context/managers/StateManager.ts:62](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/context/managers/StateManager.ts#L62)
+Defined in: [src/systems/context/managers/StateManager.ts:62](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/context/managers/StateManager.ts#L62)
 
 Loads the complete context (`ThreadConfig` and `AgentState`) for a specific thread.
 If in 'implicit' state saving strategy, it caches the loaded context and a snapshot
@@ -296,7 +296,7 @@ If `threadId` is empty or if the repository fails to find the context.
 
 > **saveStateIfModified**(`threadId`): `Promise`\<`void`\>
 
-Defined in: [src/systems/context/managers/StateManager.ts:141](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/context/managers/StateManager.ts#L141)
+Defined in: [src/systems/context/managers/StateManager.ts:141](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/context/managers/StateManager.ts#L141)
 
 Persists the thread's `AgentState` if it has been modified.
 Behavior depends on the `stateSavingStrategy`:
@@ -329,7 +329,7 @@ A promise that resolves when the state is saved or the operation is skipped.
 
 > **setAgentState**(`threadId`, `state`): `Promise`\<`void`\>
 
-Defined in: [src/systems/context/managers/StateManager.ts:223](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/context/managers/StateManager.ts#L223)
+Defined in: [src/systems/context/managers/StateManager.ts:223](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/context/managers/StateManager.ts#L223)
 
 Explicitly sets or updates the AgentState for a specific thread by calling the underlying state repository.
 If in 'implicit' mode, this also updates the cached snapshot to prevent `saveStateIfModified`
@@ -369,7 +369,7 @@ If threadId or state is undefined/null, or if the repository fails.
 
 > **setThreadConfig**(`threadId`, `config`): `Promise`\<`void`\>
 
-Defined in: [src/systems/context/managers/StateManager.ts:200](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/context/managers/StateManager.ts#L200)
+Defined in: [src/systems/context/managers/StateManager.ts:200](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/context/managers/StateManager.ts#L200)
 
 Sets or completely replaces the configuration (`ThreadConfig`) for a specific thread
 by calling the underlying state repository. This also clears any cached context for the thread.

@@ -6,7 +6,7 @@
 
 # Class: AdapterInstantiationError
 
-Defined in: [src/errors.ts:214](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/errors.ts#L214)
+Defined in: [src/errors.ts:214](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/errors.ts#L214)
 
 Error thrown when an adapter for a provider fails to instantiate.
 
@@ -20,7 +20,7 @@ Error thrown when an adapter for a provider fails to instantiate.
 
 > **new AdapterInstantiationError**(`providerName`, `originalError`): `AdapterInstantiationError`
 
-Defined in: [src/errors.ts:215](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/errors.ts#L215)
+Defined in: [src/errors.ts:215](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/errors.ts#L215)
 
 #### Parameters
 
@@ -46,7 +46,7 @@ Defined in: [src/errors.ts:215](https://github.com/hashangit/ART/blob/1e49ae91e2
 
 > `readonly` **code**: [`ErrorCode`](../enumerations/ErrorCode.md)
 
-Defined in: [src/errors.ts:132](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/errors.ts#L132)
+Defined in: [src/errors.ts:132](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/errors.ts#L132)
 
 The specific error code from the ErrorCode enum.
 
@@ -60,7 +60,7 @@ The specific error code from the ErrorCode enum.
 
 > **details**: `Record`\<`string`, `any`\>
 
-Defined in: [src/errors.ts:136](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/errors.ts#L136)
+Defined in: [src/errors.ts:136](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/errors.ts#L136)
 
 A record of additional details about the error.
 
@@ -74,7 +74,7 @@ A record of additional details about the error.
 
 > `readonly` `optional` **originalError**: `Error`
 
-Defined in: [src/errors.ts:134](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/errors.ts#L134)
+Defined in: [src/errors.ts:134](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/errors.ts#L134)
 
 The original error that caused this error, if any.
 
@@ -88,7 +88,7 @@ The original error that caused this error, if any.
 
 > **toString**(): `string`
 
-Defined in: [src/errors.ts:162](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/errors.ts#L162)
+Defined in: [src/errors.ts:162](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/errors.ts#L162)
 
 Returns a string representation of the error, including the original error if present.
 

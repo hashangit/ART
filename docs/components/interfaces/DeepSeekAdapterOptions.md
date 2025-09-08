@@ -6,7 +6,7 @@
 
 # Interface: DeepSeekAdapterOptions
 
-Defined in: [src/integrations/reasoning/deepseek.ts:19](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/reasoning/deepseek.ts#L19)
+Defined in: [src/integrations/reasoning/deepseek.ts:19](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/reasoning/deepseek.ts#L19)
 
 Configuration options required for the `DeepSeekAdapter`.
 
@@ -16,7 +16,7 @@ Configuration options required for the `DeepSeekAdapter`.
 
 > `optional` **apiBaseUrl**: `string`
 
-Defined in: [src/integrations/reasoning/deepseek.ts:25](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/reasoning/deepseek.ts#L25)
+Defined in: [src/integrations/reasoning/deepseek.ts:25](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/reasoning/deepseek.ts#L25)
 
 Optional: Override the base URL for the DeepSeek API. Defaults to 'https://api.deepseek.com/v1'.
 
@@ -26,7 +26,7 @@ Optional: Override the base URL for the DeepSeek API. Defaults to 'https://api.d
 
 > **apiKey**: `string`
 
-Defined in: [src/integrations/reasoning/deepseek.ts:21](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/reasoning/deepseek.ts#L21)
+Defined in: [src/integrations/reasoning/deepseek.ts:21](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/reasoning/deepseek.ts#L21)
 
 Your DeepSeek API key. Handle securely.
 
@@ -36,6 +36,6 @@ Your DeepSeek API key. Handle securely.
 
 > `optional` **model**: `string`
 
-Defined in: [src/integrations/reasoning/deepseek.ts:23](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/reasoning/deepseek.ts#L23)
+Defined in: [src/integrations/reasoning/deepseek.ts:23](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/reasoning/deepseek.ts#L23)
 
 The default DeepSeek model ID to use (e.g., 'deepseek-chat', 'deepseek-coder'). Defaults to 'deepseek-chat' if not provided.

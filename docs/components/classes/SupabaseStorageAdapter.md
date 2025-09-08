@@ -6,7 +6,7 @@
 
 # Class: SupabaseStorageAdapter
 
-Defined in: [src/integrations/storage/supabase.ts:39](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/supabase.ts#L39)
+Defined in: [src/integrations/storage/supabase.ts:39](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/storage/supabase.ts#L39)
 
 A Supabase-backed StorageAdapter implementation.
 
@@ -27,7 +27,7 @@ Expectations/assumptions:
 
 > **new SupabaseStorageAdapter**(`config`): `SupabaseStorageAdapter`
 
-Defined in: [src/integrations/storage/supabase.ts:54](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/supabase.ts#L54)
+Defined in: [src/integrations/storage/supabase.ts:54](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/storage/supabase.ts#L54)
 
 Creates an instance of SupabaseStorageAdapter.
 
@@ -51,7 +51,7 @@ SupabaseConfig
 
 > **clearAll**(): `Promise`\<`void`\>
 
-Defined in: [src/integrations/storage/supabase.ts:250](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/supabase.ts#L250)
+Defined in: [src/integrations/storage/supabase.ts:250](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/storage/supabase.ts#L250)
 
 Clears all items from all collections.
 
@@ -71,7 +71,7 @@ A promise that resolves when all collections are cleared.
 
 > **clearCollection**(`collection`): `Promise`\<`void`\>
 
-Defined in: [src/integrations/storage/supabase.ts:236](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/supabase.ts#L236)
+Defined in: [src/integrations/storage/supabase.ts:236](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/storage/supabase.ts#L236)
 
 Clears all items from a collection.
 
@@ -99,7 +99,7 @@ A promise that resolves when the collection is cleared.
 
 > **delete**(`collection`, `id`): `Promise`\<`void`\>
 
-Defined in: [src/integrations/storage/supabase.ts:168](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/supabase.ts#L168)
+Defined in: [src/integrations/storage/supabase.ts:168](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/storage/supabase.ts#L168)
 
 Deletes an item from a collection by its ID.
 
@@ -133,7 +133,7 @@ A promise that resolves when the item is deleted.
 
 > **get**\<`T`\>(`collection`, `id`): `Promise`\<`null` \| `T`\>
 
-Defined in: [src/integrations/storage/supabase.ts:121](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/supabase.ts#L121)
+Defined in: [src/integrations/storage/supabase.ts:121](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/storage/supabase.ts#L121)
 
 Retrieves a single item from a collection by its ID.
 
@@ -173,7 +173,7 @@ A promise that resolves with the item, or null if not found.
 
 > **init**(): `Promise`\<`void`\>
 
-Defined in: [src/integrations/storage/supabase.ts:76](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/supabase.ts#L76)
+Defined in: [src/integrations/storage/supabase.ts:76](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/storage/supabase.ts#L76)
 
 Initializes the Supabase client if it hasn't been provided already.
 
@@ -193,7 +193,7 @@ A promise that resolves when the client is initialized.
 
 > **query**\<`T`\>(`collection`, `filterOptions`): `Promise`\<`T`[]\>
 
-Defined in: [src/integrations/storage/supabase.ts:188](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/supabase.ts#L188)
+Defined in: [src/integrations/storage/supabase.ts:188](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/storage/supabase.ts#L188)
 
 Queries items in a collection.
 
@@ -233,7 +233,7 @@ A promise that resolves with an array of items.
 
 > **set**\<`T`\>(`collection`, `id`, `data`): `Promise`\<`void`\>
 
-Defined in: [src/integrations/storage/supabase.ts:145](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/storage/supabase.ts#L145)
+Defined in: [src/integrations/storage/supabase.ts:145](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/storage/supabase.ts#L145)
 
 Saves (upserts) an item in a collection.
 

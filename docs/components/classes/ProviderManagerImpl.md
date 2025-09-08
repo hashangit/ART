@@ -6,7 +6,7 @@
 
 # Class: ProviderManagerImpl
 
-Defined in: [src/systems/reasoning/ProviderManagerImpl.ts:35](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/reasoning/ProviderManagerImpl.ts#L35)
+Defined in: [src/systems/reasoning/ProviderManagerImpl.ts:35](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/reasoning/ProviderManagerImpl.ts#L35)
 
 Manages the lifecycle and access to multiple ProviderAdapter implementations.
 
@@ -20,7 +20,7 @@ Manages the lifecycle and access to multiple ProviderAdapter implementations.
 
 > **new ProviderManagerImpl**(`config`): `ProviderManagerImpl`
 
-Defined in: [src/systems/reasoning/ProviderManagerImpl.ts:42](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/reasoning/ProviderManagerImpl.ts#L42)
+Defined in: [src/systems/reasoning/ProviderManagerImpl.ts:42](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/reasoning/ProviderManagerImpl.ts#L42)
 
 #### Parameters
 
@@ -38,7 +38,7 @@ Defined in: [src/systems/reasoning/ProviderManagerImpl.ts:42](https://github.com
 
 > **getAdapter**(`config`): `Promise`\<[`ManagedAdapterAccessor`](../interfaces/ManagedAdapterAccessor.md)\>
 
-Defined in: [src/systems/reasoning/ProviderManagerImpl.ts:74](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/reasoning/ProviderManagerImpl.ts#L74)
+Defined in: [src/systems/reasoning/ProviderManagerImpl.ts:74](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/reasoning/ProviderManagerImpl.ts#L74)
 
 Gets a managed adapter instance based on the runtime config.
 
@@ -67,7 +67,7 @@ May queue requests or throw errors based on concurrency limits.
 
 > **getAvailableProviders**(): `string`[]
 
-Defined in: [src/systems/reasoning/ProviderManagerImpl.ts:70](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/reasoning/ProviderManagerImpl.ts#L70)
+Defined in: [src/systems/reasoning/ProviderManagerImpl.ts:70](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/reasoning/ProviderManagerImpl.ts#L70)
 
 Returns identifiers for all registered potential providers.
 

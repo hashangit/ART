@@ -6,7 +6,7 @@
 
 # Interface: OutputParser
 
-Defined in: [src/core/interfaces.ts:150](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L150)
+Defined in: [src/core/interfaces.ts:150](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L150)
 
 Interface for parsing structured output from LLM responses.
 
@@ -14,12 +14,11 @@ Interface for parsing structured output from LLM responses.
 
 ### parsePlanningOutput()
 
-> **parsePlanningOutput**(`output`): `Promise`\<\{ `intent?`: `string`; `plan?`: `string`; `toolCalls?`: [`ParsedToolCall`](ParsedToolCall.md)[]; \}\>
+> **parsePlanningOutput**(`output`): `Promise`\<\{ `intent?`: `string`; `plan?`: `string`; `thoughts?`: `string`; `title?`: `string`; `toolCalls?`: [`ParsedToolCall`](ParsedToolCall.md)[]; \}\>
 
-Defined in: [src/core/interfaces.ts:158](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L158)
+Defined in: [src/core/interfaces.ts:171](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L171)
 
-Parses the raw string output from the planning LLM call to extract structured information.
-Implementations should be robust to variations in LLM output formatting.
+Parses the raw planning LLM output into structured fields.
 
 #### Parameters
 
@@ -27,17 +26,20 @@ Implementations should be robust to variations in LLM output formatting.
 
 `string`
 
-The raw string response from the planning LLM call.
-
 #### Returns
 
-`Promise`\<\{ `intent?`: `string`; `plan?`: `string`; `toolCalls?`: [`ParsedToolCall`](ParsedToolCall.md)[]; \}\>
+`Promise`\<\{ `intent?`: `string`; `plan?`: `string`; `thoughts?`: `string`; `title?`: `string`; `toolCalls?`: [`ParsedToolCall`](ParsedToolCall.md)[]; \}\>
 
-A promise resolving to an object containing the extracted intent, plan description, and an array of parsed tool calls.
+#### Remarks
 
-#### Throws
-
-If the output cannot be parsed into the expected structure (typically code `OUTPUT_PARSING_FAILED`).
+This method should be resilient to provider-specific wrappers and formats.
+Implementations MUST attempt JSON-first parsing and then fall back to parsing
+labeled sections. Supported fields:
+- `title?`: A concise thread title (<= 10 words), derived from the user's intent and context.
+- `intent?`: A short summary of the user's goal.
+- `plan?`: A human-readable list/description of steps.
+- `toolCalls?`: Structured tool call intents parsed from the output.
+- `thoughts?`: Aggregated content extracted from <think> tags when present.
 
 ***
 
@@ -45,7 +47,7 @@ If the output cannot be parsed into the expected structure (typically code `OUTP
 
 > **parseSynthesisOutput**(`output`): `Promise`\<`string`\>
 
-Defined in: [src/core/interfaces.ts:171](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L171)
+Defined in: [src/core/interfaces.ts:186](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L186)
 
 Parses the raw string output from the synthesis LLM call to extract the final, user-facing response content.
 This might involve removing extraneous tags or formatting.

@@ -6,7 +6,7 @@
 
 # Class: GeminiAdapter
 
-Defined in: [src/integrations/reasoning/gemini.ts:33](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/gemini.ts#L33)
+Defined in: [src/integrations/reasoning/gemini.ts:33](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/reasoning/gemini.ts#L33)
 
 Adapter for Google's Gemini models.
 
@@ -20,7 +20,7 @@ Adapter for Google's Gemini models.
 
 > **new GeminiAdapter**(`options`): `GeminiAdapter`
 
-Defined in: [src/integrations/reasoning/gemini.ts:45](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/gemini.ts#L45)
+Defined in: [src/integrations/reasoning/gemini.ts:45](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/reasoning/gemini.ts#L45)
 
 Creates an instance of GeminiAdapter.
 
@@ -50,7 +50,7 @@ https://ai.google.dev/api/rest
 
 > `readonly` **providerName**: `"gemini"` = `'gemini'`
 
-Defined in: [src/integrations/reasoning/gemini.ts:34](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/gemini.ts#L34)
+Defined in: [src/integrations/reasoning/gemini.ts:34](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/reasoning/gemini.ts#L34)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -64,7 +64,7 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 > **call**(`prompt`, `options`): `Promise`\<`AsyncIterable`\<[`StreamEvent`](../interfaces/StreamEvent.md), `any`, `any`\>\>
 
-Defined in: [src/integrations/reasoning/gemini.ts:80](https://github.com/hashangit/ART/blob/e4c184bd9ffa5ef078ee6a88704f24584b173411/src/integrations/reasoning/gemini.ts#L80)
+Defined in: [src/integrations/reasoning/gemini.ts:111](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/reasoning/gemini.ts#L111)
 
 Makes a call to the configured Gemini model.
 Translates the `ArtStandardPrompt` into the Gemini API format, sends the request
@@ -72,6 +72,18 @@ using the `@google/genai` SDK, and yields `StreamEvent` objects representing
 the response (tokens, metadata, errors, end signal).
 
 Handles both streaming and non-streaming requests based on `options.stream`.
+
+Thinking tokens (Gemini):
+- On supported Gemini models (e.g., `gemini-2.5-*`), you can enable thought output via `config.thinkingConfig`.
+- This adapter reads provider-specific flags from the call options:
+  - `options.gemini.thinking.includeThoughts: boolean` — when `true`, requests thought (reasoning) output.
+  - `options.gemini.thinking.thinkingBudget?: number` — optional token budget for thinking.
+- When enabled and supported, the adapter will attempt to differentiate thought vs response parts and set
+  `StreamEvent.tokenType` accordingly:
+  - For planning calls (`callContext === 'AGENT_THOUGHT'`): `AGENT_THOUGHT_LLM_THINKING` or `AGENT_THOUGHT_LLM_RESPONSE`.
+  - For synthesis calls (`callContext === 'FINAL_SYNTHESIS'`): `FINAL_SYNTHESIS_LLM_THINKING` or `FINAL_SYNTHESIS_LLM_RESPONSE`.
+- `LLMMetadata.thinkingTokens` will be populated if the provider reports separate thinking token usage.
+- If the SDK/model does not expose thought parts, the adapter falls back to labeling tokens as `...LLM_RESPONSE`.
 
 #### Parameters
 
@@ -92,7 +104,9 @@ Options for the LLM call, including streaming preference, model override, and ex
 `Promise`\<`AsyncIterable`\<[`StreamEvent`](../interfaces/StreamEvent.md), `any`, `any`\>\>
 
 An async iterable that yields `StreamEvent` objects.
-  - `TOKEN`: Contains a chunk of the response text. `tokenType` indicates if it's part of agent thought or final synthesis. When Gemini thinking is enabled, `tokenType` may use `...LLM_THINKING` and `...LLM_RESPONSE` variants to separately label thought vs response tokens.
+  - `TOKEN`: Contains a chunk of the response text. `tokenType` indicates if it's part of agent thought or final synthesis.
+            When Gemini thinking is enabled and available, `tokenType` may be one of the `...LLM_THINKING` or
+            `...LLM_RESPONSE` variants to separate thought vs response tokens.
   - `METADATA`: Contains information like stop reason, token counts, and timing, yielded once at the end.
   - `ERROR`: Contains any error encountered during translation, SDK call, or response processing.
   - `END`: Signals the completion of the stream.
@@ -105,15 +119,26 @@ An async iterable that yields `StreamEvent` objects.
  - 
  - https://ai.google.dev/api/rest/v1beta/models/generateContent
 
+#### Example
+
+```ts
+// Enable Gemini thinking (if supported by the selected model)
+const stream = await geminiAdapter.call(prompt, {
+  threadId,
+  stream: true,
+  callContext: 'FINAL_SYNTHESIS',
+  providerConfig, // your RuntimeProviderConfig
+  gemini: {
+    thinking: { includeThoughts: true, thinkingBudget: 8096 }
+  }
+});
+for await (const evt of stream) {
+  if (evt.type === 'TOKEN') {
+    // evt.tokenType may be FINAL_SYNTHESIS_LLM_THINKING or FINAL_SYNTHESIS_LLM_RESPONSE
+  }
+}
+```
+
 #### Implementation of
 
 [`ProviderAdapter`](../interfaces/ProviderAdapter.md).[`call`](../interfaces/ProviderAdapter.md#call)
-
-### Usage Notes (Thinking Tokens)
-
-- To enable Gemini "thinking" output (supported on select `gemini-2.5-*` models), pass options on the call:
-  - `options.gemini.thinking.includeThoughts = true`
-  - `options.gemini.thinking.thinkingBudget = 8096` (optional)
-- The adapter sends these via the GenAI SDK `config.thinkingConfig`.
-- Stream and non-stream modes will attempt to distinguish thought parts from response parts and set `StreamEvent.tokenType` to the appropriate `...LLM_THINKING` or `...LLM_RESPONSE` value based on `callContext`.
-- `LLMMetadata.thinkingTokens` is populated when the provider reports it.

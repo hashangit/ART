@@ -8,4 +8,4 @@
 
 > **StreamEventTypeFilter** = [`StreamEvent`](../interfaces/StreamEvent.md)\[`"type"`\] \| [`StreamEvent`](../interfaces/StreamEvent.md)\[`"type"`\][]
 
-Defined in: [src/systems/ui/llm-stream-socket.ts:7](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/llm-stream-socket.ts#L7)
+Defined in: [src/systems/ui/llm-stream-socket.ts:7](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/ui/llm-stream-socket.ts#L7)

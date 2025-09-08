@@ -6,7 +6,7 @@
 
 # Interface: ArtInstance
 
-Defined in: [src/core/interfaces.ts:647](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L647)
+Defined in: [src/core/interfaces.ts:662](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L662)
 
 ## Properties
 
@@ -14,7 +14,7 @@ Defined in: [src/core/interfaces.ts:647](https://github.com/hashangit/ART/blob/1
 
 > `readonly` `optional` **authManager**: `null` \| [`AuthManager`](../classes/AuthManager.md)
 
-Defined in: [src/core/interfaces.ts:661](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L661)
+Defined in: [src/core/interfaces.ts:676](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L676)
 
 Accessor for the Auth Manager, used for handling authentication.
 
@@ -24,7 +24,7 @@ Accessor for the Auth Manager, used for handling authentication.
 
 > `readonly` **conversationManager**: [`ConversationManager`](ConversationManager.md)
 
-Defined in: [src/core/interfaces.ts:655](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L655)
+Defined in: [src/core/interfaces.ts:670](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L670)
 
 Accessor for the Conversation Manager, used for managing message history.
 
@@ -34,7 +34,7 @@ Accessor for the Conversation Manager, used for managing message history.
 
 > `readonly` **observationManager**: [`ObservationManager`](ObservationManager.md)
 
-Defined in: [src/core/interfaces.ts:659](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L659)
+Defined in: [src/core/interfaces.ts:674](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L674)
 
 Accessor for the Observation Manager, used for recording and retrieving observations.
 
@@ -44,7 +44,7 @@ Accessor for the Observation Manager, used for recording and retrieving observat
 
 > `readonly` **process**: (`props`) => `Promise`\<[`AgentFinalResponse`](AgentFinalResponse.md)\>
 
-Defined in: [src/core/interfaces.ts:649](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L649)
+Defined in: [src/core/interfaces.ts:664](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L664)
 
 The main method to process a user query using the configured Agent Core.
 
@@ -75,7 +75,7 @@ If a critical error occurs during orchestration that prevents completion.
 
 > `readonly` **stateManager**: `StateManager`
 
-Defined in: [src/core/interfaces.ts:653](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L653)
+Defined in: [src/core/interfaces.ts:668](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L668)
 
 Accessor for the State Manager, used for managing thread configuration and state.
 
@@ -85,7 +85,7 @@ Accessor for the State Manager, used for managing thread configuration and state
 
 > `readonly` **toolRegistry**: `ToolRegistry`
 
-Defined in: [src/core/interfaces.ts:657](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L657)
+Defined in: [src/core/interfaces.ts:672](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L672)
 
 Accessor for the Tool Registry, used for managing available tools.
 
@@ -95,6 +95,6 @@ Accessor for the Tool Registry, used for managing available tools.
 
 > `readonly` **uiSystem**: `UISystem`
 
-Defined in: [src/core/interfaces.ts:651](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L651)
+Defined in: [src/core/interfaces.ts:666](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L666)
 
 Accessor for the UI System, used to get sockets for subscriptions.

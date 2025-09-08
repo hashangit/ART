@@ -6,7 +6,7 @@
 
 # Interface: Observation
 
-Defined in: [src/types/index.ts:173](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L173)
+Defined in: [src/types/index.ts:175](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L175)
 
 Represents a recorded event during the agent's execution.
 
@@ -18,9 +18,19 @@ Represents a recorded event during the agent's execution.
 
 > **content**: `any`
 
-Defined in: [src/types/index.ts:208](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L208)
+Defined in: [src/types/index.ts:219](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L219)
 
 The main data payload of the observation, structure depends on the `type`.
+
+#### Remarks
+
+Common content shapes by `type`:
+- `TITLE`: `{ title: string }` — a concise thread title (<= 10 words)
+- `INTENT`: `{ intent: string }`
+- `PLAN`: `{ plan: string; rawOutput?: string }`
+- `TOOL_CALL`: `{ toolCalls: ParsedToolCall[] }`
+- `TOOL_EXECUTION`: `{ callId: string; toolName: string; status: 'success' | 'error'; output?: any; error?: string }`
+- `FINAL_RESPONSE`: `{ message: ConversationMessage; uiMetadata?: object }`
 
 ***
 
@@ -28,7 +38,7 @@ The main data payload of the observation, structure depends on the `type`.
 
 > **id**: `string`
 
-Defined in: [src/types/index.ts:178](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L178)
+Defined in: [src/types/index.ts:180](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L180)
 
 A unique identifier for this specific observation record.
 
@@ -38,7 +48,7 @@ A unique identifier for this specific observation record.
 
 > `optional` **metadata**: `Record`\<`string`, `any`\>
 
-Defined in: [src/types/index.ts:213](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L213)
+Defined in: [src/types/index.ts:224](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L224)
 
 Optional metadata providing additional context (e.g., source phase, related IDs, status).
 
@@ -48,7 +58,7 @@ Optional metadata providing additional context (e.g., source phase, related IDs,
 
 > **threadId**: `string`
 
-Defined in: [src/types/index.ts:183](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L183)
+Defined in: [src/types/index.ts:185](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L185)
 
 The identifier of the conversation thread this observation relates to.
 
@@ -58,7 +68,7 @@ The identifier of the conversation thread this observation relates to.
 
 > **timestamp**: `number`
 
-Defined in: [src/types/index.ts:193](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L193)
+Defined in: [src/types/index.ts:195](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L195)
 
 A Unix timestamp (in milliseconds) indicating when the observation was recorded.
 
@@ -68,7 +78,7 @@ A Unix timestamp (in milliseconds) indicating when the observation was recorded.
 
 > **title**: `string`
 
-Defined in: [src/types/index.ts:203](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L203)
+Defined in: [src/types/index.ts:205](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L205)
 
 A concise, human-readable title summarizing the observation (often generated based on type/metadata).
 
@@ -78,7 +88,7 @@ A concise, human-readable title summarizing the observation (often generated bas
 
 > `optional` **traceId**: `string`
 
-Defined in: [src/types/index.ts:188](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L188)
+Defined in: [src/types/index.ts:190](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L190)
 
 An optional identifier for tracing a request across multiple systems or components.
 
@@ -88,6 +98,6 @@ An optional identifier for tracing a request across multiple systems or componen
 
 > **type**: [`ObservationType`](../enumerations/ObservationType.md)
 
-Defined in: [src/types/index.ts:198](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L198)
+Defined in: [src/types/index.ts:200](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L200)
 
 The category of the event being observed (e.g., PLAN, THOUGHTS, TOOL_EXECUTION).

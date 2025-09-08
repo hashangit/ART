@@ -6,7 +6,7 @@
 
 # Class: McpClientController
 
-Defined in: [src/systems/mcp/McpClient.ts:149](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpClient.ts#L149)
+Defined in: [src/systems/mcp/McpClient.ts:149](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/mcp/McpClient.ts#L149)
 
 McpClientController
 Controls the MCP client, including OAuth flow, connection, and tool calls.
@@ -17,7 +17,7 @@ Controls the MCP client, including OAuth flow, connection, and tool calls.
 
 > **baseUrl**: `URL`
 
-Defined in: [src/systems/mcp/McpClient.ts:150](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpClient.ts#L150)
+Defined in: [src/systems/mcp/McpClient.ts:150](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/mcp/McpClient.ts#L150)
 
 ## Methods
 
@@ -25,7 +25,7 @@ Defined in: [src/systems/mcp/McpClient.ts:150](https://github.com/hashangit/ART/
 
 > **callTool**(`name`, `args`): `Promise`\<`any`\>
 
-Defined in: [src/systems/mcp/McpClient.ts:416](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpClient.ts#L416)
+Defined in: [src/systems/mcp/McpClient.ts:416](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/mcp/McpClient.ts#L416)
 
 Calls a tool on the MCP server.
 
@@ -55,7 +55,7 @@ A promise that resolves to the result of the tool call.
 
 > **connect**(): `Promise`\<`void`\>
 
-Defined in: [src/systems/mcp/McpClient.ts:356](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpClient.ts#L356)
+Defined in: [src/systems/mcp/McpClient.ts:356](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/mcp/McpClient.ts#L356)
 
 Connects to the MCP server.
 
@@ -69,7 +69,7 @@ Connects to the MCP server.
 
 > **ensureConnected**(): `Promise`\<`void`\>
 
-Defined in: [src/systems/mcp/McpClient.ts:396](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpClient.ts#L396)
+Defined in: [src/systems/mcp/McpClient.ts:396](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/mcp/McpClient.ts#L396)
 
 Ensures that the client is connected to the MCP server.
 
@@ -83,7 +83,7 @@ Ensures that the client is connected to the MCP server.
 
 > **isAuthenticated**(): `boolean`
 
-Defined in: [src/systems/mcp/McpClient.ts:347](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpClient.ts#L347)
+Defined in: [src/systems/mcp/McpClient.ts:347](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/mcp/McpClient.ts#L347)
 
 Checks if the user is authenticated.
 
@@ -99,7 +99,7 @@ True if the user is authenticated, false otherwise.
 
 > **listTools**(): `Promise`\<`object`[]\>
 
-Defined in: [src/systems/mcp/McpClient.ts:404](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpClient.ts#L404)
+Defined in: [src/systems/mcp/McpClient.ts:404](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/mcp/McpClient.ts#L404)
 
 Lists the available tools on the MCP server.
 
@@ -115,7 +115,7 @@ A promise that resolves to a list of tools.
 
 > **loadExistingSession**(): `void`
 
-Defined in: [src/systems/mcp/McpClient.ts:335](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpClient.ts#L335)
+Defined in: [src/systems/mcp/McpClient.ts:335](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/mcp/McpClient.ts#L335)
 
 Loads an existing session from session storage.
 
@@ -129,7 +129,7 @@ Loads an existing session from session storage.
 
 > **logout**(): `Promise`\<`void`\>
 
-Defined in: [src/systems/mcp/McpClient.ts:439](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpClient.ts#L439)
+Defined in: [src/systems/mcp/McpClient.ts:439](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/mcp/McpClient.ts#L439)
 
 Logs out from the MCP server and clears the session.
 
@@ -143,7 +143,7 @@ Logs out from the MCP server and clears the session.
 
 > **maybeHandleCallback**(): `Promise`\<`boolean`\>
 
-Defined in: [src/systems/mcp/McpClient.ts:288](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpClient.ts#L288)
+Defined in: [src/systems/mcp/McpClient.ts:288](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/mcp/McpClient.ts#L288)
 
 Handles the OAuth callback, exchanging the authorization code for an access token.
 
@@ -159,7 +159,7 @@ A promise that resolves to true if the callback was handled, false otherwise.
 
 > **startOAuth**(): `Promise`\<`void`\>
 
-Defined in: [src/systems/mcp/McpClient.ts:263](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpClient.ts#L263)
+Defined in: [src/systems/mcp/McpClient.ts:263](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/mcp/McpClient.ts#L263)
 
 Starts the OAuth flow by redirecting the user to the authorization server.
 
@@ -173,7 +173,7 @@ Starts the OAuth flow by redirecting the user to the authorization server.
 
 > `static` **create**(`baseUrl`, `scopes?`): `McpClientController`
 
-Defined in: [src/systems/mcp/McpClient.ts:176](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/mcp/McpClient.ts#L176)
+Defined in: [src/systems/mcp/McpClient.ts:176](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/mcp/McpClient.ts#L176)
 
 Creates a new instance of McpClientController.
 

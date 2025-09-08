@@ -6,7 +6,7 @@
 
 # ~~Class: GenericOAuthStrategy~~
 
-Defined in: [src/auth/GenericOAuthStrategy.ts:54](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/GenericOAuthStrategy.ts#L54)
+Defined in: [src/auth/GenericOAuthStrategy.ts:54](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/GenericOAuthStrategy.ts#L54)
 
 Generic OAuth 2.0 authentication strategy with token caching and refresh capabilities.
 Supports client credentials flow and authorization code flow with automatic token refresh.
@@ -29,7 +29,7 @@ This strategy is not recommended for browser-based applications as it uses the i
 
 > **new GenericOAuthStrategy**(`config`): `GenericOAuthStrategy`
 
-Defined in: [src/auth/GenericOAuthStrategy.ts:63](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/GenericOAuthStrategy.ts#L63)
+Defined in: [src/auth/GenericOAuthStrategy.ts:63](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/GenericOAuthStrategy.ts#L63)
 
 Creates a new OAuth authentication strategy.
 
@@ -51,7 +51,7 @@ OAuth configuration including endpoints, credentials, and options
 
 > **clearTokenCache**(): `void`
 
-Defined in: [src/auth/GenericOAuthStrategy.ts:283](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/GenericOAuthStrategy.ts#L283)
+Defined in: [src/auth/GenericOAuthStrategy.ts:283](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/GenericOAuthStrategy.ts#L283)
 
 Clears the cached token, forcing a new token request on next use.
 
@@ -65,7 +65,7 @@ Clears the cached token, forcing a new token request on next use.
 
 > **getAuthHeaders**(): `Promise`\<`Record`\<`string`, `string`\>\>
 
-Defined in: [src/auth/GenericOAuthStrategy.ts:103](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/GenericOAuthStrategy.ts#L103)
+Defined in: [src/auth/GenericOAuthStrategy.ts:103](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/GenericOAuthStrategy.ts#L103)
 
 Gets authentication headers, automatically handling token refresh if needed.
 
@@ -85,7 +85,7 @@ A promise that resolves to the authentication headers.
 
 > **getConfig**(): `Omit`\<[`OAuthConfig`](../interfaces/OAuthConfig.md), `"clientSecret"`\>
 
-Defined in: [src/auth/GenericOAuthStrategy.ts:309](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/GenericOAuthStrategy.ts#L309)
+Defined in: [src/auth/GenericOAuthStrategy.ts:309](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/GenericOAuthStrategy.ts#L309)
 
 Gets the configured OAuth endpoints and settings.
 
@@ -101,7 +101,7 @@ Configuration information (excluding sensitive data).
 
 > **getTokenInfo**(): `null` \| \{ `expiresAt`: `Date`; `hasRefreshToken`: `boolean`; `scope?`: `string`; \}
 
-Defined in: [src/auth/GenericOAuthStrategy.ts:293](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/GenericOAuthStrategy.ts#L293)
+Defined in: [src/auth/GenericOAuthStrategy.ts:293](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/GenericOAuthStrategy.ts#L293)
 
 Gets information about the current cached token.
 
@@ -117,7 +117,7 @@ Token information or null if no token is cached.
 
 > **refreshToken**(): `Promise`\<`Record`\<`string`, `string`\>\>
 
-Defined in: [src/auth/GenericOAuthStrategy.ts:273](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/GenericOAuthStrategy.ts#L273)
+Defined in: [src/auth/GenericOAuthStrategy.ts:273](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/GenericOAuthStrategy.ts#L273)
 
 Manually refreshes the cached token.
 

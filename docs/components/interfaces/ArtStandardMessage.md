@@ -6,7 +6,7 @@
 
 # Interface: ArtStandardMessage
 
-Defined in: [src/types/index.ts:899](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L899)
+Defined in: [src/types/index.ts:910](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L910)
 
 Represents a single message in the standardized, provider-agnostic `ArtStandardPrompt` format.
 
@@ -22,7 +22,7 @@ This structure aims to capture common message elements used by various LLM APIs.
 
 > **content**: `null` \| `string` \| `object`
 
-Defined in: [src/types/index.ts:914](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L914)
+Defined in: [src/types/index.ts:925](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L925)
 
 The primary content of the message. The type and interpretation depend on the `role`:
 - `system`: string (The system instruction).
@@ -37,7 +37,7 @@ The primary content of the message. The type and interpretation depend on the `r
 
 > `optional` **name**: `string`
 
-Defined in: [src/types/index.ts:919](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L919)
+Defined in: [src/types/index.ts:930](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L930)
 
 Optional name associated with the message. Primarily used for `tool_result` role to specify the name of the tool that was executed.
 
@@ -47,7 +47,7 @@ Optional name associated with the message. Primarily used for `tool_result` role
 
 > **role**: [`ArtStandardMessageRole`](../type-aliases/ArtStandardMessageRole.md)
 
-Defined in: [src/types/index.ts:904](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L904)
+Defined in: [src/types/index.ts:915](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L915)
 
 The role indicating the source or type of the message.
 
@@ -57,7 +57,7 @@ The role indicating the source or type of the message.
 
 > `optional` **tool\_call\_id**: `string`
 
-Defined in: [src/types/index.ts:948](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L948)
+Defined in: [src/types/index.ts:959](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L959)
 
 Optional identifier linking a 'tool_result' message back to the specific 'tool_calls' entry
 in the preceding 'assistant' message that requested it.
@@ -69,7 +69,7 @@ Required for 'tool_result' role.
 
 > `optional` **tool\_calls**: `object`[]
 
-Defined in: [src/types/index.ts:929](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L929)
+Defined in: [src/types/index.ts:940](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L940)
 
 Optional array of tool calls requested by the assistant.
 

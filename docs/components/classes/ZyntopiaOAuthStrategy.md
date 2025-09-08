@@ -6,7 +6,7 @@
 
 # Class: ZyntopiaOAuthStrategy
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:31](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L31)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:31](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L31)
 
 Zyntopia-specific OAuth 2.0 authentication strategy.
 Pre-configured for Zyntopia services with standard endpoints, scopes, and authentication flows.
@@ -22,7 +22,7 @@ Extends GenericOAuthStrategy with Zyntopia-specific defaults and configurations.
 
 > **new ZyntopiaOAuthStrategy**(`config`): `ZyntopiaOAuthStrategy`
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:50](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L50)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:50](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L50)
 
 Creates a new Zyntopia OAuth authentication strategy.
 
@@ -48,7 +48,7 @@ Zyntopia-specific OAuth configuration
 
 > **clearTokenCache**(): `void`
 
-Defined in: [src/auth/GenericOAuthStrategy.ts:283](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/GenericOAuthStrategy.ts#L283)
+Defined in: [src/auth/GenericOAuthStrategy.ts:283](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/GenericOAuthStrategy.ts#L283)
 
 Clears the cached token, forcing a new token request on next use.
 
@@ -66,7 +66,7 @@ Clears the cached token, forcing a new token request on next use.
 
 > **getAuthHeaders**(): `Promise`\<`Record`\<`string`, `string`\>\>
 
-Defined in: [src/auth/GenericOAuthStrategy.ts:103](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/GenericOAuthStrategy.ts#L103)
+Defined in: [src/auth/GenericOAuthStrategy.ts:103](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/GenericOAuthStrategy.ts#L103)
 
 Gets authentication headers, automatically handling token refresh if needed.
 
@@ -86,7 +86,7 @@ A promise that resolves to the authentication headers.
 
 > **getConfig**(): `Omit`\<[`OAuthConfig`](../interfaces/OAuthConfig.md), `"clientSecret"`\>
 
-Defined in: [src/auth/GenericOAuthStrategy.ts:309](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/GenericOAuthStrategy.ts#L309)
+Defined in: [src/auth/GenericOAuthStrategy.ts:309](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/GenericOAuthStrategy.ts#L309)
 
 Gets the configured OAuth endpoints and settings.
 
@@ -106,7 +106,7 @@ Configuration information (excluding sensitive data).
 
 > **getEnvironment**(): `"production"` \| `"staging"` \| `"development"`
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:113](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L113)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:113](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L113)
 
 Gets the current environment this strategy is configured for.
 
@@ -122,7 +122,7 @@ The environment ('production', 'staging', or 'development').
 
 > **getTokenInfo**(): `null` \| \{ `expiresAt`: `Date`; `hasRefreshToken`: `boolean`; `scope?`: `string`; \}
 
-Defined in: [src/auth/GenericOAuthStrategy.ts:293](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/GenericOAuthStrategy.ts#L293)
+Defined in: [src/auth/GenericOAuthStrategy.ts:293](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/GenericOAuthStrategy.ts#L293)
 
 Gets information about the current cached token.
 
@@ -142,7 +142,7 @@ Token information or null if no token is cached.
 
 > **getZyntopiaConfig**(): `Omit`\<[`ZyntopiaOAuthConfig`](../interfaces/ZyntopiaOAuthConfig.md), `"clientSecret"`\>
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:97](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L97)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:97](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L97)
 
 Gets the Zyntopia-specific configuration.
 
@@ -158,7 +158,7 @@ Zyntopia configuration (excluding sensitive data).
 
 > **isDevelopment**(): `boolean`
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:129](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L129)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:129](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L129)
 
 Checks if this strategy is configured for development/testing.
 
@@ -174,7 +174,7 @@ True if configured for development or staging, false for production.
 
 > **isProduction**(): `boolean`
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:121](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L121)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:121](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L121)
 
 Checks if this strategy is configured for production environment.
 
@@ -190,7 +190,7 @@ True if configured for production, false otherwise.
 
 > **refreshToken**(): `Promise`\<`Record`\<`string`, `string`\>\>
 
-Defined in: [src/auth/GenericOAuthStrategy.ts:273](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/GenericOAuthStrategy.ts#L273)
+Defined in: [src/auth/GenericOAuthStrategy.ts:273](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/GenericOAuthStrategy.ts#L273)
 
 Manually refreshes the cached token.
 
@@ -210,7 +210,7 @@ A promise that resolves to new authentication headers.
 
 > `static` **forDevelopment**(`clientId`, `clientSecret`, `customScopes?`): `ZyntopiaOAuthStrategy`
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:180](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L180)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:180](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L180)
 
 Creates a ZyntopiaOAuthStrategy instance pre-configured for development.
 
@@ -246,7 +246,7 @@ Configured ZyntopiaOAuthStrategy for development.
 
 > `static` **forProduction**(`clientId`, `clientSecret`, `customScopes?`): `ZyntopiaOAuthStrategy`
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:140](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L140)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:140](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L140)
 
 Creates a ZyntopiaOAuthStrategy instance pre-configured for production.
 
@@ -282,7 +282,7 @@ Configured ZyntopiaOAuthStrategy for production.
 
 > `static` **forStaging**(`clientId`, `clientSecret`, `customScopes?`): `ZyntopiaOAuthStrategy`
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:160](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L160)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:160](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L160)
 
 Creates a ZyntopiaOAuthStrategy instance pre-configured for staging.
 
@@ -318,7 +318,7 @@ Configured ZyntopiaOAuthStrategy for staging.
 
 > `static` **getDefaultScopes**(`environment`): `string`
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:198](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L198)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:198](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L198)
 
 Gets the default scopes for a specific environment.
 
@@ -342,7 +342,7 @@ Default scopes for the specified environment.
 
 > `static` **getTokenEndpoint**(`environment`): `string`
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:207](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L207)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:207](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L207)
 
 Gets the token endpoint for a specific environment.
 
@@ -366,7 +366,7 @@ Token endpoint URL for the specified environment.
 
 > `static` **validateZyntopiaConfig**(`config`): `void`
 
-Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:216](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/auth/ZyntopiaOAuthStrategy.ts#L216)
+Defined in: [src/auth/ZyntopiaOAuthStrategy.ts:216](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/auth/ZyntopiaOAuthStrategy.ts#L216)
 
 Validates Zyntopia-specific configuration requirements.
 

@@ -6,7 +6,7 @@
 
 # Class: UnknownProviderError
 
-Defined in: [src/errors.ts:174](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/errors.ts#L174)
+Defined in: [src/errors.ts:174](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/errors.ts#L174)
 
 Error thrown when a requested LLM provider is not known or configured.
 
@@ -20,7 +20,7 @@ Error thrown when a requested LLM provider is not known or configured.
 
 > **new UnknownProviderError**(`providerName`): `UnknownProviderError`
 
-Defined in: [src/errors.ts:175](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/errors.ts#L175)
+Defined in: [src/errors.ts:175](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/errors.ts#L175)
 
 #### Parameters
 
@@ -42,7 +42,7 @@ Defined in: [src/errors.ts:175](https://github.com/hashangit/ART/blob/1e49ae91e2
 
 > `readonly` **code**: [`ErrorCode`](../enumerations/ErrorCode.md)
 
-Defined in: [src/errors.ts:132](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/errors.ts#L132)
+Defined in: [src/errors.ts:132](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/errors.ts#L132)
 
 The specific error code from the ErrorCode enum.
 
@@ -56,7 +56,7 @@ The specific error code from the ErrorCode enum.
 
 > **details**: `Record`\<`string`, `any`\>
 
-Defined in: [src/errors.ts:136](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/errors.ts#L136)
+Defined in: [src/errors.ts:136](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/errors.ts#L136)
 
 A record of additional details about the error.
 
@@ -70,7 +70,7 @@ A record of additional details about the error.
 
 > `readonly` `optional` **originalError**: `Error`
 
-Defined in: [src/errors.ts:134](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/errors.ts#L134)
+Defined in: [src/errors.ts:134](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/errors.ts#L134)
 
 The original error that caused this error, if any.
 
@@ -84,7 +84,7 @@ The original error that caused this error, if any.
 
 > **toString**(): `string`
 
-Defined in: [src/errors.ts:162](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/errors.ts#L162)
+Defined in: [src/errors.ts:162](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/errors.ts#L162)
 
 Returns a string representation of the error, including the original error if present.
 

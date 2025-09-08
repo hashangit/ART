@@ -6,7 +6,7 @@
 
 # Class: OpenAIAdapter
 
-Defined in: [src/integrations/reasoning/openai.ts:90](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/reasoning/openai.ts#L90)
+Defined in: [src/integrations/reasoning/openai.ts:90](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/reasoning/openai.ts#L90)
 
 Implements the `ProviderAdapter` interface for interacting with OpenAI's
 Chat Completions API (compatible models like GPT-3.5, GPT-4, GPT-4o).
@@ -28,7 +28,7 @@ Uses raw `fetch` for now.
 
 > **new OpenAIAdapter**(`options`): `OpenAIAdapter`
 
-Defined in: [src/integrations/reasoning/openai.ts:102](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/reasoning/openai.ts#L102)
+Defined in: [src/integrations/reasoning/openai.ts:102](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/reasoning/openai.ts#L102)
 
 Creates an instance of the OpenAIAdapter.
 
@@ -58,7 +58,7 @@ https://platform.openai.com/docs/api-reference
 
 > `readonly` **providerName**: `"openai"` = `'openai'`
 
-Defined in: [src/integrations/reasoning/openai.ts:91](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/reasoning/openai.ts#L91)
+Defined in: [src/integrations/reasoning/openai.ts:91](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/reasoning/openai.ts#L91)
 
 The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
@@ -72,7 +72,7 @@ The unique identifier name for this provider (e.g., 'openai', 'anthropic').
 
 > **call**(`prompt`, `options`): `Promise`\<`AsyncIterable`\<[`StreamEvent`](../interfaces/StreamEvent.md), `any`, `any`\>\>
 
-Defined in: [src/integrations/reasoning/openai.ts:121](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/integrations/reasoning/openai.ts#L121)
+Defined in: [src/integrations/reasoning/openai.ts:121](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/integrations/reasoning/openai.ts#L121)
 
 Sends a request to the OpenAI Chat Completions API.
 Translates `ArtStandardPrompt` to the OpenAI format, handles streaming and non-streaming responses.

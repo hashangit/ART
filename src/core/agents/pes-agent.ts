@@ -360,6 +360,11 @@ export class PESAgent implements IAgentCore {
     /**
      * Performs the planning phase including LLM call and output parsing.
      * @private
+     *
+     * @remarks
+     * The planning prompt instructs the LLM to produce a concise `title` (<= 10 words)
+     * alongside `intent`, `plan`, and `toolCalls`. After parsing, a `TITLE` observation
+     * is emitted (if present) for UI components to subscribe via `ObservationSocket`.
      */
     private async _performPlanning(
         props: AgentProps,
@@ -455,6 +460,7 @@ ${a2aPromptSection}
 --- Primary Output Mode (JSON-Only) ---
 Output EXACTLY ONE JSON object and nothing else. No prose, no XML, no markdown fences. The object MUST follow this schema:
 {
+  "title": string,          // a concise thread title, <= 10 words, based on intent and context
   "intent": string,          // short summary of the user's goal
   "plan": [                  // A step-by-step plan.
     {
@@ -477,6 +483,7 @@ Requirements for toolCalls:
 
 Example (JSON only):
 {
+  "title": "Compute simple multiplication",
   "intent": "Compute 5 * 6",
   "plan": [
     { "step": 1, "description": "Use calculator to multiply 5 and 6", "tool_to_use": "calculator", "arguments": { "expression": "5 * 6" }, "callId": "calc_1" },
@@ -489,6 +496,8 @@ Example (JSON only):
 
 --- Fallback Output Mode (Sections) ---
 If you cannot produce the JSON object above, then output these sections instead:
+
+Title: [A single concise sentence (<= 10 words) capturing the thread title]
 
 Intent: [One or two sentences]
 
@@ -521,7 +530,7 @@ Invalid Examples (do NOT do these):
         };
 
         let planningOutputText: string = '';
-        let parsedPlanningOutput: { intent?: string; plan?: string; toolCalls?: ParsedToolCall[] } = {};
+        let parsedPlanningOutput: { title?: string; intent?: string; plan?: string; toolCalls?: ParsedToolCall[]; thoughts?: string } = {};
         let planningStreamError: Error | null = null;
         let planningMetadata: LLMMetadata | undefined = undefined;
         let planningContext: {
@@ -591,6 +600,12 @@ Invalid Examples (do NOT do these):
                 threadId: props.threadId, traceId, type: ObservationType.INTENT,
                 content: { intent: parsedPlanningOutput.intent }, metadata: { timestamp: Date.now() }
             });
+            if (parsedPlanningOutput.title) {
+                await this.deps.observationManager.record({
+                    threadId: props.threadId, traceId, type: ObservationType.TITLE,
+                    content: { title: parsedPlanningOutput.title }, metadata: { timestamp: Date.now() }
+                });
+            }
             await this.deps.observationManager.record({
                 threadId: props.threadId, traceId, type: ObservationType.PLAN,
                 content: { plan: parsedPlanningOutput.plan, rawOutput: planningOutputText },

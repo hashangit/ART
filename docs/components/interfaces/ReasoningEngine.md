@@ -6,7 +6,7 @@
 
 # Interface: ReasoningEngine
 
-Defined in: [src/core/interfaces.ts:68](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L68)
+Defined in: [src/core/interfaces.ts:68](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L68)
 
 Interface for the component responsible for interacting with LLMs.
 
@@ -20,7 +20,7 @@ Interface for the component responsible for interacting with LLMs.
 
 > **call**(`prompt`, `options`): `Promise`\<`AsyncIterable`\<[`StreamEvent`](StreamEvent.md), `any`, `any`\>\>
 
-Defined in: [src/core/interfaces.ts:83](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L83)
+Defined in: [src/core/interfaces.ts:83](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L83)
 
 Executes a call to the configured Large Language Model (LLM).
 This method is typically implemented by a specific `ProviderAdapter`.

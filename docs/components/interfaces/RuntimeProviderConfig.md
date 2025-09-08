@@ -6,7 +6,7 @@
 
 # Interface: RuntimeProviderConfig
 
-Defined in: [src/types/providers.ts:58](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/providers.ts#L58)
+Defined in: [src/types/providers.ts:58](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/providers.ts#L58)
 
 Configuration passed AT RUNTIME for a specific LLM call.
 
@@ -18,7 +18,7 @@ Configuration passed AT RUNTIME for a specific LLM call.
 
 > **adapterOptions**: `any`
 
-Defined in: [src/types/providers.ts:73](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/providers.ts#L73)
+Defined in: [src/types/providers.ts:73](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/providers.ts#L73)
 
 Specific options for THIS instance (apiKey, temperature, contextSize, baseUrl, etc.).
 
@@ -28,7 +28,7 @@ Specific options for THIS instance (apiKey, temperature, contextSize, baseUrl, e
 
 > **modelId**: `string`
 
-Defined in: [src/types/providers.ts:68](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/providers.ts#L68)
+Defined in: [src/types/providers.ts:68](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/providers.ts#L68)
 
 Specific model identifier (e.g., 'gpt-4o', 'llama3:latest').
 
@@ -38,6 +38,6 @@ Specific model identifier (e.g., 'gpt-4o', 'llama3:latest').
 
 > **providerName**: `string`
 
-Defined in: [src/types/providers.ts:63](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/providers.ts#L63)
+Defined in: [src/types/providers.ts:63](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/providers.ts#L63)
 
 Must match a name in AvailableProviderEntry.

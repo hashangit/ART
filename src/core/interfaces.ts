@@ -155,10 +155,25 @@ export interface OutputParser {
    * @returns A promise resolving to an object containing the extracted intent, plan description, and an array of parsed tool calls.
    * @throws {ARTError} If the output cannot be parsed into the expected structure (typically code `OUTPUT_PARSING_FAILED`).
    */
+  /**
+   * Parses the raw planning LLM output into structured fields.
+   *
+   * @remarks
+   * This method should be resilient to provider-specific wrappers and formats.
+   * Implementations MUST attempt JSON-first parsing and then fall back to parsing
+   * labeled sections. Supported fields:
+   * - `title?`: A concise thread title (<= 10 words), derived from the user's intent and context.
+   * - `intent?`: A short summary of the user's goal.
+   * - `plan?`: A human-readable list/description of steps.
+   * - `toolCalls?`: Structured tool call intents parsed from the output.
+   * - `thoughts?`: Aggregated content extracted from <think> tags when present.
+   */
   parsePlanningOutput(output: string): Promise<{
+    title?: string;
     intent?: string;
     plan?: string;
     toolCalls?: ParsedToolCall[];
+    thoughts?: string;
   }>;
 
   /**

@@ -6,7 +6,7 @@
 
 # Interface: IA2ATaskRepository
 
-Defined in: [src/core/interfaces.ts:550](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L550)
+Defined in: [src/core/interfaces.ts:565](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L565)
 
 Interface for managing A2A (Agent-to-Agent) task persistence and retrieval.
 
@@ -16,7 +16,7 @@ Interface for managing A2A (Agent-to-Agent) task persistence and retrieval.
 
 > **createTask**(`task`): `Promise`\<`void`\>
 
-Defined in: [src/core/interfaces.ts:557](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L557)
+Defined in: [src/core/interfaces.ts:572](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L572)
 
 Creates a new A2A task in the repository.
 
@@ -44,7 +44,7 @@ If the task cannot be created (e.g., duplicate taskId, validation errors).
 
 > **deleteTask**(`taskId`): `Promise`\<`void`\>
 
-Defined in: [src/core/interfaces.ts:582](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L582)
+Defined in: [src/core/interfaces.ts:597](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L597)
 
 Removes an A2A task from the repository.
 
@@ -72,7 +72,7 @@ If the task is not found or cannot be deleted.
 
 > **getTask**(`taskId`): `Promise`\<`null` \| [`A2ATask`](A2ATask.md)\>
 
-Defined in: [src/core/interfaces.ts:565](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L565)
+Defined in: [src/core/interfaces.ts:580](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L580)
 
 Retrieves an A2A task by its unique identifier.
 
@@ -100,7 +100,7 @@ If an error occurs during retrieval.
 
 > **getTasksByAgent**(`agentId`, `filter?`): `Promise`\<[`A2ATask`](A2ATask.md)[]\>
 
-Defined in: [src/core/interfaces.ts:602](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L602)
+Defined in: [src/core/interfaces.ts:617](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L617)
 
 Retrieves tasks assigned to a specific agent.
 
@@ -136,7 +136,7 @@ A promise resolving to an array of A2ATask objects assigned to the agent.
 
 > **getTasksByStatus**(`status`, `options?`): `Promise`\<[`A2ATask`](A2ATask.md)[]\>
 
-Defined in: [src/core/interfaces.ts:613](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L613)
+Defined in: [src/core/interfaces.ts:628](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L628)
 
 Retrieves tasks based on their current status.
 
@@ -172,7 +172,7 @@ A promise resolving to an array of A2ATask objects with the specified status.
 
 > **getTasksByThread**(`threadId`, `filter?`): `Promise`\<[`A2ATask`](A2ATask.md)[]\>
 
-Defined in: [src/core/interfaces.ts:590](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L590)
+Defined in: [src/core/interfaces.ts:605](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L605)
 
 Retrieves tasks associated with a specific thread.
 
@@ -212,7 +212,7 @@ A promise resolving to an array of A2ATask objects matching the criteria.
 
 > **updateTask**(`taskId`, `updates`): `Promise`\<`void`\>
 
-Defined in: [src/core/interfaces.ts:574](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/core/interfaces.ts#L574)
+Defined in: [src/core/interfaces.ts:589](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/core/interfaces.ts#L589)
 
 Updates an existing A2A task with new information.
 

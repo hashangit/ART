@@ -6,7 +6,7 @@
 
 # Interface: PromptBlueprint
 
-Defined in: [src/types/index.ts:1020](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1020)
+Defined in: [src/types/index.ts:1031](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1031)
 
 Represents a Mustache template that can be rendered with a PromptContext to produce an ArtStandardPrompt.
 Used by the PromptManager.assemblePrompt method.
@@ -19,6 +19,6 @@ Used by the PromptManager.assemblePrompt method.
 
 > **template**: `string`
 
-Defined in: [src/types/index.ts:1025](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1025)
+Defined in: [src/types/index.ts:1036](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1036)
 
 The Mustache template string that will be rendered with context data to produce a JSON string representing an ArtStandardPrompt

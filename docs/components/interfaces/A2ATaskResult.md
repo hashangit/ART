@@ -6,7 +6,7 @@
 
 # Interface: A2ATaskResult
 
-Defined in: [src/types/index.ts:1425](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1425)
+Defined in: [src/types/index.ts:1436](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1436)
 
 Represents the result of an A2A task execution.
 
@@ -18,7 +18,7 @@ Represents the result of an A2A task execution.
 
 > `optional` **data**: `any`
 
-Defined in: [src/types/index.ts:1435](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1435)
+Defined in: [src/types/index.ts:1446](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1446)
 
 The data returned by the task execution.
 
@@ -28,7 +28,7 @@ The data returned by the task execution.
 
 > `optional` **durationMs**: `number`
 
-Defined in: [src/types/index.ts:1457](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1457)
+Defined in: [src/types/index.ts:1468](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1468)
 
 Execution duration in milliseconds.
 
@@ -38,7 +38,7 @@ Execution duration in milliseconds.
 
 > `optional` **error**: `string`
 
-Defined in: [src/types/index.ts:1440](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1440)
+Defined in: [src/types/index.ts:1451](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1451)
 
 Error message if the task failed.
 
@@ -48,7 +48,7 @@ Error message if the task failed.
 
 > `optional` **metadata**: `object`
 
-Defined in: [src/types/index.ts:1445](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1445)
+Defined in: [src/types/index.ts:1456](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1456)
 
 Additional metadata about the execution.
 
@@ -70,6 +70,6 @@ Additional metadata about the execution.
 
 > **success**: `boolean`
 
-Defined in: [src/types/index.ts:1430](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1430)
+Defined in: [src/types/index.ts:1441](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1441)
 
 Whether the task execution was successful.

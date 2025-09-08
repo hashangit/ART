@@ -6,7 +6,7 @@
 
 # Interface: StageSpecificPrompts
 
-Defined in: [src/types/index.ts:1682](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1682)
+Defined in: [src/types/index.ts:1693](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1693)
 
 Defines stage-specific system prompts for planning and synthesis.
 
@@ -18,7 +18,7 @@ Defines stage-specific system prompts for planning and synthesis.
 
 > `optional` **planning**: `string`
 
-Defined in: [src/types/index.ts:1688](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1688)
+Defined in: [src/types/index.ts:1699](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1699)
 
 System prompt to guide the planning phase.
 Focuses on reasoning, expertise, and tool selection.
@@ -29,7 +29,7 @@ Focuses on reasoning, expertise, and tool selection.
 
 > `optional` **synthesis**: `string`
 
-Defined in: [src/types/index.ts:1695](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L1695)
+Defined in: [src/types/index.ts:1706](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L1706)
 
 System prompt to guide the synthesis phase.
 Focuses on tone, formatting, and final response structure.

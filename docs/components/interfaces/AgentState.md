@@ -6,7 +6,7 @@
 
 # Interface: AgentState
 
-Defined in: [src/types/index.ts:588](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L588)
+Defined in: [src/types/index.ts:599](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L599)
 
 Represents non-configuration state associated with an agent or thread.
 Could include user preferences, accumulated knowledge, etc. (Less defined for v1.0)
@@ -25,7 +25,7 @@ Allows for other arbitrary properties to be stored in the agent's state.
 
 > **data**: `any`
 
-Defined in: [src/types/index.ts:593](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L593)
+Defined in: [src/types/index.ts:604](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L604)
 
 The primary data payload of the agent's state. Structure is application-defined.
 
@@ -35,6 +35,6 @@ The primary data payload of the agent's state. Structure is application-defined.
 
 > `optional` **version**: `number`
 
-Defined in: [src/types/index.ts:598](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/types/index.ts#L598)
+Defined in: [src/types/index.ts:609](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/types/index.ts#L609)
 
 An optional version number for the agent's state, useful for migrations or tracking changes.

@@ -6,7 +6,7 @@
 
 # Class: Logger
 
-Defined in: [src/utils/logger.ts:49](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/utils/logger.ts#L49)
+Defined in: [src/utils/logger.ts:49](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/utils/logger.ts#L49)
 
 A simple static logger class for outputting messages to the console at different levels.
 
@@ -32,7 +32,7 @@ Configuration is global via the static `configure` method.
 
 > `static` **configure**(`config`): `void`
 
-Defined in: [src/utils/logger.ts:59](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/utils/logger.ts#L59)
+Defined in: [src/utils/logger.ts:59](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/utils/logger.ts#L59)
 
 Configures the static logger settings.
 
@@ -54,7 +54,7 @@ A partial `LoggerConfig` object. Provided settings will override defaults.
 
 > `static` **debug**(`message`, ...`args`): `void`
 
-Defined in: [src/utils/logger.ts:72](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/utils/logger.ts#L72)
+Defined in: [src/utils/logger.ts:72](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/utils/logger.ts#L72)
 
 Logs a message at the DEBUG level.
 
@@ -86,7 +86,7 @@ Only outputs if the configured log level is DEBUG.
 
 > `static` **error**(`message`, ...`args`): `void`
 
-Defined in: [src/utils/logger.ts:120](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/utils/logger.ts#L120)
+Defined in: [src/utils/logger.ts:120](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/utils/logger.ts#L120)
 
 Logs a message at the ERROR level.
 
@@ -118,7 +118,7 @@ Outputs if the configured log level is ERROR, WARN, INFO, or DEBUG.
 
 > `static` **info**(`message`, ...`args`): `void`
 
-Defined in: [src/utils/logger.ts:88](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/utils/logger.ts#L88)
+Defined in: [src/utils/logger.ts:88](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/utils/logger.ts#L88)
 
 Logs a message at the INFO level.
 
@@ -150,7 +150,7 @@ Outputs if the configured log level is INFO or DEBUG.
 
 > `static` **warn**(`message`, ...`args`): `void`
 
-Defined in: [src/utils/logger.ts:104](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/utils/logger.ts#L104)
+Defined in: [src/utils/logger.ts:104](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/utils/logger.ts#L104)
 
 Logs a message at the WARN level.
 

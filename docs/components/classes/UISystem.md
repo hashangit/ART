@@ -6,7 +6,7 @@
 
 # Class: UISystem
 
-Defined in: [src/systems/ui/ui-system.ts:18](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/ui-system.ts#L18)
+Defined in: [src/systems/ui/ui-system.ts:18](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/ui/ui-system.ts#L18)
 
 Provides access to the UI communication sockets (Observation, Conversation, LLM Stream, and A2A Task).
 Instantiates the sockets with their required dependencies.
@@ -21,7 +21,7 @@ Instantiates the sockets with their required dependencies.
 
 > **new UISystem**(`observationRepository`, `conversationRepository`, `a2aTaskRepository?`): `UISystem`
 
-Defined in: [src/systems/ui/ui-system.ts:30](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/ui-system.ts#L30)
+Defined in: [src/systems/ui/ui-system.ts:30](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/ui/ui-system.ts#L30)
 
 Creates an instance of UISystem.
 
@@ -55,7 +55,7 @@ Optional repository for A2A task data, passed to A2ATaskSocket.
 
 > **getA2ATaskSocket**(): [`A2ATaskSocket`](A2ATaskSocket.md)
 
-Defined in: [src/systems/ui/ui-system.ts:70](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/ui-system.ts#L70)
+Defined in: [src/systems/ui/ui-system.ts:70](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/ui/ui-system.ts#L70)
 
 Gets the singleton instance of the A2ATaskSocket.
 
@@ -75,7 +75,7 @@ The A2ATaskSocket instance.
 
 > **getConversationSocket**(): [`ConversationSocket`](ConversationSocket.md)
 
-Defined in: [src/systems/ui/ui-system.ts:54](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/ui-system.ts#L54)
+Defined in: [src/systems/ui/ui-system.ts:54](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/ui/ui-system.ts#L54)
 
 Gets the singleton instance of the ConversationSocket.
 
@@ -95,7 +95,7 @@ The ConversationSocket instance.
 
 > **getLLMStreamSocket**(): [`LLMStreamSocket`](LLMStreamSocket.md)
 
-Defined in: [src/systems/ui/ui-system.ts:62](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/ui-system.ts#L62)
+Defined in: [src/systems/ui/ui-system.ts:62](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/ui/ui-system.ts#L62)
 
 Gets the singleton instance of the LLMStreamSocket.
 
@@ -115,7 +115,7 @@ The LLMStreamSocket instance.
 
 > **getObservationSocket**(): [`ObservationSocket`](ObservationSocket.md)
 
-Defined in: [src/systems/ui/ui-system.ts:46](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/ui/ui-system.ts#L46)
+Defined in: [src/systems/ui/ui-system.ts:46](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/ui/ui-system.ts#L46)
 
 Gets the singleton instance of the ObservationSocket.
 

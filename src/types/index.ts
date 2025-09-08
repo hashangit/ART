@@ -111,6 +111,8 @@ export interface ConversationMessage {
 export enum ObservationType {
   /** The user's inferred intent. */
   INTENT = 'INTENT',
+  /** The generated concise thread title. */
+  TITLE = 'TITLE',
   /** The agent's step-by-step plan to address the intent. */
   PLAN = 'PLAN',
   /** The agent's internal monologue or reasoning process. */
@@ -203,6 +205,15 @@ export interface Observation {
   title: string;
   /**
    * The main data payload of the observation, structure depends on the `type`.
+   *
+   * @remarks
+   * Common content shapes by `type`:
+   * - `TITLE`: `{ title: string }` — a concise thread title (<= 10 words)
+   * - `INTENT`: `{ intent: string }`
+   * - `PLAN`: `{ plan: string; rawOutput?: string }`
+   * - `TOOL_CALL`: `{ toolCalls: ParsedToolCall[] }`
+   * - `TOOL_EXECUTION`: `{ callId: string; toolName: string; status: 'success' | 'error'; output?: any; error?: string }`
+   * - `FINAL_RESPONSE`: `{ message: ConversationMessage; uiMetadata?: object }`
    * @property {any} content
    */
   content: any;

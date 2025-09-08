@@ -6,7 +6,7 @@
 
 # Class: AuthManager
 
-Defined in: [src/systems/auth/AuthManager.ts:10](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/auth/AuthManager.ts#L10)
+Defined in: [src/systems/auth/AuthManager.ts:10](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/auth/AuthManager.ts#L10)
 
 Central authentication manager for handling multiple authentication strategies.
 Manages registration and retrieval of different auth strategies for secure connections
@@ -18,7 +18,7 @@ to remote services like MCP servers and A2A agents.
 
 > **new AuthManager**(): `AuthManager`
 
-Defined in: [src/systems/auth/AuthManager.ts:13](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/auth/AuthManager.ts#L13)
+Defined in: [src/systems/auth/AuthManager.ts:13](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/auth/AuthManager.ts#L13)
 
 #### Returns
 
@@ -30,7 +30,7 @@ Defined in: [src/systems/auth/AuthManager.ts:13](https://github.com/hashangit/AR
 
 > **clearAllStrategies**(): `void`
 
-Defined in: [src/systems/auth/AuthManager.ts:95](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/auth/AuthManager.ts#L95)
+Defined in: [src/systems/auth/AuthManager.ts:95](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/auth/AuthManager.ts#L95)
 
 Clears all registered strategies.
 Useful for testing or complete reconfiguration.
@@ -45,7 +45,7 @@ Useful for testing or complete reconfiguration.
 
 > **getHeaders**(`strategyId`): `Promise`\<`Record`\<`string`, `string`\>\>
 
-Defined in: [src/systems/auth/AuthManager.ts:42](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/auth/AuthManager.ts#L42)
+Defined in: [src/systems/auth/AuthManager.ts:42](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/auth/AuthManager.ts#L42)
 
 Retrieves authentication headers from the specified strategy.
 
@@ -73,7 +73,7 @@ If strategy is not found or authentication fails
 
 > **getRegisteredStrategyIds**(): `string`[]
 
-Defined in: [src/systems/auth/AuthManager.ts:74](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/auth/AuthManager.ts#L74)
+Defined in: [src/systems/auth/AuthManager.ts:74](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/auth/AuthManager.ts#L74)
 
 Lists all registered strategy IDs.
 
@@ -89,7 +89,7 @@ Array of registered strategy IDs
 
 > **handleRedirect**(`strategyId`): `Promise`\<`void`\>
 
-Defined in: [src/systems/auth/AuthManager.ts:121](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/auth/AuthManager.ts#L121)
+Defined in: [src/systems/auth/AuthManager.ts:121](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/auth/AuthManager.ts#L121)
 
 Handles the redirect from an OAuth provider.
 
@@ -117,7 +117,7 @@ If the strategy is not found or does not support handling redirects.
 
 > **hasStrategy**(`strategyId`): `boolean`
 
-Defined in: [src/systems/auth/AuthManager.ts:66](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/auth/AuthManager.ts#L66)
+Defined in: [src/systems/auth/AuthManager.ts:66](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/auth/AuthManager.ts#L66)
 
 Checks if a strategy with the given ID is registered.
 
@@ -141,7 +141,7 @@ True if the strategy exists, false otherwise
 
 > **isAuthenticated**(`strategyId`): `Promise`\<`boolean`\>
 
-Defined in: [src/systems/auth/AuthManager.ts:147](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/auth/AuthManager.ts#L147)
+Defined in: [src/systems/auth/AuthManager.ts:147](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/auth/AuthManager.ts#L147)
 
 Checks if the user is authenticated with a specific strategy.
 
@@ -165,7 +165,7 @@ A promise that resolves to true if authenticated, false otherwise.
 
 > **login**(`strategyId`): `Promise`\<`void`\>
 
-Defined in: [src/systems/auth/AuthManager.ts:107](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/auth/AuthManager.ts#L107)
+Defined in: [src/systems/auth/AuthManager.ts:107](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/auth/AuthManager.ts#L107)
 
 Initiates the login flow for a specific strategy.
 
@@ -193,7 +193,7 @@ If the strategy is not found or does not support login.
 
 > **logout**(`strategyId`): `void`
 
-Defined in: [src/systems/auth/AuthManager.ts:134](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/auth/AuthManager.ts#L134)
+Defined in: [src/systems/auth/AuthManager.ts:134](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/auth/AuthManager.ts#L134)
 
 Logs the user out of a specific strategy.
 
@@ -219,7 +219,7 @@ If the strategy is not found or does not support logout.
 
 > **registerStrategy**(`strategyId`, `strategy`): `void`
 
-Defined in: [src/systems/auth/AuthManager.ts:23](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/auth/AuthManager.ts#L23)
+Defined in: [src/systems/auth/AuthManager.ts:23](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/auth/AuthManager.ts#L23)
 
 Registers an authentication strategy with the given ID.
 
@@ -251,7 +251,7 @@ If strategyId is empty or null
 
 > **removeStrategy**(`strategyId`): `boolean`
 
-Defined in: [src/systems/auth/AuthManager.ts:83](https://github.com/hashangit/ART/blob/1e49ae91e230443ba790ac800658233963b3d60c/src/systems/auth/AuthManager.ts#L83)
+Defined in: [src/systems/auth/AuthManager.ts:83](https://github.com/hashangit/ART/blob/389c66e54bc50d9dde33052d28a5a19571a13dbf/src/systems/auth/AuthManager.ts#L83)
 
 Removes a registered strategy.
 
