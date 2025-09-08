@@ -154,6 +154,83 @@ Provides a real-time stream of the raw token output from the Language Model as i
 -   **Associated Types**:
     -   `StreamEventTypeFilter`: A type used to filter the events received from the LLM stream.
 
+#### Rendering Execution Metadata (Run Metrics)
+
+You can surface execution metrics like token counts, durations, and stop reasons in a small UI card by listening to the final agent event via the `ObservationSocket`.
+
+-   **What to listen to**: Subscribe to `FINAL_RESPONSE` on `art.uiSystem.getObservationSocket()` scoped by `threadId`.
+-   **Where the fields live**:
+    -   From `ExecutionMetadata` (`response.metadata`): `totalDurationMs`, `llmCalls`, `toolCalls`.
+    -   From `LLMMetadata` (`response.metadata.llmMetadata`): `inputTokens`, `outputTokens`, `timeToFirstTokenMs`, `stopReason`.
+
+```tsx
+import React from 'react';
+
+type MetaMap = Record<string, any>;
+
+export function RunMetricsCard({ art, threadId }: { art: any; threadId: string }) {
+  const [meta, setMeta] = React.useState<MetaMap | null>(null);
+
+  React.useEffect(() => {
+    const observationSocket = art.uiSystem.getObservationSocket();
+    const unsubscribe = observationSocket.subscribe(
+      (observation: any) => {
+        if (observation.type !== 'FINAL_RESPONSE') return;
+
+        const response = observation.content; // AgentFinalResponse
+        const exec = response.metadata;       // ExecutionMetadata
+        const llm = exec.llmMetadata ?? {};   // LLMMetadata
+
+        const totalInputTokens = llm.inputTokens ?? 0;
+        const totalOutputTokens = llm.outputTokens ?? 0;
+        const timeToFirstTokenMs = llm.timeToFirstTokenMs ?? undefined;
+        const lastStopReason = llm.stopReason ?? undefined;
+
+        const metaMap: MetaMap = {
+          'Input Tokens': totalInputTokens,
+          'Output Tokens': totalOutputTokens,
+          'Total Tokens': totalInputTokens + totalOutputTokens,
+          'First Token MS': timeToFirstTokenMs,
+          'Total Time MS': exec.totalDurationMs,
+          'Finish Reason': lastStopReason ?? 'stop',
+          'LLM Calls': exec.llmCalls,
+          'Tool Calls': exec.toolCalls,
+        };
+        setMeta(metaMap);
+      },
+      'FINAL_RESPONSE',
+      { threadId }
+    );
+
+    return () => unsubscribe();
+  }, [art, threadId]);
+
+  if (!meta) return null;
+
+  return (
+    <div style={{
+      border: '1px solid #e2e8f0',
+      borderRadius: 8,
+      padding: 12,
+      background: '#fff',
+      maxWidth: 360
+    }}>
+      <div style={{ fontWeight: 600, marginBottom: 8 }}>Run Metrics</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', rowGap: 6 }}>
+        {Object.entries(meta).map(([label, value]) => (
+          <React.Fragment key={label}>
+            <div style={{ color: '#475569' }}>{label}</div>
+            <div style={{ fontWeight: 600 }}>{value ?? '—'}</div>
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+If you want earlier values for fields like "First Token MS" or an interim stop reason, also subscribe to the `LLMStreamSocket` and handle `METADATA` events (availability varies by adapter). Update the same state as tokens arrive, and let the `FINAL_RESPONSE` overwrite with authoritative values at the end.
+
 ---
 
 ## 6. Gemini Thinking Tokens & THOUGHTS Observations
