@@ -1,5 +1,13 @@
 /**
+ * @module utils/logger
+ * Provides a simple, static, and configurable logger for the ART framework.
+ * It supports different log levels and can be enabled or disabled globally.
+ */
+
+/**
  * Defines the available logging levels, ordered from most verbose to least verbose.
+ *
+ * @enum {number}
  */
 export enum LogLevel {
   /** Detailed debugging information, useful for development. */
@@ -14,17 +22,29 @@ export enum LogLevel {
 
 /**
  * Configuration options for the static Logger class.
+ *
+ * @interface LoggerConfig
  */
 export interface LoggerConfig {
-  /** The minimum log level to output messages for. Messages below this level will be ignored. */
+  /**
+   * The minimum log level to output messages for. Messages below this level will be ignored.
+   * @property {LogLevel} level
+   */
   level: LogLevel;
-  /** An optional prefix string to prepend to all log messages (e.g., '[MyApp]'). Defaults to '[ART]'. */
+  /**
+   * An optional prefix string to prepend to all log messages (e.g., '[MyApp]'). Defaults to '[ART]'.
+   * @property {string} [prefix]
+   */
   prefix?: string;
 }
 
 /**
  * A simple static logger class for outputting messages to the console at different levels.
+ *
+ * @remarks
  * Configuration is global via the static `configure` method.
+ *
+ * @class Logger
  */
 export class Logger {
   private static config: LoggerConfig = {
@@ -33,7 +53,8 @@ export class Logger {
 
   /**
    * Configures the static logger settings.
-   * @param config - A partial `LoggerConfig` object. Provided settings will override defaults.
+   *
+   * @param config A partial `LoggerConfig` object. Provided settings will override defaults.
    */
   static configure(config: Partial<LoggerConfig>): void {
     Logger.config = { ...Logger.config, ...config };
@@ -41,9 +62,12 @@ export class Logger {
 
   /**
    * Logs a message at the DEBUG level.
+   *
+   * @remarks
    * Only outputs if the configured log level is DEBUG.
-   * @param message - The main log message string.
-   * @param args - Additional arguments to include in the console output (e.g., objects, arrays).
+   *
+   * @param message The main log message string.
+   * @param args Additional arguments to include in the console output (e.g., objects, arrays).
    */
   static debug(message: string, ...args: any[]): void {
     if (Logger.config.level <= LogLevel.DEBUG) {
@@ -54,9 +78,12 @@ export class Logger {
 
   /**
    * Logs a message at the INFO level.
+   *
+   * @remarks
    * Outputs if the configured log level is INFO or DEBUG.
-   * @param message - The main log message string.
-   * @param args - Additional arguments to include in the console output.
+   *
+   * @param message The main log message string.
+   * @param args Additional arguments to include in the console output.
    */
   static info(message: string, ...args: any[]): void {
     if (Logger.config.level <= LogLevel.INFO) {
@@ -67,9 +94,12 @@ export class Logger {
 
   /**
    * Logs a message at the WARN level.
+   *
+   * @remarks
    * Outputs if the configured log level is WARN, INFO, or DEBUG.
-   * @param message - The main log message string.
-   * @param args - Additional arguments to include in the console output.
+   *
+   * @param message The main log message string.
+   * @param args Additional arguments to include in the console output.
    */
   static warn(message: string, ...args: any[]): void {
     if (Logger.config.level <= LogLevel.WARN) {
@@ -80,9 +110,12 @@ export class Logger {
 
   /**
    * Logs a message at the ERROR level.
+   *
+   * @remarks
    * Outputs if the configured log level is ERROR, WARN, INFO, or DEBUG.
-   * @param message - The main log message string.
-   * @param args - Additional arguments to include in the console output (often an error object).
+   *
+   * @param message The main log message string.
+   * @param args Additional arguments to include in the console output (often an error object).
    */
   static error(message: string, ...args: any[]): void {
     if (Logger.config.level <= LogLevel.ERROR) {

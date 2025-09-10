@@ -1,9 +1,9 @@
 // src/systems/reasoning/OutputParser.ts
 import * as z from 'zod'; // Import Zod
-import { OutputParser as IOutputParser } from '../../core/interfaces';
-import { ParsedToolCall } from '../../types';
-import { Logger } from '../../utils/logger'; // Import the Logger class
-import { XmlMatcher } from '../../utils/xml-matcher'; // Import XmlMatcher
+import { OutputParser as IOutputParser } from '@/core/interfaces';
+import { ParsedToolCall } from '@/types';
+import { Logger } from '@/utils/logger'; // Import the Logger class
+import { XmlMatcher } from '@/utils/xml-matcher'; // Import XmlMatcher
 
 // Define Zod schema for a single tool call
 const parsedToolCallSchema = z.object({
@@ -17,11 +17,20 @@ const toolCallsSchema = z.array(parsedToolCallSchema);
 
 /**
  * Default implementation of the `OutputParser` interface.
- * Responsible for extracting structured data (intent, plan, tool calls) from the planning phase
- * LLM response and the final response content from the synthesis phase response.
- * Includes robust parsing for tool call JSON arrays and Zod validation.
+ * - Planning: Extracts Intent, Plan, and Tool Calls from the LLM output while ignoring any
+ *   custom formatting constraints that apps may add. Tool Calls MUST be a JSON array where each
+ *   item conforms to { callId: string, toolName: string, arguments: object }. If Tool Calls
+ *   appears but contains no items, returns []. If the section is absent, leaves `toolCalls` undefined.
+ * - Synthesis: Returns the final response text (trimmed).
  *
- * @implements {IOutputParser}
+ * This enforces the framework-level Output Contract and keeps the structure provider-agnostic
+ * and tool-type-agnostic (native and MCP tools share the same interface).
+ *
+ * It is responsible for parsing the raw string output from a Large Language Model (LLM)
+ * and converting it into a structured format that the ART agent can understand and act upon.
+ * This includes extracting the agent's intent, the plan, and any tool calls it intends to make.
+ *
+ * @see {@link IOutputParser} for the interface definition.
  */
 export class OutputParser implements IOutputParser {
   /**
@@ -29,31 +38,23 @@ export class OutputParser implements IOutputParser {
    *
    * This method performs the following steps:
    * 1. Uses `XmlMatcher` to identify and extract content within `<think>...</think>` tags.
-   *    This extracted content is aggregated into the `thoughts` field of the result.
-   * 2. The remaining content (outside of `<think>` tags) is then parsed for sections
-   *    explicitly marked with "Intent:", "Plan:", and "Tool Calls:".
-   * 3. It attempts to find and parse a JSON array within the "Tool Calls:" section, handling
-   *    potential markdown fences (e.g., \`\`\`json ... \`\`\`) and validating the structure using Zod.
+   *    The extracted content is aggregated into the `thoughts` field of the result.
+   * 2. Attempts a JSON-first parse (Option 2): tries to parse a single JSON object containing
+   *    `{ title?, intent, plan, toolCalls }`. If successful, returns immediately.
+   * 3. Falls back to the section-based parser (Option 1): parses `Title:`, `Intent:`, `Plan:`, and `Tool Calls:`
+   *    sections from the remaining content. Includes tolerant fallbacks for common wrappers (e.g., code fences).
    *
-   * @param output - The raw string response from the planning LLM call, which may include
-   *                 text, `<think>` tags, and sections for Intent, Plan, and Tool Calls.
-   * @returns A promise resolving to an object containing:
-   *          - `thoughts?`: An optional string aggregating content from all `<think>` tags, separated by "\\n\\n---\\n\\n".
-   *          - `intent?`: An optional string for the parsed intent.
-   *          - `plan?`: An optional string for the parsed plan.
-   *          - `toolCalls?`: An optional array of `ParsedToolCall` objects. This will be an empty array `[]`
-   *                        if the "Tool Calls:" section is present in the non-thinking content but is empty,
-   *                        or if the JSON is invalid/fails validation. It remains `undefined` if the
-   *                        "Tool Calls:" section itself is missing from the non-thinking content.
-   *          Fields will be `undefined` if the corresponding section is not found or cannot be parsed correctly.
+   * The `title` value should be a concise sentence with no more than 10 words.
    */
   async parsePlanningOutput(output: string): Promise<{
+    title?: string;
     intent?: string;
     plan?: string;
     toolCalls?: ParsedToolCall[];
     thoughts?: string; // Add thoughts to the return type
   }> {
    const result: {
+     title?: string;
      intent?: string;
      plan?: string;
      toolCalls?: ParsedToolCall[];
@@ -82,10 +83,60 @@ export class OutputParser implements IOutputParser {
      result.thoughts = thoughtsList.join("\n\n---\n\n"); // Join multiple thoughts
    }
 
-   // Now parse Intent, Plan, Tool Calls from the non-thinking content
+   // Now parse Title, Intent, Plan, Tool Calls from the non-thinking content
    processedOutput = nonThinkingContent;
 
+   // --- Option 2: JSON-first parsing for a single object ---
+   const tryParsePlanningJson = (raw: string): { title?: string; intent?: string; plan?: string; toolCalls?: ParsedToolCall[] } | null => {
+     if (!raw) return null;
+     let s = raw.trim();
+     // Remove code fences if present
+     s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+     // Remove a leading 'json' token on its own line
+     s = s.replace(/^json\s*/i, '').trim();
+     // If it doesn't start with {, try to slice between first { and last }
+     if (!s.startsWith('{') && s.includes('{') && s.includes('}')) {
+       const first = s.indexOf('{');
+       const last = s.lastIndexOf('}');
+       if (first >= 0 && last > first) {
+         s = s.slice(first, last + 1);
+       }
+     }
+     try {
+       const obj: any = JSON.parse(s);
+       if (!obj || (typeof obj !== 'object')) return null;
+       const out: { title?: string; intent?: string; plan?: string; toolCalls?: ParsedToolCall[] } = {};
+       if (typeof obj.title === 'string') out.title = obj.title;
+       if (typeof obj.intent === 'string') out.intent = obj.intent;
+       if (Array.isArray(obj.plan)) out.plan = obj.plan.join('\n');
+       else if (typeof obj.plan === 'string') out.plan = obj.plan;
+       if (Array.isArray(obj.toolCalls)) {
+         const validation = toolCallsSchema.safeParse(obj.toolCalls);
+         if (validation.success) out.toolCalls = validation.data as ParsedToolCall[];
+         else out.toolCalls = [];
+       }
+       // Accept if at least one of the expected fields exists
+       if (out.title || out.intent || out.plan || out.toolCalls) return out;
+       return null;
+     } catch {
+       return null;
+     }
+   };
+
+   const jsonParsed = tryParsePlanningJson(processedOutput);
+   if (jsonParsed) {
+     result.title = jsonParsed.title;
+     result.intent = jsonParsed.intent;
+     result.plan = jsonParsed.plan;
+     result.toolCalls = jsonParsed.toolCalls;
+     return result;
+   }
+
+   // --- Fallback: section-based parsing (Option 1) ---
    // Robustly extract sections from the processedOutput (non-thinking part)
+   const titleMatch = processedOutput.match(/Title:\s*([\s\S]*?)(Intent:|Plan:|Tool Calls:|$)/i);
+   result.title = titleMatch?.[1]?.trim();
+
    const intentMatch = processedOutput.match(/Intent:\s*([\s\S]*?)(Plan:|Tool Calls:|$)/i);
    result.intent = intentMatch?.[1]?.trim();
 
@@ -156,8 +207,8 @@ export class OutputParser implements IOutputParser {
     }
 
      // Handle cases where sections might be missing entirely from the non-thinking content
-     if (!result.intent && !result.plan && (result.toolCalls === undefined || result.toolCalls.length === 0) && !result.thoughts) {
-        Logger.warn(`OutputParser: Could not parse any structured data (Intent, Plan, Tool Calls, Thoughts) from planning output. Original output: ${output}`);
+     if (!result.title && !result.intent && !result.plan && (result.toolCalls === undefined || result.toolCalls.length === 0) && !result.thoughts) {
+        Logger.warn(`OutputParser: Could not parse any structured data (Title, Intent, Plan, Tool Calls, Thoughts) from planning output. Original output: ${output}`);
         // If nothing structured is found, but there were thoughts, that's still a partial parse.
         // If no thoughts AND no other structure, then it's a more complete failure to parse structure.
         // If the original output was just thoughts, result.thoughts would be populated.
@@ -165,10 +216,10 @@ export class OutputParser implements IOutputParser {
         // This warning triggers if even thoughts couldn't be extracted AND other sections are also missing.
         // If only thoughts were present, result.thoughts would exist, and this condition might not be met.
         // Let's refine the condition: if no standard sections (intent, plan, toolCalls) are found in `processedOutput`
-        if (!result.intent && !result.plan && (result.toolCalls === undefined || result.toolCalls.length === 0)) {
-           Logger.debug(`OutputParser: No Intent, Plan, or Tool Calls found in non-thinking content part: ${processedOutput}`);
+        if (!result.title && !result.intent && !result.plan && (result.toolCalls === undefined || result.toolCalls.length === 0)) {
+           Logger.debug(`OutputParser: No Title, Intent, Plan, or Tool Calls found in non-thinking content part: ${processedOutput}`);
         }
-     } else if (!result.intent && !result.plan && !result.toolCalls && !result.thoughts) {
+     } else if (!result.title && !result.intent && !result.plan && !result.toolCalls && !result.thoughts) {
         // This case means absolutely nothing was parsed, not even thoughts.
         Logger.warn(`OutputParser: Complete failure to parse any structured data or thoughts from planning output: ${output}`);
      }

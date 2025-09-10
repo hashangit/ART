@@ -1,8 +1,8 @@
 // src/systems/ui/conversation-socket.ts
 import { TypedSocket } from './typed-socket';
-import { ConversationMessage, MessageRole } from '../../types';
-import { Logger } from '../../utils/logger';
-import { IConversationRepository } from '../../core/interfaces'; // Assuming this exists
+import { ConversationMessage, MessageRole } from '@/types';
+import { Logger } from '@/utils/logger';
+import { IConversationRepository } from '@/core/interfaces'; // Assuming this exists
 
 /**
  * A specialized TypedSocket for handling ConversationMessage data.

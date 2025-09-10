@@ -1,8 +1,8 @@
 // src/types/index.ts
 import type { RuntimeProviderConfig } from './providers'; // Import for use within this file
-import type { IToolExecutor, IAgentCore } from '../core/interfaces'; // For ArtInstanceConfig
-import type { LogLevel } from '../utils/logger'; // For ArtInstanceConfig
-import type { StorageAdapter } from '../core/interfaces'; // For ArtInstanceConfig (storage property)
+import type { IToolExecutor, IAgentCore } from '@/core/interfaces'; // For ArtInstanceConfig
+import type { LogLevel } from '@/utils/logger'; // For ArtInstanceConfig
+import type { StorageAdapter } from '@/core/interfaces'; // For ArtInstanceConfig (storage property)
 // --- ART Error Types ---
 export {
     ErrorCode,
@@ -12,12 +12,29 @@ export {
     LocalInstanceBusyError,
     ApiQueueTimeoutError,
     AdapterInstantiationError
-} from '../errors';
+} from '@/errors';
+
+/**
+ * @module types
+ *
+ * This module aggregates and exports the core data structures, enums, and type definitions
+ * used throughout the ART framework. It serves as the single source of truth for
+ * a majority of the framework's types.
+ *
+ * Key exports include:
+ * - {@link AgentProps}: Input properties for agent execution.
+ * - {@link AgentFinalResponse}: Standardized output from an agent.
+ * - {@link ConversationMessage}: Structure for a single message in a conversation.
+ * - {@link ToolSchema}: Definition for a tool's capabilities.
+ * - {@link A2ATask}: Structure for Agent-to-Agent tasks.
+ * - Various enums like {@link MessageRole}, {@link ModelCapability}, etc.
+ */
 
 // --- UI Socket Related Types ---
-export { LLMStreamSocket } from '../systems/ui/llm-stream-socket';
-export { TypedSocket } from '../systems/ui/typed-socket';
-export type { UnsubscribeFunction } from '../systems/ui/typed-socket';
+export { LLMStreamSocket } from '@/systems/ui/llm-stream-socket';
+export { TypedSocket } from '@/systems/ui/typed-socket';
+export { A2ATaskSocket } from '@/systems/ui/a2a-task-socket';
+export type { UnsubscribeFunction } from '@/systems/ui/typed-socket';
 
 // --- Zod Schemas for Validation ---
 export { ArtStandardPromptSchema, ArtStandardMessageSchema } from './schemas';
@@ -34,38 +51,71 @@ export type {
 
 /**
  * Represents the role of a message sender in a conversation.
+ *
+ * @enum {string}
  */
 export enum MessageRole {
+  /** The end-user interacting with the agent. */
   USER = 'USER',
+  /** The AI agent. */
   AI = 'AI',
-  SYSTEM = 'SYSTEM', // Added for system prompts, though not explicitly in checklist message interface
-  TOOL = 'TOOL',     // Added for tool results, though not explicitly in checklist message interface
+  /** A system-level message providing context or instructions. */
+  SYSTEM = 'SYSTEM',
+  /** A message containing the result of a tool execution. */
+  TOOL = 'TOOL',
 }
 
 /**
  * Represents a single message within a conversation thread.
+ *
+ * @interface ConversationMessage
  */
 export interface ConversationMessage {
-  /** A unique identifier for this specific message. */
+  /**
+   * A unique identifier for this specific message.
+   * @property {string} messageId
+   */
   messageId: string;
-  /** The identifier of the conversation thread this message belongs to. */
+  /**
+   * The identifier of the conversation thread this message belongs to.
+   * @property {string} threadId
+   */
   threadId: string;
-  /** The role of the sender (User, AI, System, or Tool). */
+  /**
+   * The role of the sender (User, AI, System, or Tool).
+   * @property {MessageRole} role
+   */
   role: MessageRole;
-  /** The textual content of the message. */
+  /**
+   * The textual content of the message.
+   * @property {string} content
+   */
   content: string;
-  /** A Unix timestamp (in milliseconds) indicating when the message was created. */
+  /**
+   * A Unix timestamp (in milliseconds) indicating when the message was created.
+   * @property {number} timestamp
+   */
   timestamp: number;
-  /** Optional metadata associated with the message (e.g., related observation IDs, tool call info, UI state). */
+  /**
+   * Optional metadata associated with the message (e.g., related observation IDs, tool call info, UI state).
+   * @property {Record<string, any>} [metadata]
+   */
   metadata?: Record<string, any>;
 }
 
 /**
  * Represents the type of an observation record, capturing significant events during agent execution.
+ *
+ * @enum {string}
  */
 export enum ObservationType {
+  /** The user's inferred intent. */
   INTENT = 'INTENT',
+  /** The generated concise thread title. */
+  TITLE = 'TITLE',
+  /** The agent's step-by-step plan to address the intent. */
   PLAN = 'PLAN',
+  /** The agent's internal monologue or reasoning process. */
   THOUGHTS = 'THOUGHTS',
   /** Records the LLM's decision to call one or more tools (part of the plan). */
   TOOL_CALL = 'TOOL_CALL',
@@ -95,53 +145,102 @@ export enum ObservationType {
 /**
  * Represents the different capabilities a model might possess.
  * Used for model selection and validation.
+ *
+ * @enum {string}
  */
 export enum ModelCapability {
-  TEXT = 'text',         // Basic text generation/understanding
-  VISION = 'vision',       // Ability to process and understand images
-  STREAMING = 'streaming',   // Supports streaming responses chunk by chunk
-  TOOL_USE = 'tool_use',    // Capable of using tools/function calling
-  RAG = 'rag',           // Built-in or optimized for Retrieval-Augmented Generation
-  CODE = 'code',         // Specialized in understanding or generating code
-  REASONING = 'reasoning'  // Advanced reasoning, planning, complex instruction following
+  /** Basic text generation/understanding. */
+  TEXT = 'text',
+  /** Ability to process and understand images. */
+  VISION = 'vision',
+  /** Supports streaming responses chunk by chunk. */
+  STREAMING = 'streaming',
+  /** Capable of using tools/function calling. */
+  TOOL_USE = 'tool_use',
+  /** Built-in or optimized for Retrieval-Augmented Generation. */
+  RAG = 'rag',
+  /** Specialized in understanding or generating code. */
+  CODE = 'code',
+  /** Advanced reasoning, planning, complex instruction following. */
+  REASONING = 'reasoning'
 }
 // --- END NEW ENUM DEFINITION ---
 
 
 /**
  * Represents a recorded event during the agent's execution.
+ *
+ * @interface Observation
  */
 export interface Observation {
-  /** A unique identifier for this specific observation record. */
+  /**
+   * A unique identifier for this specific observation record.
+   * @property {string} id
+   */
   id: string;
-  /** The identifier of the conversation thread this observation relates to. */
+  /**
+   * The identifier of the conversation thread this observation relates to.
+   * @property {string} threadId
+   */
   threadId: string;
-  /** An optional identifier for tracing a request across multiple systems or components. */
+  /**
+   * An optional identifier for tracing a request across multiple systems or components.
+   * @property {string} [traceId]
+   */
   traceId?: string;
-  /** A Unix timestamp (in milliseconds) indicating when the observation was recorded. */
+  /**
+   * A Unix timestamp (in milliseconds) indicating when the observation was recorded.
+   * @property {number} timestamp
+   */
   timestamp: number;
-  /** The category of the event being observed (e.g., PLAN, THOUGHTS, TOOL_EXECUTION). */
+  /**
+   * The category of the event being observed (e.g., PLAN, THOUGHTS, TOOL_EXECUTION).
+   * @property {ObservationType} type
+   */
   type: ObservationType;
-  /** A concise, human-readable title summarizing the observation (often generated based on type/metadata). */
+  /**
+   * A concise, human-readable title summarizing the observation (often generated based on type/metadata).
+   * @property {string} title
+   */
   title: string;
-  /** The main data payload of the observation, structure depends on the `type`. */
+  /**
+   * The main data payload of the observation, structure depends on the `type`.
+   *
+   * @remarks
+   * Common content shapes by `type`:
+   * - `TITLE`: `{ title: string }` — a concise thread title (<= 10 words)
+   * - `INTENT`: `{ intent: string }`
+   * - `PLAN`: `{ plan: string; rawOutput?: string }`
+   * - `TOOL_CALL`: `{ toolCalls: ParsedToolCall[] }`
+   * - `TOOL_EXECUTION`: `{ callId: string; toolName: string; status: 'success' | 'error'; output?: any; error?: string }`
+   * - `FINAL_RESPONSE`: `{ message: ConversationMessage; uiMetadata?: object }`
+   * @property {any} content
+   */
   content: any;
-  /** Optional metadata providing additional context (e.g., source phase, related IDs, status). */
+  /**
+   * Optional metadata providing additional context (e.g., source phase, related IDs, status).
+   * @property {Record<string, any>} [metadata]
+   */
   metadata?: Record<string, any>;
 }
 
 /**
  * Represents a single event emitted from an asynchronous LLM stream (`ReasoningEngine.call`).
+ *
+ * @remarks
  * Allows for real-time delivery of tokens, metadata, errors, and lifecycle signals.
  * Adapters are responsible for translating provider-specific stream chunks into these standard events.
+ *
+ * @interface StreamEvent
  */
 export interface StreamEvent {
   /**
-   * The type of the stream event:
+   * The type of the stream event.
    * - `TOKEN`: A chunk of text generated by the LLM.
    * - `METADATA`: Information about the LLM call (e.g., token counts, stop reason), typically sent once at the end.
    * - `ERROR`: An error occurred during the LLM call or stream processing. `data` will contain the Error object.
    * - `END`: Signals the successful completion of the stream. `data` is typically null.
+   * @property {'TOKEN' | 'METADATA' | 'ERROR' | 'END'} type
    */
   type: 'TOKEN' | 'METADATA' | 'ERROR' | 'END';
   /**
@@ -150,6 +249,7 @@ export interface StreamEvent {
    * - For `METADATA`: `LLMMetadata` object.
    * - For `ERROR`: `Error` object or error details.
    * - For `END`: null.
+   * @property {any} data
    */
   data: any;
   /**
@@ -165,25 +265,44 @@ export interface StreamEvent {
    * - `FINAL_SYNTHESIS_LLM_THINKING`: Token from an LLM call made in the 'FINAL_SYNTHESIS' context, identified as thinking.
    * - `FINAL_SYNTHESIS_LLM_RESPONSE`: Token from an LLM call made in the 'FINAL_SYNTHESIS' context, identified as response (part of the final answer to the user).
    *
-   * Note: Not all adapters can reliably distinguish 'LLM_THINKING' vs 'LLM_RESPONSE'.
+   * @remarks
+   * Not all adapters can reliably distinguish 'LLM_THINKING' vs 'LLM_RESPONSE'.
    * Adapters should prioritize setting the agent context part (`AGENT_THOUGHT_...` or `FINAL_SYNTHESIS_...`) based on `CallOptions.callContext`.
    * If thinking detection is unavailable, adapters should default to `AGENT_THOUGHT_LLM_RESPONSE` or `FINAL_SYNTHESIS_LLM_RESPONSE`.
+   * @property {'LLM_THINKING' | 'LLM_RESPONSE' | 'AGENT_THOUGHT_LLM_THINKING' | 'AGENT_THOUGHT_LLM_RESPONSE' | 'FINAL_SYNTHESIS_LLM_THINKING' | 'FINAL_SYNTHESIS_LLM_RESPONSE'} [tokenType]
    */
   tokenType?: 'LLM_THINKING' | 'LLM_RESPONSE' | 'AGENT_THOUGHT_LLM_THINKING' | 'AGENT_THOUGHT_LLM_RESPONSE' | 'FINAL_SYNTHESIS_LLM_THINKING' | 'FINAL_SYNTHESIS_LLM_RESPONSE';
-  /** The identifier of the conversation thread this event belongs to. */
+  /**
+   * The identifier of the conversation thread this event belongs to.
+   * @property {string} threadId
+   */
   threadId: string;
-  /** The identifier tracing the specific agent execution cycle this event is part of. */
+  /**
+   * The identifier tracing the specific agent execution cycle this event is part of.
+   * @property {string} traceId
+   */
   traceId: string;
-  /** Optional identifier linking the event to a specific UI tab/window. */
+  /**
+   * Optional identifier linking the event to a specific UI tab/window.
+   * @property {string} [sessionId]
+   */
   sessionId?: string;
 }
 
 /**
  * Represents a basic JSON Schema definition, focusing on object types commonly used for tool inputs/outputs.
  * This is a simplified representation and doesn't cover all JSON Schema features.
+ *
+ * @interface JsonObjectSchema
  */
 export interface JsonObjectSchema {
+  /**
+   * @property {'object'} type
+   */
   type: 'object';
+  /**
+   * @property {object} properties
+   */
   properties: {
     [key: string]: {
       type: string; // e.g., 'string', 'number', 'boolean', 'object', 'array'
@@ -206,125 +325,348 @@ export type JsonSchema = JsonObjectSchema | { type: 'string' | 'number' | 'boole
 /**
  * Structure for holding metadata about an LLM call, typically received via a `METADATA` `StreamEvent`
  * or parsed from a non-streaming response. Fields are optional as availability varies by provider and stream state.
+ *
+ * @interface LLMMetadata
  */
 export interface LLMMetadata {
-  /** The number of tokens in the input prompt, if available. */
+  /**
+   * The number of tokens in the input prompt, if available.
+   * @property {number} [inputTokens]
+   */
   inputTokens?: number;
-  /** The number of tokens generated in the output response, if available. */
+  /**
+   * The number of tokens generated in the output response, if available.
+   * @property {number} [outputTokens]
+   */
   outputTokens?: number;
-  /** The number of tokens identified as part of the LLM's internal thinking process (if available from provider). */
+  /**
+   * The number of tokens identified as part of the LLM's internal thinking process (if available from provider).
+   * @property {number} [thinkingTokens]
+   */
   thinkingTokens?: number;
-  /** The time elapsed (in milliseconds) until the first token was generated in a streaming response, if applicable and available. */
+  /**
+   * The time elapsed (in milliseconds) until the first token was generated in a streaming response, if applicable and available.
+   * @property {number} [timeToFirstTokenMs]
+   */
   timeToFirstTokenMs?: number;
-  /** The total time elapsed (in milliseconds) for the entire generation process, if available. */
+  /**
+   * The total time elapsed (in milliseconds) for the entire generation process, if available.
+   * @property {number} [totalGenerationTimeMs]
+   */
   totalGenerationTimeMs?: number;
-  /** The reason the LLM stopped generating tokens (e.g., 'stop_sequence', 'max_tokens', 'tool_calls'), if available. */
+  /**
+   * The reason the LLM stopped generating tokens (e.g., 'stop_sequence', 'max_tokens', 'tool_calls'), if available.
+   * @property {string} [stopReason]
+   */
   stopReason?: string;
-  /** Optional raw usage data provided directly by the LLM provider for extensibility (structure depends on provider). */
+  /**
+   * Optional raw usage data provided directly by the LLM provider for extensibility (structure depends on provider).
+   * @property {any} [providerRawUsage]
+   */
   providerRawUsage?: any;
-  /** The trace ID associated with the LLM call, useful for correlating metadata with the specific request. */
+  /**
+   * The trace ID associated with the LLM call, useful for correlating metadata with the specific request.
+   * @property {string} [traceId]
+   */
   traceId?: string; // Include traceId if this object might be stored or passed independently.
 }
 
 /**
  * Defines the schema for a tool, including its input parameters.
  * Uses JSON Schema format for inputSchema.
+ *
+ * @interface ToolSchema
  */
 export interface ToolSchema {
-  /** A unique name identifying the tool (used in LLM prompts and registry lookups). Must be unique. */
+  /**
+   * A unique name identifying the tool (used in LLM prompts and registry lookups). Must be unique.
+   * @property {string} name
+   */
   name: string;
-  /** A clear description of what the tool does, intended for the LLM to understand its purpose and usage. */
+  /**
+   * A clear description of what the tool does, intended for the LLM to understand its purpose and usage.
+   * @property {string} description
+   */
   description: string;
-  /** A JSON Schema object defining the structure, types, and requirements of the input arguments the tool expects. */
+  /**
+   * A JSON Schema object defining the structure, types, and requirements of the input arguments the tool expects.
+   * @property {JsonSchema} inputSchema
+   */
   inputSchema: JsonSchema;
-  /** An optional JSON Schema object defining the expected structure of the data returned in the `output` field of a successful `ToolResult`. */
+  /**
+   * An optional JSON Schema object defining the expected structure of the data returned in the `output` field of a successful `ToolResult`.
+   * @property {JsonSchema} [outputSchema]
+   */
   outputSchema?: JsonSchema;
-  /** Optional array of examples demonstrating how to use the tool, useful for few-shot prompting of the LLM. */
+  /**
+   * Optional array of examples demonstrating how to use the tool, useful for few-shot prompting of the LLM.
+   * @property {Array<{ input: any; output?: any; description?: string }>} [examples]
+   */
   examples?: Array<{ input: any; output?: any; description?: string }>;
 }
 /**
  * Represents the structured result of a tool execution.
+ *
+ * @interface ToolResult
  */
 export interface ToolResult {
-  /** The unique identifier of the corresponding `ParsedToolCall` that initiated this execution attempt. */
+  /**
+   * The unique identifier of the corresponding `ParsedToolCall` that initiated this execution attempt.
+   * @property {string} callId
+   */
   callId: string;
-  /** The name of the tool that was executed. */
+  /**
+   * The name of the tool that was executed.
+   * @property {string} toolName
+   */
   toolName: string;
-  /** Indicates whether the tool execution succeeded or failed. */
+  /**
+   * Indicates whether the tool execution succeeded or failed.
+   * @property {'success' | 'error'} status
+   */
   status: 'success' | 'error';
-  /** The data returned by the tool upon successful execution. Structure may be validated against `outputSchema`. */
+  /**
+   * The data returned by the tool upon successful execution. Structure may be validated against `outputSchema`.
+   * @property {any} [output]
+   */
   output?: any;
-  /** A descriptive error message if the execution failed (`status` is 'error'). */
+  /**
+   * A descriptive error message if the execution failed (`status` is 'error').
+   * @property {string} [error]
+   */
   error?: string;
-  /** Optional metadata about the execution (e.g., duration, cost, logs). */
-  metadata?: Record<string, any>;
+  /**
+   * Optional metadata about the execution (e.g., duration, cost, logs).
+   * @property {object} [metadata]
+   */
+  metadata?: {
+    sources?: Array<{
+      sourceName: string;
+      url?: string;
+      [key: string]: any;
+    }>;
+    [key: string]: any;
+  };
+}
+
+// --- SYSTEM PROMPT STANDARDIZATION TYPES ---
+/**
+ * Strategy for combining custom system prompt content across precedence levels.
+ *
+ * @typedef {'append' | 'prepend'} SystemPromptMergeStrategy
+ */
+export type SystemPromptMergeStrategy = 'append' | 'prepend';
+
+/**
+ * Named preset for system prompts, supporting variables and a default merge strategy.
+ *
+ * @interface SystemPromptSpec
+ */
+export interface SystemPromptSpec {
+  /**
+   * Optional explicit ID; when in a registry map, the key is typically the tag.
+   * @property {string} [id]
+   */
+  id?: string;
+  /**
+   * Template string. Supports simple {{variable}} placeholders and {{fragment:name}} for PromptManager fragments.
+   * @property {string} template
+   */
+  template: string;
+  /**
+   * Default variables applied if not provided at use time.
+   * @property {Record<string, any>} [defaultVariables]
+   */
+  defaultVariables?: Record<string, any>;
+  /**
+   * Default strategy to combine this spec with lower levels. Defaults to 'append'.
+   * @property {SystemPromptMergeStrategy} [mergeStrategy]
+   */
+  mergeStrategy?: SystemPromptMergeStrategy;
+}
+
+/**
+ * Registry of available system prompt presets (tags) at the instance level.
+ *
+ * @interface SystemPromptsRegistry
+ */
+export interface SystemPromptsRegistry {
+  /**
+   * Tag to use when no other tag is specified.
+   * @property {string} [defaultTag]
+   */
+  defaultTag?: string;
+  /**
+   * Mapping of tag -> spec.
+   * @property {Record<string, SystemPromptSpec>} specs
+   */
+  specs: Record<string, SystemPromptSpec>;
+}
+
+/**
+ * Override provided at instance/thread/call level to select a tag and/or provide variables,
+ * or to provide freeform content and a merge strategy.
+ *
+ * @interface SystemPromptOverride
+ */
+export interface SystemPromptOverride {
+  /**
+   * Preset tag from the registry (e.g., 'default', 'legal_advisor').
+   * @property {string} [tag]
+   */
+  tag?: string;
+  /**
+   * Variables to substitute in the selected template.
+   * @property {Record<string, any>} [variables]
+   */
+  variables?: Record<string, any>;
+  /**
+   * Freeform content to apply directly (escape hatch).
+   * @property {string} [content]
+   */
+  content?: string;
+  /**
+   * Merge behavior against previous level: append | prepend.
+   * @property {SystemPromptMergeStrategy} [strategy]
+   */
+  strategy?: SystemPromptMergeStrategy;
 }
 
 /**
  * Represents a parsed request from the LLM to call a specific tool.
+ *
+ * @interface ParsedToolCall
  */
 export interface ParsedToolCall {
-  /** A unique identifier generated by the OutputParser for this specific tool call request within a plan. */
+  /**
+   * A unique identifier generated by the OutputParser for this specific tool call request within a plan.
+   * @property {string} callId
+   */
   callId: string;
-  /** The name of the tool the LLM intends to call. Must match a registered tool's schema name. */
+  /**
+   * The name of the tool the LLM intends to call. Must match a registered tool's schema name.
+   * @property {string} toolName
+   */
   toolName: string;
-  /** The arguments object, parsed from the LLM response, intended to be passed to the tool's `execute` method after validation. */
+  /**
+   * The arguments object, parsed from the LLM response, intended to be passed to the tool's `execute` method after validation.
+   * @property {any} arguments
+   */
   arguments: any;
 }
 
 /**
  * Configuration specific to a conversation thread.
+ *
+ * @interface ThreadConfig
  */
  export interface ThreadConfig {
-   /** Default provider configuration for this thread. */
+   /**
+    * Default provider configuration for this thread.
+    * @property {RuntimeProviderConfig} providerConfig
+    */
    providerConfig: RuntimeProviderConfig;
-   /** An array of tool names (matching `ToolSchema.name`) that are permitted for use within this thread. */
+   /**
+    * An array of tool names (matching `ToolSchema.name`) that are permitted for use within this thread.
+    * @property {string[]} enabledTools
+    */
    enabledTools: string[];
-   /** The maximum number of past messages (`ConversationMessage` objects) to retrieve for context. */
+   /**
+    * The maximum number of past messages (`ConversationMessage` objects) to retrieve for context.
+    * @property {number} historyLimit
+    */
    historyLimit: number;
-   /** Optional system prompt string to be used for this thread, overriding instance or agent defaults. */
-   systemPrompt?: string;
+   /**
+    * Optional system prompt override to be used for this thread, overriding instance or agent defaults.
+    * @property {string | SystemPromptOverride} [systemPrompt]
+    */
+   systemPrompt?: string | SystemPromptOverride;
+   /**
+    * Optional: Defines the identity and high-level guidance for the agent for this specific thread.
+    * This overrides the instance-level persona.
+    * @property {Partial<AgentPersona>} [persona]
+    */
+   persona?: Partial<AgentPersona>;
    // TODO: Add other potential thread-specific settings (e.g., RAG configuration, default timeouts)
  }
 
 /**
  * Represents non-configuration state associated with an agent or thread.
  * Could include user preferences, accumulated knowledge, etc. (Less defined for v1.0)
+ *
+ * @interface AgentState
  */
 export interface AgentState {
-  /** The primary data payload of the agent's state. Structure is application-defined. */
+  /**
+   * The primary data payload of the agent's state. Structure is application-defined.
+   * @property {any} data
+   */
   data: any;
-  /** An optional version number for the agent's state, useful for migrations or tracking changes. */
+  /**
+   * An optional version number for the agent's state, useful for migrations or tracking changes.
+   * @property {number} [version]
+   */
   version?: number;
-  /** Allows for other arbitrary properties to be stored in the agent's state. */
+  /**
+   * Allows for other arbitrary properties to be stored in the agent's state.
+   * @property {any} [key: string]
+   */
   [key: string]: any;
 }
 
 /**
  * Encapsulates the configuration and state for a specific thread.
+ *
+ * @interface ThreadContext
  */
 export interface ThreadContext {
-  /** The configuration settings (`ThreadConfig`) currently active for the thread. */
+  /**
+   * The configuration settings (`ThreadConfig`) currently active for the thread.
+   * @property {ThreadConfig} config
+   */
   config: ThreadConfig;
-  /** The persistent state (`AgentState`) associated with the thread, or `null` if no state exists. */
+  /**
+   * The persistent state (`AgentState`) associated with the thread, or `null` if no state exists.
+   * @property {AgentState | null} state
+   */
   state: AgentState | null;
 }
 
 /**
  * Properties required to initiate an agent processing cycle.
+ *
+ * @interface AgentProps
  */
 export interface AgentProps {
-  /** The user's input query or request to the agent. */
+  /**
+   * The user's input query or request to the agent.
+   * @property {string} query
+   */
   query: string;
-  /** The mandatory identifier for the conversation thread. All context is scoped to this ID. */
+  /**
+   * The mandatory identifier for the conversation thread. All context is scoped to this ID.
+   * @property {string} threadId
+   */
   threadId: string;
-  /** An optional identifier for the specific UI session, useful for targeting UI updates. */
+  /**
+   * An optional identifier for the specific UI session, useful for targeting UI updates.
+   * @property {string} [sessionId]
+   */
   sessionId?: string;
-  /** An optional identifier for the user interacting with the agent. */
+  /**
+   * An optional identifier for the user interacting with the agent.
+   * @property {string} [userId]
+   */
   userId?: string;
-  /** An optional identifier used for tracing a request across multiple systems or services. */
+  /**
+   * An optional identifier used for tracing a request across multiple systems or services.
+   * @property {string} [traceId]
+   */
   traceId?: string;
-  /** Optional runtime options that can override default behaviors for this specific `process` call. */
+  /**
+   * Optional runtime options that can override default behaviors for this specific `process` call.
+   * @property {AgentOptions} [options]
+   */
   options?: AgentOptions;
   // Note: Core dependencies (StateManager, ConversationManager, etc.) are typically injected
   // during `createArtInstance` and are accessed internally by the Agent Core, not passed in AgentProps.
@@ -332,70 +674,150 @@ export interface AgentProps {
 
 /**
  * Options to override agent behavior at runtime.
+ *
+ * @interface AgentOptions
  */
  export interface AgentOptions {
-   /** Override specific LLM parameters (e.g., temperature, max_tokens) for this call only. */
+   /**
+    * Override specific LLM parameters (e.g., temperature, max_tokens) for this call only.
+    * @property {Record<string, any>} [llmParams]
+    */
    llmParams?: Record<string, any>;
-   /** Override provider configuration for this specific call. */
+   /**
+    * Override provider configuration for this specific call.
+    * @property {RuntimeProviderConfig} [providerConfig]
+    */
    providerConfig?: RuntimeProviderConfig; // Add this line
-   /** Force the use of specific tools, potentially overriding the thread's `enabledTools` for this call (use with caution). */
+   /**
+    * Force the use of specific tools, potentially overriding the thread's `enabledTools` for this call (use with caution).
+    * @property {string[]} [forceTools]
+    */
    forceTools?: string[];
-   /** Specify a particular reasoning model to use for this call, overriding the thread's default. */
+   /**
+    * Specify a particular reasoning model to use for this call, overriding the thread's default.
+    * @property {{ provider: string; model: string }} [overrideModel]
+    */
    overrideModel?: { provider: string; model: string };
-   /** Request a streaming response for this specific agent process call. */
+   /**
+    * Request a streaming response for this specific agent process call.
+    * @property {boolean} [stream]
+    */
    stream?: boolean;
-   /** Override the prompt template used for this specific call. */
+   /**
+    * Override the prompt template used for this specific call.
+    * @property {string} [promptTemplateId]
+    */
    promptTemplateId?: string;
-   /** Optional system prompt string to override thread, instance, or agent defaults for this specific call. */
-   systemPrompt?: string;
+   /**
+    * Optional system prompt override/tag to override thread, instance, or agent defaults for this specific call.
+    * @property {string | SystemPromptOverride} [systemPrompt]
+    */
+   systemPrompt?: string | SystemPromptOverride;
+   /**
+    * Optional: Defines the identity and high-level guidance for the agent for this specific call.
+    * This overrides both the instance-level and thread-level persona.
+    * @property {Partial<AgentPersona>} [persona]
+    */
+   persona?: Partial<AgentPersona>;
    // TODO: Add other potential runtime overrides (e.g., history length).
  }
 
 /**
  * The final structured response returned by the agent core after processing.
+ *
+ * @interface AgentFinalResponse
  */
 export interface AgentFinalResponse {
-  /** The final `ConversationMessage` generated by the AI, which has also been persisted. */
+  /**
+   * The final `ConversationMessage` generated by the AI, which has also been persisted.
+   * @property {ConversationMessage} response
+   */
   response: ConversationMessage;
-  /** Metadata summarizing the execution cycle that produced this response. */
+  /**
+   * Metadata summarizing the execution cycle that produced this response.
+   * @property {ExecutionMetadata} metadata
+   */
   metadata: ExecutionMetadata;
 }
 
 /**
  * Metadata summarizing an agent execution cycle, including performance metrics and outcomes.
+ *
+ * @interface ExecutionMetadata
  */
 export interface ExecutionMetadata {
-  /** The thread ID associated with this execution cycle. */
+  /**
+   * The thread ID associated with this execution cycle.
+   * @property {string} threadId
+   */
   threadId: string;
-  /** The trace ID used during this execution, if provided. */
+  /**
+   * The trace ID used during this execution, if provided.
+   * @property {string} [traceId]
+   */
   traceId?: string;
-  /** The user ID associated with the execution, if provided. */
+  /**
+   * The user ID associated with the execution, if provided.
+   * @property {string} [userId]
+   */
   userId?: string;
-  /** The overall status of the execution ('success', 'error', or 'partial' if some steps failed but a response was generated). */
+  /**
+   * The overall status of the execution ('success', 'error', or 'partial' if some steps failed but a response was generated).
+   * @property {'success' | 'error' | 'partial'} status
+   */
   status: 'success' | 'error' | 'partial';
-  /** The total duration of the `agent.process()` call in milliseconds. */
+  /**
+   * The total duration of the `agent.process()` call in milliseconds.
+   * @property {number} totalDurationMs
+   */
   totalDurationMs: number;
-  /** The number of calls made to the `ReasoningEngine`. */
+  /**
+   * The number of calls made to the `ReasoningEngine`.
+   * @property {number} llmCalls
+   */
   llmCalls: number;
-  /** The number of tool execution attempts made by the `ToolSystem`. */
+  /**
+   * The number of tool execution attempts made by the `ToolSystem`.
+   * @property {number} toolCalls
+   */
   toolCalls: number;
-  /** An optional estimated cost for the LLM calls made during this execution. */
+  /**
+   * An optional estimated cost for the LLM calls made during this execution.
+   * @property {number} [llmCost]
+   */
   llmCost?: number;
-  /** A top-level error message if the overall status is 'error' or 'partial'. */
+  /**
+   * A top-level error message if the overall status is 'error' or 'partial'.
+   * @property {string} [error]
+   */
   error?: string;
-  /** Aggregated metadata from LLM calls made during the execution. */
+  /**
+   * Aggregated metadata from LLM calls made during the execution.
+   * @property {LLMMetadata} [llmMetadata]
+   */
   llmMetadata?: LLMMetadata;
 }
 
 /**
  * Context provided to a tool during its execution.
+ *
+ * @interface ExecutionContext
  */
 export interface ExecutionContext {
-  /** The ID of the thread in which the tool is being executed. */
+  /**
+   * The ID of the thread in which the tool is being executed.
+   * @property {string} threadId
+   */
   threadId: string;
-  /** The trace ID for this execution cycle, if available. */
+  /**
+   * The trace ID for this execution cycle, if available.
+   * @property {string} [traceId]
+   */
   traceId?: string;
-  /** The user ID associated with the execution, if available. */
+  /**
+   * The user ID associated with the execution, if available.
+   * @property {string} [userId]
+   */
   userId?: string;
   // TODO: Potentially include access tokens or credentials scoped to this execution, if needed securely.
   // TODO: Consider providing limited access to StateManager or other relevant context if required by complex tools.
@@ -403,34 +825,57 @@ export interface ExecutionContext {
 
 /**
  * Options for configuring an LLM call, including streaming and context information.
+ *
+ * @interface CallOptions
  */
 export interface CallOptions {
-  /** The mandatory thread ID, used by the ReasoningEngine to fetch thread-specific configuration (e.g., model, params) via StateManager. */
+  /**
+   * The mandatory thread ID, used by the ReasoningEngine to fetch thread-specific configuration (e.g., model, params) via StateManager.
+   * @property {string} threadId
+   */
   threadId: string;
-  /** Optional trace ID for correlation. */
+  /**
+   * Optional trace ID for correlation.
+   * @property {string} [traceId]
+   */
   traceId?: string;
-  /** Optional user ID. */
+  /**
+   * Optional user ID.
+   * @property {string} [userId]
+   */
   userId?: string;
-  /** Optional session ID. */
+  /**
+   * Optional session ID.
+   * @property {string} [sessionId]
+   */
   sessionId?: string; // Added sessionId
   /**
    * Request a streaming response from the LLM provider.
    * Adapters MUST check this flag.
+   * @property {boolean} [stream]
    */
   stream?: boolean;
   /**
    * Provides context for the LLM call, allowing adapters to differentiate
    * between agent-level thoughts and final synthesis calls for token typing.
    * Agent Core MUST provide this.
+   * @property {'AGENT_THOUGHT' | 'FINAL_SYNTHESIS' | string} [callContext]
    */
   callContext?: 'AGENT_THOUGHT' | 'FINAL_SYNTHESIS' | string;
-  /** An optional callback function invoked when the LLM streams intermediate 'thoughts' or reasoning steps.
+  /**
+   * An optional callback function invoked when the LLM streams intermediate 'thoughts' or reasoning steps.
    * @deprecated Prefer using StreamEvent with appropriate tokenType for thoughts. Kept for potential transitional compatibility.
    */
   // onThought?: (thought: string) => void; // Commented out as per implementation plan decision (Ref: 7.2, Checklist Phase 1)
-  /** Carries the specific target provider and configuration for this call. */
+  /**
+   * Carries the specific target provider and configuration for this call.
+   * @property {RuntimeProviderConfig} providerConfig
+   */
   providerConfig: RuntimeProviderConfig;
-  /** Additional key-value pairs representing provider-specific parameters (e.g., `temperature`, `max_tokens`, `top_p`). These often override defaults set in `ThreadConfig`. */
+  /**
+   * Additional key-value pairs representing provider-specific parameters (e.g., `temperature`, `max_tokens`, `top_p`). These often override defaults set in `ThreadConfig`.
+   * @property {any} [key: string]
+   */
   [key: string]: any;
 }
 
@@ -438,6 +883,8 @@ export interface CallOptions {
 
 /**
  * Defines the standard roles for messages within the `ArtStandardPrompt` format.
+ *
+ * @remarks
  * These roles are chosen for broad compatibility across major LLM providers (like OpenAI, Anthropic, Gemini).
  * Provider Adapters are responsible for translating these standard roles into the specific formats
  * required by their respective APIs (e.g., 'assistant' might become 'model' for Gemini).
@@ -447,15 +894,24 @@ export interface CallOptions {
  * - `assistant`: Responses generated by the AI model. Can contain text content and/or `tool_calls`.
  * - `tool_request`: Represents the LLM's request to use tools (often implicitly part of an `assistant` message with `tool_calls`). Included for potential future explicit use.
  * - `tool_result`: The outcome (output or error) of executing a requested tool call.
+ *
+ * @typedef {'system' | 'user' | 'assistant' | 'tool_request' | 'tool_result' | 'tool'} ArtStandardMessageRole
  */
  export type ArtStandardMessageRole = 'system' | 'user' | 'assistant' | 'tool_request' | 'tool_result' | 'tool'; // Added 'tool' role
 
 /**
  * Represents a single message in the standardized, provider-agnostic `ArtStandardPrompt` format.
+ *
+ * @remarks
  * This structure aims to capture common message elements used by various LLM APIs.
+ *
+ * @interface ArtStandardMessage
  */
 export interface ArtStandardMessage {
-  /** The role indicating the source or type of the message. */
+  /**
+   * The role indicating the source or type of the message.
+   * @property {ArtStandardMessageRole} role
+   */
   role: ArtStandardMessageRole;
   /**
    * The primary content of the message. The type and interpretation depend on the `role`:
@@ -464,14 +920,22 @@ export interface ArtStandardMessage {
    * - `assistant`: string | null (The AI's text response, or null/empty if only making `tool_calls`).
    * - `tool_request`: object | null (Structured representation of the tool call, often implicitly handled via `assistant` message's `tool_calls`).
    * - `tool_result`: string (Stringified JSON output or error message from the tool execution).
+   * @property {string | object | null} content
    */
   content: string | object | null;
-  /** Optional name associated with the message. Primarily used for `tool_result` role to specify the name of the tool that was executed. */
+  /**
+   * Optional name associated with the message. Primarily used for `tool_result` role to specify the name of the tool that was executed.
+   * @property {string} [name]
+   */
   name?: string;
   /**
    * Optional array of tool calls requested by the assistant.
+   *
+   * @remarks
    * Only relevant for 'assistant' role messages that trigger tool usage.
    * Structure mirrors common provider formats (e.g., OpenAI).
+   *
+   * @property {Array<{ id: string; type: 'function'; function: { name: string; arguments: string; }; }>} [tool_calls]
    */
   tool_calls?: Array<{
     /** A unique identifier for this specific tool call request. */
@@ -490,14 +954,20 @@ export interface ArtStandardMessage {
    * Optional identifier linking a 'tool_result' message back to the specific 'tool_calls' entry
    * in the preceding 'assistant' message that requested it.
    * Required for 'tool_result' role.
+   * @property {string} [tool_call_id]
    */
   tool_call_id?: string;
 }
 
 /**
  * Represents the entire prompt as an array of standardized messages (`ArtStandardMessage`).
- * This is the standard format produced by `PromptManager.assemblePrompt` and consumed
- * by `ProviderAdapter.call` for translation into provider-specific API formats.
+ *
+ * @remarks
+ * Constructed by agent logic (e.g., `PESAgent`) and optionally validated via
+ * `PromptManager.validatePrompt` before being sent to the `ReasoningEngine` and
+ * translated by a `ProviderAdapter` for provider-specific API formats.
+ *
+ * @typedef {ArtStandardMessage[]} ArtStandardPrompt
  */
 export type ArtStandardPrompt = ArtStandardMessage[];
 
@@ -505,33 +975,65 @@ export type ArtStandardPrompt = ArtStandardMessage[];
  * Represents the contextual data gathered by Agent Logic (e.g., `PESAgent`) to be injected
  * into a Mustache blueprint/template by the `PromptManager.assemblePrompt` method.
  *
+ * @remarks
  * Contains standard fields commonly needed for prompts, plus allows for arbitrary
  * additional properties required by specific agent blueprints. Agent logic is responsible
  * for populating this context appropriately before calling `assemblePrompt`.
+ *
+ * @interface PromptContext
  */
 export interface PromptContext {
-  /** The user's current query or input relevant to this prompt generation step. */
+  /**
+   * The user's current query or input relevant to this prompt generation step.
+   * @property {string} [query]
+   */
   query?: string;
   /**
    * The conversation history, typically formatted as an array suitable for the blueprint
    * (e.g., array of objects with `role` and `content`). Agent logic should pre-format this.
-   * Note: While `ArtStandardPrompt` could be used, simpler structures might be preferred for blueprints.
+   *
+   * @remarks
+   * While `ArtStandardPrompt` could be used, simpler structures might be preferred for blueprints.
+   *
+   * @property {Array<{ role: string; content: string; [key: string]: any }>} [history]
    */
   history?: Array<{ role: string; content: string; [key: string]: any }>; // Flexible history format for blueprints
   /**
    * The schemas of the tools available for use, potentially pre-formatted for the blueprint
    * (e.g., with `inputSchemaJson` pre-stringified).
+   * @property {Array<ToolSchema & { inputSchemaJson?: string }>} [availableTools]
    */
   availableTools?: Array<ToolSchema & { inputSchemaJson?: string }>;
   /**
    * The results from any tools executed in a previous step, potentially pre-formatted for the blueprint
    * (e.g., with `outputJson` pre-stringified).
+   * @property {Array<ToolResult & { outputJson?: string }>} [toolResults]
    */
   toolResults?: Array<ToolResult & { outputJson?: string }>;
-  /** The system prompt string to be used (resolved by agent logic from config or defaults). */
+  /**
+   * The system prompt string to be used (resolved by agent logic from config or defaults).
+   * @property {string} [systemPrompt]
+   */
   systemPrompt?: string;
-  /** Allows agent patterns (like PES) to pass any other custom data needed by their specific blueprints (e.g., `intent`, `plan`). */
+  /**
+   * Allows agent patterns (like PES) to pass any other custom data needed by their specific blueprints (e.g., `intent`, `plan`).
+   * @property {any} [key: string]
+   */
   [key: string]: any;
+}
+
+/**
+ * Represents a Mustache template that can be rendered with a PromptContext to produce an ArtStandardPrompt.
+ * Used by the PromptManager.assemblePrompt method.
+ *
+ * @interface PromptBlueprint
+ */
+export interface PromptBlueprint {
+  /**
+   * The Mustache template string that will be rendered with context data to produce a JSON string representing an ArtStandardPrompt
+   * @property {string} template
+   */
+  template: string;
 }
 
 // --- END ART STANDARD PROMPT TYPES ---
@@ -540,49 +1042,90 @@ export interface PromptContext {
 /**
  * Represents the prompt data formatted for a specific LLM provider.
  * Can be a simple string or a complex object (e.g., for OpenAI Chat Completion API).
+ *
  * @deprecated Use `ArtStandardPrompt` as the standard intermediate format. ProviderAdapters handle final formatting.
+ * @typedef {ArtStandardPrompt} FormattedPrompt
  */
 export type FormattedPrompt = ArtStandardPrompt; // Point deprecated type to the new standard
 
 /**
  * Options for filtering data retrieved from storage.
  * Structure depends heavily on the underlying adapter's capabilities.
+ *
+ * @interface FilterOptions
  */
 export interface FilterOptions {
-  /** An object defining filter criteria (e.g., `{ threadId: 'abc', type: 'TOOL_EXECUTION' }`). Structure may depend on adapter capabilities. */
+  /**
+   * An object defining filter criteria (e.g., `{ threadId: 'abc', type: 'TOOL_EXECUTION' }`). Structure may depend on adapter capabilities.
+   * @property {Record<string, any>} [filter]
+   */
   filter?: Record<string, any>;
-  /** An object defining sorting criteria (e.g., `{ timestamp: 'desc' }`). */
+  /**
+   * An object defining sorting criteria (e.g., `{ timestamp: 'desc' }`).
+   * @property {Record<string, 'asc' | 'desc'>} [sort]
+   */
   sort?: Record<string, 'asc' | 'desc'>;
-  /** The maximum number of records to return. */
+  /**
+   * The maximum number of records to return.
+   * @property {number} [limit]
+   */
   limit?: number;
-  /** The number of records to skip (for pagination). */
+  /**
+   * The number of records to skip (for pagination).
+   * @property {number} [skip]
+   */
   skip?: number;
   // TODO: Consider adding projection options to retrieve only specific fields.
 }
 
 /**
  * Options for retrieving conversation messages.
+ *
+ * @interface MessageOptions
  */
 export interface MessageOptions {
-  /** The maximum number of messages to retrieve. */
+  /**
+   * The maximum number of messages to retrieve.
+   * @property {number} [limit]
+   */
   limit?: number;
-  /** Retrieve messages created before this Unix timestamp (milliseconds). */
+  /**
+   * Retrieve messages created before this Unix timestamp (milliseconds).
+   * @property {number} [beforeTimestamp]
+   */
   beforeTimestamp?: number;
-  /** Retrieve messages created after this Unix timestamp (milliseconds). */
+  /**
+   * Retrieve messages created after this Unix timestamp (milliseconds).
+   * @property {number} [afterTimestamp]
+   */
   afterTimestamp?: number;
-  /** Optionally filter messages by role (e.g., retrieve only 'AI' messages). */
+  /**
+   * Optionally filter messages by role (e.g., retrieve only 'AI' messages).
+   * @property {MessageRole[]} [roles]
+   */
   roles?: MessageRole[];
 }
 
 /**
  * Options for filtering observations.
+ *
+ * @interface ObservationFilter
  */
 export interface ObservationFilter {
-  /** An array of `ObservationType` enums to filter by. If provided, only observations matching these types are returned. */
+  /**
+   * An array of `ObservationType` enums to filter by. If provided, only observations matching these types are returned.
+   * @property {ObservationType[]} [types]
+   */
   types?: ObservationType[];
-  /** Retrieve observations recorded before this Unix timestamp (milliseconds). */
+  /**
+   * Retrieve observations recorded before this Unix timestamp (milliseconds).
+   * @property {number} [beforeTimestamp]
+   */
   beforeTimestamp?: number;
-  /** Retrieve observations recorded after this Unix timestamp (milliseconds). */
+  /**
+   * Retrieve observations recorded after this Unix timestamp (milliseconds).
+   * @property {number} [afterTimestamp]
+   */
   afterTimestamp?: number;
   // TODO: Add other potential criteria like filtering by metadata content if needed.
 }
@@ -592,58 +1135,573 @@ export interface ObservationFilter {
 
 /**
  * Defines the strategy for saving AgentState.
+ *
+ * @remarks
  * - 'explicit': AgentState is only saved when `StateManager.setAgentState()` is explicitly called by the agent.
  *               `StateManager.saveStateIfModified()` will be a no-op for AgentState persistence.
  * - 'implicit': AgentState is loaded by `StateManager.loadThreadContext()`, and if modified by the agent,
  *               `StateManager.saveStateIfModified()` will attempt to automatically persist these changes
  *               by comparing the current state with a snapshot taken at load time.
  *               `StateManager.setAgentState()` will still work for explicit saves.
+ *
+ * @typedef {'explicit' | 'implicit'} StateSavingStrategy
  */
 export type StateSavingStrategy = 'explicit' | 'implicit';
 
 // Explicitly import ProviderManagerConfig here for ArtInstanceConfig
 import type { ProviderManagerConfig as PMConfig } from './providers';
+// Import McpManagerConfig for ArtInstanceConfig
+import type { McpManagerConfig } from '../systems/mcp/types';
 
 /**
  * Configuration for creating an ART instance.
+ *
+ * @interface ArtInstanceConfig
  */
 export interface ArtInstanceConfig {
   /**
    * Configuration for the storage adapter.
    * Can be a pre-configured `StorageAdapter` instance,
    * or an object specifying the type and options for a built-in adapter.
-   * Example: `{ type: 'indexedDB', dbName: 'MyArtDB' }`
+   *
+   * @example { type: 'indexedDB', dbName: 'MyArtDB' }
+   *
+   * @property {StorageAdapter | { type: 'memory' | 'indexedDB', dbName?: string, version?: number, objectStores?: any[] }} storage
    */
   storage: StorageAdapter | { type: 'memory' | 'indexedDB', dbName?: string, version?: number, objectStores?: any[] };
-  /** Configuration for the ProviderManager, defining available LLM provider adapters. */
+  /**
+   * Configuration for the ProviderManager, defining available LLM provider adapters.
+   * @property {PMConfig} providers
+   */
   providers: PMConfig; // Use the aliased import
   /**
    * The agent core implementation class to use.
    * Defaults to `PESAgent` if not provided.
-   * Example: `MyCustomAgentClass`
+   *
+   * @example MyCustomAgentClass
+   *
+   * @property {new (dependencies: any) => IAgentCore} [agentCore]
    */
   agentCore?: new (dependencies: any) => IAgentCore; // Constructor type for an IAgentCore implementation
-  /** An optional array of tool executor instances to register at initialization. */
+  /**
+   * An optional array of tool executor instances to register at initialization.
+   * @property {IToolExecutor[]} [tools]
+   */
   tools?: IToolExecutor[];
   /**
    * Defines the strategy for saving `AgentState`. Defaults to 'explicit'.
+   *
+   * @remarks
    * - 'explicit': `AgentState` is only saved when `StateManager.setAgentState()` is explicitly called by the agent.
    *               `StateManager.saveStateIfModified()` will be a no-op for `AgentState` persistence.
    * - 'implicit': `AgentState` is loaded by `StateManager.loadThreadContext()`. If modified by the agent,
    *               `StateManager.saveStateIfModified()` will attempt to automatically persist these changes.
    *               `StateManager.setAgentState()` will still work for explicit saves in this mode.
+   *
+   * @property {StateSavingStrategy} [stateSavingStrategy]
    */
   stateSavingStrategy?: StateSavingStrategy;
-  /** Optional configuration for the framework's logger. */
+  /**
+   * Optional configuration for the framework's logger.
+   * @property {{ level?: LogLevel }} [logger]
+   */
   logger?: {
     /** Minimum log level to output. Defaults to 'info'. */
     level?: LogLevel;
   };
   /**
-   * Optional default system prompt string to be used for the entire ART instance.
-   * This can be overridden at the thread level or at the individual call level.
+   * Optional: Defines the default identity and high-level guidance for the agent.
+   * This can be overridden at the thread or call level.
+   * @property {AgentPersona} [persona]
    */
-  defaultSystemPrompt?: string;
+  persona?: AgentPersona;
+  /**
+   * Optional configuration for MCP (Model Context Protocol) manager.
+   * Enables connection to external MCP servers for dynamic tool loading.
+   * @property {McpManagerConfig} [mcpConfig]
+   */
+  mcpConfig?: McpManagerConfig;
+  /**
+   * Optional configuration for authentication strategies.
+   * Used for secure connections to external services and MCP servers.
+   * @property {object} [authConfig]
+   */
+  authConfig?: {
+    /**
+     * Whether to enable authentication manager. Defaults to false.
+     * @property {boolean} [enabled]
+     */
+    enabled?: boolean;
+    /**
+     * Pre-configured authentication strategies to register at startup.
+     * @property {Array<{ id: string; strategy: any }>} [strategies]
+     */
+    strategies?: Array<{ id: string; strategy: any }>;
+  };
+  /**
+   * Optional: Configuration for A2A services.
+   * @property {object} [a2aConfig]
+   */
+  a2aConfig?: {
+    /**
+     * The endpoint for discovering A2A agents.
+     * @property {string} [discoveryEndpoint]
+     */
+    discoveryEndpoint?: string;
+    /**
+     * The callback URL for receiving A2A task updates.
+     * @property {string} [callbackUrl]
+     */
+    callbackUrl?: string;
+  };
   // Add other top-level configuration properties as needed, e.g.:
   // defaultThreadConfig?: Partial<ThreadConfig>;
+}
+
+/**
+ * Represents the possible states of an A2A (Agent-to-Agent) task.
+ *
+ * @enum {string}
+ */
+export enum A2ATaskStatus {
+  /** Task has been created but not yet assigned to an agent. */
+  PENDING = 'PENDING',
+  /** Task has been assigned to an agent and is being processed. */
+  IN_PROGRESS = 'IN_PROGRESS',
+  /** Task has been completed successfully. */
+  COMPLETED = 'COMPLETED',
+  /** Task has failed during execution. */
+  FAILED = 'FAILED',
+  /** Task has been cancelled before completion. */
+  CANCELLED = 'CANCELLED',
+  /** Task is waiting for external dependencies or manual intervention. */
+  WAITING = 'WAITING',
+  /** Task is being reviewed for quality assurance. */
+  REVIEW = 'REVIEW'
+}
+
+/**
+ * Represents the priority level of an A2A task.
+ *
+ * @enum {string}
+ */
+export enum A2ATaskPriority {
+  /** Low priority. */
+  LOW = 'LOW',
+  /** Medium priority. */
+  MEDIUM = 'MEDIUM',
+  /** High priority. */
+  HIGH = 'HIGH',
+  /** Urgent priority. */
+  URGENT = 'URGENT'
+}
+
+/**
+ * Represents agent information for A2A task assignment.
+ *
+ * @interface A2AAgentInfo
+ */
+export interface A2AAgentInfo {
+  /**
+   * Unique identifier for the agent.
+   * @property {string} agentId
+   */
+  agentId: string;
+  /**
+   * Human-readable name for the agent.
+   * @property {string} agentName
+   */
+  agentName: string;
+  /**
+   * The type or role of the agent (e.g., 'reasoning', 'data-processing', 'synthesis').
+   * @property {string} agentType
+   */
+  agentType: string;
+  /**
+   * Base URL or endpoint for communicating with the agent.
+   * @property {string} [endpoint]
+   */
+  endpoint?: string;
+  /**
+   * Agent capabilities or specializations.
+   * @property {string[]} [capabilities]
+   */
+  capabilities?: string[];
+  /**
+   * Current load or availability status of the agent.
+   * @property {'available' | 'busy' | 'offline'} [status]
+   */
+  status?: 'available' | 'busy' | 'offline';
+  /**
+   * Authentication configuration for communicating with the agent.
+   * @property {object} [authentication]
+   */
+  authentication?: {
+    /**
+     * Type of authentication required.
+     * @property {'bearer' | 'api_key' | 'none'} type
+     */
+    type: 'bearer' | 'api_key' | 'none';
+    /**
+     * Bearer token for authorization (if type is 'bearer').
+     * @property {string} [token]
+     */
+    token?: string;
+    /**
+     * API key for authorization (if type is 'api_key').
+     * @property {string} [apiKey]
+     */
+    apiKey?: string;
+  };
+}
+
+/**
+ * Represents metadata about A2A task execution.
+ *
+ * @interface A2ATaskMetadata
+ */
+export interface A2ATaskMetadata {
+  /**
+   * Timestamp when the task was created (Unix timestamp in milliseconds).
+   * @property {number} createdAt
+   */
+  createdAt: number;
+  /**
+   * Timestamp when the task was last updated (Unix timestamp in milliseconds).
+   * @property {number} updatedAt
+   */
+  updatedAt: number;
+  /**
+   * Timestamp when the task was started (if applicable).
+   * @property {number} [startedAt]
+   */
+  startedAt?: number;
+  /**
+   * Timestamp when the task was completed/failed (if applicable).
+   * @property {number} [completedAt]
+   */
+  completedAt?: number;
+  /**
+   * Timestamp when the task was delegated to a remote agent (if applicable).
+   * @property {number} [delegatedAt]
+   */
+  delegatedAt?: number;
+  /**
+   * Timestamp when the task was last updated (for compatibility).
+   * @property {number} [lastUpdated]
+   */
+  lastUpdated?: number;
+  /**
+   * The user or system that initiated this task.
+   * @property {string} [initiatedBy]
+   */
+  initiatedBy?: string;
+  /**
+   * Correlation ID for tracking related tasks across the system.
+   * @property {string} [correlationId]
+   */
+  correlationId?: string;
+  /**
+   * Number of retry attempts made for this task.
+   * @property {number} [retryCount]
+   */
+  retryCount?: number;
+  /**
+   * Maximum number of retry attempts allowed.
+   * @property {number} [maxRetries]
+   */
+  maxRetries?: number;
+  /**
+   * Timeout duration in milliseconds.
+   * @property {number} [timeoutMs]
+   */
+  timeoutMs?: number;
+  /**
+   * Estimated completion time in milliseconds (if provided by remote agent).
+   * @property {number} [estimatedCompletionMs]
+   */
+  estimatedCompletionMs?: number;
+  /**
+   * Tags or labels for categorizing tasks.
+   * @property {string[]} [tags]
+   */
+  tags?: string[];
+}
+
+/**
+ * Represents the result of an A2A task execution.
+ *
+ * @interface A2ATaskResult
+ */
+export interface A2ATaskResult {
+  /**
+   * Whether the task execution was successful.
+   * @property {boolean} success
+   */
+  success: boolean;
+  /**
+   * The data returned by the task execution.
+   * @property {any} [data]
+   */
+  data?: any;
+  /**
+   * Error message if the task failed.
+   * @property {string} [error]
+   */
+  error?: string;
+  /**
+   * Additional metadata about the execution.
+   * @property {object} [metadata]
+   */
+  metadata?: {
+    sources?: Array<{
+      sourceName: string;
+      url?: string;
+      [key: string]: any;
+    }>;
+    [key: string]: any;
+  };
+  /**
+   * Execution duration in milliseconds.
+   * @property {number} [durationMs]
+   */
+  durationMs?: number;
+}
+
+/**
+ * Represents a task for Agent-to-Agent (A2A) communication and delegation.
+ * Used for asynchronous task delegation between AI agents in distributed systems.
+ *
+ * @interface A2ATask
+ */
+export interface A2ATask {
+  /**
+   * Unique identifier for the task.
+   * @property {string} taskId
+   */
+  taskId: string;
+  /**
+   * The thread this task belongs to (top-level for efficient filtering).
+   * @property {string} threadId
+   */
+  threadId: string;
+  
+  /**
+   * Current status of the task.
+   * @property {A2ATaskStatus} status
+   */
+  status: A2ATaskStatus;
+  
+  /**
+   * The data payload containing task parameters and context.
+   * @property {object} payload
+   */
+  payload: {
+    /**
+     * The type of task to be executed (e.g., 'analyze', 'synthesize', 'transform').
+     * @property {string} taskType
+     */
+    taskType: string;
+    /**
+     * Input data required for task execution.
+     * @property {any} input
+     */
+    input: any;
+    /**
+     * Instructions or configuration for the task.
+     * @property {string} [instructions]
+     */
+    instructions?: string;
+    /**
+     * Additional parameters specific to the task type.
+     * @property {Record<string, any>} [parameters]
+     */
+    parameters?: Record<string, any>;
+  };
+  
+  /**
+   * Information about the agent that created/requested this task.
+   * @property {A2AAgentInfo} sourceAgent
+   */
+  sourceAgent: A2AAgentInfo;
+  
+  /**
+   * Information about the agent assigned to execute this task (if assigned).
+   * @property {A2AAgentInfo} [targetAgent]
+   */
+  targetAgent?: A2AAgentInfo;
+  
+  /**
+   * Task priority level.
+   * @property {A2ATaskPriority} priority
+   */
+  priority: A2ATaskPriority;
+  
+  /**
+   * Task execution metadata.
+   * @property {A2ATaskMetadata} metadata
+   */
+  metadata: A2ATaskMetadata;
+  
+  /**
+   * The result of task execution (if completed).
+   * @property {A2ATaskResult} [result]
+   */
+  result?: A2ATaskResult;
+  
+  /**
+   * Callback URL or identifier for task completion notifications.
+   * @property {string} [callbackUrl]
+   */
+  callbackUrl?: string;
+  
+  /**
+   * Dependencies that must be completed before this task can start.
+   * @property {string[]} [dependencies]
+   */
+  dependencies?: string[];
+}
+
+/**
+ * Represents a request to create a new A2A task.
+ *
+ * @interface CreateA2ATaskRequest
+ */
+export interface CreateA2ATaskRequest {
+  /**
+   * The type of task to be executed.
+   * @property {string} taskType
+   */
+  taskType: string;
+  /**
+   * Input data for the task.
+   * @property {any} input
+   */
+  input: any;
+  /**
+   * Instructions for task execution.
+   * @property {string} [instructions]
+   */
+  instructions?: string;
+  /**
+   * Task parameters.
+   * @property {Record<string, any>} [parameters]
+   */
+  parameters?: Record<string, any>;
+  /**
+   * Task priority.
+   * @property {A2ATaskPriority} [priority]
+   */
+  priority?: A2ATaskPriority;
+  /**
+   * Source agent information.
+   * @property {A2AAgentInfo} sourceAgent
+   */
+  sourceAgent: A2AAgentInfo;
+  /**
+   * Preferred target agent (if any).
+   * @property {A2AAgentInfo} [preferredTargetAgent]
+   */
+  preferredTargetAgent?: A2AAgentInfo;
+  /**
+   * Task dependencies.
+   * @property {string[]} [dependencies]
+   */
+  dependencies?: string[];
+  /**
+   * Callback URL for notifications.
+   * @property {string} [callbackUrl]
+   */
+  callbackUrl?: string;
+  /**
+   * Task timeout in milliseconds.
+   * @property {number} [timeoutMs]
+   */
+  timeoutMs?: number;
+  /**
+   * Maximum retry attempts.
+   * @property {number} [maxRetries]
+   */
+  maxRetries?: number;
+  /**
+   * Task tags.
+   * @property {string[]} [tags]
+   */
+  tags?: string[];
+}
+
+/**
+ * Represents an update to an existing A2A task.
+ *
+ * @interface UpdateA2ATaskRequest
+ */
+export interface UpdateA2ATaskRequest {
+  /**
+   * Task ID to update.
+   * @property {string} taskId
+   */
+  taskId: string;
+  /**
+   * New task status (if changing).
+   * @property {A2ATaskStatus} [status]
+   */
+  status?: A2ATaskStatus;
+  /**
+   * Target agent assignment (if assigning/reassigning).
+   * @property {A2AAgentInfo} [targetAgent]
+   */
+  targetAgent?: A2AAgentInfo;
+  /**
+   * Task result (if completing).
+   * @property {A2ATaskResult} [result]
+   */
+  result?: A2ATaskResult;
+  /**
+   * Additional metadata updates.
+   * @property {Partial<A2ATaskMetadata>} [metadata]
+   */
+  metadata?: Partial<A2ATaskMetadata>;
+}
+
+/**
+ * Defines the default identity and high-level guidance for an agent.
+ * This is provided at the instance level and can be overridden by thread or call-specific prompts.
+ *
+ * @interface AgentPersona
+ */
+export interface AgentPersona {
+  /**
+   * The name or identity of the agent (e.g., "Zoi").
+   * This will be used in the synthesis prompt.
+   * @property {string} name
+   */
+  name: string;
+
+  /**
+   * The default system prompt that provides high-level guidance.
+   * This serves as the base layer in the system prompt resolution hierarchy.
+   * @property {string} defaultSystemPrompt
+   */
+  prompts: StageSpecificPrompts;
+}
+
+/**
+ * Defines stage-specific system prompts for planning and synthesis.
+ *
+ * @interface StageSpecificPrompts
+ */
+export interface StageSpecificPrompts {
+  /**
+   * System prompt to guide the planning phase.
+   * Focuses on reasoning, expertise, and tool selection.
+   * @property {string} [planning]
+   */
+  planning?: string;
+
+  /**
+   * System prompt to guide the synthesis phase.
+   * Focuses on tone, formatting, and final response structure.
+   * @property {string} [synthesis]
+   */
+  synthesis?: string;
 }

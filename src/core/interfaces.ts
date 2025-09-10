@@ -21,7 +21,7 @@ import {
   // --- Import new types (Refactor Phase 1) ---
   ArtStandardPrompt,
   // PromptContext, // Removed - No longer used by PromptManager interface
-} from '../types';
+} from '@/types';
 
 // Re-export types that might be needed by implementers of these core interfaces
 export type {
@@ -45,7 +45,7 @@ export type {
   ArtStandardPrompt,
   StreamEvent, // Also re-export StreamEvent as it's used in ReasoningEngine
   LLMMetadata  // Also re-export LLMMetadata
-} from '../types';
+} from '@/types';
 
 
 /**
@@ -80,7 +80,7 @@ export interface ReasoningEngine {
    * @throws {ARTError} If a critical error occurs during the initial call setup or if the stream itself errors out (typically code `LLM_PROVIDER_ERROR`).
    */
   // TODO (Refactor): Update prompt type from FormattedPrompt to FormattedPromptResult['prompt'] in Phase 2
-  call(prompt: import('../types').FormattedPrompt, options: CallOptions): Promise<AsyncIterable<import("../types").StreamEvent>>;
+  call(prompt: import('@/types').FormattedPrompt, options: CallOptions): Promise<AsyncIterable<import("@/types").StreamEvent>>;
 }
 
 // --- PromptManager Interface (Refactor Phase 1) ---
@@ -110,9 +110,36 @@ export interface PromptManager {
      */
     validatePrompt(prompt: ArtStandardPrompt): ArtStandardPrompt;
 
+    /**
+     * Assembles a prompt using a Mustache template (blueprint) and context data.
+     * Renders the template with the provided context and parses the result as an ArtStandardPrompt.
+     *
+     * @param blueprint - The Mustache template containing the prompt structure.
+     * @param context - The context data to inject into the template.
+     * @returns A promise resolving to the assembled ArtStandardPrompt.
+     * @throws {ARTError} If template rendering or JSON parsing fails.
+     */
+    assemblePrompt(blueprint: import('@/types').PromptBlueprint, context: import('@/types').PromptContext): Promise<ArtStandardPrompt>;
+
     // Future methods could include:
     // - loadFragmentsFromDir(directoryPath: string): Promise<void>;
     // - registerFragment(name: string, content: string): void;
+}
+// --- SystemPromptResolver Interface ---
+/**
+ * Resolves the final system prompt from base + instance/thread/call overrides
+ * using tag+variables and merge strategies.
+ */
+export interface SystemPromptResolver {
+  resolve(
+    input: {
+      base: string;
+      instance?: string | import('@/types').SystemPromptOverride;
+      thread?: string | import('@/types').SystemPromptOverride;
+      call?: string | import('@/types').SystemPromptOverride;
+    },
+    traceId?: string
+  ): Promise<string>;
 }
 // --- END PromptManager Interface ---
 
@@ -128,10 +155,25 @@ export interface OutputParser {
    * @returns A promise resolving to an object containing the extracted intent, plan description, and an array of parsed tool calls.
    * @throws {ARTError} If the output cannot be parsed into the expected structure (typically code `OUTPUT_PARSING_FAILED`).
    */
+  /**
+   * Parses the raw planning LLM output into structured fields.
+   *
+   * @remarks
+   * This method should be resilient to provider-specific wrappers and formats.
+   * Implementations MUST attempt JSON-first parsing and then fall back to parsing
+   * labeled sections. Supported fields:
+   * - `title?`: A concise thread title (<= 10 words), derived from the user's intent and context.
+   * - `intent?`: A short summary of the user's goal.
+   * - `plan?`: A human-readable list/description of steps.
+   * - `toolCalls?`: Structured tool call intents parsed from the output.
+   * - `thoughts?`: Aggregated content extracted from <think> tags when present.
+   */
   parsePlanningOutput(output: string): Promise<{
+    title?: string;
     intent?: string;
     plan?: string;
     toolCalls?: ParsedToolCall[];
+    thoughts?: string;
   }>;
 
   /**
@@ -198,6 +240,18 @@ export interface ToolRegistry {
    * @returns A promise resolving to an array of `ToolSchema` objects.
    */
   getAvailableTools(filter?: { enabledForThreadId?: string }): Promise<ToolSchema[]>;
+
+  /**
+   * Unregisters a tool by its unique name.
+   * Implementations should silently succeed if the tool does not exist.
+   */
+  unregisterTool?(toolName: string): Promise<void>;
+
+  /**
+   * Unregisters multiple tools that match a predicate. Returns the number of tools removed.
+   * This is useful for removing all tools belonging to a specific MCP server by name prefix.
+   */
+  unregisterTools?(predicate: (schema: ToolSchema) => boolean): Promise<number>;
 }
 
 /**
@@ -280,6 +334,37 @@ export interface StateManager {
    * @throws {ARTError} If no ThreadConfig exists for the threadId, or if the repository fails.
    */
   setAgentState(threadId: string, state: AgentState): Promise<void>;
+
+  /**
+   * Enables specific tools for a conversation thread by adding them to the thread's enabled tools list.
+   * This method loads the current thread configuration, updates the enabledTools array,
+   * and persists the changes. Cache is invalidated to ensure fresh data on next load.
+   * @param threadId - The unique identifier of the thread.
+   * @param toolNames - Array of tool names to enable for this thread.
+   * @returns A promise that resolves when the tools are enabled and configuration is saved.
+   * @throws {ARTError} If no ThreadConfig exists for the threadId, or if the repository fails.
+   */
+  enableToolsForThread(threadId: string, toolNames: string[]): Promise<void>;
+
+  /**
+   * Disables specific tools for a conversation thread by removing them from the thread's enabled tools list.
+   * This method loads the current thread configuration, updates the enabledTools array,
+   * and persists the changes. Cache is invalidated to ensure fresh data on next load.
+   * @param threadId - The unique identifier of the thread.
+   * @param toolNames - Array of tool names to disable for this thread.
+   * @returns A promise that resolves when the tools are disabled and configuration is saved.
+   * @throws {ARTError} If no ThreadConfig exists for the threadId, or if the repository fails.
+   */
+  disableToolsForThread(threadId: string, toolNames: string[]): Promise<void>;
+
+  /**
+   * Gets the list of currently enabled tools for a specific thread.
+   * This is a convenience method that loads the thread context and returns the enabledTools array.
+   * @param threadId - The unique identifier of the thread.
+   * @returns A promise that resolves to an array of enabled tool names, or empty array if no tools are enabled.
+   * @throws {ARTError} If the thread context cannot be loaded.
+   */
+  getEnabledToolsForThread(threadId: string): Promise<string[]>;
 
   // Potentially add methods to update config/state if needed during runtime,
   // though v0.2.4 focuses on loading existing config.
@@ -384,8 +469,8 @@ export interface ObservationSocket extends ITypedSocket<Observation, Observation
 export interface ConversationSocket extends ITypedSocket<ConversationMessage, MessageRole | MessageRole[]> {}
 
 // Import concrete socket classes for use in the UISystem interface return types
-import { ObservationSocket as ObservationSocketImpl } from '../systems/ui/observation-socket';
-import { ConversationSocket as ConversationSocketImpl } from '../systems/ui/conversation-socket';
+import { ObservationSocket as ObservationSocketImpl } from '@/systems/ui/observation-socket';
+import { ConversationSocket as ConversationSocketImpl } from '@/systems/ui/conversation-socket';
 
 /**
  * Interface for the system providing access to UI communication sockets.
@@ -396,7 +481,9 @@ export interface UISystem {
   /** Returns the singleton instance of the ConversationSocket. */
   getConversationSocket(): ConversationSocketImpl;
   /** Returns the singleton instance of the LLMStreamSocket. */
-  getLLMStreamSocket(): import("../systems/ui/llm-stream-socket").LLMStreamSocket;
+  getLLMStreamSocket(): import("@/systems/ui/llm-stream-socket").LLMStreamSocket;
+  /** Returns the singleton instance of the A2ATaskSocket. */
+  getA2ATaskSocket(): import("@/systems/ui/a2a-task-socket").A2ATaskSocket;
   // TODO: Potentially add getStateSocket(): StateSocket; in the future
 }
 
@@ -473,10 +560,105 @@ export interface IStateRepository {
 }
 
 /**
- * Represents the fully initialized and configured ART Framework client instance.
- * This object is the main entry point for interacting with the framework after setup.
- * It provides access to the core processing method and key subsystems.
+ * Interface for managing A2A (Agent-to-Agent) task persistence and retrieval.
  */
+export interface IA2ATaskRepository {
+  /**
+   * Creates a new A2A task in the repository.
+   * @param task - The A2ATask object to create.
+   * @returns A promise that resolves when the task is successfully stored.
+   * @throws {ARTError} If the task cannot be created (e.g., duplicate taskId, validation errors).
+   */
+  createTask(task: import('@/types').A2ATask): Promise<void>;
+
+  /**
+   * Retrieves an A2A task by its unique identifier.
+   * @param taskId - The unique identifier of the task.
+   * @returns A promise resolving to the A2ATask object if found, or null if not found.
+   * @throws {ARTError} If an error occurs during retrieval.
+   */
+  getTask(taskId: string): Promise<import('@/types').A2ATask | null>;
+
+  /**
+   * Updates an existing A2A task with new information.
+   * @param taskId - The unique identifier of the task to update.
+   * @param updates - Partial A2ATask object containing the fields to update.
+   * @returns A promise that resolves when the task is successfully updated.
+   * @throws {ARTError} If the task is not found or cannot be updated.
+   */
+  updateTask(taskId: string, updates: Partial<import('@/types').A2ATask>): Promise<void>;
+
+  /**
+   * Removes an A2A task from the repository.
+   * @param taskId - The unique identifier of the task to delete.
+   * @returns A promise that resolves when the task is successfully deleted.
+   * @throws {ARTError} If the task is not found or cannot be deleted.
+   */
+  deleteTask(taskId: string): Promise<void>;
+
+  /**
+   * Retrieves tasks associated with a specific thread.
+   * @param threadId - The thread identifier to filter tasks.
+   * @param filter - Optional filter criteria for task status, priority, or assigned agent.
+   * @returns A promise resolving to an array of A2ATask objects matching the criteria.
+   */
+  getTasksByThread(threadId: string, filter?: {
+    status?: import('@/types').A2ATaskStatus | import('@/types').A2ATaskStatus[];
+    priority?: import('@/types').A2ATaskPriority;
+    assignedAgentId?: string;
+  }): Promise<import('@/types').A2ATask[]>;
+
+  /**
+   * Retrieves tasks assigned to a specific agent.
+   * @param agentId - The agent identifier to filter tasks.
+   * @param filter - Optional filter criteria for task status or priority.
+   * @returns A promise resolving to an array of A2ATask objects assigned to the agent.
+   */
+  getTasksByAgent(agentId: string, filter?: {
+    status?: import('@/types').A2ATaskStatus | import('@/types').A2ATaskStatus[];
+    priority?: import('@/types').A2ATaskPriority;
+  }): Promise<import('@/types').A2ATask[]>;
+
+  /**
+   * Retrieves tasks based on their current status.
+   * @param status - The task status(es) to filter by.
+   * @param options - Optional query parameters like limit and pagination.
+   * @returns A promise resolving to an array of A2ATask objects with the specified status.
+   */
+  getTasksByStatus(
+    status: import('@/types').A2ATaskStatus | import('@/types').A2ATaskStatus[],
+    options?: { limit?: number; offset?: number }
+  ): Promise<import('@/types').A2ATask[]>;
+}
+
+/**
+ * Interface for an authentication strategy that can provide authorization headers.
+ * This enables pluggable security for remote service connections (MCP servers, A2A agents, etc.)
+ */
+export interface IAuthStrategy {
+  /**
+   * Asynchronously retrieves the authentication headers.
+   * This might involve checking a cached token, refreshing it if expired, and then returning it.
+   * @returns A promise that resolves to a record of header keys and values.
+   * @throws {ARTError} If authentication fails or cannot be obtained.
+   */
+  getAuthHeaders(): Promise<Record<string, string>>;
+
+  /** Optional: Initiates the login flow for the strategy. */
+  login?(): Promise<void>;
+
+  /** Optional: Handles the redirect from the authentication server. */
+  handleRedirect?(): Promise<void>;
+
+  /** Optional: Logs the user out. */
+  logout?(): void;
+
+  /** Optional: Checks if the user is authenticated. */
+  isAuthenticated?(): Promise<boolean>;
+}
+
+import { AuthManager } from '@/systems/auth/AuthManager';
+
 export interface ArtInstance {
     /** The main method to process a user query using the configured Agent Core. */
     readonly process: IAgentCore['process'];
@@ -490,6 +672,8 @@ export interface ArtInstance {
     readonly toolRegistry: ToolRegistry;
     /** Accessor for the Observation Manager, used for recording and retrieving observations. */
     readonly observationManager: ObservationManager;
+    /** Accessor for the Auth Manager, used for handling authentication. */
+    readonly authManager?: AuthManager | null;
     // Note: Direct access to other internal components like ReasoningEngine or StorageAdapter
     // is typically discouraged; interaction should primarily happen via the managers and process method.
 }

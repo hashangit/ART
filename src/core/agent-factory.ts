@@ -5,6 +5,7 @@ import {
     IConversationRepository,
     IObservationRepository,
     IStateRepository,
+    IA2ATaskRepository,
     ConversationManager,
     StateManager,
     ObservationManager,
@@ -18,45 +19,52 @@ import {
     ToolSystem,
     UISystem
     // Removed ObservationSocket, ConversationSocket interface imports
-} from './interfaces';
-import { IProviderManager } from '../types/providers'; // Corrected path
+} from '@/core/interfaces';
+import { IProviderManager } from '@/types/providers'; // Corrected path
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { ProviderManagerConfig } from '../types/providers'; // type-only import
+import type { ProviderManagerConfig } from '@/types/providers'; // type-only import
 // Import ArtInstanceConfig and StateSavingStrategy
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { ArtInstanceConfig } from '../types'; // type-only import
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { StateSavingStrategy } from '../types'; // type-only import
-import { ProviderManagerImpl } from '../providers/ProviderManagerImpl'; // Corrected path
-import { PESAgent } from './agents/pes-agent';
+import { ArtInstanceConfig, StateSavingStrategy } from '@/types';
+import { ProviderManagerImpl } from '@/systems/reasoning/ProviderManagerImpl'; // Corrected path
+import { PESAgent } from '@/core/agents/pes-agent';
 
 // Import concrete implementations (assuming paths)
 // Storage Adapters
-import { InMemoryStorageAdapter } from '../adapters/storage/inMemory'; // Corrected path
-import { IndexedDBStorageAdapter } from '../adapters/storage/indexedDB'; // Corrected path
+import { InMemoryStorageAdapter } from '@/integrations/storage/inMemory'; // Corrected path
+import { IndexedDBStorageAdapter } from '@/integrations/storage/indexedDB'; // Corrected path
 // Repositories
-import { ConversationRepository } from '../systems/context/repositories/ConversationRepository'; // Corrected path
-import { ObservationRepository } from '../systems/context/repositories/ObservationRepository'; // Corrected path - Moved from observation system
-import { StateRepository } from '../systems/context/repositories/StateRepository'; // Corrected path
+import { ConversationRepository } from '@/systems/context/repositories/ConversationRepository'; // Corrected path
+import { ObservationRepository } from '@/systems/context/repositories/ObservationRepository'; // Corrected path - Moved from observation system
+import { StateRepository } from '@/systems/context/repositories/StateRepository'; // Corrected path
+import { TaskStatusRepository } from '@/systems/context/repositories/TaskStatusRepository'; // A2A task repository
 // Managers
-import { ConversationManager as ConversationManagerImpl } from '../systems/context/managers/ConversationManager'; // Corrected path
-import { StateManager as StateManagerImpl } from '../systems/context/managers/StateManager'; // Corrected path
-import { ObservationManager as ObservationManagerImpl } from '../systems/observation/observation-manager'; // Correct path
+import { ConversationManager as ConversationManagerImpl } from '@/systems/context/managers/ConversationManager'; // Corrected path
+import { StateManager as StateManagerImpl } from '@/systems/context/managers/StateManager'; // Corrected path
+import { ObservationManager as ObservationManagerImpl } from '@/systems/observation/observation-manager'; // Correct path
 // Tool System
-import { ToolRegistry as ToolRegistryImpl } from '../systems/tool/ToolRegistry'; // Correct path
-import { ToolSystem as ToolSystemImpl } from '../systems/tool/ToolSystem'; // Correct path
+import { ToolRegistry as ToolRegistryImpl } from '@/systems/tool/ToolRegistry'; // Correct path
+import { ToolSystem as ToolSystemImpl } from '@/systems/tool/ToolSystem'; // Correct path
 // Reasoning System
-import { PromptManager as PromptManagerImpl } from '../systems/reasoning/PromptManager'; // Correct path
-import { ReasoningEngine as ReasoningEngineImpl } from '../systems/reasoning/ReasoningEngine'; // Correct path
-import { OutputParser as OutputParserImpl } from '../systems/reasoning/OutputParser'; // Correct path
+import { PromptManager as PromptManagerImpl } from '@/systems/reasoning/PromptManager'; // Correct path
+import { SystemPromptResolver as SystemPromptResolverImpl } from '@/systems/reasoning/SystemPromptResolver';
+import { ReasoningEngine as ReasoningEngineImpl } from '@/systems/reasoning/ReasoningEngine'; // Correct path
+import { OutputParser as OutputParserImpl } from '@/systems/reasoning/OutputParser'; // Correct path
 // Provider Adapters are now managed by ProviderManagerImpl
 // UI System
-import { UISystem as UISystemImpl } from '../systems/ui/ui-system'; // Correct path
+import { UISystem as UISystemImpl } from '@/systems/ui/ui-system'; // Correct path
+// Auth and MCP Systems
+import { AuthManager } from '@/systems/auth/AuthManager'; // Import AuthManager
+import { McpManager } from '@/systems/mcp/McpManager'; // Import McpManager
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { McpManagerConfig } from '@/systems/mcp/types'; // type-only import for McpManagerConfig
+import { AgentDiscoveryService } from '@/systems/a2a/AgentDiscoveryService';
+import { TaskDelegationService } from '@/systems/a2a/TaskDelegationService';
 // Removed direct imports of concrete socket classes - they will be accessed via UISystem instance
 // Removed unused type imports: Observation, ConversationMessage, ObservationType, MessageRole
-import { Logger } from '../utils/logger'; // Import Logger
+import { Logger } from '@/utils/logger'; // Import Logger
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { LogLevel } from '../utils/logger'; // type-only import
+import type { LogLevel } from '@/utils/logger'; // type-only import
 
 
 /**
@@ -121,6 +129,7 @@ export class AgentFactory {
     private conversationRepository: IConversationRepository | null = null;
     private observationRepository: IObservationRepository | null = null;
     private stateRepository: IStateRepository | null = null;
+    private a2aTaskRepository: IA2ATaskRepository | null = null;
     private conversationManager: ConversationManager | null = null;
     private stateManager: StateManager | null = null;
     private observationManager: ObservationManager | null = null;
@@ -130,7 +139,12 @@ export class AgentFactory {
     private reasoningEngine: ReasoningEngine | null = null;
     private promptManager: PromptManager | null = null;
     private outputParser: OutputParser | null = null;
+    private systemPromptResolver: any | null = null;
     private toolSystem: ToolSystem | null = null;
+    private authManager: AuthManager | null = null;
+    private mcpManager: McpManager | null = null;
+    private agentDiscoveryService: AgentDiscoveryService | null = null;
+    private taskDelegationService: TaskDelegationService | null = null;
 
 
     /**
@@ -160,7 +174,7 @@ export class AgentFactory {
                 case 'indexedDB':
                     this.storageAdapter = new IndexedDBStorageAdapter({
                         dbName: storageConfig.dbName || 'ARTDB',
-                        objectStores: storageConfig.objectStores || ['conversations', 'observations', 'state']
+                        objectStores: storageConfig.objectStores || ['conversations', 'observations', 'state', 'a2a_tasks']
                     });
                     break;
                 case 'memory':
@@ -178,10 +192,11 @@ export class AgentFactory {
         this.conversationRepository = new ConversationRepository(this.storageAdapter!);
         this.observationRepository = new ObservationRepository(this.storageAdapter!);
         this.stateRepository = new StateRepository(this.storageAdapter!);
+        this.a2aTaskRepository = new TaskStatusRepository(this.storageAdapter!);
 
         // --- Initialize UI System ---
         // UISystem constructor expects repositories, not sockets
-        this.uiSystem = new UISystemImpl(this.observationRepository!, this.conversationRepository!); // Pass repositories
+        this.uiSystem = new UISystemImpl(this.observationRepository!, this.conversationRepository!, this.a2aTaskRepository || undefined); // Pass repositories including A2A task repository
 
         // --- Initialize Managers ---
         // Pass the actual socket instances obtained from the initialized uiSystem
@@ -213,11 +228,54 @@ export class AgentFactory {
         // --- Initialize Reasoning Components ---
         this.reasoningEngine = new ReasoningEngineImpl(this.providerManager!); // Pass ProviderManager
         this.promptManager = new PromptManagerImpl(); // Basic implementation for now
+        // Initialize SystemPromptResolver with registry from config if provided
+        const registry = (this.config as any).systemPrompts as import('../types').SystemPromptsRegistry | undefined;
+        this.systemPromptResolver = new SystemPromptResolverImpl(this.promptManager as any, registry);
         this.outputParser = new OutputParserImpl(); // Basic implementation for now
 
         // --- Initialize Tool System ---
         // Inject ToolRegistry, StateManager, and ObservationManager into ToolSystem
         this.toolSystem = new ToolSystemImpl(this.toolRegistry!, this.stateManager!, this.observationManager!); // Added observationManager
+
+        // --- Initialize Auth Manager ---
+        if (this.config.authConfig?.enabled) {
+            this.authManager = new AuthManager();
+            // Register any pre-configured strategies
+            if (this.config.authConfig.strategies) {
+                for (const { id, strategy } of this.config.authConfig.strategies) {
+                    this.authManager.registerStrategy(id, strategy);
+                }
+            }
+            Logger.info("AuthManager initialized.");
+        }
+
+        // --- Initialize A2A Services ---
+        if (this.config.a2aConfig) {
+            this.agentDiscoveryService = new AgentDiscoveryService({
+                discoveryEndpoint: this.config.a2aConfig.discoveryEndpoint,
+            });
+            this.taskDelegationService = new TaskDelegationService(
+                this.a2aTaskRepository!,
+                { callbackUrl: this.config.a2aConfig.callbackUrl }
+            );
+            Logger.info("A2A Services (Discovery, Delegation) initialized.");
+        }
+
+        // --- Initialize MCP Manager ---
+        if (this.config.mcpConfig) {
+            if (!this.toolRegistry || !this.stateManager) {
+                throw new Error("MCP Manager requires ToolRegistry and StateManager to be initialized first.");
+            }
+            // McpManager now reads its own config from the file system and discovers from Zyntopia.
+            this.mcpManager = new McpManager(
+                this.toolRegistry,
+                this.stateManager,
+                this.authManager || undefined
+            );
+            // Initialize with both local config and Zyntopia discovery
+            await this.mcpManager.initialize(this.config.mcpConfig);
+            Logger.info("McpManager Hub initialized with local config and Zyntopia discovery.");
+        }
     }
 
     /**
@@ -231,7 +289,8 @@ export class AgentFactory {
         // Check for all required components after initialization
         if (!this.stateManager || !this.conversationManager || !this.toolRegistry ||
             !this.promptManager || !this.reasoningEngine || !this.outputParser ||
-            !this.observationManager || !this.toolSystem || !this.providerManager) { // Check providerManager
+            !this.observationManager || !this.toolSystem || !this.providerManager ||
+            !this.a2aTaskRepository) { // Check A2A task repository
             throw new Error("AgentFactory not fully initialized. Call initialize() before creating an agent.");
         }
 
@@ -247,7 +306,13 @@ export class AgentFactory {
             observationManager: this.observationManager,
             toolSystem: this.toolSystem,
             uiSystem: this.uiSystem!, // Include the UI System (non-null assertion)
-            instanceDefaultCustomSystemPrompt: this.config.defaultSystemPrompt, // Pass instance-level default system prompt from ArtInstanceConfig
+            systemPromptResolver: this.systemPromptResolver,
+            a2aTaskRepository: this.a2aTaskRepository, // Include A2A task repository
+            authManager: this.authManager, // Include Auth Manager (may be null if not configured)
+            mcpManager: this.mcpManager, // Include MCP Manager (may be null if not configured)
+            agentDiscoveryService: this.agentDiscoveryService, // Include A2A Discovery Service
+            taskDelegationService: this.taskDelegationService, // Include A2A Delegation Service
+            persona: this.config.persona, // Pass the persona from the main config
             // Note: providerAdapter is used by reasoningEngine, not directly by agent core usually
         };
 
@@ -270,11 +335,15 @@ export class AgentFactory {
     getConversationManager(): ConversationManager | null { return this.conversationManager; }
     /** Gets the initialized Observation Manager instance. */
     getObservationManager(): ObservationManager | null { return this.observationManager; }
+    /** Gets the initialized Auth Manager instance. */
+    getAuthManager(): AuthManager | null { return this.authManager; }
+    /** Gets the initialized MCP Manager instance. */
+    getMcpManager(): McpManager | null { return this.mcpManager; }
     // Add getters for other components like reasoningEngine, toolSystem if needed
 }
 
 // --- Convenience Factory Function ---
-import { ArtInstance } from './interfaces'; // Import the new interface
+import { ArtInstance } from '@/core/interfaces'; // Import the new interface
 
 /**
  * High-level factory function to create and initialize a complete ART framework instance.
@@ -302,6 +371,7 @@ export async function createArtInstance(config: ArtInstanceConfig): Promise<ArtI
     const conversationManager = factory.getConversationManager(); // Assuming getter exists
     const toolRegistry = factory.getToolRegistry(); // Assuming getter exists
     const observationManager = factory.getObservationManager(); // Assuming getter exists
+    const authManager = factory.getAuthManager();
 
     // Ensure all required components were initialized
     if (!uiSystem || !stateManager || !conversationManager || !toolRegistry || !observationManager) {
@@ -315,5 +385,6 @@ export async function createArtInstance(config: ArtInstanceConfig): Promise<ArtI
         conversationManager: conversationManager,
         toolRegistry: toolRegistry,
         observationManager: observationManager,
+        authManager: authManager,
     };
 }

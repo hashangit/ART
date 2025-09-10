@@ -1,44 +1,53 @@
-﻿# ✨ ART: Agent Runtime Framework <img src="https://img.shields.io/badge/Version-v0.2.8-blue" alt="Version 0.2.8">
+﻿
 
-**ART is a powerful, modular, and browser-first JavaScript/TypeScript framework for building sophisticated LLM-powered intelligent agents capable of complex reasoning, planning, and tool usage.**
+# ✨ ART: Agentic Runtime Framework <img src="https://img.shields.io/badge/Version-v0.3.7-blue" alt="Version 0.3.7">
 
-It provides the building blocks for sophisticated agent systems that can run entirely client-side, emphasizing privacy, offline capability, and observability, while also supporting server integration.
+<p align="center">
+  <img src="docs/art-logo.jpeg" alt="ART Framework Logo" width="200"/>
+</p>
+
+**ART is a powerful, modular, and browser-first TypeScript framework for building sophisticated LLM-powered agents capable of complex reasoning, planning, and tool usage.**
+
+It provides the building blocks for creating robust agentic systems that can run entirely client-side, emphasizing user privacy, offline capability, and deep observability, while also supporting server-side deployments.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 
 [![Sponsor on Patreon](https://img.shields.io/badge/Sponsor%20on-Patreon-F96854?logo=patreon&style=flat)](https://www.patreon.com/HashanWickramasinghe)
-<!-- Add other relevant badges here -->
 
 ## Overview
 
-Existing agent frameworks often require server-side components, limiting their use in purely web-based applications where privacy or offline capabilities are crucial. ART addresses this by offering a comprehensive, standalone toolkit designed for the browser environment, leveraging WebAssembly (WASM) where feasible for local processing (LLMs, vector stores) and providing robust components for building production-ready agents.
+Existing agent frameworks often rely on server-side components, limiting their use in web applications where user privacy or offline functionality is critical. ART is engineered to address this gap by providing a comprehensive, standalone toolkit designed for the browser, while remaining powerful enough for server-side execution.
 
 **Core Goals:**
-*   **Browser-First:** Enable complex agent logic directly in the user's browser.
-*   **Modularity:** Offer distinct, replaceable components (storage, providers, agent logic).
-*   **Observability:** Provide deep insights into the agent's internal workings.
-*   **Developer Experience:** Offer a layered approach, simple for basic use, powerful for advanced customization.
-
-**Target Audience:** Web developers (JavaScript/TypeScript) building applications requiring agentic capabilities (chatbots, assistants, automation tools) directly within the browser, ranging from simple integrations to complex, custom agent behaviors.
+*   **Browser-First:** Enable complex agent logic to run directly in the user's browser, enhancing privacy and reducing server costs.
+*   **Modularity:** Offer distinct, replaceable components for storage, reasoning, and tools.
+*   **Observability:** Provide deep, real-time insights into the agent's internal thought process.
+*   **Developer Experience:** Deliver a layered API that is simple for basic use cases yet powerful enough for advanced customization.
 
 ## Key Features
 
-*   **Browser-First Design:** Built to run fully in the browser, enabling privacy-preserving and offline-capable applications (when used with local models/WASM).
-*   **Modular Architecture:** Comprises specialized subsystems with clear boundaries, enabling mix-and-match capabilities and easy extension. (See Architecture below).
-*   **Decoupled Orchestration:** Agent reasoning patterns (like Plan-Execute-Synthesize) are decoupled from execution mechanics, allowing patterns to be swapped or customized.
-*   **Real-time Streaming:** Natively supports streaming LLM responses for interactive, real-time user experiences.
-*   **Flexible Prompt Management:** Advanced system using blueprints and dynamic context injection for fine-grained control over prompt construction.
-*   **Dynamic Provider Management:** Centralized `ProviderManager` allows runtime selection and configuration of multiple LLM providers (OpenAI, Anthropic, Gemini, DeepSeek, OpenRouter, local models via adapters).
-*   **Flexible State Management:** Pluggable `StorageAdapter` interface allows integration with various storage backends (IndexedDB, server APIs, custom solutions).
-*   **Rich Observability:** Detailed, typed `Observation` system provides transparent insights into agent operations for debugging, monitoring, and visualization.
-*   **Robust Tool Integration:** Schema-driven tool system (Schema-Registry-Executor) with validation and secure execution.
-*   **Flexible UI Integration:** Typed socket system (publish/subscribe) for reactive UI updates with fine-grained filtering.
-*   **Multiple Reasoning Patterns:** Supports Plan-Execute-Synthesize (PES) as default, with the ability to implement and integrate custom patterns like ReAct, Chain of Thought (CoT), etc.
+#### Reasoning & Orchestration
+*   **Swappable Agent Cores:** Start with the default Plan-Execute-Synthesize (`PESAgent`) pattern and seamlessly switch to or create custom reasoning patterns (e.g., ReAct, Chain of Thought).
+*   **Streaming-First:** Native support for streaming LLM responses, enabling real-time, interactive user experiences.
+*   **Dynamic Prompt Management:** A powerful system for constructing prompts from blueprints with dynamic context injection.
+*   **Agent Persona Customization:** Easily define your agent's identity and default system prompt through a simple configuration object.
+*   **Rich Observability:** A detailed, typed `Observation` system provides transparent insights into every step of an agent's operation for debugging, monitoring, and visualization.
+
+#### Connectivity & Data
+*   **Multi-Provider Support:** A centralized `ProviderManager` allows runtime selection and configuration of multiple LLM providers (OpenAI, Anthropic, Gemini, OpenRouter, and local models via Ollama).
+*   **Pluggable Storage:** A flexible `StorageAdapter` interface allows easy integration with any storage backend (default support for IndexedDB, InMemory, and Supabase).
+*   **Schema-Driven Tooling:** A robust tool integration system with automatic schema validation and secure execution.
+*   **Dynamic Tool Loading (MCP):** Support for the Model Context Protocol (MCP) enables agents to dynamically discover and use tools from compliant external servers.
+
+#### Developer Experience
+*   **Browser-First Design:** Built to run fully in the browser, enabling privacy-preserving and offline-capable applications.
+*   **Flexible UI Integration:** A typed, publish/subscribe socket system allows for reactive UI updates with fine-grained event filtering.
+*   **TypeScript-Native:** Engineered from the ground up with TypeScript for a robust, type-safe development experience.
 
 ## Architecture: The 3 Nodes
 
-ART's architecture can be understood as three interconnected nodes:
+ART's architecture is best understood as three interconnected nodes:
 
 ```mermaid
 flowchart LR
@@ -48,113 +57,115 @@ flowchart LR
     B -- Streams Results/Updates --> A
 ```
 
-*   **Node 1: Developer Interface (Your Code & Config):** This is where you interact with ART. You use `createArtInstance` to configure the framework, selecting your desired agent core (e.g., `PESAgent`), storage adapter, provider configurations, and tools. You then interact with the created `ArtInstance` (e.g., calling `art.process()`).
-*   **Node 2: ART Core Orchestration (The Framework's Brain):** This is the internal engine that manages the agent's execution flow based on your configuration. It handles state management (via `StateManager` & `ConversationManager`), interacts with LLMs (via `ProviderManager` & `ReasoningEngine`), manages prompt construction (`PromptManager`), executes tools (`ToolSystem`), logs events (`ObservationManager`), and broadcasts updates for the UI (`UISystem`). The selected `Agent Core` (e.g., `PESAgent`) dictates the high-level reasoning pattern used here.
-*   **Node 3: External Dependencies & Interactions (The Outside World):** This node represents the external services and logic ART connects to. This includes:
-    *   **LLM Providers:** APIs (OpenAI, Anthropic, etc.) or local models accessed via specific `ProviderAdapter` implementations managed by the `ProviderManager`.
-    *   **Tools:** Your custom tool logic, implemented according to the `IToolExecutor` interface and managed by the `ToolSystem`.
-    *   **Storage:** Databases, browser storage (like IndexedDB), or remote APIs accessed via a `StorageAdapter`.
-
-*(For more details, see the [Comprehensive Developer Guide](link/to/ART-Guide.html) or the [Architecture Overview Section](link/to/ART-Guide.html#architecture))*
+*   **Node 1: Developer Interface (Your Code & Config):** This is your interaction point with ART. You use `createArtInstance` to configure the framework, selecting your storage, LLM providers, and tools. You then invoke the agent via the `art.process()` method.
+*   **Node 2: ART Core Orchestration (The Framework's Brain):** This is the internal engine that manages the agent's lifecycle. It orchestrates state, reasons with LLMs, constructs prompts, executes tools, and broadcasts updates to your UI. The selected `Agent Core` (e.g., `PESAgent`) dictates the high-level reasoning strategy used here.
+*   **Node 3: External Dependencies & Interactions (The Outside World):** This node represents the external services ART connects to. This includes LLM APIs (like OpenAI), your custom tool logic, and storage backends (like IndexedDB or a remote database).
 
 ## Installation
 
 ```bash
 npm install art-framework
 # or
+pnpm install art-framework
+# or
 yarn add art-framework
 ```
 
 ## Quick Start
 
-This example demonstrates setting up a simple agent using the `PESAgent`, persisting history in `IndexedDB`, and configuring the `OpenAIAdapter` via the `ProviderManager`.
+This example demonstrates setting up a simple agent that uses OpenAI and runs in-memory. For a complete example with all configurations, see the [Comprehensive Developer Guide](./docs/README.md).
 
 ```typescript
-import {
-    createArtInstance,
-    PESAgent,                 // Default Agent Core
-    IndexedDBStorageAdapter,  // Browser-persistent storage
-    OpenAIAdapter,            // OpenAI Provider Adapter
-    ProviderManagerConfig,    // Type for configuring providers
-    RuntimeProviderConfig,    // Type for runtime provider settings
-    // Import any tools you want to use, e.g.: import { YourTool } from './your-tool';
+import { 
+  createArtInstance, 
+  ArtInstanceConfig, 
+  ThreadConfig,
+  CalculatorTool,
+  OpenAIAdapter, 
+  GeminiAdapter 
 } from 'art-framework';
 
-async function runSimpleAgent() {
-    // 1. Define Provider Configuration for the ProviderManager
-    const providerConfig: ProviderManagerConfig = {
-        availableProviders: [
-            {
-                name: 'openai',           // Unique name for this provider config
-                adapter: OpenAIAdapter,   // The adapter class
-                // Default options for this adapter (can be overridden at runtime)
-                defaultOptions: { /* e.g., specific parameters if needed */ }
-            }
-            // Add other providers like GeminiAdapter, AnthropicAdapter here
-            // { name: 'gemini', adapter: GeminiAdapter }
-        ]
-        // Optional global settings like rate limits can be defined here
-    };
+// --- 1. Configure the ART Instance ---
+// Note: No API keys or secrets are present here.
 
-    // 2. Configure and create the ART instance
-    const art = await createArtInstance({
-        agentCore: PESAgent,                                         // Use the Plan-Execute-Synthesize agent
-        storage: new IndexedDBStorageAdapter({ dbName: 'artQuickstartHistory' }), // Use IndexedDB for storage
-        providers: providerConfig,                                   // Pass the provider manager config
-        // tools: [new YourTool()],                                  // Register any tools here
-    });
-
-    // 3. Define a unique thread ID for the conversation
-    const threadId = 'quickstart-thread-' + Date.now();
-
-    // 4. Set the runtime provider configuration for this specific thread
-    // This tells ART which provider and model to use for this conversation.
-    const runtimeConfig: RuntimeProviderConfig = {
-        providerName: 'openai', // Use the 'openai' provider defined above
-        modelId: 'gpt-4o-mini',   // Specify the desired model
-        adapterOptions: {       // Pass API key securely (use env vars in production)
-            apiKey: 'YOUR_OPENAI_API_KEY'
-        }
-    };
-    await art.stateManager.setThreadConfigValue(threadId, 'runtimeProviderConfig', runtimeConfig);
-
-    console.log(`Starting agent process for thread: ${threadId}`);
-
-    try {
-        // 5. Process a user query
-        // The agent core will automatically load the runtimeProviderConfig from the thread's state.
-        const result = await art.process({
-            query: "What is the capital of France and what is its population?",
-            threadId: threadId,
-            // Optional: userId, sessionId, traceId for tracking
-            // Optional: configOverrides to temporarily change config for this call
-        });
-
-        // 6. Log the result
-        console.log("Agent Response Text:", result.responseText); // Direct access to the final text response
-        console.log("Full Result:", result); // Explore the full result object (metadata, observations, etc.)
-
-    } catch (error) {
-        console.error("Agent processing failed:", error);
+const artConfig: ArtInstanceConfig = {
+  storage: { 
+    type: 'indexedDB', 
+    dbName: 'MyCorrectChatDB'
+  },
+  providers: {
+    availableProviders: [
+      { name: 'openai', adapter: OpenAIAdapter },
+      { name: 'gemini', adapter: GeminiAdapter }
+    ]
+  },
+  tools: [new CalculatorTool()],
+  persona: {
+    name: 'ConfigExpert',
+    prompts: {
+      synthesis: 'You explain configurations clearly.'
     }
+  },
+  logger: { level: 'info' }
+};
+
+
+// --- 2. Main Application Logic ---
+
+async function initializeAndRun() {
+  // Create the ART instance with the high-level configuration.
+  const art = await createArtInstance(artConfig);
+  console.log('ART Instance Initialized.');
+
+  // --- 3. Set Up a New Conversation Thread ---
+  const threadId = 'user-123-session-1';
+
+  // Create the thread-specific configuration.
+  // THIS is where you specify the provider, model, and API key.
+  const threadConfig: ThreadConfig = {
+    providerConfig: {
+      providerName: 'openai', // Must match a name from availableProviders
+      modelId: 'gpt-4o',
+      adapterOptions: {
+        apiKey: 'sk-your-real-openai-api-key', // Securely provide your API key here
+        temperature: 0.7
+      }
+    },
+    // Other thread settings
+    enabledTools: ['CalculatorTool'],
+    historyLimit: 20
+  };
+
+  // Save this configuration for the new thread.
+  // This step is crucial and must be done before the first `process` call.
+  await art.stateManager.setThreadConfig(threadId, threadConfig);
+  console.log(`ThreadConfig set for threadId: ${threadId}`);
+  
+  // Now the ART instance is ready to process requests for this thread.
+  console.log('Sending first message...');
+  const response = await art.process({
+    query: 'What is 2 + 2?',
+    threadId: threadId
+  });
+
+  console.log('Final response:', response.response.content);
 }
 
-runSimpleAgent();
+initializeAndRun().catch(console.error);
 ```
 
-*(Note: Replace `'YOUR_OPENAI_API_KEY'` with your actual key, preferably loaded from environment variables in a real application. This example uses `IndexedDBStorageAdapter` for browser-based persistence and the new `ProviderManager` system.)*
+*(Note: Replace `'YOUR_OPENAI_API_KEY'` with your actual key. In a real application, load this from a secure source like environment variables or a secrets manager.)*
 
 ## Documentation
 
-*   **[Comprehensive Developer Guide](link/to/ART-Guide.html):** The primary guide covering concepts, architecture, scenarios, and API usage. **(Start Here!)**
-*   **[Core Concepts](link/to/ART-Guide.html#core-concepts):** Understand fundamental ideas like Threads, Observations, Adapters, and Sockets within the main guide.
-*   **[Architecture Overview](link/to/ART-Guide.html#architecture):** Learn about the 3-node architecture and design principles in the main guide.
-*   **[Usage Scenarios / Tutorials](link/to/ART-Guide.html#scenarios):** Step-by-step examples for common tasks (Chatbot, Custom Tools, Custom Adapters).
-*   **[API Reference](Docs/API/):** (Coming Soon) Auto-generated API documentation.
+*   **[Comprehensive Developer Guide](docs/README.md):** The primary guide covering concepts, architecture, and API usage. **(Start Here!)**
+*   **[How-To Guides](./docs/how-to):** Practical guides for specific tasks, such as [Customizing the Agent's Persona](./docs/how-to/customizing-agent-persona.md).
+*   **[API Reference](./docs/components):** Auto-generated API documentation.
+*   **[Examples](./examples):** Find practical examples, including a full React chatbot implementation.
 
 ## Contributing
 
-Contributions are welcome! Please refer to the Contributing Guide (TODO: Create and Link Contributing.md) for details on how to submit issues, feature requests, and pull requests.
+Contributions are welcome! Please refer to the [Contributing Guide](./CONTRIBUTING.md) for details on how to submit issues, feature requests, and pull requests.
 
 ## License
 

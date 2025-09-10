@@ -1,10 +1,10 @@
 // src/systems/ui/llm-stream-socket.ts
 import { TypedSocket } from './typed-socket';
-import { StreamEvent } from '../../types';
-import { Logger } from '../../utils/logger';
+import { StreamEvent } from '@/types';
+import { Logger } from '@/utils/logger';
 
 // Define the type for the filter used in this specific socket
-type StreamEventTypeFilter = StreamEvent['type'] | Array<StreamEvent['type']>;
+export type StreamEventTypeFilter = StreamEvent['type'] | Array<StreamEvent['type']>;
 
 /**
  * A dedicated socket for broadcasting LLM stream events (`StreamEvent`) to UI subscribers.

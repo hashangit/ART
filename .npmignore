@@ -1,0 +1,17 @@
+node_modules/
+src/
+examples/
+docs/
+playwright.config.ts
+tsconfig.json
+tsup.config.ts
+typedoc.json
+CONTRIBUTING.md
+.gitignore
+.github/
+.roo/
+.env
+.env.example
+.prettierrc
+.roomodes
+

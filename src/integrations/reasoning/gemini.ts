@@ -1,0 +1,462 @@
+// src/adapters/reasoning/gemini.ts
+// Use correct import based on documentation for @google/genai
+import { GoogleGenAI, Content, Part, GenerationConfig, GenerateContentResponse } from "@google/genai"; // Import SDK components
+import { ProviderAdapter } from '@/core/interfaces';
+import {
+  ArtStandardPrompt, // Use the new standard type
+  // ArtStandardMessage, // Removed unused import
+  // ArtStandardMessageRole, // Removed unused import
+  CallOptions,
+  StreamEvent,
+  LLMMetadata,
+  // Removed ConversationMessage, MessageRole as they are replaced by ArtStandard types for input
+} from '@/types';
+import { Logger } from '@/utils/logger';
+import { ARTError, ErrorCode } from '@/errors'; // Import ARTError and ErrorCode
+
+// Define expected options for the Gemini adapter constructor
+/**
+ * Configuration options required for the `GeminiAdapter`.
+ */
+export interface GeminiAdapterOptions {
+  /** Your Google AI API key (e.g., from Google AI Studio). Handle securely. */
+  apiKey: string;
+  /** The default Gemini model ID to use (e.g., 'gemini-1.5-flash-latest', 'gemini-pro'). Defaults to 'gemini-1.5-flash-latest' if not provided. */
+  model?: string;
+  /** Optional: Override the base URL for the Google Generative AI API. */
+  apiBaseUrl?: string; // Note: Not directly used by SDK basic setup
+  /** Optional: Specify the API version to use (e.g., 'v1beta'). Defaults to 'v1beta'. */
+  apiVersion?: string; // Note: Not directly used by SDK basic setup
+}
+
+
+export class GeminiAdapter implements ProviderAdapter {
+  readonly providerName = 'gemini';
+  private apiKey: string;
+  private defaultModel: string; // Renamed for clarity
+  private genAI: GoogleGenAI; // Stores the initialized GoogleGenAI SDK instance.
+
+  /**
+   * Creates an instance of GeminiAdapter.
+   * @param {GeminiAdapterOptions} options - Configuration options for the adapter.
+   * @throws {Error} If `apiKey` is missing in the options.
+   * @see https://ai.google.dev/api/rest
+   */
+  constructor(options: GeminiAdapterOptions) {
+    if (!options.apiKey) {
+      throw new Error('GeminiAdapter requires an apiKey in options.');
+    }
+    this.apiKey = options.apiKey;
+    this.defaultModel = options.model || 'gemini-1.5-flash-latest'; // Use a common default like flash
+    // Initialize the SDK
+    // Use correct constructor based on documentation
+    this.genAI = new GoogleGenAI({ apiKey: this.apiKey });
+    // Note: apiBaseUrl and apiVersion from options are not directly used by the SDK in this basic setup.
+    // Advanced SDK configuration might allow proxies if needed.
+    Logger.debug(`GeminiAdapter initialized with default model: ${this.defaultModel}`);
+  }
+
+  /**
+   * Makes a call to the configured Gemini model.
+   * Translates the `ArtStandardPrompt` into the Gemini API format, sends the request
+   * using the `@google/genai` SDK, and yields `StreamEvent` objects representing
+   * the response (tokens, metadata, errors, end signal).
+   *
+   * Handles both streaming and non-streaming requests based on `options.stream`.
+   *
+   * Thinking tokens (Gemini):
+   * - On supported Gemini models (e.g., `gemini-2.5-*`), you can enable thought output via `config.thinkingConfig`.
+   * - This adapter reads provider-specific flags from the call options:
+   *   - `options.gemini.thinking.includeThoughts: boolean` — when `true`, requests thought (reasoning) output.
+   *   - `options.gemini.thinking.thinkingBudget?: number` — optional token budget for thinking.
+   * - When enabled and supported, the adapter will attempt to differentiate thought vs response parts and set
+   *   `StreamEvent.tokenType` accordingly:
+   *   - For planning calls (`callContext === 'AGENT_THOUGHT'`): `AGENT_THOUGHT_LLM_THINKING` or `AGENT_THOUGHT_LLM_RESPONSE`.
+   *   - For synthesis calls (`callContext === 'FINAL_SYNTHESIS'`): `FINAL_SYNTHESIS_LLM_THINKING` or `FINAL_SYNTHESIS_LLM_RESPONSE`.
+   * - `LLMMetadata.thinkingTokens` will be populated if the provider reports separate thinking token usage.
+   * - If the SDK/model does not expose thought parts, the adapter falls back to labeling tokens as `...LLM_RESPONSE`.
+   *
+   * @param {ArtStandardPrompt} prompt - The standardized prompt messages.
+   * @param {CallOptions} options - Options for the LLM call, including streaming preference, model override, and execution context.
+   * @returns {Promise<AsyncIterable<StreamEvent>>} An async iterable that yields `StreamEvent` objects.
+   *   - `TOKEN`: Contains a chunk of the response text. `tokenType` indicates if it's part of agent thought or final synthesis.
+   *             When Gemini thinking is enabled and available, `tokenType` may be one of the `...LLM_THINKING` or
+   *             `...LLM_RESPONSE` variants to separate thought vs response tokens.
+   *   - `METADATA`: Contains information like stop reason, token counts, and timing, yielded once at the end.
+   *   - `ERROR`: Contains any error encountered during translation, SDK call, or response processing.
+   *   - `END`: Signals the completion of the stream.
+   * @see {ArtStandardPrompt}
+   * @see {CallOptions}
+   * @see {StreamEvent}
+   * @see {LLMMetadata}
+   * @see https://ai.google.dev/api/rest/v1beta/models/generateContent
+   *
+   * @example
+   * // Enable Gemini thinking (if supported by the selected model)
+   * const stream = await geminiAdapter.call(prompt, {
+   *   threadId,
+   *   stream: true,
+   *   callContext: 'FINAL_SYNTHESIS',
+   *   providerConfig, // your RuntimeProviderConfig
+   *   gemini: {
+   *     thinking: { includeThoughts: true, thinkingBudget: 8096 }
+   *   }
+   * });
+   * for await (const evt of stream) {
+   *   if (evt.type === 'TOKEN') {
+   *     // evt.tokenType may be FINAL_SYNTHESIS_LLM_THINKING or FINAL_SYNTHESIS_LLM_RESPONSE
+   *   }
+   * }
+   */
+  async call(prompt: ArtStandardPrompt, options: CallOptions): Promise<AsyncIterable<StreamEvent>> {
+    const { threadId, traceId = `gemini-trace-${Date.now()}`, sessionId, stream, callContext, model: modelOverride } = options;
+    const modelToUse = modelOverride || this.defaultModel;
+
+    // --- Format Payload for SDK ---
+    let contents: Content[];
+    try {
+      contents = this.translateToGemini(prompt); // Use the new translation function
+    } catch (error: any) {
+      Logger.error(`Error translating ArtStandardPrompt to Gemini format: ${error.message}`, { error, threadId, traceId });
+      // Immediately yield error and end if translation fails
+      const generator = async function*(): AsyncIterable<StreamEvent> {
+          yield { type: 'ERROR', data: error instanceof Error ? error : new Error(String(error)), threadId, traceId, sessionId };
+          yield { type: 'END', data: null, threadId, traceId, sessionId };
+      }
+      return generator();
+    }
+
+    const generationConfig: GenerationConfig = { // Use SDK GenerationConfig type
+      temperature: options.temperature,
+      maxOutputTokens: options.max_tokens || options.maxOutputTokens, // Allow both snake_case and camelCase
+      topP: options.top_p || options.topP,
+      topK: options.top_k || options.topK,
+      stopSequences: options.stop || options.stop_sequences || options.stopSequences,
+      // candidateCount: options.n // Map 'n' if needed
+    };
+    // Remove undefined generationConfig parameters
+    Object.keys(generationConfig).forEach(key =>
+        generationConfig[key as keyof GenerationConfig] === undefined &&
+        delete generationConfig[key as keyof GenerationConfig]
+    );
+    // Build optional thinking configuration from CallOptions (feature flag)
+    // Expecting shape: options.gemini?.thinking?.{ includeThoughts?: boolean; thinkingBudget?: number }
+    const includeThoughts: boolean = !!(options as any)?.gemini?.thinking?.includeThoughts;
+    const thinkingBudget: number | undefined = (options as any)?.gemini?.thinking?.thinkingBudget;
+    // Merge into a requestConfig that is leniently typed to allow SDK preview fields
+    const requestConfig: any = includeThoughts
+      ? {
+          ...generationConfig,
+          thinkingConfig: {
+            includeThoughts: true,
+            ...(thinkingBudget !== undefined ? { thinkingBudget } : {}),
+          },
+        }
+      : { ...generationConfig };
+    // --- End Format Payload ---
+
+    Logger.debug(`Calling Gemini SDK with model ${modelToUse}, stream: ${!!stream}`, { threadId, traceId });
+
+    // Capture 'this.genAI' for use inside the generator function
+    const genAIInstance = this.genAI;
+    // Use an async generator function
+    const generator = async function*(): AsyncIterable<StreamEvent> {
+      const startTime = Date.now(); // Use const
+      let timeToFirstTokenMs: number | undefined;
+      let streamUsageMetadata: any = undefined; // Variable to hold aggregated usage metadata from stream
+      let streamFinishReason: string | undefined; // Will hold finishReason from the LAST chunk
+      let lastChunk: GenerateContentResponse | undefined = undefined; // Variable to store the last chunk
+      // Removed unused aggregatedResponseText
+ 
+      try {
+        // --- Handle Streaming Response using SDK ---
+        if (stream) {
+          // Let TypeScript infer the type of streamResult
+          // Use the new SDK pattern: genAI.models.generateContentStream
+          const streamResult = await genAIInstance.models.generateContentStream({ // Use captured instance
+            model: modelToUse, // Pass model name here
+            contents,
+            config: requestConfig, // Pass merged config including optional thinkingConfig
+          });
+
+          // Process the stream by iterating directly over streamResult (based on docs)
+          for await (const chunk of streamResult) {
+            lastChunk = chunk; // Store the current chunk as the potential last one
+            if (!timeToFirstTokenMs) {
+                timeToFirstTokenMs = Date.now() - startTime;
+            }
+            // Prefer structured parts if available to differentiate thinking vs response
+            const candidate = (chunk as any)?.candidates?.[0];
+            const parts = candidate?.content?.parts;
+            if (Array.isArray(parts) && parts.length > 0) {
+              for (const part of parts) {
+                const partText: string | undefined = (part as any)?.text;
+                if (!partText) continue;
+                const isThought: boolean = !!(
+                  (part as any)?.thought ||
+                  (part as any)?.metadata?.thought ||
+                  (part as any)?.inlineMetadata?.thought
+                );
+                const tokenType = callContext === 'AGENT_THOUGHT'
+                  ? (isThought ? 'AGENT_THOUGHT_LLM_THINKING' : 'AGENT_THOUGHT_LLM_RESPONSE')
+                  : (isThought ? 'FINAL_SYNTHESIS_LLM_THINKING' : 'FINAL_SYNTHESIS_LLM_RESPONSE');
+                yield { type: 'TOKEN', data: partText, threadId, traceId, sessionId, tokenType };
+              }
+            } else {
+              const textPart = (chunk as any).text; // Access as property (fallback)
+              if (textPart) {
+                const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'FINAL_SYNTHESIS_LLM_RESPONSE';
+                yield { type: 'TOKEN', data: textPart, threadId, traceId, sessionId, tokenType };
+              }
+            }
+             // Log potential usage metadata if available in chunks (less common)
+             // Capture usage metadata if present in chunks
+             if (chunk.usageMetadata) {
+                // Note: Based on testing, usageMetadata usually appears only in the *last* chunk,
+                // but we check here just in case the behavior changes or varies.
+                Logger.debug("Gemini stream chunk usageMetadata:", { usageMetadata: chunk.usageMetadata, threadId, traceId });
+                // Simple merge/overwrite for now, might need more sophisticated aggregation
+                streamUsageMetadata = { ...(streamUsageMetadata || {}), ...chunk.usageMetadata };
+             }
+          }
+
+          // NOTE: The new SDK stream example doesn't show accessing a final .response
+          // We might need to aggregate metadata from chunks or handle it differently.
+          // For now, remove the finalResponse logic and associated metadata yield for streaming.
+          // We still need to yield END.
+          const totalGenerationTimeMs = Date.now() - startTime; // Keep total time calculation
+          Logger.debug("Gemini stream finished processing chunks.", { totalGenerationTimeMs, threadId, traceId });
+
+          // TODO: Revisit how to get final metadata (stopReason, token counts) for streams if needed.
+          // --- Extract metadata from the LAST chunk AFTER the loop ---
+          if (lastChunk) {
+              streamFinishReason = lastChunk.candidates?.[0]?.finishReason;
+              streamUsageMetadata = lastChunk.usageMetadata; // Get metadata directly from last chunk
+              Logger.debug("Gemini stream - Extracted from last chunk:", { finishReason: streamFinishReason, usageMetadata: streamUsageMetadata, threadId, traceId });
+          } else {
+              Logger.warn("Gemini stream - No last chunk found after loop.", { threadId, traceId });
+          }
+          // --- End extraction from last chunk ---
+ 
+          // Yield final METADATA using values extracted from the last chunk
+          const finalUsage = streamUsageMetadata || {}; // Use extracted metadata or empty object
+          const metadata: LLMMetadata = {
+             stopReason: streamFinishReason, // Use finishReason from last chunk
+             inputTokens: finalUsage?.promptTokenCount,
+             outputTokens: finalUsage?.candidatesTokenCount, // Or totalTokenCount? Check SDK details
+             thinkingTokens: finalUsage?.thinkingTokenCount ?? finalUsage?.thoughtTokens,
+             timeToFirstTokenMs: timeToFirstTokenMs,
+             totalGenerationTimeMs: totalGenerationTimeMs,
+             providerRawUsage: finalUsage, // Use usage from last chunk
+             traceId: traceId,
+           };
+           yield { type: 'METADATA', data: metadata, threadId, traceId, sessionId };
+ 
+          // --- Handle Non-Streaming Response using SDK ---
+        } else {
+          // Use the new SDK pattern: genAIInstance.models.generateContent
+          // Revert direct parameter passing
+          const result: GenerateContentResponse = await genAIInstance.models.generateContent({ // Use captured instance
+            model: modelToUse, // Pass model name here
+            contents,
+            config: requestConfig, // Use merged config including optional thinkingConfig
+          });
+          // Removed incorrect line: const response = result.response;
+          const firstCandidate = result.candidates?.[0]; // Access directly from result
+          const responseText = result.text; // Access as a property
+          const finishReason = firstCandidate?.finishReason;
+          const usageMetadata = result.usageMetadata; // Access directly from result
+          const totalGenerationTimeMs = Date.now() - startTime;
+
+
+          // If structured parts are present, prefer splitting into thought vs response tokens
+          const nonStreamParts = (firstCandidate as any)?.content?.parts;
+          if (Array.isArray(nonStreamParts) && nonStreamParts.length > 0) {
+            for (const part of nonStreamParts) {
+              const partText: string | undefined = (part as any)?.text;
+              if (!partText) continue;
+              const isThought: boolean = !!(
+                (part as any)?.thought ||
+                (part as any)?.metadata?.thought ||
+                (part as any)?.inlineMetadata?.thought
+              );
+              const tokenType = callContext === 'AGENT_THOUGHT'
+                ? (isThought ? 'AGENT_THOUGHT_LLM_THINKING' : 'AGENT_THOUGHT_LLM_RESPONSE')
+                : (isThought ? 'FINAL_SYNTHESIS_LLM_THINKING' : 'FINAL_SYNTHESIS_LLM_RESPONSE');
+              yield { type: 'TOKEN', data: partText.trim(), threadId, traceId, sessionId, tokenType };
+            }
+          } else if (!firstCandidate || !responseText) {
+            if (result.promptFeedback?.blockReason) { // Access directly from result
+              Logger.error('Gemini SDK call blocked.', { feedback: result.promptFeedback, threadId, traceId });
+              yield { type: 'ERROR', data: new Error(`Gemini API call blocked: ${result.promptFeedback.blockReason}`), threadId, traceId, sessionId };
+              return;
+            }
+            Logger.error('Invalid response structure from Gemini SDK: No text content found', { responseData: result, threadId, traceId }); // Log the whole result
+            yield { type: 'ERROR', data: new Error('Invalid response structure from Gemini SDK: No text content found.'), threadId, traceId, sessionId };
+            return;
+          } else {
+            // Yield TOKEN (fallback single text)
+            const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'LLM_RESPONSE';
+            yield { type: 'TOKEN', data: responseText.trim(), threadId, traceId, sessionId, tokenType };
+          }
+
+          // Yield METADATA
+          const metadata: LLMMetadata = {
+            stopReason: finishReason,
+            inputTokens: usageMetadata?.promptTokenCount,
+            outputTokens: usageMetadata?.candidatesTokenCount,
+            thinkingTokens: (usageMetadata as any)?.thinkingTokenCount ?? (usageMetadata as any)?.thoughtTokens,
+            totalGenerationTimeMs: totalGenerationTimeMs,
+            providerRawUsage: usageMetadata,
+            traceId: traceId,
+          };
+          yield { type: 'METADATA', data: metadata, threadId, traceId, sessionId };
+        }
+
+        // Yield END signal
+        yield { type: 'END', data: null, threadId, traceId, sessionId };
+
+      } catch (error: any) {
+        Logger.error(`Error during Gemini SDK call: ${error.message}`, { error, threadId, traceId });
+        yield { type: 'ERROR', data: error instanceof Error ? error : new Error(String(error)), threadId, traceId, sessionId };
+        // Ensure END is yielded even after an error
+        yield { type: 'END', data: null, threadId, traceId, sessionId };
+      }
+    };
+
+    return generator();
+  }
+
+  /**
+   * Translates the provider-agnostic `ArtStandardPrompt` into the Gemini API's `Content[]` format.
+   *
+   * Key translations:
+   * - `system` role: Merged into the first `user` message.
+   * - `user` role: Maps to Gemini's `user` role.
+   * - `assistant` role: Maps to Gemini's `model` role. Handles text content and `tool_calls` (mapped to `functionCall`).
+   * - `tool_result` role: Maps to Gemini's `user` role with a `functionResponse` part.
+   * - `tool_request` role: Skipped (implicitly handled by `assistant`'s `tool_calls`).
+   *
+   * Adds validation to ensure the conversation doesn't start with a 'model' role.
+   *
+   * @private
+   * @param {ArtStandardPrompt} artPrompt - The input `ArtStandardPrompt` array.
+   * @returns {Content[]} The `Content[]` array formatted for the Gemini API.
+   * @throws {ARTError} If translation encounters an issue, such as a `tool_result` missing required fields (ErrorCode.PROMPT_TRANSLATION_FAILED).
+   * @see https://ai.google.dev/api/rest/v1beta/Content
+   */
+  private translateToGemini(artPrompt: ArtStandardPrompt): Content[] {
+    const geminiContents: Content[] = [];
+
+    // System prompt handling: Gemini prefers system instructions via specific parameters or
+    // potentially as the first part of the first 'user' message. For simplicity,
+    // we'll merge the system prompt content into the first user message if present.
+    let systemPromptContent: string | null = null;
+
+    for (const message of artPrompt) {
+      let role: 'user' | 'model';
+      const parts: Part[] = [];
+
+      switch (message.role) {
+        case 'system':
+          // Store system prompt content to potentially merge later.
+          if (typeof message.content === 'string') {
+            systemPromptContent = message.content;
+          } else {
+             Logger.warn(`GeminiAdapter: Ignoring non-string system prompt content.`, { content: message.content });
+          }
+          continue; // Don't add a separate 'system' role message
+
+        case 'user': { // Added braces to fix ESLint error
+          role = 'user';
+          let userContent = '';
+          // Prepend system prompt if this is the first user message
+          if (systemPromptContent) {
+            userContent += systemPromptContent + "\n\n";
+            systemPromptContent = null; // Clear after merging
+          }
+          if (typeof message.content === 'string') {
+            userContent += message.content;
+          } else {
+             Logger.warn(`GeminiAdapter: Stringifying non-string user content.`, { content: message.content });
+             userContent += JSON.stringify(message.content);
+          }
+          parts.push({ text: userContent });
+          break;
+        } // Added braces
+
+        case 'assistant':
+          role = 'model';
+          // Handle text content
+          if (typeof message.content === 'string' && message.content.trim() !== '') {
+            parts.push({ text: message.content });
+          }
+          // Handle tool calls (function calls in Gemini)
+          if (message.tool_calls && message.tool_calls.length > 0) {
+            message.tool_calls.forEach(toolCall => {
+              if (toolCall.type === 'function') {
+                parts.push({
+                  functionCall: {
+                    name: toolCall.function.name,
+                    args: JSON.parse(toolCall.function.arguments || '{}'), // Gemini expects parsed args object
+                  }
+                });
+              } else {
+                 Logger.warn(`GeminiAdapter: Skipping unsupported tool call type: ${toolCall.type}`);
+              }
+            });
+          }
+           // If assistant message has neither content nor tool calls, add empty text part? Gemini might require it.
+           if (parts.length === 0) {
+             parts.push({ text: "" }); // Add empty text part if no content or tool calls
+           }
+          break;
+
+        case 'tool_result':
+          role = 'user'; // Gemini expects tool results within a 'user' role message
+          if (!message.tool_call_id || !message.name) {
+             throw new ARTError(
+               `GeminiAdapter: 'tool_result' message missing required 'tool_call_id' or 'name'.`,
+               ErrorCode.PROMPT_TRANSLATION_FAILED
+             );
+          }
+          parts.push({
+            functionResponse: {
+              name: message.name, // Tool name
+              response: {
+                // Gemini expects the result content under a 'content' key within 'response'
+                // The content should be the stringified output/error from ArtStandardMessage.content
+                content: message.content // Assuming content is already stringified result/error
+              }
+            }
+          });
+          break;
+
+        case 'tool_request':
+           // This role is implicitly handled by 'tool_calls' in the preceding 'assistant' message.
+           Logger.debug(`GeminiAdapter: Skipping 'tool_request' role message as it's handled by assistant's tool_calls.`);
+           continue; // Skip this message
+
+        default:
+          Logger.warn(`GeminiAdapter: Skipping message with unhandled role: ${message.role}`);
+          continue;
+      }
+
+      geminiContents.push({ role, parts });
+    }
+
+     // Handle case where system prompt was provided but no user message followed
+     if (systemPromptContent) {
+         Logger.warn("GeminiAdapter: System prompt provided but no user message found to merge it into. Adding as a separate initial user message.");
+         geminiContents.unshift({ role: 'user', parts: [{ text: systemPromptContent }] });
+     }
+
+    // Gemini specific validation: Ensure conversation doesn't start with 'model'
+    if (geminiContents.length > 0 && geminiContents[0].role === 'model') {
+      Logger.warn("Gemini conversation history starts with 'model' role. Prepending a dummy 'user' turn.", { firstRole: geminiContents[0].role });
+      geminiContents.unshift({ role: 'user', parts: [{ text: "(Initial context)" }] }); // Prepend a generic user turn
+    }
+
+    return geminiContents;
+  }
+}

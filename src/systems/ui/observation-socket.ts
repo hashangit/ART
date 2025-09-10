@@ -1,8 +1,8 @@
 // src/systems/ui/observation-socket.ts
 import { TypedSocket } from './typed-socket';
-import { Observation, ObservationType, ObservationFilter } from '../../types';
-import { Logger } from '../../utils/logger';
-import { IObservationRepository } from '../../core/interfaces'; // Assuming this exists
+import { Observation, ObservationType, ObservationFilter } from '@/types';
+import { Logger } from '@/utils/logger';
+import { IObservationRepository } from '@/core/interfaces'; // Assuming this exists
 
 /**
  * A specialized TypedSocket for handling Observation data.

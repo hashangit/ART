@@ -1,5 +1,5 @@
-import { IStateRepository, StorageAdapter } from '../../../core/interfaces';
-import { ThreadContext, ThreadConfig, AgentState } from '../../../types';
+import { IStateRepository, StorageAdapter } from '@/core/interfaces';
+import { ThreadContext, ThreadConfig, AgentState } from '@/types';
 
 // Define the structure of the data as stored, including the 'id' field (threadId)
 type StoredThreadContext = ThreadContext & { id: string };
@@ -10,7 +10,12 @@ type StoredThreadContext = ThreadContext & { id: string };
  * underlying `StorageAdapter`. It stores the entire context object for each thread
  * under a key equal to the `threadId` within a designated collection (default: 'state').
  *
- * @implements {IStateRepository}
+ * It uses a `StorageAdapter` to abstract the underlying storage, allowing for
+ * flexibility in choosing storage backends (e.g., in-memory, IndexedDB, Supabase).
+ * This repository is responsible for CRUD operations on thread state and configuration.
+ *
+ * @see {@link IStateRepository} for the interface it implements.
+ * @see {@link StorageAdapter} for the storage backend interface.
  */
 export class StateRepository implements IStateRepository {
   private adapter: StorageAdapter;
@@ -18,7 +23,7 @@ export class StateRepository implements IStateRepository {
 
   /**
    * Creates an instance of StateRepository.
-   * @param storageAdapter - The configured `StorageAdapter` instance used for persistence.
+   * @param {StorageAdapter} storageAdapter - The configured `StorageAdapter` instance used for persistence.
    */
   constructor(storageAdapter: StorageAdapter) {
      if (!storageAdapter) {
@@ -29,10 +34,9 @@ export class StateRepository implements IStateRepository {
   }
 
   /**
-   /**
     * Retrieves the complete `ThreadContext` (config and state) for a specific thread ID.
-    * @param threadId - The unique identifier of the thread.
-    * @returns A promise resolving to the `ThreadContext` object if found, or `null` otherwise.
+    * @param {string} threadId - The unique identifier of the thread.
+    * @returns {Promise<ThreadContext | null>} A promise resolving to the `ThreadContext` object if found, or `null` otherwise.
     * @throws {Error} Propagates errors from the storage adapter's `get` method.
     */
   async getThreadContext(threadId: string): Promise<ThreadContext | null> {
@@ -48,12 +52,11 @@ export class StateRepository implements IStateRepository {
   }
 
   /**
-   /**
     * Saves (or overwrites) the complete `ThreadContext` for a specific thread ID.
     * Ensures the context object includes the `threadId` as the `id` property for storage.
-    * @param threadId - The unique identifier of the thread.
-   * @param context - The `ThreadContext` object to save. Must contain at least the `config` property.
-   * @returns A promise that resolves when the context is successfully saved.
+    * @param {string} threadId - The unique identifier of the thread.
+   * @param {ThreadContext} context - The `ThreadContext` object to save. Must contain at least the `config` property.
+   * @returns {Promise<void>} A promise that resolves when the context is successfully saved.
    * @throws {Error} If the context is missing the required `config` property or if the storage adapter fails.
    */
   async setThreadContext(threadId: string, context: ThreadContext): Promise<void> {
@@ -69,10 +72,9 @@ export class StateRepository implements IStateRepository {
   }
 
   /**
-   /**
     * Retrieves only the `ThreadConfig` part of the context for a specific thread ID.
-    * @param threadId - The unique identifier of the thread.
-    * @returns A promise resolving to the `ThreadConfig` object if found, or `null` otherwise.
+    * @param {string} threadId - The unique identifier of the thread.
+    * @returns {Promise<ThreadConfig | null>} A promise resolving to the `ThreadConfig` object if found, or `null` otherwise.
     * @throws {Error} Propagates errors from the underlying `getThreadContext` call.
     */
   async getThreadConfig(threadId: string): Promise<ThreadConfig | null> {
@@ -81,13 +83,12 @@ export class StateRepository implements IStateRepository {
   }
 
   /**
-   /**
     * Sets or updates only the `ThreadConfig` part of the context for a specific thread ID.
     * It fetches the existing context, replaces the `config` field, preserves the existing `state` (or sets it to null if none existed),
     * and then saves the entire updated `ThreadContext` back to storage.
-    * @param threadId - The unique identifier of the thread.
-    * @param config - The `ThreadConfig` object to save.
-    * @returns A promise that resolves when the updated context is saved.
+    * @param {string} threadId - The unique identifier of the thread.
+    * @param {ThreadConfig} config - The `ThreadConfig` object to save.
+    * @returns {Promise<void>} A promise that resolves when the updated context is saved.
     * @throws {Error} Propagates errors from the underlying `getThreadContext` or `setThreadContext` calls.
     */
   async setThreadConfig(threadId: string, config: ThreadConfig): Promise<void> {
@@ -100,10 +101,9 @@ export class StateRepository implements IStateRepository {
   }
 
   /**
-   /**
     * Retrieves only the `AgentState` part of the context for a specific thread ID.
-    * @param threadId - The unique identifier of the thread.
-    * @returns A promise resolving to the `AgentState` object if found and not null, or `null` otherwise.
+    * @param {string} threadId - The unique identifier of the thread.
+    * @returns {Promise<AgentState | null>} A promise resolving to the `AgentState` object if found and not null, or `null` otherwise.
     * @throws {Error} Propagates errors from the underlying `getThreadContext` call.
     */
   async getAgentState(threadId: string): Promise<AgentState | null> {
@@ -112,15 +112,14 @@ export class StateRepository implements IStateRepository {
   }
 
   /**
-   /**
     * Sets or updates only the `AgentState` part of the context for a specific thread ID.
     * It fetches the existing context, replaces the `state` field, preserves the existing `config`,
     * and then saves the entire updated `ThreadContext` back to storage.
     * **Important:** This method requires that a `ThreadConfig` already exists for the thread.
     * Attempting to set state for a thread without prior configuration will result in an error.
-    * @param threadId - The unique identifier of the thread.
-   * @param state - The `AgentState` object to save.
-   * @returns A promise that resolves when the updated context is saved.
+    * @param {string} threadId - The unique identifier of the thread.
+   * @param {AgentState} state - The `AgentState` object to save.
+   * @returns {Promise<void>} A promise that resolves when the updated context is saved.
    * @throws {Error} If no `ThreadConfig` exists for the `threadId`, or if errors occur during context retrieval or saving.
    */
   async setAgentState(threadId: string, state: AgentState): Promise<void> {

@@ -1,7 +1,7 @@
 // src/systems/tool/ToolRegistry.ts
-import { ToolRegistry as IToolRegistry, IToolExecutor, StateManager } from '../../core/interfaces'; // Added StateManager import
-import { ToolSchema } from '../../types';
-import { Logger } from '../../utils/logger';
+import { ToolRegistry as IToolRegistry, IToolExecutor, StateManager } from '@/core/interfaces'; // Added StateManager import
+import { ToolSchema } from '@/types';
+import { Logger } from '@/utils/logger';
 
 /**
  * A simple in-memory implementation of the `ToolRegistry` interface.
@@ -105,5 +105,35 @@ export class ToolRegistry implements IToolRegistry {
   async clearAllTools(): Promise<void> {
       this.executors.clear();
       Logger.debug('ToolRegistry: Cleared all registered tools.');
+  }
+
+  /**
+   * Unregister a single tool by name.
+   */
+  async unregisterTool(toolName: string): Promise<void> {
+    if (this.executors.delete(toolName)) {
+      Logger.debug(`ToolRegistry: Unregistered tool "${toolName}".`);
+    }
+  }
+
+  /**
+   * Unregister tools matching a predicate; returns count removed.
+   */
+  async unregisterTools(predicate: (schema: ToolSchema) => boolean): Promise<number> {
+    let removed = 0;
+    for (const [name, exec] of Array.from(this.executors.entries())) {
+      try {
+        if (predicate(exec.schema)) {
+          this.executors.delete(name);
+          removed++;
+        }
+      } catch {
+        // ignore predicate errors
+      }
+    }
+    if (removed > 0) {
+      Logger.debug(`ToolRegistry: Unregistered ${removed} tool(s) via predicate.`);
+    }
+    return removed;
   }
 }

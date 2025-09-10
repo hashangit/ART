@@ -2,17 +2,22 @@
 import {
   ReasoningEngine as IReasoningEngine,
   // Removed ProviderAdapter import
-} from '../../core/interfaces';
-import { FormattedPrompt, CallOptions, StreamEvent } from '../../types';
-import { IProviderManager, ManagedAdapterAccessor, RuntimeProviderConfig } from '../../types/providers'; // Import ProviderManager types and RuntimeProviderConfig
-import { Logger } from '../../utils/logger';
+} from '@/core/interfaces';
+import { FormattedPrompt, CallOptions, StreamEvent } from '@/types';
+import { IProviderManager, ManagedAdapterAccessor, RuntimeProviderConfig } from '@/types/providers'; // Import ProviderManager types and RuntimeProviderConfig
+import { Logger } from '@/utils/logger';
 
 /**
  * Default implementation of the `ReasoningEngine` interface.
  * This class uses the `ProviderManager` to dynamically obtain `ProviderAdapter` instances
  * based on the runtime configuration provided in `CallOptions`.
  *
- * @implements {IReasoningEngine}
+ * It abstracts the details of interacting with a specific LLM provider by using a
+ * `ProviderAdapter`. This allows the agent to switch between different LLM providers
+ * (like OpenAI, Anthropic, Gemini) without changing its core logic.
+ *
+ * @see {@link IReasoningEngine} for the interface definition.
+ * @see {@link ProviderAdapter} for the adapter interface to different LLM providers.
  */
 export class ReasoningEngine implements IReasoningEngine {
   private providerManager: IProviderManager; // Replaced adapter with providerManager

@@ -1,8 +1,8 @@
 // src/systems/tool/ToolSystem.ts
-import { ToolSystem as IToolSystem, ToolRegistry, StateManager, IToolExecutor, ObservationManager } from '../../core/interfaces'; // Added ObservationManager
-import { ParsedToolCall, ToolResult, ExecutionContext, ObservationType } from '../../types'; // Added ObservationType
-import { validateJsonSchema } from '../../utils/validation';
-import { Logger } from '../../utils/logger';
+import { ToolSystem as IToolSystem, ToolRegistry, StateManager, IToolExecutor, ObservationManager } from '@/core/interfaces'; // Added ObservationManager
+import { ParsedToolCall, ToolResult, ExecutionContext, ObservationType } from '@/types'; // Added ObservationType
+import { validateJsonSchema } from '@/utils/validation';
+import { Logger } from '@/utils/logger';
 // import { v4 as uuidv4 } from 'uuid'; // Removed unused import
 
 /**

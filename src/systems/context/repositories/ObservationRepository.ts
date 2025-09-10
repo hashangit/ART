@@ -1,5 +1,5 @@
-import { IObservationRepository, StorageAdapter } from '../../../core/interfaces';
-import { Observation, ObservationFilter } from '../../../types';
+import { IObservationRepository, StorageAdapter } from '@/core/interfaces';
+import { Observation, ObservationFilter } from '@/types';
 
 // Observation already has an 'id' field, so no need for a separate Stored type usually.
 // However, ensure the StorageAdapter expects 'id' as the keyPath for the 'observations' store.
@@ -9,7 +9,12 @@ import { Observation, ObservationFilter } from '../../../types';
  * manage `Observation` objects using an underlying `StorageAdapter`.
  * Handles adding and retrieving observations for specific threads.
  *
- * @implements {IObservationRepository}
+ * It relies on a `StorageAdapter` to abstract the actual storage mechanism,
+ * making it compatible with different backends like IndexedDB, Supabase, or
+ * in-memory storage.
+ *
+ * @see {@link IObservationRepository} for the interface it implements.
+ * @see {@link StorageAdapter} for the storage backend interface.
  */
 export class ObservationRepository implements IObservationRepository {
   private adapter: StorageAdapter;
@@ -17,7 +22,7 @@ export class ObservationRepository implements IObservationRepository {
 
   /**
    * Creates an instance of ObservationRepository.
-   * @param storageAdapter - The configured `StorageAdapter` instance that will be used for persistence.
+   * @param {StorageAdapter} storageAdapter - The configured `StorageAdapter` instance that will be used for persistence.
    */
   constructor(storageAdapter: StorageAdapter) {
      if (!storageAdapter) {
@@ -31,8 +36,8 @@ export class ObservationRepository implements IObservationRepository {
 
   /**
    * Adds a single `Observation` object to the storage using its `id` as the key.
-   * @param observation - The `Observation` object to add. Must have a valid `id`.
-   * @returns A promise that resolves when the observation has been saved.
+   * @param {Observation} observation - The `Observation` object to add. Must have a valid `id`.
+   * @returns {Promise<void>} A promise that resolves when the observation has been saved.
    * @throws {Error} If the observation is missing an `id` or if the storage adapter fails.
    */
   async addObservation(observation: Observation): Promise<void> {
@@ -48,9 +53,9 @@ export class ObservationRepository implements IObservationRepository {
    * This implementation fetches all observations for the thread and then applies
    * client-side filtering (by type, timestamp) and sorting (by timestamp).
    * For performance with many observations, adapter-level querying/indexing would be preferable.
-   * @param threadId - The ID of the thread whose observations are to be retrieved.
-   * @param filter - Optional `ObservationFilter` criteria (e.g., `types`, `beforeTimestamp`, `afterTimestamp`).
-   * @returns A promise resolving to an array of `Observation` objects matching the criteria, sorted chronologically (ascending timestamp).
+   * @param {string} threadId - The ID of the thread whose observations are to be retrieved.
+   * @param {ObservationFilter} [filter] - Optional `ObservationFilter` criteria (e.g., `types`, `beforeTimestamp`, `afterTimestamp`).
+   * @returns {Promise<Observation[]>} A promise resolving to an array of `Observation` objects matching the criteria, sorted chronologically (ascending timestamp).
    * @throws {Error} Propagates errors from the storage adapter's `query` method.
    */
   async getObservations(threadId: string, filter?: ObservationFilter): Promise<Observation[]> {
