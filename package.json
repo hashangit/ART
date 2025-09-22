@@ -1,6 +1,6 @@
 {
   "name": "art-framework",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "Agent Runtine (ART) Framework - A browser-first JavaScript/TypeScript framework for building LLM-powered Agentic AI applications that supports MCP and A2A protocols natively",
   "type": "module",
   "main": "./dist/index.js",

@@ -449,4 +449,4 @@ A function to generate RFC4122 v4 compliant UUIDs.
 
 The current version of the ART Framework package.
 -   **Usage**: `console.log(VERSION);`
--   **Value**: `'0.3.7'` (at the time of writing)
+-   **Value**: `'0.3.8'` (at the time of writing)

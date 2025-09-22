@@ -64,6 +64,8 @@ interface OpenRouterChatCompletionPayload {
     effort?: 'low' | 'medium' | 'high';
     tokens?: number;
   };
+  // Legacy toggle allowed by OpenRouter; maps to reasoning include/exclude
+  include_reasoning?: boolean;
 }
 
 // See https://openrouter.ai/docs/use-cases/usage-accounting
@@ -160,6 +162,13 @@ export class OpenRouterAdapter implements ProviderAdapter {
     }
 
     const openRouterOptions = (options as any).openrouter || {};
+    // Determine legacy include_reasoning flag per OpenRouter docs
+    const includeReasoning: boolean | undefined =
+      typeof openRouterOptions?.include_reasoning === 'boolean'
+        ? openRouterOptions.include_reasoning
+        : (openRouterOptions?.reasoning
+            ? (openRouterOptions.reasoning.exclude === true ? false : true)
+            : undefined);
 
     const payload: OpenRouterChatCompletionPayload = {
       model: modelToUse,
@@ -176,6 +185,7 @@ export class OpenRouterAdapter implements ProviderAdapter {
       provider: openRouterOptions.provider,
       transforms: openRouterOptions.useMiddleOutTransform === false ? undefined : ['middle-out'],
       reasoning: openRouterOptions.reasoning,
+      ...(includeReasoning !== undefined ? { include_reasoning: includeReasoning } : {}),
     };
 
     Object.keys(payload).forEach(
@@ -235,13 +245,19 @@ export class OpenRouterAdapter implements ProviderAdapter {
     options: CallOptions,
   ): AsyncIterable<StreamEvent> {
     const { threadId, traceId, sessionId, callContext } = options;
+    const tid = (threadId || '') as string;
+    const trid = (traceId || '') as string;
+    const sid = (sessionId || '') as string;
+
     const startTime = Date.now();
     let timeToFirstTokenMs: number | undefined;
     let finalStopReason: string | undefined;
     let finalUsage: OpenRouterUsage | undefined;
     const aggregatedToolCalls: any[] = [];
 
-    const reader = stream.pipeThrough(new TextDecoderStream()).getReader();
+    // Use TextDecoder + getReader to avoid DOM lib typing issues
+    const reader = stream.getReader();
+    const decoder = new TextDecoder();
     let buffer = '';
 
     while (true) {
@@ -249,88 +265,116 @@ export class OpenRouterAdapter implements ProviderAdapter {
         const { value, done } = await reader.read();
         if (done) break;
 
-        buffer += value;
+        buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const dataContent = line.substring(6);
-            if (dataContent === '[DONE]') break;
+        for (const raw of lines) {
+          const line = raw.trim();
+          if (!line || !line.startsWith('data: ')) continue;
 
-            const chunk = JSON.parse(dataContent);
-            if (chunk.error) {
-              throw new ARTError(
-                `OpenRouter stream error: ${chunk.error.message}`,
-                ErrorCode.LLM_PROVIDER_ERROR,
-                new Error(JSON.stringify(chunk.error)),
-              );
-            }
+          const dataContent = line.substring(6);
+          if (dataContent === '[DONE]') {
+            // End of stream signal
+            break;
+          }
 
-            const choice = chunk.choices?.[0];
-            if (!choice) continue;
+          const chunk = JSON.parse(dataContent);
+          if (chunk?.error) {
+            throw new ARTError(
+              `OpenRouter stream error: ${chunk.error?.message ?? 'unknown'}`,
+              ErrorCode.LLM_PROVIDER_ERROR,
+              new Error(JSON.stringify(chunk.error)),
+            );
+          }
 
-            if (timeToFirstTokenMs === undefined) {
-              timeToFirstTokenMs = Date.now() - startTime;
-            }
+          const choice = chunk.choices?.[0];
+          if (!choice) continue;
 
-            const delta = choice.delta;
-            if (delta?.reasoning && typeof delta.reasoning === 'string') {
-              const tokenType =
-                callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_THINKING' : 'FINAL_SYNTHESIS_LLM_THINKING';
-              yield { type: 'TOKEN', data: delta.reasoning, threadId, traceId, sessionId, tokenType };
-            }
+          if (timeToFirstTokenMs === undefined) {
+            timeToFirstTokenMs = Date.now() - startTime;
+          }
 
-            if (delta?.content) {
-              const tokenType =
-                callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'FINAL_SYNTHESIS_LLM_RESPONSE';
-              yield { type: 'TOKEN', data: delta.content, threadId, traceId, sessionId, tokenType };
-            }
+          const delta = choice.delta ?? {};
 
-            if (delta?.tool_calls) {
-              delta.tool_calls.forEach((tcDelta: any) => {
-                if (tcDelta.index !== undefined) {
-                  if (!aggregatedToolCalls[tcDelta.index]) aggregatedToolCalls[tcDelta.index] = {};
-                  if (tcDelta.id) aggregatedToolCalls[tcDelta.index].id = tcDelta.id;
-                  if (tcDelta.type) aggregatedToolCalls[tcDelta.index].type = tcDelta.type;
-                  if (tcDelta.function) {
-                    if (!aggregatedToolCalls[tcDelta.index].function) aggregatedToolCalls[tcDelta.index].function = {};
-                    if (tcDelta.function.name)
-                      aggregatedToolCalls[tcDelta.index].function.name = tcDelta.function.name;
-                    if (tcDelta.function.arguments) {
-                      aggregatedToolCalls[tcDelta.index].function.arguments =
-                        (aggregatedToolCalls[tcDelta.index].function.arguments || '') + tcDelta.function.arguments;
-                    }
-                  }
-                }
-              });
-            }
+          // 1) Reasoning text (simple field)
+          if (typeof delta.reasoning === 'string' && delta.reasoning.length > 0) {
+            const tokenType = callContext === 'AGENT_THOUGHT'
+              ? 'AGENT_THOUGHT_LLM_THINKING'
+              : 'FINAL_SYNTHESIS_LLM_THINKING';
+            yield { type: 'TOKEN', data: delta.reasoning, threadId: tid, traceId: trid, sessionId: sid, tokenType };
+          }
 
-            if (choice.finish_reason) {
-              finalStopReason = choice.finish_reason;
-            }
-            if (chunk.usage) {
-              finalUsage = chunk.usage;
+          // 2) Reasoning details array (normalized across providers)
+          const reasoningDetails = (delta as any).reasoning_details;
+          if (Array.isArray(reasoningDetails)) {
+            for (const rd of reasoningDetails) {
+              // Prefer raw reasoning.text, else summarize/ignore encrypted
+              if (rd?.type === 'reasoning.text' && typeof rd.text === 'string' && rd.text.length > 0) {
+                const tokenType = callContext === 'AGENT_THOUGHT'
+                  ? 'AGENT_THOUGHT_LLM_THINKING'
+                  : 'FINAL_SYNTHESIS_LLM_THINKING';
+                yield { type: 'TOKEN', data: rd.text, threadId: tid, traceId: trid, sessionId: sid, tokenType };
+              } else if (rd?.type === 'reasoning.summary' && typeof rd.summary === 'string' && rd.summary.length > 0) {
+                const tokenType = callContext === 'AGENT_THOUGHT'
+                  ? 'AGENT_THOUGHT_LLM_THINKING'
+                  : 'FINAL_SYNTHESIS_LLM_THINKING';
+                yield { type: 'TOKEN', data: rd.summary, threadId: tid, traceId: trid, sessionId: sid, tokenType };
+              }
+              // Encrypted or unknown formats are ignored for token streaming
             }
           }
+
+          // 3) Content delta (normal response tokens)
+          if (typeof delta.content === 'string' && delta.content.length > 0) {
+            const tokenType = callContext === 'AGENT_THOUGHT'
+              ? 'AGENT_THOUGHT_LLM_RESPONSE'
+              : 'FINAL_SYNTHESIS_LLM_RESPONSE';
+            yield { type: 'TOKEN', data: delta.content, threadId: tid, traceId: trid, sessionId: sid, tokenType };
+          }
+
+          // 4) Tool call deltas
+          if (Array.isArray(delta.tool_calls)) {
+            for (const tcDelta of delta.tool_calls) {
+              if (typeof tcDelta?.index === 'number') {
+                if (!aggregatedToolCalls[tcDelta.index]) aggregatedToolCalls[tcDelta.index] = {};
+                if (tcDelta.id) aggregatedToolCalls[tcDelta.index].id = tcDelta.id;
+                if (tcDelta.type) aggregatedToolCalls[tcDelta.index].type = tcDelta.type;
+                if (tcDelta.function) {
+                  const dst = (aggregatedToolCalls[tcDelta.index].function ||= {});
+                  if (tcDelta.function.name) dst.name = tcDelta.function.name;
+                  if (typeof tcDelta.function.arguments === 'string') {
+                    dst.arguments = (dst.arguments || '') + tcDelta.function.arguments;
+                  }
+                }
+              }
+            }
+          }
+
+          // 5) Finish/usage
+          if (choice.finish_reason) finalStopReason = choice.finish_reason;
+          if (chunk.usage) finalUsage = chunk.usage as OpenRouterUsage;
         }
       } catch (error: any) {
         const artError =
-          error instanceof ARTError ? error : new ARTError(`Error reading OpenRouter stream: ${error.message}`, ErrorCode.LLM_PROVIDER_ERROR, error);
-        yield { type: 'ERROR', data: artError, threadId, traceId, sessionId };
+          error instanceof ARTError
+            ? error
+            : new ARTError(`Error reading OpenRouter stream: ${error.message}`, ErrorCode.LLM_PROVIDER_ERROR, error);
+        yield { type: 'ERROR', data: artError, threadId: tid, traceId: trid, sessionId: sid };
         return; // End generation on error
       }
     }
 
+    // If the stream ended with tool_calls, emit accumulated calls
     if (finalStopReason === 'tool_calls' && aggregatedToolCalls.length > 0) {
       const toolData = aggregatedToolCalls.map((tc) => ({
         type: 'tool_use',
-        id: tc.id,
-        name: tc.function.name,
-        input: JSON.parse(tc.function.arguments || '{}'),
+        id: String(tc?.id ?? ''),
+        name: String(tc?.function?.name ?? ''),
+        input: JSON.parse((tc?.function?.arguments as string | undefined) ?? '{}'),
       }));
       const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'FINAL_SYNTHESIS_LLM_RESPONSE';
-      yield { type: 'TOKEN', data: toolData, threadId, traceId, sessionId, tokenType };
+      yield { type: 'TOKEN', data: toolData, threadId: tid, traceId: trid, sessionId: sid, tokenType };
     }
 
     const totalGenerationTimeMs = Date.now() - startTime;
@@ -342,10 +386,10 @@ export class OpenRouterAdapter implements ProviderAdapter {
       timeToFirstTokenMs,
       totalGenerationTimeMs,
       providerRawUsage: { ...finalUsage, finish_reason: finalStopReason },
-      traceId,
+      traceId: trid,
     };
-    yield { type: 'METADATA', data: metadata, threadId, traceId, sessionId };
-    yield { type: 'END', data: null, threadId, traceId, sessionId };
+    yield { type: 'METADATA', data: metadata, threadId: tid, traceId: trid, sessionId: sid };
+    yield { type: 'END', data: null, threadId: tid, traceId: trid, sessionId: sid };
   }
 
   private async *processNonStreamingResponse(
@@ -353,6 +397,10 @@ export class OpenRouterAdapter implements ProviderAdapter {
     options: CallOptions,
   ): AsyncIterable<StreamEvent> {
     const { threadId, traceId, sessionId, callContext } = options;
+    const tid = (threadId || '') as string;
+    const trid = (traceId || '') as string;
+    const sid = (sessionId || '') as string;
+
     const firstChoice = data.choices?.[0];
 
     if (!firstChoice?.message) {
@@ -361,23 +409,47 @@ export class OpenRouterAdapter implements ProviderAdapter {
         ErrorCode.LLM_PROVIDER_ERROR,
         new Error(JSON.stringify(data)),
       );
-      yield { type: 'ERROR', data: err, threadId, traceId, sessionId };
-      yield { type: 'END', data: null, threadId, traceId, sessionId };
+      yield { type: 'ERROR', data: err, threadId: tid, traceId: trid, sessionId: sid };
+      yield { type: 'END', data: null, threadId: tid, traceId: trid, sessionId: sid };
       return;
     }
 
-    const responseMessage = firstChoice.message;
+    const responseMessage: any = firstChoice.message;
+
+    // Emit reasoning (non-streaming) if present
+    if (typeof responseMessage.reasoning === 'string' && responseMessage.reasoning.length > 0) {
+      const thinkingType = callContext === 'AGENT_THOUGHT'
+        ? 'AGENT_THOUGHT_LLM_THINKING'
+        : 'FINAL_SYNTHESIS_LLM_THINKING';
+      yield { type: 'TOKEN', data: responseMessage.reasoning, threadId: tid, traceId: trid, sessionId: sid, tokenType: thinkingType };
+    }
+    if (Array.isArray(responseMessage.reasoning_details)) {
+      for (const rd of responseMessage.reasoning_details) {
+        if (rd?.type === 'reasoning.text' && typeof rd.text === 'string' && rd.text.length > 0) {
+          const thinkingType = callContext === 'AGENT_THOUGHT'
+            ? 'AGENT_THOUGHT_LLM_THINKING'
+            : 'FINAL_SYNTHESIS_LLM_THINKING';
+          yield { type: 'TOKEN', data: rd.text, threadId: tid, traceId: trid, sessionId: sid, tokenType: thinkingType };
+        } else if (rd?.type === 'reasoning.summary' && typeof rd.summary === 'string' && rd.summary.length > 0) {
+          const thinkingType = callContext === 'AGENT_THOUGHT'
+            ? 'AGENT_THOUGHT_LLM_THINKING'
+            : 'FINAL_SYNTHESIS_LLM_THINKING';
+          yield { type: 'TOKEN', data: rd.summary, threadId: tid, traceId: trid, sessionId: sid, tokenType: thinkingType };
+        }
+      }
+    }
+
     const tokenType = callContext === 'AGENT_THOUGHT' ? 'AGENT_THOUGHT_LLM_RESPONSE' : 'FINAL_SYNTHESIS_LLM_RESPONSE';
 
     const toolData =
-      responseMessage.tool_calls?.map((tc) => ({
+      (responseMessage.tool_calls as any[] | undefined)?.map((tc) => ({
         type: 'tool_use',
-        id: tc.id,
-        name: tc.function.name,
-        input: JSON.parse(tc.function.arguments || '{}'),
+        id: String(tc?.id ?? ''),
+        name: String(tc?.function?.name ?? ''),
+        input: JSON.parse((tc?.function?.arguments as string | undefined) ?? '{}'),
       })) || [];
 
-    const responseContent = responseMessage.content ?? '';
+    const responseContent = (responseMessage.content as string | null) ?? '';
     const tokenPayload: any[] = [];
     if (responseContent.trim()) {
       tokenPayload.push({ type: 'text', text: responseContent.trim() });
@@ -388,9 +460,9 @@ export class OpenRouterAdapter implements ProviderAdapter {
       yield {
         type: 'TOKEN',
         data: tokenPayload.length === 1 && tokenPayload[0].type === 'text' ? tokenPayload[0].text : tokenPayload,
-        threadId,
-        traceId,
-        sessionId,
+        threadId: tid,
+        traceId: trid,
+        sessionId: sid,
         tokenType,
       };
     }
@@ -402,10 +474,10 @@ export class OpenRouterAdapter implements ProviderAdapter {
       outputTokens: usage?.completion_tokens,
       thinkingTokens: usage?.completion_tokens_details?.reasoning_tokens,
       providerRawUsage: { ...usage, finish_reason: firstChoice.finish_reason },
-      traceId,
+      traceId: trid,
     };
-    yield { type: 'METADATA', data: metadata, threadId, traceId, sessionId };
-    yield { type: 'END', data: null, threadId, traceId, sessionId };
+    yield { type: 'METADATA', data: metadata, threadId: tid, traceId: trid, sessionId: sid };
+    yield { type: 'END', data: null, threadId: tid, traceId: trid, sessionId: sid };
   }
 
   private translateArtToolsToOpenAI(artTools: ToolSchema[]): OpenRouterTool[] {
